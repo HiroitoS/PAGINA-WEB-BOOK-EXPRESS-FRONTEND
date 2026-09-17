@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="https://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://book-express.com/</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://book-express.com/nosotros</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://book-express.com/servicios</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://book-express.com/catalogo</loc>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://book-express.com/plan-lector</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://book-express.com/contacto</loc>
+    <priority>0.8</priority>
+  </url>
+</urlset>

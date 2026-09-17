@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color: #111827;
+  background-color: #ffffff;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+@layer components {
+  .input-admin {
+    @apply w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-medium text-gray-900 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-100;
+  }
+}
+
+.todo-calendar {
+  overflow: hidden;
+}
+
+.todo-calendar .fc {
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
+.todo-calendar .fc-header-toolbar {
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.todo-calendar .fc-toolbar-title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #111827;
+  text-transform: capitalize;
+}
+
+.todo-calendar .fc-button {
+  border-radius: 0.75rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 0.45rem 0.7rem;
+  text-transform: capitalize;
+}
+
+.todo-calendar .fc-col-header-cell-cushion,
+.todo-calendar .fc-daygrid-day-number {
+  color: #374151;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.todo-calendar .fc-daygrid-day-frame {
+  min-height: 82px;
+}
+
+.todo-calendar .fc-daygrid-day-top {
+  padding: 0.2rem;
+}
+
+.todo-calendar .fc-event {
+  border: 0;
+  border-radius: 0.45rem;
+  padding: 0.1rem 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.todo-calendar .fc-day-today {
+  background: #fff7ed;
+}
+
+.todo-calendar-task {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.todo-calendar-event {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.todo-calendar-reminder {
+  background: #fef3c7;
+  color: #92400e;
+}
