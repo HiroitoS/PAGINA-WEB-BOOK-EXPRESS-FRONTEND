@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import { motion } from "motion/react";
 import {
   FaBuilding,
@@ -393,6 +394,13 @@ function SchoolDetailDrawer({ schoolId, onClose }) {
                   </p>
                 </div>
               </section>
+              <Link
+                className="flex w-full items-center justify-center rounded-2xl bg-red-700 px-4 py-3 text-sm font-black text-white transition hover:bg-red-800"
+                to={`/admin/crm/colegios/${school.id}`}
+                onClick={onClose}
+              >
+                Abrir ficha comercial completa
+              </Link>
             </div>
           ) : null}
         </div>
