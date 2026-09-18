@@ -43,6 +43,10 @@ const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
 );
 
+const CRMSchoolsPage = lazy(
+  () => import("../pages/admin/crm/CRMSchoolsPage"),
+);
+
 function protectRole(element, allowedRoles) {
   return <RequireRole allowedRoles={allowedRoles}>{element}</RequireRole>;
 }
@@ -129,6 +133,13 @@ const router = createBrowserRouter([
             path: "crm",
             element: protectPermission(
               renderLazyPage(CRMSummaryPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
+            path: "crm/colegios",
+            element: protectPermission(
+              renderLazyPage(CRMSchoolsPage),
               ["crm.view_crm"],
             ),
           },

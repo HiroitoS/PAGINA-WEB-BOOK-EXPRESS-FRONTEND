@@ -11,6 +11,7 @@ import {
   FaComments,
   FaFileExcel,
   FaLayerGroup,
+  FaSchool,
   FaTags,
   FaTasks,
   FaThLarge,
@@ -137,6 +138,12 @@ const NAV_SECTIONS = [
         icon: <FaChartLine />,
         permissions: ["crm.view_crm"],
       },
+      {
+        label: "Colegios",
+        to: "/admin/crm/colegios",
+        icon: <FaSchool />,
+        permissions: ["crm.view_crm"],
+    },
     ],
   },
 ];

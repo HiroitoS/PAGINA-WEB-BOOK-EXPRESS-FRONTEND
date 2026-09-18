@@ -9,3 +9,19 @@ export async function getCRMSummary(params = {}) {
 
   return response.data;
 }
+
+export async function getCRMSchools(params = {}) {
+  const response = await axiosClient.get(`${CRM_ADMIN_BASE}/schools/`, {
+    params,
+  });
+
+  return response.data;
+}
+
+export async function getCRMSchool(schoolId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/`,
+  );
+
+  return response.data;
+}
