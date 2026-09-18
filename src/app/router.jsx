@@ -1,4 +1,5 @@
-import { createBrowserRouter } from "react-router";
+import { lazy, Suspense } from "react";
+import { createBrowserRouter, RouterProvider } from "react-router";
 
 import PublicLayout from "../layouts/PublicLayout";
 import AdminLayout from "../layouts/AdminLayout";
@@ -38,6 +39,10 @@ import WorkspaceRemindersPage from "../pages/admin/workspace/WorkspaceRemindersP
 import WorkspaceCalendarPage from "../pages/admin/workspace/WorkspaceCalendarPage";
 import WorkspaceGroupsPage from "../pages/admin/workspace/WorkspaceGroupsPage";
 
+const CRMSummaryPage = lazy(
+  () => import("../pages/admin/crm/CRMSummaryPage"),
+);
+
 function protectRole(element, allowedRoles) {
   return <RequireRole allowedRoles={allowedRoles}>{element}</RequireRole>;
 }
@@ -50,7 +55,23 @@ function protectPermission(element, requiredPermissions) {
   );
 }
 
-export const router = createBrowserRouter([
+function renderLazyPage(Component) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[45vh] items-center justify-center">
+          <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm font-bold text-gray-600 shadow-sm">
+            Cargando módulo...
+          </div>
+        </div>
+      }
+    >
+      <Component />
+    </Suspense>
+  );
+}
+
+const router = createBrowserRouter([
   {
     path: "/",
     element: <PublicLayout />,
@@ -103,6 +124,13 @@ export const router = createBrowserRouter([
           {
             path: "dashboard",
             element: protectRole(<DashboardPage />, DASHBOARD_ROLES),
+          },
+          {
+            path: "crm",
+            element: protectPermission(
+              renderLazyPage(CRMSummaryPage),
+              ["crm.view_crm"],
+            ),
           },
           {
             path: "workspace",
@@ -215,3 +243,8 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
+
+export default function AppRouter() {
+  return <RouterProvider router={router} />;
+}

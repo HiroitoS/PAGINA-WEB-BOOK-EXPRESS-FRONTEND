@@ -19,6 +19,7 @@ export const CURRENT_PANEL_PERMISSIONS = [
   "catalog.view_prices",
   "inquiries.view_inquiries",
   "workspaces.use_workspace",
+  "crm.view_crm",
 ];
 
 export function userHasRole(user, allowedRoles = []) {
@@ -66,9 +67,13 @@ export function getDefaultAdminPath(user) {
 
   if (
     userHasRole(user, [SALES_MANAGER_ROLE, SALES_ADVISOR_ROLE])
-    && userHasPermission(user, ["workspaces.use_workspace"])
+    && userHasPermission(user, ["crm.view_crm"])
   ) {
-    return "/admin/workspace";
+    return "/admin/crm";
+  }
+
+  if (userHasPermission(user, ["crm.view_crm"])) {
+    return "/admin/crm";
   }
 
   if (userHasPermission(user, ["workspaces.use_workspace"])) {

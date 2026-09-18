@@ -4,12 +4,13 @@ import {
   FaBell,
   FaBookOpen,
   FaBoxOpen,
+  FaBriefcase,
+  FaChartLine,
   FaChevronDown,
   FaClipboardList,
   FaComments,
   FaFileExcel,
   FaLayerGroup,
-  FaLock,
   FaTags,
   FaTasks,
   FaThLarge,
@@ -21,10 +22,7 @@ import { useAuth } from "../hooks/useAuth";
 import NotificationBell from "../components/admin/NotificationBell";
 import {
   ADMIN_ONLY_ROLES,
-  ADMIN_ROLE,
   DASHBOARD_ROLES,
-  SALES_ADVISOR_ROLE,
-  SALES_MANAGER_ROLE,
   getDefaultAdminPath,
   getPrimaryRole,
   userHasPermission,
@@ -128,11 +126,18 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    type: "comingSoon",
+    type: "group",
     label: "CRM",
-    description: "Próximamente",
-    icon: <FaComments />,
-    roles: [ADMIN_ROLE, SALES_MANAGER_ROLE, SALES_ADVISOR_ROLE],
+    icon: <FaBriefcase />,
+    permissions: ["crm.view_crm"],
+    children: [
+      {
+        label: "Resumen",
+        to: "/admin/crm",
+        icon: <FaChartLine />,
+        permissions: ["crm.view_crm"],
+      },
+    ],
   },
 ];
 
@@ -154,12 +159,12 @@ function sectionIsActive(section, pathname) {
   if (section.type !== "group") return false;
 
   return section.children.some((item) => {
-    if (item.to === "/admin/workspace") {
-      return pathname === "/admin/workspace";
-    }
-
-    if (item.to === "/admin/dashboard") {
-      return pathname === "/admin/dashboard";
+    if (
+      item.to === "/admin/workspace"
+      || item.to === "/admin/dashboard"
+      || item.to === "/admin/crm"
+    ) {
+      return pathname === item.to;
     }
 
     return pathname.startsWith(item.to);
@@ -179,13 +184,9 @@ function SidebarContent({
   onCloseMenu,
   onToggleSection,
 }) {
-  const visibleSections = NAV_SECTIONS.filter((section) => {
-    if (section.type === "comingSoon") {
-      return userCanSeeEntry(user, section);
-    }
-
-    return section.children.some((item) => userCanSeeEntry(user, item));
-  });
+  const visibleSections = NAV_SECTIONS.filter((section) =>
+    section.children.some((item) => userCanSeeEntry(user, item)),
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -219,28 +220,6 @@ function SidebarContent({
 
       <nav className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
         {visibleSections.map((section) => {
-          if (section.type === "comingSoon") {
-            return (
-              <div
-                key={section.label}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-gray-300"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-3 text-sm font-black">
-                    <span className="text-sm">{section.icon}</span>
-                    <span>{section.label}</span>
-                  </span>
-
-                  <FaLock className="text-xs text-gray-500" />
-                </div>
-
-                <p className="mt-2 rounded-full bg-white/10 px-3 py-1 text-center text-xs font-black text-gray-400">
-                  {section.description}
-                </p>
-              </div>
-            );
-          }
-
           const isOpen = openSection === section.label;
           const isActive = sectionIsActive(section, location.pathname);
           const visibleChildren = section.children.filter((item) =>
@@ -288,6 +267,7 @@ function SidebarContent({
                         end={
                           item.to === "/admin/workspace"
                           || item.to === "/admin/dashboard"
+                          || item.to === "/admin/crm"
                         }
                         to={item.to}
                         onClick={onCloseMenu}
