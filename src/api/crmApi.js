@@ -25,3 +25,21 @@ export async function getCRMSchool(schoolId) {
 
   return response.data;
 }
+export async function getCRMOpportunities(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+export async function getCRMOpportunity(opportunityId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/`,
+  );
+
+  return response.data;
+}

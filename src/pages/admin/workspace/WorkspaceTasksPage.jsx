@@ -1959,7 +1959,12 @@ function TaskDetailPanel({
   const focusedActivityRef = useRef(null);
 
   const tabs = [
-    { value: "info", label: "Info", icon: <FaTasks />, enabled: true },
+    {
+      value: "info",
+      label: "Info",
+      icon: <FaTasks />,
+      enabled: true,
+    },
     {
       value: "edit",
       label: "Editar",
@@ -2021,11 +2026,12 @@ function TaskDetailPanel({
     >
       <aside
         aria-modal="true"
-        className="flex h-screen w-full flex-col overflow-hidden bg-white shadow-2xl lg:max-w-3xl"
+        className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl lg:max-w-3xl"
         role="dialog"
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="border-b border-gray-200 bg-white px-4 py-4 sm:px-5">
+        {/* CABECERA FIJA */}
+        <header className="shrink-0 border-b border-gray-200 bg-white px-4 py-4 sm:px-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-wide text-red-700">
@@ -2059,6 +2065,7 @@ function TaskDetailPanel({
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 transition hover:bg-gray-50"
               type="button"
               onClick={onClose}
+              aria-label="Cerrar detalle de tarea"
             >
               <FaTimes />
             </button>
@@ -2083,7 +2090,8 @@ function TaskDetailPanel({
           </nav>
         </header>
 
-        <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4 sm:px-5 sm:py-5">
+        {/* SOLO ESTA PARTE HACE SCROLL */}
+        <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-4 py-4 sm:px-5 sm:py-5">
           {isClosed ? (
             <PermissionNotice
               title="Tarea cerrada"
@@ -2120,18 +2128,22 @@ function TaskDetailPanel({
             </div>
           ) : null}
 
+          {/* INFORMACIÓN */}
           {activeDetailTab === "info" ? (
             <section className="space-y-4">
               <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h3 className="text-lg font-black text-gray-950">Información actual</h3>
+                    <h3 className="text-lg font-black text-gray-950">
+                      Información actual
+                    </h3>
+
                     <p className="mt-1 text-sm text-gray-500">
                       Datos principales registrados para esta tarea.
                     </p>
                   </div>
 
-                  {canEditDetails ? (
+                  {canEditDetails && !isClosed ? (
                     <button
                       className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-xs font-black text-white transition hover:bg-red-800"
                       type="button"
@@ -2144,25 +2156,47 @@ function TaskDetailPanel({
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <InfoItem label="Estado" value={getStatusLabel(selectedTask.status)} />
-                  <InfoItem label="Prioridad" value={getPriorityLabel(selectedTask.priority)} />
-                  <InfoItem label="Categoría" value={getTaskCategoryLabel(selectedTask.task_type)} />
-                  <InfoItem label="Grupo" value={selectedTask.group_name || "Sin grupo"} />
+                  <InfoItem
+                    label="Estado"
+                    value={getStatusLabel(selectedTask.status)}
+                  />
+
+                  <InfoItem
+                    label="Prioridad"
+                    value={getPriorityLabel(selectedTask.priority)}
+                  />
+
+                  <InfoItem
+                    label="Categoría"
+                    value={getTaskCategoryLabel(selectedTask.task_type)}
+                  />
+
+                  <InfoItem
+                    label="Grupo"
+                    value={selectedTask.group_name || "Sin grupo"}
+                  />
+
                   <InfoItem
                     label="Asignado a"
                     value={selectedTask.assigned_to_name || "Sin asignar"}
                   />
+
                   <InfoItem
                     label="Asignada por"
                     value={selectedTask.created_by_name || "Sistema"}
                   />
-                  <InfoItem label="Fecha límite" value={formatDateTime(selectedTask.due_at)} />
+
+                  <InfoItem
+                    label="Fecha límite"
+                    value={formatDateTime(selectedTask.due_at)}
+                  />
                 </div>
 
                 <div className="mt-3 rounded-2xl border border-yellow-100 bg-yellow-50 p-4">
                   <p className="text-xs font-black uppercase tracking-wide text-yellow-800">
                     Recordatorio
                   </p>
+
                   <p className="mt-2 text-sm font-black text-gray-900">
                     {formatDateTime(selectedTask.reminder_at)}
                   </p>
@@ -2172,8 +2206,10 @@ function TaskDetailPanel({
                   <p className="text-xs font-black uppercase tracking-wide text-gray-500">
                     Descripción
                   </p>
+
                   <p className="mt-2 text-sm leading-6 text-gray-700">
-                    {selectedTask.description || "Sin descripción registrada."}
+                    {selectedTask.description ||
+                      "Sin descripción registrada."}
                   </p>
                 </div>
               </div>
@@ -2187,11 +2223,14 @@ function TaskDetailPanel({
                     <p className="text-xs font-black uppercase tracking-wide text-amber-800">
                       Retomar trabajo
                     </p>
+
                     <h3 className="mt-1 text-lg font-black text-gray-950">
                       Reabrir tarea
                     </h3>
+
                     <p className="mt-1 text-sm leading-5 text-gray-600">
-                      La tarea volverá a Pendiente. El motivo quedará registrado en el historial.
+                      La tarea volverá a Pendiente. El motivo quedará registrado
+                      en el historial.
                     </p>
                   </div>
 
@@ -2202,12 +2241,15 @@ function TaskDetailPanel({
                     >
                       Motivo de reapertura *
                     </label>
+
                     <textarea
                       className="input-admin min-h-24 resize-none"
                       id="reopen_reason"
                       placeholder="Ejemplo: El colegio solicitó una nueva coordinación."
                       value={reopenReason}
-                      onChange={(event) => onReopenReasonChange(event.target.value)}
+                      onChange={(event) =>
+                        onReopenReasonChange(event.target.value)
+                      }
                     />
                   </div>
 
@@ -2216,7 +2258,12 @@ function TaskDetailPanel({
                     disabled={isSavingDetail}
                     type="submit"
                   >
-                    {isSavingDetail ? <FaSpinner className="animate-spin" /> : <FaUndo />}
+                    {isSavingDetail ? (
+                      <FaSpinner className="animate-spin" />
+                    ) : (
+                      <FaUndo />
+                    )}
+
                     {isSavingDetail ? "Reabriendo..." : "Reabrir tarea"}
                   </button>
                 </form>
@@ -2224,188 +2271,196 @@ function TaskDetailPanel({
             </section>
           ) : null}
 
-          {activeDetailTab === "edit" && canEditDetails ? (
-            <form className="flex min-h-full flex-col" onSubmit={onUpdateTask}>
-              <div className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-                <div className="mb-4">
-                  <h3 className="text-lg font-black text-gray-950">Editar datos</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Actualiza la tarea. Al guardar, la lista se refrescará.
-                  </p>
-                </div>
+          {/* EDICIÓN */}
+          {activeDetailTab === "edit" &&
+          canEditDetails &&
+          !isClosed ? (
+            <form
+              id="task-edit-form"
+              className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5"
+              onSubmit={onUpdateTask}
+            >
+              <div className="mb-4">
+                <h3 className="text-lg font-black text-gray-950">
+                  Editar datos
+                </h3>
 
-                <div className="space-y-4">
-                  <div>
-                    <label
-                      className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500"
-                      htmlFor="edit_title"
-                    >
-                      Actividad
-                    </label>
-                    <input
-                      className="input-admin"
-                      id="edit_title"
-                      name="title"
-                      type="text"
-                      value={editTaskForm.title}
-                      onChange={onEditTaskChange}
-                    />
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <DateTimeField
-                      helper="Fecha en la que debe estar terminada."
-                      id="edit_due_at"
-                      label="Fecha límite"
-                      name="due_at"
-                      value={editTaskForm.due_at}
-                      onChange={onEditTaskChange}
-                    />
-
-                    <DateTimeField
-                      helper="Día y hora del aviso."
-                      id="edit_reminder_at"
-                      label="Recordatorio"
-                      name="reminder_at"
-                      value={editTaskForm.reminder_at}
-                      onChange={onEditTaskChange}
-                    />
-
-                    <SelectField
-                      id="edit_group"
-                      label="Grupo"
-                      name="group"
-                      options={groups.map((group) => ({
-                        value: String(group.id),
-                        label: group.name,
-                      }))}
-                      placeholder="Sin grupo"
-                      value={editTaskForm.group}
-                      onChange={onEditTaskChange}
-                    />
-
-                    {canAssignToOthers ? (
-                      <SelectField
-                        helper="Selecciona otro usuario solo si esta tarea no será para ti."
-                        id="edit_assigned_to"
-                        label="Asignado a"
-                        name="assigned_to"
-                        options={users.map((user) => ({
-                          value: String(user.id),
-                          label: getUserLabel(user),
-                        }))}
-                        placeholder="Para mí"
-                        value={editTaskForm.assigned_to}
-                        onChange={onEditTaskChange}
-                      />
-                    ) : (
-                      <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                        <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                          Asignado a
-                        </p>
-                        <p className="mt-1 text-sm font-black text-gray-950">
-                          {selectedTask.assigned_to_name || "Para mí"}
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-gray-500">
-                          Este campo no se cambia desde tu perfil.
-                        </p>
-                      </div>
-                    )}
-
-                    <SelectField
-                      id="edit_task_type"
-                      label="Categoría"
-                      name="task_type"
-                      options={TASK_CATEGORY_OPTIONS}
-                      value={editTaskForm.task_type}
-                      onChange={onEditTaskChange}
-                    />
-
-                    <SelectField
-                      id="edit_priority"
-                      label="Prioridad"
-                      name="priority"
-                      options={PRIORITY_OPTIONS}
-                      value={editTaskForm.priority}
-                      onChange={onEditTaskChange}
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <QuickDateButton
-                      label="Hoy 6 p. m."
-                      onClick={() => onSetEditField("due_at", getTodayAt(18))}
-                    />
-                    <QuickDateButton
-                      label="Mañana 9 a. m."
-                      onClick={() => onSetEditField("due_at", getTomorrowAt(9))}
-                    />
-                    <QuickDateButton
-                      label="Recordar en 1 hora"
-                      onClick={() => onSetEditField("reminder_at", getTodayReminderAt(60))}
-                    />
-                    <QuickDateButton
-                      label="Recordar 1 h antes"
-                      onClick={() =>
-                        onSetEditField(
-                          "reminder_at",
-                          getReminderBeforeDue(editTaskForm.due_at, 60)
-                        )
-                      }
-                    />
-                    <QuickDateButton
-                      label="Limpiar fechas"
-                      onClick={() => {
-                        onSetEditField("due_at", "");
-                        onSetEditField("reminder_at", "");
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500"
-                      htmlFor="edit_description"
-                    >
-                      Descripción
-                    </label>
-                    <textarea
-                      className="input-admin min-h-24 resize-none"
-                      id="edit_description"
-                      name="description"
-                      value={editTaskForm.description}
-                      onChange={onEditTaskChange}
-                    />
-                  </div>
-                </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  Actualiza la tarea. Al guardar, la lista se refrescará.
+                </p>
               </div>
 
-              <div className="sticky bottom-0 mt-4 border-t border-gray-200 bg-white px-4 py-4 sm:px-5">
-                <div className="grid gap-2 sm:flex sm:justify-end">
-                  <button
-                    className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition hover:bg-gray-50"
-                    type="button"
-                    onClick={() => onSetDetailTab("info")}
+              <div className="space-y-4">
+                <div>
+                  <label
+                    className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500"
+                    htmlFor="edit_title"
                   >
-                    Cancelar
-                  </button>
+                    Actividad
+                  </label>
 
-                  <button
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-3 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isSavingEdit}
-                    type="submit"
+                  <input
+                    className="input-admin"
+                    id="edit_title"
+                    name="title"
+                    type="text"
+                    value={editTaskForm.title}
+                    onChange={onEditTaskChange}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <DateTimeField
+                    helper="Fecha en la que debe estar terminada."
+                    id="edit_due_at"
+                    label="Fecha límite"
+                    name="due_at"
+                    value={editTaskForm.due_at}
+                    onChange={onEditTaskChange}
+                  />
+
+                  <DateTimeField
+                    helper="Día y hora del aviso."
+                    id="edit_reminder_at"
+                    label="Recordatorio"
+                    name="reminder_at"
+                    value={editTaskForm.reminder_at}
+                    onChange={onEditTaskChange}
+                  />
+
+                  <SelectField
+                    id="edit_group"
+                    label="Grupo"
+                    name="group"
+                    options={groups.map((group) => ({
+                      value: String(group.id),
+                      label: group.name,
+                    }))}
+                    placeholder="Sin grupo"
+                    value={editTaskForm.group}
+                    onChange={onEditTaskChange}
+                  />
+
+                  {canAssignToOthers ? (
+                    <SelectField
+                      helper="Selecciona otro usuario solo si esta tarea no será para ti."
+                      id="edit_assigned_to"
+                      label="Asignado a"
+                      name="assigned_to"
+                      options={users.map((user) => ({
+                        value: String(user.id),
+                        label: getUserLabel(user),
+                      }))}
+                      placeholder="Para mí"
+                      value={editTaskForm.assigned_to}
+                      onChange={onEditTaskChange}
+                    />
+                  ) : (
+                    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                      <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Asignado a
+                      </p>
+
+                      <p className="mt-1 text-sm font-black text-gray-950">
+                        {selectedTask.assigned_to_name || "Para mí"}
+                      </p>
+
+                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                        Este campo no se cambia desde tu perfil.
+                      </p>
+                    </div>
+                  )}
+
+                  <SelectField
+                    id="edit_task_type"
+                    label="Categoría"
+                    name="task_type"
+                    options={TASK_CATEGORY_OPTIONS}
+                    value={editTaskForm.task_type}
+                    onChange={onEditTaskChange}
+                  />
+
+                  <SelectField
+                    id="edit_priority"
+                    label="Prioridad"
+                    name="priority"
+                    options={PRIORITY_OPTIONS}
+                    value={editTaskForm.priority}
+                    onChange={onEditTaskChange}
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <QuickDateButton
+                    label="Hoy 6 p. m."
+                    onClick={() =>
+                      onSetEditField("due_at", getTodayAt(18))
+                    }
+                  />
+
+                  <QuickDateButton
+                    label="Mañana 9 a. m."
+                    onClick={() =>
+                      onSetEditField("due_at", getTomorrowAt(9))
+                    }
+                  />
+
+                  <QuickDateButton
+                    label="Recordar en 1 hora"
+                    onClick={() =>
+                      onSetEditField(
+                        "reminder_at",
+                        getTodayReminderAt(60)
+                      )
+                    }
+                  />
+
+                  <QuickDateButton
+                    label="Recordar 1 h antes"
+                    onClick={() =>
+                      onSetEditField(
+                        "reminder_at",
+                        getReminderBeforeDue(editTaskForm.due_at, 60)
+                      )
+                    }
+                  />
+
+                  <QuickDateButton
+                    label="Limpiar fechas"
+                    onClick={() => {
+                      onSetEditField("due_at", "");
+                      onSetEditField("reminder_at", "");
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="mb-2 block text-xs font-black uppercase tracking-wide text-gray-500"
+                    htmlFor="edit_description"
                   >
-                    {isSavingEdit ? <FaSpinner className="animate-spin" /> : <FaCheckCircle />}
-                    {isSavingEdit ? "Guardando..." : "Guardar cambios"}
-                  </button>
+                    Descripción
+                  </label>
+
+                  <textarea
+                    className="input-admin min-h-24 resize-none"
+                    id="edit_description"
+                    name="description"
+                    value={editTaskForm.description}
+                    onChange={onEditTaskChange}
+                  />
                 </div>
               </div>
             </form>
           ) : null}
 
-          {activeDetailTab === "management" && canFollowUp && !isClosed ? (
+          {/* GESTIÓN */}
+          {activeDetailTab === "management" &&
+          canFollowUp &&
+          !isClosed ? (
             <section className="space-y-4">
               <form
+                id="task-management-form"
                 className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5"
                 onSubmit={onRegisterManagement}
               >
@@ -2413,11 +2468,14 @@ function TaskDetailPanel({
                   <p className="text-xs font-black uppercase tracking-wide text-red-700">
                     Gestión de la tarea
                   </p>
+
                   <h3 className="mt-1 text-lg font-black text-gray-950">
                     Registrar lo realizado
                   </h3>
+
                   <p className="mt-1 text-sm leading-5 text-gray-500">
-                    Registra una sola vez la actividad realizada. El cambio de estado es opcional.
+                    Registra una sola vez la actividad realizada. El cambio de
+                    estado es opcional.
                   </p>
                 </div>
 
@@ -2442,9 +2500,12 @@ function TaskDetailPanel({
                     label="Estado de la tarea"
                     name="status"
                     options={STATUS_OPTIONS.filter(
-                      (option) => option.value !== selectedTask.status
+                      (option) =>
+                        option.value !== selectedTask.status
                     )}
-                    placeholder={`Mantener ${getStatusLabel(selectedTask.status)}`}
+                    placeholder={`Mantener ${getStatusLabel(
+                      selectedTask.status
+                    )}`}
                     value={managementForm.status}
                     onChange={(event) =>
                       onManagementChange((currentForm) => ({
@@ -2462,6 +2523,7 @@ function TaskDetailPanel({
                   >
                     Detalle / resultado *
                   </label>
+
                   <textarea
                     className="input-admin min-h-28 resize-none"
                     id="management_comment"
@@ -2475,32 +2537,25 @@ function TaskDetailPanel({
                     }
                   />
                 </div>
-
-                <div className="mt-4 flex justify-end">
-                  <button
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-3 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                    disabled={isSavingDetail}
-                    type="submit"
-                  >
-                    {isSavingDetail ? <FaSpinner className="animate-spin" /> : <FaCheckCircle />}
-                    {isSavingDetail ? "Guardando..." : "Guardar gestión"}
-                  </button>
-                </div>
               </form>
             </section>
           ) : null}
 
+          {/* HISTORIAL */}
           {activeDetailTab === "history" ? (
             <section className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-4">
                 <p className="text-xs font-black uppercase tracking-wide text-gray-500">
                   Trazabilidad
                 </p>
+
                 <h3 className="mt-1 text-lg font-black text-gray-950">
                   Historial de la tarea
                 </h3>
+
                 <p className="mt-1 text-sm leading-5 text-gray-500">
-                  Aquí se muestran juntas las gestiones realizadas y los cambios de estado.
+                  Aquí se muestran juntas las gestiones realizadas y los
+                  cambios de estado.
                 </p>
               </div>
 
@@ -2510,12 +2565,17 @@ function TaskDetailPanel({
                     const isFocusedComment =
                       timelineItem.kind === "management" &&
                       focusCommentId &&
-                      timelineItem.sourceId === String(focusCommentId);
+                      timelineItem.sourceId ===
+                        String(focusCommentId);
 
                     return (
                       <article
                         key={timelineItem.id}
-                        ref={isFocusedComment ? focusedActivityRef : undefined}
+                        ref={
+                          isFocusedComment
+                            ? focusedActivityRef
+                            : undefined
+                        }
                         className={`rounded-2xl border p-4 transition ${
                           isFocusedComment
                             ? "border-red-200 bg-red-50 ring-2 ring-red-100"
@@ -2542,6 +2602,7 @@ function TaskDetailPanel({
                               <p className="text-sm font-black text-gray-950">
                                 {timelineItem.title}
                               </p>
+
                               <p className="mt-0.5 text-xs font-bold text-gray-500">
                                 {timelineItem.actor}
                               </p>
@@ -2549,7 +2610,9 @@ function TaskDetailPanel({
                           </div>
 
                           <p className="text-xs font-bold text-gray-500">
-                            {formatDateTime(timelineItem.createdAt)}
+                            {formatDateTime(
+                              timelineItem.createdAt
+                            )}
                           </p>
                         </div>
 
@@ -2568,6 +2631,74 @@ function TaskDetailPanel({
             </section>
           ) : null}
         </div>
+
+        {/* FOOTER FIJO DE EDICIÓN */}
+        {activeDetailTab === "edit" &&
+        canEditDetails &&
+        !isClosed ? (
+          <footer className="shrink-0 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)] sm:px-5 sm:py-4">
+            <div className="grid gap-2 sm:flex sm:justify-end">
+              <button
+                className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition hover:bg-gray-50"
+                type="button"
+                onClick={() => onSetDetailTab("info")}
+              >
+                Cancelar
+              </button>
+
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-3 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSavingEdit}
+                form="task-edit-form"
+                type="submit"
+              >
+                {isSavingEdit ? (
+                  <FaSpinner className="animate-spin" />
+                ) : (
+                  <FaCheckCircle />
+                )}
+
+                {isSavingEdit
+                  ? "Guardando..."
+                  : "Guardar cambios"}
+              </button>
+            </div>
+          </footer>
+        ) : null}
+
+        {/* FOOTER FIJO DE GESTIÓN */}
+        {activeDetailTab === "management" &&
+        canFollowUp &&
+        !isClosed ? (
+          <footer className="shrink-0 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)] sm:px-5 sm:py-4">
+            <div className="grid gap-2 sm:flex sm:justify-end">
+              <button
+                className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-black text-gray-700 transition hover:bg-gray-50"
+                type="button"
+                onClick={() => onSetDetailTab("info")}
+              >
+                Cancelar
+              </button>
+
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-3 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSavingDetail}
+                form="task-management-form"
+                type="submit"
+              >
+                {isSavingDetail ? (
+                  <FaSpinner className="animate-spin" />
+                ) : (
+                  <FaCheckCircle />
+                )}
+
+                {isSavingDetail
+                  ? "Guardando..."
+                  : "Guardar gestión"}
+              </button>
+            </div>
+          </footer>
+        ) : null}
       </aside>
     </div>
   );
