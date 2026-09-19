@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import {
   FaArrowLeft,
+  FaBookOpen,
   FaBuilding,
+  FaChartLine,
   FaEnvelope,
   FaExclamationTriangle,
   FaMapMarkerAlt,
@@ -43,6 +45,16 @@ function formatOwner(owner) {
 
 function formatTeam(team) {
   return team?.name || "Sin equipo comercial";
+}
+
+function formatPopulation(school) {
+  const population = school?.current_population_total ?? school?.estimated_students;
+
+  return population != null ? String(population) : "Sin información";
+}
+
+function formatSegment(segment) {
+  return segment && segment !== "OUT" ? `Segmento ${segment}` : "Fuera del objetivo base";
 }
 
 function formatDate(value) {
@@ -234,11 +246,11 @@ export default function CRMSchoolDetailPage() {
                 <div className="grid grid-cols-2 gap-3 sm:flex">
                   <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
                     <p className="text-xs font-bold uppercase text-gray-400">
-                      Código modular
+                      Código de institución
                     </p>
 
                     <p className="mt-1 font-black">
-                      {school.modular_code || "No registrado"}
+                      {school.institution_code || "No registrado"}
                     </p>
                   </div>
 
@@ -278,12 +290,8 @@ export default function CRMSchoolDetailPage() {
 
               <SummaryItem
                 icon={FaBuilding}
-                label="Alumnos estimados"
-                value={
-                  school.estimated_students != null
-                    ? String(school.estimated_students)
-                    : "Sin estimación"
-                }
+                label="Población vigente"
+                value={formatPopulation(school)}
               />
             </div>
           </section>
@@ -418,6 +426,57 @@ export default function CRMSchoolDetailPage() {
                   </div>
                 )}
               </section>
+
+              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                    Inteligencia comercial
+                  </p>
+                  <h2 className="mt-1 text-xl font-black text-gray-950">
+                    Editoriales identificadas
+                  </h2>
+                </div>
+
+                {Array.isArray(school.editorial_usages) &&
+                school.editorial_usages.length > 0 ? (
+                  <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                    {school.editorial_usages.map((usage) => (
+                      <article
+                        key={usage.id}
+                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                      >
+                        <p className="font-black text-gray-950">
+                          {usage.provider?.name || "Editorial no registrada"}
+                        </p>
+                        <p className="mt-1 text-sm text-gray-600">
+                          {usage.area?.name || "Área no especificada"}
+                          {usage.service?.level ? ` · ${usage.service.level}` : ""}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+                          <span className="rounded-full bg-white px-2.5 py-1 text-gray-700 ring-1 ring-gray-200">
+                            {usage.year}
+                          </span>
+                          <span className="rounded-full bg-white px-2.5 py-1 text-gray-700 ring-1 ring-gray-200">
+                            {usage.status_display}
+                          </span>
+                          <span className="rounded-full bg-white px-2.5 py-1 text-gray-700 ring-1 ring-gray-200">
+                            {usage.source_display}
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-7 text-center">
+                    <p className="font-black text-gray-950">
+                      Sin editoriales registradas
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Aún no hay información comercial de editoriales para este colegio.
+                    </p>
+                  </div>
+                )}
+              </section>
             </div>
 
             <div className="space-y-5">
@@ -427,26 +486,85 @@ export default function CRMSchoolDetailPage() {
                 </p>
 
                 <h2 className="mt-1 text-lg font-black text-gray-950">
-                  Niveles registrados
+                  Servicios educativos
                 </h2>
 
-                {Array.isArray(school.levels) &&
-                school.levels.length > 0 ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {school.levels.map((level) => (
-                      <span
-                        key={level.id}
-                        className="rounded-full bg-gray-100 px-3 py-2 text-xs font-black text-gray-700"
+                {Array.isArray(school.educational_services) &&
+                school.educational_services.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {school.educational_services.map((service) => (
+                      <article
+                        key={service.id}
+                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
                       >
-                        {level.name}
-                      </span>
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
+                            <FaBookOpen />
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="font-black text-gray-950">
+                              {service.level?.name || "Nivel no registrado"}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              Código modular: {service.modular_code || "No registrado"}
+                            </p>
+                            {service.modality ? (
+                              <p className="mt-1 text-xs text-gray-500">
+                                {service.modality}
+                              </p>
+                            ) : null}
+                            <p className="mt-2 text-sm font-bold text-gray-700">
+                              {service.latest_population?.student_count != null
+                                ? `${service.latest_population.student_count} alumnos · ${service.latest_population.year}`
+                                : "Población sin registrar"}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
                     ))}
                   </div>
                 ) : (
                   <p className="mt-4 text-sm leading-6 text-gray-500">
-                    No hay niveles educativos registrados.
+                    No hay servicios educativos registrados.
                   </p>
                 )}
+              </section>
+
+              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-700">
+                    <FaChartLine />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                      Perfil comercial
+                    </p>
+                    <h2 className="mt-1 text-lg font-black text-gray-950">
+                      {formatSegment(school.segment)}
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3 text-sm">
+                  <div className="rounded-2xl bg-gray-50 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Prioridad
+                    </p>
+                    <p className="mt-1 font-black text-gray-950">
+                      {school.commercial_profile?.priority_display || "Sin evaluar"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl bg-gray-50 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Uso de textos
+                    </p>
+                    <p className="mt-1 font-black text-gray-950">
+                      {school.commercial_profile?.textbook_usage_display || "Sin información"}
+                    </p>
+                  </div>
+                </div>
               </section>
 
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
