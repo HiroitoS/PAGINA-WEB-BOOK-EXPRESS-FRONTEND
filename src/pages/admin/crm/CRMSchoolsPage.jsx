@@ -225,9 +225,9 @@ function SchoolDetailDrawer({ schoolId, onClose }) {
               <section className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
                 <div className="flex flex-wrap items-center gap-2">
                   <SchoolStatusBadge isActive={school.is_active} />
-                  {school.modular_code ? (
+                  {school.institution_code ? (
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-gray-600 ring-1 ring-gray-200">
-                      Cód. modular: {school.modular_code}
+                      Cód. institución: {school.institution_code}
                     </span>
                   ) : null}
                   {school.ruc ? (
@@ -255,11 +255,13 @@ function SchoolDetailDrawer({ schoolId, onClose }) {
                   />
                   <InfoItem
                     icon={FaBuilding}
-                    label="Alumnos estimados"
+                    label="Población vigente"
                     value={
-                      school.estimated_students != null
-                        ? String(school.estimated_students)
-                        : "Sin estimación"
+                      school.current_population_total != null
+                        ? String(school.current_population_total)
+                        : school.estimated_students != null
+                          ? String(school.estimated_students)
+                          : "Sin información"
                     }
                   />
                 </div>
@@ -367,14 +369,15 @@ function SchoolDetailDrawer({ schoolId, onClose }) {
                     Niveles educativos
                   </p>
 
-                  {Array.isArray(school.levels) && school.levels.length > 0 ? (
+                  {Array.isArray(school.educational_services) &&
+                  school.educational_services.length > 0 ? (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {school.levels.map((level) => (
+                      {school.educational_services.map((service) => (
                         <span
-                          key={level.id}
+                          key={service.id}
                           className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-700"
                         >
-                          {level.name}
+                          {service.level?.name || "Nivel no registrado"}
                         </span>
                       ))}
                     </div>
@@ -662,11 +665,13 @@ export default function CRMSchoolsPage() {
                             {school.name}
                           </p>
                           <p className="mt-1 text-xs text-gray-500">
-                            {school.modular_code
-                              ? `Cód. ${school.modular_code}`
-                              : school.ruc
-                                ? `RUC ${school.ruc}`
-                                : "Sin código registrado"}
+                            {school.institution_code
+                              ? `Cód. institución ${school.institution_code}`
+                              : school.modular_code
+                                ? `Cód. modular ${school.modular_code}`
+                                : school.ruc
+                                  ? `RUC ${school.ruc}`
+                                  : "Sin código registrado"}
                           </p>
                         </td>
                         <td className="px-3 py-4 text-sm text-gray-600">
@@ -681,7 +686,9 @@ export default function CRMSchoolsPage() {
                           </p>
                         </td>
                         <td className="px-3 py-4 text-sm font-bold text-gray-700">
-                          {school.estimated_students ?? "—"}
+                          {school.current_population_total ??
+                            school.estimated_students ??
+                            "—"}
                         </td>
                         <td className="px-3 py-4">
                           <SchoolStatusBadge isActive={school.is_active} />
