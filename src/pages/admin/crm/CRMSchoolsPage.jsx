@@ -2,21 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
 import {
-  FaBuilding,
   FaChevronLeft,
   FaChevronRight,
-  FaEnvelope,
   FaExclamationTriangle,
-  FaMapMarkerAlt,
-  FaPhoneAlt,
   FaSchool,
   FaSearch,
-  FaTimes,
-  FaUserTie,
-  FaUsers,
-  FaWhatsapp,
 } from "react-icons/fa";
-import { getCRMSchool, getCRMSchools } from "../../../api/crmApi";
+
+import { getCRMSchools } from "../../../api/crmApi";
 
 const INITIAL_FILTERS = {
   search: "",
@@ -66,7 +59,9 @@ function formatLocation(school) {
 }
 
 function formatOwner(owner) {
-  if (!owner) return "Sin asesor asignado";
+  if (!owner) {
+    return "Sin asesor asignado";
+  }
 
   return owner.full_name || owner.username || "Asesor asignado";
 }
@@ -95,7 +90,7 @@ function LoadingRows() {
       {Array.from({ length: 6 }, (_, index) => (
         <div
           key={index}
-          className="h-24 animate-pulse rounded-2xl bg-gray-100"
+          className="h-20 animate-pulse rounded-2xl bg-gray-100"
         />
       ))}
     </div>
@@ -108,344 +103,14 @@ function EmptyState() {
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-gray-700 ring-1 ring-gray-200">
         <FaSchool />
       </div>
+
       <p className="mt-4 text-base font-black text-gray-950">
         No encontramos colegios.
       </p>
+
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-500">
-        Ajusta los filtros o registra colegios cuando habilitemos la gestión
-        completa de esta sección.
+        Ajusta los filtros para encontrar instituciones de la cartera comercial.
       </p>
-    </div>
-  );
-}
-
-function SchoolDetailDrawer({ schoolId, onClose }) {
-  const [school, setSchool] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadSchool() {
-      try {
-        setLoading(true);
-        setErrorMessage("");
-
-        const data = await getCRMSchool(schoolId);
-
-        if (!ignore) {
-          setSchool(data);
-        }
-      } catch (error) {
-        if (!ignore) {
-          setErrorMessage(
-            getErrorMessage(
-              error,
-              "No se pudo cargar el detalle del colegio.",
-            ),
-          );
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadSchool();
-
-    return () => {
-      ignore = true;
-    };
-  }, [schoolId]);
-
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50">
-      <button
-        aria-label="Cerrar detalle"
-        className="absolute inset-0 bg-black/50"
-        type="button"
-        onClick={onClose}
-      />
-
-      <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-5 py-4 sm:px-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                Ficha comercial
-              </p>
-              <h2 className="mt-1 truncate text-xl font-black text-gray-950 sm:text-2xl">
-                {school?.name || "Colegio"}
-              </h2>
-            </div>
-
-            <button
-              aria-label="Cerrar"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-700 transition hover:bg-gray-100"
-              type="button"
-              onClick={onClose}
-            >
-              <FaTimes />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-5 sm:p-6">
-          {loading ? (
-            <LoadingRows />
-          ) : errorMessage ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
-              <div className="flex gap-3">
-                <FaExclamationTriangle className="mt-1 shrink-0 text-red-700" />
-                <p className="text-sm leading-6 text-red-800">
-                  {errorMessage}
-                </p>
-              </div>
-            </div>
-          ) : school ? (
-            <div className="space-y-5">
-              <section className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <SchoolStatusBadge isActive={school.is_active} />
-                  {school.institution_code ? (
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-gray-600 ring-1 ring-gray-200">
-                      Cód. institución: {school.institution_code}
-                    </span>
-                  ) : null}
-                  {school.ruc ? (
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-gray-600 ring-1 ring-gray-200">
-                      RUC: {school.ruc}
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  <InfoItem
-                    icon={FaUserTie}
-                    label="Asesor responsable"
-                    value={formatOwner(school.owner)}
-                  />
-                  <InfoItem
-                    icon={FaUsers}
-                    label="Equipo comercial"
-                    value={formatTeam(school.team)}
-                  />
-                  <InfoItem
-                    icon={FaMapMarkerAlt}
-                    label="Ubicación"
-                    value={formatLocation(school) || "Sin ubicación registrada"}
-                  />
-                  <InfoItem
-                    icon={FaBuilding}
-                    label="Población vigente"
-                    value={
-                      school.current_population_total != null
-                        ? String(school.current_population_total)
-                        : school.estimated_students != null
-                          ? String(school.estimated_students)
-                          : "Sin información"
-                    }
-                  />
-                </div>
-              </section>
-
-              <section className="rounded-3xl border border-gray-200 bg-white p-5">
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Contacto institucional
-                </p>
-
-                <div className="mt-4 grid gap-3">
-                  <ContactLine
-                    icon={FaPhoneAlt}
-                    label="Teléfono"
-                    value={school.phone}
-                  />
-                  <ContactLine
-                    icon={FaWhatsapp}
-                    label="WhatsApp"
-                    value={school.whatsapp}
-                  />
-                  <ContactLine
-                    icon={FaEnvelope}
-                    label="Correo"
-                    value={school.email}
-                  />
-                  <ContactLine
-                    icon={FaMapMarkerAlt}
-                    label="Dirección"
-                    value={school.address}
-                  />
-                </div>
-
-                {school.reference ? (
-                  <p className="mt-4 rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-600">
-                    <span className="font-black text-gray-900">
-                      Referencia:
-                    </span>{" "}
-                    {school.reference}
-                  </p>
-                ) : null}
-              </section>
-
-              <section className="rounded-3xl border border-gray-200 bg-white p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                      Personas de contacto
-                    </p>
-                    <h3 className="mt-1 text-lg font-black text-gray-950">
-                      Contactos del colegio
-                    </h3>
-                  </div>
-
-                  <span className="rounded-full bg-gray-950 px-3 py-1 text-xs font-black text-white">
-                    {school.contacts?.length || 0}
-                  </span>
-                </div>
-
-                {Array.isArray(school.contacts) && school.contacts.length > 0 ? (
-                  <div className="mt-4 space-y-3">
-                    {school.contacts.map((contact) => (
-                      <article
-                        key={contact.id}
-                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-black text-gray-950">
-                              {contact.full_name}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-500">
-                              {contact.position || "Cargo no registrado"}
-                            </p>
-                          </div>
-
-                          {contact.is_primary ? (
-                            <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-100">
-                              Principal
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-3 grid gap-2 text-xs text-gray-600 sm:grid-cols-2">
-                          <span>{contact.phone || contact.whatsapp || "Sin teléfono"}</span>
-                          <span>{contact.email || "Sin correo"}</span>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-4 rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">
-                    Todavía no hay contactos registrados para este colegio.
-                  </p>
-                )}
-              </section>
-
-              <section className="rounded-3xl border border-gray-200 bg-white p-5">
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Información comercial
-                </p>
-
-                <div className="mt-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                    Niveles educativos
-                  </p>
-
-                  {Array.isArray(school.educational_services) &&
-                  school.educational_services.length > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {school.educational_services.map((service) => (
-                        <span
-                          key={service.id}
-                          className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-700"
-                        >
-                          {service.level?.name || "Nivel no registrado"}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-sm text-gray-500">
-                      Sin niveles registrados.
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-5">
-                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                    Observaciones
-                  </p>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600">
-                    {school.notes || "Sin observaciones registradas."}
-                  </p>
-                </div>
-              </section>
-              <Link
-                className="flex w-full items-center justify-center rounded-2xl bg-red-700 px-4 py-3 text-sm font-black text-white transition hover:bg-red-800"
-                to={`/admin/crm/colegios/${school.id}`}
-                onClick={onClose}
-              >
-                Abrir ficha comercial completa
-              </Link>
-            </div>
-          ) : null}
-        </div>
-      </aside>
-    </div>
-  );
-}
-
-function InfoItem({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-2xl bg-white p-4 ring-1 ring-gray-200">
-      <div className="flex gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-xs text-white">
-          <Icon />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-            {label}
-          </p>
-          <p className="mt-1 break-words text-sm font-black text-gray-950">
-            {value}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ContactLine({ icon: Icon, label, value }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl bg-gray-50 p-3">
-      <div className="mt-0.5 text-gray-500">
-        <Icon />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-          {label}
-        </p>
-        <p className="mt-1 break-words text-sm font-semibold text-gray-900">
-          {value || "No registrado"}
-        </p>
-      </div>
     </div>
   );
 }
@@ -461,7 +126,6 @@ export default function CRMSchoolsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [selectedSchoolId, setSelectedSchoolId] = useState(null);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((pagination.count || 0) / PAGE_SIZE)),
@@ -528,19 +192,20 @@ export default function CRMSchoolsPage() {
       <motion.section
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-3xl bg-gray-950 px-5 py-6 text-white shadow-sm sm:px-7 lg:px-8"
+        className="rounded-3xl bg-gray-950 px-5 py-5 text-white shadow-sm sm:px-7"
       >
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-wide text-red-300">
               CRM Comercial
             </p>
-            <h1 className="mt-2 text-2xl font-black sm:text-3xl">
+
+            <h1 className="mt-1 text-2xl font-black sm:text-3xl">
               Colegios
             </h1>
+
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-300">
-              Consulta la cartera institucional visible para tu responsabilidad
-              comercial y revisa sus principales datos de seguimiento.
+              Consulta y gestiona la cartera institucional de Book Express.
             </p>
           </div>
 
@@ -555,7 +220,7 @@ export default function CRMSchoolsPage() {
         </div>
       </motion.section>
 
-      <section className="mt-5 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+      <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <div>
             <p className="text-xs font-black uppercase tracking-wide text-red-700">
@@ -575,7 +240,7 @@ export default function CRMSchoolsPage() {
           </button>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-3 grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
           <label className="relative xl:col-span-2">
             <span className="sr-only">Buscar</span>
             <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
@@ -618,7 +283,7 @@ export default function CRMSchoolsPage() {
       </section>
 
       {errorMessage ? (
-        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4">
+        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
           <div className="flex items-start gap-3">
             <FaExclamationTriangle className="mt-0.5 shrink-0 text-red-700" />
             <p className="text-sm leading-6 text-red-800">
@@ -628,13 +293,14 @@ export default function CRMSchoolsPage() {
         </div>
       ) : null}
 
-      <section className="mt-5 rounded-3xl border border-gray-200 bg-white shadow-sm">
+      <section className="mt-4 rounded-3xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-4 sm:px-5">
           <h2 className="text-lg font-black text-gray-950">
             Cartera de colegios
           </h2>
+
           <p className="mt-1 text-xs text-gray-500">
-            Los resultados respetan el alcance comercial del usuario conectado.
+            Selecciona una institución para abrir su ficha comercial.
           </p>
         </div>
 
@@ -657,13 +323,18 @@ export default function CRMSchoolsPage() {
                       <th className="px-3 py-3 text-right">Acción</th>
                     </tr>
                   </thead>
+
                   <tbody className="divide-y divide-gray-100">
                     {schools.map((school) => (
-                      <tr key={school.id} className="align-top">
+                      <tr
+                        key={school.id}
+                        className="align-middle transition hover:bg-gray-50"
+                      >
                         <td className="px-3 py-4">
                           <p className="font-black text-gray-950">
                             {school.name}
                           </p>
+
                           <p className="mt-1 text-xs text-gray-500">
                             {school.institution_code
                               ? `Cód. institución ${school.institution_code}`
@@ -674,33 +345,38 @@ export default function CRMSchoolsPage() {
                                   : "Sin código registrado"}
                           </p>
                         </td>
+
                         <td className="px-3 py-4 text-sm text-gray-600">
                           {formatLocation(school) || "Sin ubicación"}
                         </td>
+
                         <td className="px-3 py-4">
                           <p className="text-sm font-bold text-gray-900">
                             {formatOwner(school.owner)}
                           </p>
+
                           <p className="mt-1 text-xs text-gray-500">
                             {formatTeam(school.team)}
                           </p>
                         </td>
+
                         <td className="px-3 py-4 text-sm font-bold text-gray-700">
                           {school.current_population_total ??
                             school.estimated_students ??
                             "—"}
                         </td>
+
                         <td className="px-3 py-4">
                           <SchoolStatusBadge isActive={school.is_active} />
                         </td>
+
                         <td className="px-3 py-4 text-right">
-                          <button
-                            className="rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
-                            type="button"
-                            onClick={() => setSelectedSchoolId(school.id)}
+                          <Link
+                            className="inline-flex rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
+                            to={`/admin/crm/colegios/${school.id}`}
                           >
-                            Ver detalle
-                          </button>
+                            Ver ficha
+                          </Link>
                         </td>
                       </tr>
                     ))}
@@ -719,31 +395,39 @@ export default function CRMSchoolsPage() {
                         <p className="break-words text-base font-black text-gray-950">
                           {school.name}
                         </p>
+
                         <p className="mt-1 text-xs text-gray-500">
                           {formatLocation(school) || "Sin ubicación"}
                         </p>
                       </div>
+
                       <SchoolStatusBadge isActive={school.is_active} />
                     </div>
 
-                    <div className="mt-4 grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
+                    <div className="mt-3 grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
                       <p>
-                        <span className="font-black text-gray-900">Asesor:</span>{" "}
+                        <span className="font-black text-gray-900">
+                          Asesor:
+                        </span>{" "}
                         {formatOwner(school.owner)}
                       </p>
+
                       <p>
-                        <span className="font-black text-gray-900">Equipo:</span>{" "}
-                        {formatTeam(school.team)}
+                        <span className="font-black text-gray-900">
+                          Alumnos:
+                        </span>{" "}
+                        {school.current_population_total ??
+                          school.estimated_students ??
+                          "—"}
                       </p>
                     </div>
 
-                    <button
-                      className="mt-4 w-full rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700"
-                      type="button"
-                      onClick={() => setSelectedSchoolId(school.id)}
+                    <Link
+                      className="mt-4 flex w-full items-center justify-center rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700"
+                      to={`/admin/crm/colegios/${school.id}`}
                     >
-                      Ver detalle
-                    </button>
+                      Ver ficha
+                    </Link>
                   </article>
                 ))}
               </div>
@@ -758,7 +442,11 @@ export default function CRMSchoolsPage() {
                     className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                     disabled={!pagination.previous}
                     type="button"
-                    onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+                    onClick={() =>
+                      setPage((currentPage) =>
+                        Math.max(1, currentPage - 1),
+                      )
+                    }
                   >
                     <FaChevronLeft className="text-xs" />
                     Anterior
@@ -768,7 +456,9 @@ export default function CRMSchoolsPage() {
                     className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                     disabled={!pagination.next}
                     type="button"
-                    onClick={() => setPage((currentPage) => currentPage + 1)}
+                    onClick={() =>
+                      setPage((currentPage) => currentPage + 1)
+                    }
                   >
                     Siguiente
                     <FaChevronRight className="text-xs" />
@@ -779,13 +469,6 @@ export default function CRMSchoolsPage() {
           )}
         </div>
       </section>
-
-      {selectedSchoolId ? (
-        <SchoolDetailDrawer
-          schoolId={selectedSchoolId}
-          onClose={() => setSelectedSchoolId(null)}
-        />
-      ) : null}
     </div>
   );
 }
