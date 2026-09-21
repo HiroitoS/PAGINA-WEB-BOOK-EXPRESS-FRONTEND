@@ -5,7 +5,6 @@ import {
   FaPlus,
   FaSave,
   FaTimes,
-  FaUsers,
 } from "react-icons/fa";
 
 import {
@@ -60,14 +59,12 @@ function createServiceRow(service) {
     id: service.id,
     levelId: String(service.level?.id || ""),
     levelName: service.level?.name || "Nivel no registrado",
-    modularCode: service.modular_code || "",
     isActive: Boolean(service.is_active),
     populationYear: String(population?.year || CURRENT_YEAR),
     studentCount:
       population?.student_count != null
         ? String(population.student_count)
         : "",
-    originalModularCode: service.modular_code || "",
     originalIsActive: Boolean(service.is_active),
     originalPopulationYear: population?.year ?? null,
     originalStudentCount: population?.student_count ?? null,
@@ -82,11 +79,9 @@ function createEmptyRow() {
     id: null,
     levelId: "",
     levelName: "",
-    modularCode: "",
     isActive: true,
     populationYear: String(CURRENT_YEAR),
     studentCount: "",
-    originalModularCode: "",
     originalIsActive: true,
     originalPopulationYear: null,
     originalStudentCount: null,
@@ -99,24 +94,6 @@ function buildRows(school) {
   }
 
   return school.educational_services.map(createServiceRow);
-}
-
-function formatSegment(segment) {
-  if (!segment || segment === "OUT") {
-    return "Fuera del objetivo base";
-  }
-
-  return `Segmento ${segment}`;
-}
-
-function hasPopulationByLevel(school) {
-  return Boolean(
-    school?.educational_services?.some(
-      (service) =>
-        service.is_active &&
-        service.latest_population?.student_count != null,
-    ),
-  );
 }
 
 export default function SchoolEducationalServicesSection({
@@ -197,11 +174,6 @@ export default function SchoolEducationalServicesSection({
     (level) => !selectedLevelIds.has(level.id),
   );
 
-  const populationByLevel = hasPopulationByLevel(school);
-  const populationLabel = populationByLevel
-    ? "Población por niveles"
-    : "Población estimada";
-
   function startEditing() {
     const currentRows = buildRows(school);
 
@@ -254,7 +226,6 @@ export default function SchoolEducationalServicesSection({
 
   function validateRows() {
     const levelIds = [];
-    const modularCodes = [];
 
     for (const row of rows) {
       const levelId = Number(row.levelId);
@@ -264,12 +235,6 @@ export default function SchoolEducationalServicesSection({
       }
 
       levelIds.push(levelId);
-
-      const modularCode = row.modularCode.trim().toLocaleLowerCase("es");
-
-      if (modularCode) {
-        modularCodes.push(modularCode);
-      }
 
       if (
         row.originalStudentCount != null &&
@@ -289,10 +254,7 @@ export default function SchoolEducationalServicesSection({
           return "El año de población debe ser válido.";
         }
 
-        if (
-          !Number.isInteger(studentCount) ||
-          studentCount < 0
-        ) {
+        if (!Number.isInteger(studentCount) || studentCount < 0) {
           return "La cantidad de alumnos debe ser un número válido.";
         }
       }
@@ -300,10 +262,6 @@ export default function SchoolEducationalServicesSection({
 
     if (new Set(levelIds).size !== levelIds.length) {
       return "No puedes registrar dos veces el mismo nivel educativo.";
-    }
-
-    if (new Set(modularCodes).size !== modularCodes.length) {
-      return "Cada nivel debe tener un código modular diferente.";
     }
 
     return "";
@@ -324,19 +282,13 @@ export default function SchoolEducationalServicesSection({
 
       for (const row of rows) {
         let serviceId = row.id;
-        const modularCode = row.modularCode.trim();
 
         if (row.id) {
-          const serviceChanged =
-            modularCode !== row.originalModularCode ||
-            row.isActive !== row.originalIsActive;
-
-          if (serviceChanged) {
+          if (row.isActive !== row.originalIsActive) {
             await updateCRMSchoolEducationalService(
               school.id,
               row.id,
               {
-                modular_code: modularCode || null,
                 is_active: row.isActive,
               },
             );
@@ -346,7 +298,6 @@ export default function SchoolEducationalServicesSection({
             school.id,
             {
               level: Number(row.levelId),
-              modular_code: modularCode || null,
               is_active: row.isActive,
             },
           );
@@ -381,7 +332,7 @@ export default function SchoolEducationalServicesSection({
 
       setRows(buildRows(updatedSchool));
       setEditing(false);
-      setSuccessMessage("Los niveles educativos fueron actualizados.");
+      setSuccessMessage("La cobertura educativa fue actualizada.");
 
       if (onSchoolUpdated) {
         onSchoolUpdated(updatedSchool);
@@ -390,7 +341,7 @@ export default function SchoolEducationalServicesSection({
       setErrorMessage(
         getErrorMessage(
           error,
-          "No se pudieron guardar los niveles educativos.",
+          "No se pudo actualizar la cobertura educativa.",
         ),
       );
     } finally {
@@ -407,11 +358,11 @@ export default function SchoolEducationalServicesSection({
           </p>
 
           <h2 className="mt-1 text-xl font-black text-gray-950">
-            Niveles educativos
+            Niveles y población
           </h2>
 
           <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
-            Gestiona nivel, código modular y población en un solo lugar.
+            Registra los niveles que atiende el colegio y la población vigente de cada uno.
           </p>
         </div>
 
@@ -422,9 +373,7 @@ export default function SchoolEducationalServicesSection({
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700"
           >
             <FaEdit />
-            {displayRows.length > 0
-              ? "Editar niveles"
-              : "Configurar niveles"}
+            Gestionar niveles
           </button>
         ) : null}
       </div>
@@ -442,122 +391,77 @@ export default function SchoolEducationalServicesSection({
       ) : null}
 
       {!editing ? (
-        <>
-          {displayRows.length > 0 ? (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200">
-              <div className="hidden grid-cols-4 gap-3 bg-gray-50 px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500 lg:grid">
-                <span>Nivel</span>
-                <span>Código modular</span>
-                <span>Población</span>
-                <span>Estado</span>
-              </div>
+        displayRows.length > 0 ? (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200">
+            <div className="hidden grid-cols-3 gap-3 bg-gray-50 px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500 lg:grid">
+              <span>Nivel</span>
+              <span>Población vigente</span>
+              <span>Estado</span>
+            </div>
 
-              <div className="divide-y divide-gray-200">
-                {displayRows.map((row) => (
-                  <div
-                    key={row.clientId}
-                    className="grid gap-3 px-4 py-3 lg:grid-cols-4 lg:items-center"
-                  >
-                    <div>
-                      <p className="text-xs font-bold uppercase text-gray-400 lg:hidden">
-                        Nivel
-                      </p>
-                      <p className="font-black text-gray-950">
-                        {row.levelName}
-                      </p>
-                    </div>
+            <div className="divide-y divide-gray-200">
+              {displayRows.map((row) => (
+                <div
+                  key={row.clientId}
+                  className="grid gap-3 px-4 py-3 lg:grid-cols-3 lg:items-center"
+                >
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-400 lg:hidden">
+                      Nivel
+                    </p>
 
-                    <div>
-                      <p className="text-xs font-bold uppercase text-gray-400 lg:hidden">
-                        Código modular
-                      </p>
-                      <p className="text-sm font-semibold text-gray-700">
-                        {row.modularCode || "No registrado"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-bold uppercase text-gray-400 lg:hidden">
-                        Población
-                      </p>
-
-                      {row.studentCount !== "" ? (
-                        <p className="text-sm font-black text-gray-950">
-                          {row.studentCount} alumnos
-                          <span className="ml-1 font-semibold text-gray-500">
-                            · {row.populationYear}
-                          </span>
-                        </p>
-                      ) : (
-                        <p className="text-sm text-gray-500">
-                          Sin registrar
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${
-                          row.isActive
-                            ? "bg-gray-950 text-white"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {row.isActive ? "Activo" : "Inactivo"}
-                      </span>
-                    </div>
+                    <p className="font-black text-gray-950">
+                      {row.levelName}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
-              <FaBookOpen className="mx-auto text-gray-400" />
 
-              <p className="mt-2 font-black text-gray-950">
-                Sin niveles educativos registrados
-              </p>
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-400 lg:hidden">
+                      Población vigente
+                    </p>
 
-              <p className="mt-1 text-sm text-gray-500">
-                Configura los niveles que atiende el colegio.
-              </p>
-            </div>
-          )}
+                    {row.studentCount !== "" ? (
+                      <p className="text-sm font-black text-gray-950">
+                        {row.studentCount} alumnos
+                        <span className="ml-1 font-semibold text-gray-500">
+                          · {row.populationYear}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        Sin registrar
+                      </p>
+                    )}
+                  </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-gray-950 px-4 py-3 text-white">
-              <div className="flex items-center gap-3">
-                <FaUsers />
-
-                <div>
-                  <p className="text-xs font-bold uppercase text-gray-400">
-                    {populationLabel}
-                  </p>
-
-                  <p className="mt-1 text-xl font-black">
-                    {school.current_population_total ?? 0}
-                  </p>
+                  <div>
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${
+                        row.isActive
+                          ? "bg-gray-950 text-white"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {row.isActive ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              {!populationByLevel && school.estimated_students != null ? (
-                <p className="mt-2 text-xs leading-5 text-gray-400">
-                  Dato general del colegio hasta registrar población por nivel.
-                </p>
-              ) : null}
-            </div>
-
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-              <p className="text-xs font-bold uppercase text-gray-500">
-                Segmentación comercial
-              </p>
-
-              <p className="mt-1 text-xl font-black text-gray-950">
-                {formatSegment(school.segment)}
-              </p>
+              ))}
             </div>
           </div>
-        </>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
+            <FaBookOpen className="mx-auto text-gray-400" />
+
+            <p className="mt-2 font-black text-gray-950">
+              Sin niveles educativos registrados
+            </p>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Configura los niveles que atiende el colegio.
+            </p>
+          </div>
+        )
       ) : (
         <div className="mt-4 space-y-3">
           {rows.map((row) => (
@@ -565,7 +469,7 @@ export default function SchoolEducationalServicesSection({
               key={row.clientId}
               className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
             >
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className="text-xs font-black uppercase tracking-wide text-gray-500">
                     Nivel educativo
@@ -609,26 +513,6 @@ export default function SchoolEducationalServicesSection({
                       })}
                     </select>
                   )}
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase tracking-wide text-gray-500">
-                    Código modular
-                  </label>
-
-                  <input
-                    type="text"
-                    value={row.modularCode}
-                    onChange={(event) =>
-                      updateRow(
-                        row.clientId,
-                        "modularCode",
-                        event.target.value,
-                      )
-                    }
-                    placeholder="Ej. 1234567"
-                    className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
-                  />
                 </div>
 
                 <div>
