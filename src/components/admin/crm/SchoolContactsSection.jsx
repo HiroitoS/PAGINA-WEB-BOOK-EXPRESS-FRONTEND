@@ -8,7 +8,6 @@ import {
   FaTimes,
   FaUserTie,
   FaUsers,
-  FaWhatsapp,
 } from "react-icons/fa";
 
 import {
@@ -20,8 +19,8 @@ import {
 const EMPTY_FORM = {
   full_name: "",
   position: "",
-  phone: "",
-  whatsapp: "",
+  contact_number: "",
+  alternate_phone: "",
   email: "",
   notes: "",
   is_primary: false,
@@ -49,11 +48,20 @@ function getErrorMessage(error, fallback) {
 }
 
 function contactToForm(contact) {
+  const whatsapp = String(contact.whatsapp || "").trim();
+  const phone = String(contact.phone || "").trim();
+
+  const contactNumber = whatsapp || phone;
+  const alternatePhone =
+    whatsapp && phone && whatsapp !== phone
+      ? phone
+      : "";
+
   return {
     full_name: contact.full_name || "",
     position: contact.position || "",
-    phone: contact.phone || "",
-    whatsapp: contact.whatsapp || "",
+    contact_number: contactNumber,
+    alternate_phone: alternatePhone,
     email: contact.email || "",
     notes: contact.notes || "",
     is_primary: Boolean(contact.is_primary),
@@ -61,7 +69,7 @@ function contactToForm(contact) {
   };
 }
 
-function ContactBadge({ active }) {
+function ContactStatusBadge({ active }) {
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${
@@ -70,7 +78,7 @@ function ContactBadge({ active }) {
           : "bg-gray-100 text-gray-500"
       }`}
     >
-      {active ? "Activo" : "Inactivo"}
+      {active ? "Vigente" : "Inactivo"}
     </span>
   );
 }
@@ -84,6 +92,7 @@ function ContactValue({ icon: Icon, label, value }) {
         <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
           {label}
         </p>
+
         <p className="mt-0.5 break-words text-sm font-semibold text-gray-700">
           {value || "No registrado"}
         </p>
@@ -117,7 +126,9 @@ export default function SchoolContactsSection({
       })
     : [];
 
-  const activeCount = contacts.filter((contact) => contact.is_active).length;
+  const activeCount = contacts.filter(
+    (contact) => contact.is_active,
+  ).length;
 
   function updateField(field, value) {
     setForm((currentForm) => ({
@@ -155,7 +166,7 @@ export default function SchoolContactsSection({
     }
 
     if (!form.is_active && form.is_primary) {
-      return "Un contacto inactivo no puede mantenerse como principal.";
+      return "Un contacto inactivo no puede ser el contacto principal.";
     }
 
     return "";
@@ -169,11 +180,14 @@ export default function SchoolContactsSection({
       return;
     }
 
+    const contactNumber = form.contact_number.trim();
+    const alternatePhone = form.alternate_phone.trim();
+
     const payload = {
       full_name: form.full_name.trim(),
       position: form.position.trim(),
-      phone: form.phone.trim(),
-      whatsapp: form.whatsapp.trim(),
+      phone: alternatePhone || contactNumber,
+      whatsapp: contactNumber,
       email: form.email.trim(),
       notes: form.notes.trim(),
       is_primary: form.is_primary,
@@ -204,11 +218,13 @@ export default function SchoolContactsSection({
         onSchoolUpdated(updatedSchool);
       }
 
+      const completedMode = mode;
+
       setMode(null);
       setEditingId(null);
       setForm(EMPTY_FORM);
       setSuccessMessage(
-        mode === "edit"
+        completedMode === "edit"
           ? "El contacto fue actualizado."
           : "El contacto fue registrado.",
       );
@@ -243,7 +259,7 @@ export default function SchoolContactsSection({
 
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-black text-gray-700">
-            {activeCount} activo{activeCount === 1 ? "" : "s"}
+            {activeCount} vigente{activeCount === 1 ? "" : "s"}
           </span>
 
           {!mode ? (
@@ -302,6 +318,7 @@ export default function SchoolContactsSection({
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
                 Nombre completo
               </span>
+
               <input
                 type="text"
                 value={form.full_name}
@@ -317,6 +334,7 @@ export default function SchoolContactsSection({
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
                 Cargo / función
               </span>
+
               <input
                 type="text"
                 value={form.position}
@@ -330,30 +348,32 @@ export default function SchoolContactsSection({
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Teléfono
+                Celular / WhatsApp
               </span>
+
               <input
                 type="text"
-                value={form.phone}
+                value={form.contact_number}
                 onChange={(event) =>
-                  updateField("phone", event.target.value)
+                  updateField("contact_number", event.target.value)
                 }
-                placeholder="Número de contacto"
+                placeholder="Número principal de contacto"
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
               />
             </label>
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                WhatsApp
+                Teléfono alternativo
               </span>
+
               <input
                 type="text"
-                value={form.whatsapp}
+                value={form.alternate_phone}
                 onChange={(event) =>
-                  updateField("whatsapp", event.target.value)
+                  updateField("alternate_phone", event.target.value)
                 }
-                placeholder="Número de WhatsApp"
+                placeholder="Opcional"
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
               />
             </label>
@@ -362,6 +382,7 @@ export default function SchoolContactsSection({
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
                 Correo
               </span>
+
               <input
                 type="email"
                 value={form.email}
@@ -377,6 +398,7 @@ export default function SchoolContactsSection({
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
                 Observaciones
               </span>
+
               <textarea
                 rows="2"
                 value={form.notes}
@@ -389,9 +411,9 @@ export default function SchoolContactsSection({
             </label>
           </div>
 
-          <div className="mt-4 flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap gap-4">
-              <label className="inline-flex items-center gap-2 text-sm font-bold text-gray-700">
+          <div className="mt-4 grid gap-3 border-t border-gray-200 pt-4 md:grid-cols-2">
+            <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+              <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
                   checked={form.is_primary}
@@ -399,137 +421,183 @@ export default function SchoolContactsSection({
                   onChange={(event) =>
                     updateField("is_primary", event.target.checked)
                   }
-                  className="h-4 w-4 accent-red-700"
+                  className="mt-0.5 h-4 w-4 accent-red-700"
                 />
-                Contacto principal
-              </label>
 
-              <label className="inline-flex items-center gap-2 text-sm font-bold text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
+                <span>
+                  <span className="block text-sm font-black text-gray-900">
+                    Contacto principal
+                  </span>
+
+                  <span className="mt-1 block text-xs leading-5 text-gray-500">
+                    Persona de referencia para la comunicación con el colegio.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            {mode === "edit" ? (
+              <label className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                <span className="block text-xs font-black uppercase tracking-wide text-gray-500">
+                  Estado del contacto
+                </span>
+
+                <select
+                  value={form.is_active ? "active" : "inactive"}
                   onChange={(event) => {
-                    const active = event.target.checked;
+                    const isActive = event.target.value === "active";
 
                     setForm((currentForm) => ({
                       ...currentForm,
-                      is_active: active,
-                      is_primary: active
+                      is_active: isActive,
+                      is_primary: isActive
                         ? currentForm.is_primary
                         : false,
                     }));
                   }}
-                  className="h-4 w-4 accent-red-700"
-                />
-                Contacto activo
+                  className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
+                >
+                  <option value="active">Vigente</option>
+                  <option value="inactive">Inactivo</option>
+                </select>
+
+                <span className="mt-1 block text-xs leading-5 text-gray-500">
+                  Usa Inactivo cuando la persona ya no sea un contacto válido del colegio.
+                </span>
               </label>
-            </div>
+            ) : (
+              <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                  Estado
+                </p>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={cancelForm}
-                disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
-              >
-                <FaTimes />
-                Cancelar
-              </button>
+                <p className="mt-2 text-sm font-black text-gray-900">
+                  Vigente
+                </p>
 
-              <button
-                type="button"
-                onClick={saveContact}
-                disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <FaSave />
-                {saving ? "Guardando..." : "Guardar contacto"}
-              </button>
-            </div>
+                <p className="mt-1 text-xs leading-5 text-gray-500">
+                  Los contactos nuevos se registran como vigentes.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={cancelForm}
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+            >
+              <FaTimes />
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              onClick={saveContact}
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <FaSave />
+              {saving ? "Guardando..." : "Guardar contacto"}
+            </button>
           </div>
         </div>
       ) : null}
 
       {contacts.length > 0 ? (
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {contacts.map((contact) => (
-            <article
-              key={contact.id}
-              className={`rounded-2xl border p-4 ${
-                contact.is_active
-                  ? "border-gray-200 bg-gray-50"
-                  : "border-gray-200 bg-white opacity-70"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-gray-950 ring-1 ring-gray-200">
-                    <FaUserTie />
+          {contacts.map((contact) => {
+            const whatsapp = String(contact.whatsapp || "").trim();
+            const phone = String(contact.phone || "").trim();
+            const primaryNumber = whatsapp || phone;
+            const alternatePhone =
+              whatsapp && phone && whatsapp !== phone
+                ? phone
+                : "";
+
+            return (
+              <article
+                key={contact.id}
+                className={`rounded-2xl border p-4 ${
+                  contact.is_active
+                    ? "border-gray-200 bg-gray-50"
+                    : "border-gray-200 bg-white opacity-70"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-gray-950 ring-1 ring-gray-200">
+                      <FaUserTie />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="break-words font-black text-gray-950">
+                        {contact.full_name}
+                      </p>
+
+                      <p className="mt-1 text-sm text-gray-500">
+                        {contact.position || "Cargo no registrado"}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="min-w-0">
-                    <p className="break-words font-black text-gray-950">
-                      {contact.full_name}
-                    </p>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    {contact.is_primary ? (
+                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-100">
+                        Principal
+                      </span>
+                    ) : null}
 
-                    <p className="mt-1 text-sm text-gray-500">
-                      {contact.position || "Cargo no registrado"}
-                    </p>
+                    <ContactStatusBadge active={contact.is_active} />
                   </div>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                  {contact.is_primary ? (
-                    <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-100">
-                      Principal
-                    </span>
-                  ) : null}
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <ContactValue
+                    icon={FaPhoneAlt}
+                    label="Celular / WhatsApp"
+                    value={primaryNumber}
+                  />
 
-                  <ContactBadge active={contact.is_active} />
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <ContactValue
-                  icon={FaPhoneAlt}
-                  label="Teléfono"
-                  value={contact.phone}
-                />
-
-                <ContactValue
-                  icon={FaWhatsapp}
-                  label="WhatsApp"
-                  value={contact.whatsapp}
-                />
-
-                <div className="sm:col-span-2">
                   <ContactValue
                     icon={FaEnvelope}
                     label="Correo"
                     value={contact.email}
                   />
+
+                  {alternatePhone ? (
+                    <div className="sm:col-span-2">
+                      <ContactValue
+                        icon={FaPhoneAlt}
+                        label="Teléfono alternativo"
+                        value={alternatePhone}
+                      />
+                    </div>
+                  ) : null}
                 </div>
-              </div>
 
-              {contact.notes ? (
-                <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm leading-6 text-gray-600 ring-1 ring-gray-200">
-                  {contact.notes}
-                </p>
-              ) : null}
+                {contact.notes ? (
+                  <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm leading-6 text-gray-600 ring-1 ring-gray-200">
+                    {contact.notes}
+                  </p>
+                ) : null}
 
-              <div className="mt-4 flex justify-end border-t border-gray-200 pt-3">
-                <button
-                  type="button"
-                  onClick={() => startEdit(contact)}
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-700 transition hover:border-red-200 hover:text-red-700 disabled:opacity-50"
-                >
-                  <FaEdit />
-                  Editar
-                </button>
-              </div>
-            </article>
-          ))}
+                <div className="mt-4 flex justify-end border-t border-gray-200 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(contact)}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-700 transition hover:border-red-200 hover:text-red-700 disabled:opacity-50"
+                  >
+                    <FaEdit />
+                    Editar
+                  </button>
+                </div>
+              </article>
+            );
+          })}
         </div>
       ) : (
         <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-7 text-center">
