@@ -16,6 +16,7 @@ import {
 import { getCRMSchool } from "../../../api/crmApi";
 import SchoolContactsSection from "../../../components/admin/crm/SchoolContactsSection";
 import SchoolEducationalServicesSection from "../../../components/admin/crm/SchoolEducationalServicesSection";
+import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
 
 function getErrorMessage(error, fallback) {
   const detail = error?.response?.data?.detail;
@@ -352,64 +353,10 @@ export default function CRMSchoolDetailPage() {
                 onSchoolUpdated={setSchool}
               />
 
-              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                    Inteligencia comercial
-                  </p>
-
-                  <h2 className="mt-1 text-xl font-black text-gray-950">
-                    Editoriales identificadas
-                  </h2>
-
-                  <p className="mt-1 text-sm leading-6 text-gray-500">
-                    Registra las editoriales y áreas que actualmente utiliza el colegio.
-                  </p>
-                </div>
-
-                {Array.isArray(school.editorial_usages) &&
-                school.editorial_usages.length > 0 ? (
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {school.editorial_usages.map((usage) => (
-                      <article
-                        key={usage.id}
-                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                      >
-                        <p className="font-black text-gray-950">
-                          {usage.provider?.name || "Editorial no registrada"}
-                        </p>
-
-                        <p className="mt-1 text-sm text-gray-600">
-                          {usage.area?.name || "Área no especificada"}
-                          {usage.service?.level
-                            ? ` · ${usage.service.level}`
-                            : ""}
-                        </p>
-
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
-                          <span className="rounded-full bg-white px-2.5 py-1 text-gray-700 ring-1 ring-gray-200">
-                            {usage.year}
-                          </span>
-
-                          <span className="rounded-full bg-white px-2.5 py-1 text-gray-700 ring-1 ring-gray-200">
-                            {usage.status_display}
-                          </span>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
-                    <p className="font-black text-gray-950">
-                      Sin editoriales registradas
-                    </p>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                      Aún no hay información editorial registrada para este colegio.
-                    </p>
-                  </div>
-                )}
-              </section>
+              <SchoolEditorialUsagesSection
+                school={school}
+                onSchoolUpdated={setSchool}
+              />
             </div>
 
             <aside className="xl:col-span-4">

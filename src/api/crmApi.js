@@ -138,6 +138,27 @@ export async function updateCRMSchoolContact(
   return response.data;
 }
 
+export async function getCRMMarketEditorials(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/editorials/`,
+    {
+      params,
+    },
+  );
+
+  return normalizeList(response.data);
+}
+
+export async function createCRMMarketEditorial(payload) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/editorials/`,
+    payload,
+  );
+
+  return response.data;
+}
+
+
 export async function getCRMSchoolEditorialUsages(schoolId) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/schools/${schoolId}/editorial-usages/`,
