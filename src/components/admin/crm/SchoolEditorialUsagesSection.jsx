@@ -21,10 +21,10 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 const EMPTY_FORM = {
   editorialId: "",
-  newEditorialName: "",
-  productName: "",
+  newEditorialName: "",  
   serviceId: "",
   areaId: "",
+  productName: "",
   year: String(CURRENT_YEAR),
   status: "current",
   notes: "",
@@ -205,6 +205,7 @@ export default function SchoolEditorialUsagesSection({
       areaId: usage.area?.id
         ? String(usage.area.id)
         : "",
+      productName: usage.product_name || "",
       year: String(usage.year || CURRENT_YEAR),
       status: usage.status || "reported",
       notes: usage.notes || "",
@@ -267,6 +268,7 @@ export default function SchoolEditorialUsagesSection({
         year,
         status: form.status,
         notes: form.notes.trim(),
+        product_name: form.productName.trim(),
         service: form.serviceId
           ? Number(form.serviceId)
           : null,
@@ -539,6 +541,22 @@ export default function SchoolEditorialUsagesSection({
           ) : null}
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="md:col-span-2">
+            <span className="text-xs font-black uppercase tracking-wide text-gray-600">
+                Producto / serie observada
+            </span>
+
+            <input
+                type="text"
+                value={form.productName}
+                onChange={(event) =>
+                updateField("productName", event.target.value)
+                }
+                disabled={saving}
+                placeholder="Ej. Matemática Activa, Comunicación 5..."
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+            />
+            </label>
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-600">
                 Situación
@@ -634,6 +652,11 @@ export default function SchoolEditorialUsagesSection({
                     </p>
 
                     <p className="mt-1 text-sm text-gray-600">
+                    {usage.product_name ? (
+                    <p className="mt-1 font-bold text-gray-900">
+                        {usage.product_name}
+                    </p>
+                    ) : null}
                       {usage.area?.name ||
                         "Área no especificada"}
 
