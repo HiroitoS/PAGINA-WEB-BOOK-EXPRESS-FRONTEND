@@ -73,17 +73,6 @@ function getEditorialName(usage) {
 }
 
 function EditorialOriginBadge({ usage }) {
-  if (
-    usage?.editorial?.is_catalog_editorial ||
-    (!usage?.editorial && usage?.provider)
-  ) {
-    return (
-      <span className="inline-flex rounded-full bg-gray-950 px-2.5 py-1 text-xs font-black text-white">
-        Book Express
-      </span>
-    );
-  }
-
   if (usage?.editorial?.verification_status === "pending") {
     return (
       <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-200">
@@ -92,11 +81,7 @@ function EditorialOriginBadge({ usage }) {
     );
   }
 
-  return (
-    <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-600 ring-1 ring-gray-200">
-      Mercado
-    </span>
-  );
+  return null;
 }
 
 export default function SchoolEditorialUsagesSection({
@@ -646,25 +631,25 @@ export default function SchoolEditorialUsagesSection({
                     <FaBook />
                   </div>
 
-                  <div className="min-w-0">
-                    <p className="break-words font-black text-gray-950">
-                      {getEditorialName(usage)}
-                    </p>
+                    <div className="min-w-0">
+                        <p className="wrap-break-words font-black text-gray-950">
+                            {getEditorialName(usage)}
+                        </p>
 
-                    <p className="mt-1 text-sm text-gray-600">
-                    {usage.product_name ? (
-                    <p className="mt-1 font-bold text-gray-900">
-                        {usage.product_name}
-                    </p>
-                    ) : null}
-                      {usage.area?.name ||
-                        "Área no especificada"}
+                        {usage.product_name ? (
+                            <p className="mt-1 wrap-break-words font-bold text-gray-900">
+                            {usage.product_name}
+                            </p>
+                        ) : null}
 
-                      {usage.service?.level
-                        ? ` · ${usage.service.level}`
-                        : ""}
-                    </p>
-                  </div>
+                        <p className="mt-1 text-sm text-gray-600">
+                            {usage.area?.name || "Área no especificada"}
+
+                            {usage.service?.level
+                            ? ` · ${usage.service.level}`
+                            : ""}
+                        </p>
+                    </div>
                 </div>
 
                 <EditorialOriginBadge usage={usage} />
