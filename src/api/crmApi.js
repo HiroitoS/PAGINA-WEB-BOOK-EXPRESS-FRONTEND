@@ -242,6 +242,20 @@ export async function createCRMSchoolActivity(
   return response.data;
 }
 
+export async function getCRMSchoolWorkItems(
+  schoolId,
+  params = {},
+) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/work-items/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
 export async function createCRMSchoolTask(
   schoolId,
   payload,
