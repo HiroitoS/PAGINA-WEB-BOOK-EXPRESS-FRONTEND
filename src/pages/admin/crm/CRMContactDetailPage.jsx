@@ -172,7 +172,7 @@ function getReturnContext(locationState) {
 
   return {
     path: "/admin/crm/contactos",
-    label: "{returnContext.label}",
+    label: "Volver a contactos",
   };
 }
 
