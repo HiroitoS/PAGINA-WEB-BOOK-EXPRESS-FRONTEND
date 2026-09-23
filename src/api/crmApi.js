@@ -254,6 +254,15 @@ export async function getCRMContact(contactId) {
   return response.data;
 }
 
+export async function updateCRMContact(contactId, payload) {
+  const response = await axiosClient.patch(
+    `${CRM_ADMIN_BASE}/contacts/${contactId}/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function getCRMContactActivities(
   contactId,
   params = {},
