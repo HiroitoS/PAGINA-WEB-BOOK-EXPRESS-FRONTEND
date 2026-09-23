@@ -22,7 +22,6 @@ import {
   getCRMSchoolActivities,
   getCRMSchoolWorkItems,
 } from "../../../api/crmApi";
-import SchoolContactsSection from "../../../components/admin/crm/SchoolContactsSection";
 import SchoolEducationalServicesSection from "../../../components/admin/crm/SchoolEducationalServicesSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
 
@@ -852,7 +851,7 @@ export default function CRMSchoolDetailPage() {
                   Gestión institucional y comercial
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-gray-500">
-                  Consulta y actualiza la información sin alargar innecesariamente la ficha.
+                  Consulta la población y las editoriales del colegio sin duplicar información.
                 </p>
               </div>
 
@@ -872,28 +871,9 @@ export default function CRMSchoolDetailPage() {
                       : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
                   }`}
                 >
-                  Cobertura
+                  Población
                   <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
-                    {Array.isArray(school.educational_services)
-                      ? school.educational_services.filter((service) => service.is_active).length
-                      : 0}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeInfoTab === "contacts"}
-                  onClick={() => setActiveInfoTab("contacts")}
-                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
-                    activeInfoTab === "contacts"
-                      ? "bg-gray-950 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
-                  }`}
-                >
-                  Contactos
-                  <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
-                    {visibleContacts.length}
+                    {school.current_population_total ?? 0}
                   </span>
                 </button>
 
@@ -921,13 +901,6 @@ export default function CRMSchoolDetailPage() {
 
           {activeInfoTab === "coverage" ? (
             <SchoolEducationalServicesSection
-              school={school}
-              onSchoolUpdated={setSchool}
-            />
-          ) : null}
-
-          {activeInfoTab === "contacts" ? (
-            <SchoolContactsSection
               school={school}
               onSchoolUpdated={setSchool}
             />
