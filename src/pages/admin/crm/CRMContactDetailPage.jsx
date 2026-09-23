@@ -278,6 +278,7 @@ export default function CRMContactDetailPage() {
   const [savingActivity, setSavingActivity] = useState(false);
   const [activityErrorMessage, setActivityErrorMessage] = useState("");
   const [activitySuccessMessage, setActivitySuccessMessage] = useState("");
+  const [activityWarningMessage, setActivityWarningMessage] = useState("");
   const [editingContact, setEditingContact] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [savingContact, setSavingContact] = useState(false);
@@ -380,6 +381,7 @@ export default function CRMContactDetailPage() {
     setActivityForm(createInitialActivityForm());
     setActivityErrorMessage("");
     setActivitySuccessMessage("");
+    setActivityWarningMessage("");
     setRegisteringActivity(true);
   }
 
@@ -451,11 +453,14 @@ export default function CRMContactDetailPage() {
       setSavingActivity(true);
       setActivityErrorMessage("");
       setActivitySuccessMessage("");
+      setActivityWarningMessage("");
 
       const createdActivity = await createCRMSchoolActivity(
         school.id,
         payload,
       );
+
+      let nextActionCreated = false;
 
       if (activityForm.schedule_next_action && nextActionAt) {
         const commonWorkItem = {
@@ -464,22 +469,33 @@ export default function CRMContactDetailPage() {
           origin_activity: createdActivity.id,
         };
 
-        if (activityForm.next_action_type === "event") {
-          await createCRMSchoolEvent(school.id, {
-            ...commonWorkItem,
-            start_at: nextActionAt.toISOString(),
-            event_type: "meeting",
-          });
-        } else if (activityForm.next_action_type === "reminder") {
-          await createCRMSchoolReminder(school.id, {
-            ...commonWorkItem,
-            remind_at: nextActionAt.toISOString(),
-          });
-        } else {
-          await createCRMSchoolTask(school.id, {
-            ...commonWorkItem,
-            due_at: nextActionAt.toISOString(),
-          });
+        try {
+          if (activityForm.next_action_type === "event") {
+            await createCRMSchoolEvent(school.id, {
+              ...commonWorkItem,
+              start_at: nextActionAt.toISOString(),
+              event_type: "meeting",
+            });
+          } else if (activityForm.next_action_type === "reminder") {
+            await createCRMSchoolReminder(school.id, {
+              ...commonWorkItem,
+              remind_at: nextActionAt.toISOString(),
+            });
+          } else {
+            await createCRMSchoolTask(school.id, {
+              ...commonWorkItem,
+              due_at: nextActionAt.toISOString(),
+            });
+          }
+
+          nextActionCreated = true;
+        } catch (nextActionError) {
+          setActivityWarningMessage(
+            getErrorMessage(
+              nextActionError,
+              "La actividad se guardó, pero no se pudo programar la próxima acción.",
+            ),
+          );
         }
       }
 
@@ -494,7 +510,7 @@ export default function CRMContactDetailPage() {
       setActivityForm(createInitialActivityForm());
       setActivityFilter("all");
       setActivitySuccessMessage(
-        activityForm.schedule_next_action
+        activityForm.schedule_next_action && nextActionCreated
           ? "La actividad y la próxima acción fueron registradas correctamente."
           : "La actividad fue registrada correctamente.",
       );
@@ -982,6 +998,12 @@ export default function CRMContactDetailPage() {
               {activitySuccessMessage ? (
                 <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
                   {activitySuccessMessage}
+                </div>
+              ) : null}
+
+              {activityWarningMessage ? (
+                <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                  {activityWarningMessage}
                 </div>
               ) : null}
 
