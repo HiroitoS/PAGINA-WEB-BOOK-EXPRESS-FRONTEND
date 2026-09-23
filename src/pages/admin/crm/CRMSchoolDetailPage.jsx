@@ -203,7 +203,7 @@ export default function CRMSchoolDetailPage() {
 
   const backLabel = cameFromContact
     ? "Volver al contacto"
-    : "{backLabel}";
+    : "Volver a colegios";
 
   return (
     <div className="mx-auto w-full max-w-7xl">
@@ -213,7 +213,7 @@ export default function CRMSchoolDetailPage() {
           to={backPath}
         >
           <FaArrowLeft />
-          Volver a colegios
+          {backLabel}
         </Link>
       </div>
 
