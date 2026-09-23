@@ -245,7 +245,7 @@ export default function CRMSchoolDetailPage() {
   const [activities, setActivities] = useState([]);
   const [workItems, setWorkItems] = useState([]);
   const [activityFilter, setActivityFilter] = useState("all");
-  const [activeInfoTab, setActiveInfoTab] = useState("coverage");
+  const [activeInfoTab, setActiveInfoTab] = useState("population");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [supportingWarning, setSupportingWarning] = useState("");
@@ -863,10 +863,10 @@ export default function CRMSchoolDetailPage() {
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={activeInfoTab === "coverage"}
-                  onClick={() => setActiveInfoTab("coverage")}
+                  aria-selected={activeInfoTab === "population"}
+                  onClick={() => setActiveInfoTab("population")}
                   className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
-                    activeInfoTab === "coverage"
+                    activeInfoTab === "population"
                       ? "bg-gray-950 text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
                   }`}
@@ -899,7 +899,7 @@ export default function CRMSchoolDetailPage() {
             </div>
           </section>
 
-          {activeInfoTab === "coverage" ? (
+          {activeInfoTab === "population" ? (
             <SchoolEducationalServicesSection
               school={school}
               onSchoolUpdated={setSchool}
