@@ -13,6 +13,7 @@ import {
 } from "react-icons/fa";
 
 import { getCRMContacts } from "../../../api/crmApi";
+import CRMContactCreatePanel from "../../../components/admin/crm/CRMContactCreatePanel";
 
 const PAGE_SIZE = 25;
 
@@ -151,6 +152,7 @@ export default function CRMContactsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((pagination.count || 0) / PAGE_SIZE)),
@@ -195,7 +197,7 @@ export default function CRMContactsPage() {
       ignore = true;
       clearTimeout(timeoutId);
     };
-  }, [filters, page]);
+  }, [filters, page, refreshKey]);
 
   function handleFilterChange(event) {
     const { name, value } = event.target;
@@ -243,6 +245,26 @@ export default function CRMContactsPage() {
           </div>
         </div>
       </motion.section>
+
+      <section className="mt-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-red-700">
+              Gestión de contactos
+            </p>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
+              Registra una persona y vincúlala desde el inicio con el colegio al
+              que pertenece.
+            </p>
+          </div>
+
+          <CRMContactCreatePanel
+            onCreated={() =>
+              setRefreshKey((currentKey) => currentKey + 1)
+            }
+          />
+        </div>
+      </section>
 
       <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
