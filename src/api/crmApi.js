@@ -216,6 +216,32 @@ export async function getCRMReferenceProviders() {
   return normalizeList(response.data);
 }
 
+export async function getCRMSchoolActivities(
+  schoolId,
+  params = {},
+) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/activities/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+export async function createCRMSchoolActivity(
+  schoolId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/activities/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function getCRMOpportunities(params = {}) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/opportunities/`,
