@@ -200,6 +200,15 @@ export async function getCRMReferenceLevels() {
   return normalizeList(response.data);
 }
 
+export async function getCRMReferenceGrades() {
+  const response = await axiosClient.get(
+    `${PUBLIC_CATALOG_BASE}/grades/`,
+  );
+
+  return normalizeList(response.data);
+}
+
+
 export async function getCRMReferenceAreas() {
   const response = await axiosClient.get(
     `${PUBLIC_CATALOG_BASE}/areas/`,
