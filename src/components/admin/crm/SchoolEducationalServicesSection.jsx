@@ -170,6 +170,22 @@ export default function SchoolEducationalServicesSection({
 
   const displayRows = editing ? rows : buildRows(school);
 
+  const hasPopulationData = displayRows.some(
+    (row) => row.studentCount !== "",
+  );
+
+  const currentPopulationTotal = displayRows.reduce((total, row) => {
+    if (!row.isActive || row.studentCount === "") {
+      return total;
+    }
+
+    const studentCount = Number(row.studentCount);
+
+    return Number.isFinite(studentCount)
+      ? total + studentCount
+      : total;
+  }, 0);
+
   const canAddLevel = availableLevels.some(
     (level) => !selectedLevelIds.has(level.id),
   );
@@ -392,62 +408,76 @@ export default function SchoolEducationalServicesSection({
 
       {!editing ? (
         displayRows.length > 0 ? (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200">
-            <div className="hidden grid-cols-3 gap-3 bg-gray-50 px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500 lg:grid">
-              <span>Nivel</span>
-              <span>Población vigente</span>
-              <span>Estado</span>
-            </div>
-
-            <div className="divide-y divide-gray-200">
-              {displayRows.map((row) => (
-                <div
-                  key={row.clientId}
-                  className="grid gap-3 px-4 py-3 lg:grid-cols-3 lg:items-center"
-                >
-                  <div>
-                    <p className="text-xs font-bold uppercase text-gray-400 lg:hidden">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {displayRows.map((row) => (
+              <article
+                key={row.clientId}
+                className={`rounded-2xl border p-4 ${
+                  row.isActive
+                    ? "border-gray-200 bg-gray-50"
+                    : "border-gray-200 bg-white opacity-70"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-400">
                       Nivel
                     </p>
-
-                    <p className="font-black text-gray-950">
+                    <h3 className="mt-1 break-words text-base font-black text-gray-950">
                       {row.levelName}
-                    </p>
+                    </h3>
                   </div>
 
-                  <div>
-                    <p className="text-xs font-bold uppercase text-gray-400 lg:hidden">
-                      Población vigente
-                    </p>
+                  <span
+                    className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-black ${
+                      row.isActive
+                        ? "bg-gray-950 text-white"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {row.isActive ? "Activo" : "Inactivo"}
+                  </span>
+                </div>
 
-                    {row.studentCount !== "" ? (
-                      <p className="text-sm font-black text-gray-950">
-                        {row.studentCount} alumnos
-                        <span className="ml-1 font-semibold text-gray-500">
-                          · {row.populationYear}
+                <div className="mt-4">
+                  <p className="text-xs font-black uppercase tracking-wide text-gray-400">
+                    Población vigente
+                  </p>
+
+                  {row.studentCount !== "" ? (
+                    <>
+                      <p className="mt-1 text-2xl font-black text-gray-950">
+                        {row.studentCount}
+                        <span className="ml-1 text-sm font-bold text-gray-500">
+                          alumnos
                         </span>
                       </p>
-                    ) : (
-                      <p className="text-sm text-gray-500">
-                        Sin registrar
+                      <p className="mt-1 text-xs font-semibold text-gray-500">
+                        Campaña {row.populationYear}
                       </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${
-                        row.isActive
-                          ? "bg-gray-950 text-white"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {row.isActive ? "Activo" : "Inactivo"}
-                    </span>
-                  </div>
+                    </>
+                  ) : (
+                    <p className="mt-1 text-sm font-semibold text-gray-500">
+                      Sin registrar
+                    </p>
+                  )}
                 </div>
-              ))}
-            </div>
+              </article>
+            ))}
+
+            <article className="rounded-2xl bg-gray-950 p-4 text-white">
+              <p className="text-xs font-black uppercase tracking-wide text-gray-300">
+                Población total
+              </p>
+              <p className="mt-2 text-3xl font-black">
+                {hasPopulationData ? currentPopulationTotal : "—"}
+              </p>
+              <p className="mt-1 text-sm font-semibold text-gray-300">
+                {hasPopulationData
+                  ? "alumnos en niveles activos"
+                  : "Sin población registrada"}
+              </p>
+            </article>
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
