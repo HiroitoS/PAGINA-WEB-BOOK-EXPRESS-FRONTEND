@@ -246,6 +246,7 @@ export default function CRMSchoolDetailPage() {
   const [activities, setActivities] = useState([]);
   const [workItems, setWorkItems] = useState([]);
   const [activityFilter, setActivityFilter] = useState("all");
+  const [activeInfoTab, setActiveInfoTab] = useState("coverage");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [supportingWarning, setSupportingWarning] = useState("");
@@ -782,6 +783,11 @@ export default function CRMSchoolDetailPage() {
 
                   <Link
                     to="/admin/workspace/calendar"
+                    state={{
+                      from: `/admin/crm/colegios/${school.id}`,
+                      fromLabel: school.name,
+                      fromType: "school",
+                    }}
                     className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                   >
                     <FaCalendarAlt />
@@ -836,20 +842,103 @@ export default function CRMSchoolDetailPage() {
             </aside>
           </div>
 
-          <SchoolEducationalServicesSection
-            school={school}
-            onSchoolUpdated={setSchool}
-          />
+          <section className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                  Información del colegio
+                </p>
+                <h2 className="mt-1 text-xl font-black text-gray-950">
+                  Gestión institucional y comercial
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-gray-500">
+                  Consulta y actualiza la información sin alargar innecesariamente la ficha.
+                </p>
+              </div>
 
-          <SchoolContactsSection
-            school={school}
-            onSchoolUpdated={setSchool}
-          />
+              <div
+                className="flex gap-2 overflow-x-auto pb-1"
+                role="tablist"
+                aria-label="Información complementaria del colegio"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeInfoTab === "coverage"}
+                  onClick={() => setActiveInfoTab("coverage")}
+                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                    activeInfoTab === "coverage"
+                      ? "bg-gray-950 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                  }`}
+                >
+                  Cobertura
+                  <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                    {Array.isArray(school.educational_services)
+                      ? school.educational_services.filter((service) => service.is_active).length
+                      : 0}
+                  </span>
+                </button>
 
-          <SchoolEditorialUsagesSection
-            school={school}
-            onSchoolUpdated={setSchool}
-          />
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeInfoTab === "contacts"}
+                  onClick={() => setActiveInfoTab("contacts")}
+                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                    activeInfoTab === "contacts"
+                      ? "bg-gray-950 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                  }`}
+                >
+                  Contactos
+                  <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                    {visibleContacts.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeInfoTab === "editorials"}
+                  onClick={() => setActiveInfoTab("editorials")}
+                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                    activeInfoTab === "editorials"
+                      ? "bg-gray-950 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                  }`}
+                >
+                  Editoriales
+                  <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                    {Array.isArray(school.editorial_usages)
+                      ? school.editorial_usages.length
+                      : 0}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {activeInfoTab === "coverage" ? (
+            <SchoolEducationalServicesSection
+              school={school}
+              onSchoolUpdated={setSchool}
+            />
+          ) : null}
+
+          {activeInfoTab === "contacts" ? (
+            <SchoolContactsSection
+              school={school}
+              onSchoolUpdated={setSchool}
+            />
+          ) : null}
+
+          {activeInfoTab === "editorials" ? (
+            <SchoolEditorialUsagesSection
+              school={school}
+              onSchoolUpdated={setSchool}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>
