@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
 import {
   FaArrowLeft,
   FaBuilding,
@@ -145,6 +145,7 @@ function LoadingState() {
 
 export default function CRMSchoolDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
 
   const [school, setSchool] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -192,12 +193,24 @@ export default function CRMSchoolDetailPage() {
       hasValue(school.institution_code) ||
       hasValue(school.reference));
 
+  const cameFromContact =
+    typeof location.state?.from === "string" &&
+    location.state.from.startsWith("/admin/crm/contactos/");
+
+  const backPath = cameFromContact
+    ? location.state.from
+    : "/admin/crm/colegios";
+
+  const backLabel = cameFromContact
+    ? "Volver al contacto"
+    : "{backLabel}";
+
   return (
     <div className="mx-auto w-full max-w-7xl">
       <div className="mb-3">
         <Link
           className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-          to="/admin/crm/colegios"
+          to={backPath}
         >
           <FaArrowLeft />
           Volver a colegios
