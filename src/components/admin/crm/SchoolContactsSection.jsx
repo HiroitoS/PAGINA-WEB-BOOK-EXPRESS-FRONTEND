@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import {
+  FaArrowRight,
   FaEdit,
   FaEnvelope,
   FaPhoneAlt,
@@ -584,7 +586,20 @@ export default function SchoolContactsSection({
                   </p>
                 ) : null}
 
-                <div className="mt-4 flex justify-end border-t border-gray-200 pt-3">
+                <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-gray-200 pt-3">
+                  <Link
+                    to={`/admin/crm/contactos/${contact.id}`}
+                    state={{
+                      from: `/admin/crm/colegios/${school.id}`,
+                      fromLabel: school.name,
+                      fromType: "school",
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-700 transition hover:border-gray-400 hover:bg-gray-100"
+                  >
+                    Abrir contacto
+                    <FaArrowRight />
+                  </Link>
+
                   <button
                     type="button"
                     onClick={() => startEdit(contact)}
