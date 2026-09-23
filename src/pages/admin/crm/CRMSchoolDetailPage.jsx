@@ -1,22 +1,50 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import {
   FaArrowLeft,
   FaBuilding,
+  FaCalendarAlt,
   FaChartLine,
   FaEnvelope,
   FaExclamationTriangle,
   FaMapMarkerAlt,
   FaPhoneAlt,
+  FaSchool,
+  FaStar,
+  FaTasks,
   FaUserTie,
   FaUsers,
   FaWhatsapp,
 } from "react-icons/fa";
 
-import { getCRMSchool } from "../../../api/crmApi";
+import {
+  getCRMSchool,
+  getCRMSchoolActivities,
+  getCRMSchoolWorkItems,
+} from "../../../api/crmApi";
 import SchoolContactsSection from "../../../components/admin/crm/SchoolContactsSection";
 import SchoolEducationalServicesSection from "../../../components/admin/crm/SchoolEducationalServicesSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
+
+const ACTIVITY_FILTERS = [
+  { value: "all", label: "Todas" },
+  { value: "call", label: "Llamadas" },
+  { value: "visit", label: "Visitas" },
+  { value: "meeting", label: "Reuniones" },
+  { value: "follow_up", label: "Seguimientos" },
+];
+
+function normalizeResults(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.results)) {
+    return data.results;
+  }
+
+  return [];
+}
 
 function getErrorMessage(error, fallback) {
   const detail = error?.response?.data?.detail;
@@ -70,6 +98,23 @@ function formatPopulation(school) {
   );
 }
 
+function formatDateTime(value) {
+  if (!value) {
+    return "Sin fecha";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin fecha";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 function StatusBadge({ isActive }) {
   return (
     <span
@@ -108,7 +153,7 @@ function SummaryItem({ icon: Icon, label, value }) {
 
 function InfoItem({ icon: Icon, label, value }) {
   return (
-    <div className="flex min-w-0 items-start gap-3 rounded-2xl bg-gray-50 px-3 py-3">
+    <div className="flex min-w-0 items-start gap-3 rounded-2xl bg-gray-50 px-3 py-3 ring-1 ring-gray-200">
       <div className="mt-0.5 shrink-0 text-gray-500">
         <Icon />
       </div>
@@ -126,6 +171,56 @@ function InfoItem({ icon: Icon, label, value }) {
   );
 }
 
+function WorkItemIcon({ type }) {
+  if (type === "event") {
+    return <FaCalendarAlt />;
+  }
+
+  if (type === "task") {
+    return <FaTasks />;
+  }
+
+  return <FaStar />;
+}
+
+function getWorkItemDate(workItem) {
+  const item = workItem?.item || {};
+
+  if (workItem?.type === "event") {
+    return item.start_at;
+  }
+
+  if (workItem?.type === "task") {
+    return item.due_at || item.reminder_at;
+  }
+
+  return item.remind_at;
+}
+
+function isPendingWorkItem(workItem) {
+  const item = workItem?.item || {};
+
+  if (workItem?.type === "task") {
+    return !["completed", "cancelled"].includes(item.status);
+  }
+
+  if (workItem?.type === "reminder") {
+    return !["completed", "dismissed"].includes(item.status);
+  }
+
+  if (workItem?.type === "event") {
+    if (!item.start_at) {
+      return true;
+    }
+
+    const startAt = new Date(item.start_at);
+
+    return Number.isNaN(startAt.getTime()) || startAt >= new Date();
+  }
+
+  return true;
+}
+
 function LoadingState() {
   return (
     <div className="space-y-4">
@@ -138,7 +233,7 @@ function LoadingState() {
           />
         ))}
       </div>
-      <div className="h-64 animate-pulse rounded-3xl bg-gray-200" />
+      <div className="h-72 animate-pulse rounded-3xl bg-gray-200" />
     </div>
   );
 }
@@ -148,21 +243,57 @@ export default function CRMSchoolDetailPage() {
   const location = useLocation();
 
   const [school, setSchool] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [workItems, setWorkItems] = useState([]);
+  const [activityFilter, setActivityFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [supportingWarning, setSupportingWarning] = useState("");
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadSchool() {
+    async function loadSchoolWorkspace() {
       try {
         setLoading(true);
         setErrorMessage("");
+        setSupportingWarning("");
 
-        const data = await getCRMSchool(id);
+        const schoolData = await getCRMSchool(id);
 
-        if (!ignore) {
-          setSchool(data);
+        if (ignore) {
+          return;
+        }
+
+        setSchool(schoolData);
+
+        const [activitiesResult, workItemsResult] = await Promise.allSettled([
+          getCRMSchoolActivities(id),
+          getCRMSchoolWorkItems(id),
+        ]);
+
+        if (ignore) {
+          return;
+        }
+
+        if (activitiesResult.status === "fulfilled") {
+          setActivities(normalizeResults(activitiesResult.value));
+        } else {
+          setActivities([]);
+          setSupportingWarning(
+            "La ficha cargó, pero no se pudo mostrar el historial comercial.",
+          );
+        }
+
+        if (workItemsResult.status === "fulfilled") {
+          setWorkItems(normalizeResults(workItemsResult.value));
+        } else {
+          setWorkItems([]);
+          setSupportingWarning((currentWarning) =>
+            currentWarning
+              ? `${currentWarning} Tampoco se pudieron cargar las próximas acciones.`
+              : "La ficha cargó, pero no se pudieron mostrar las próximas acciones.",
+          );
         }
       } catch (error) {
         if (!ignore) {
@@ -180,7 +311,7 @@ export default function CRMSchoolDetailPage() {
       }
     }
 
-    loadSchool();
+    loadSchoolWorkspace();
 
     return () => {
       ignore = true;
@@ -204,6 +335,37 @@ export default function CRMSchoolDetailPage() {
   const backLabel = cameFromContact
     ? "Volver al contacto"
     : "Volver a colegios";
+
+  const visibleContacts = useMemo(() => {
+    const contacts = Array.isArray(school?.contacts)
+      ? [...school.contacts]
+      : [];
+
+    return contacts
+      .filter((contact) => contact.is_active)
+      .sort((contactA, contactB) => {
+        if (contactA.is_primary !== contactB.is_primary) {
+          return contactA.is_primary ? -1 : 1;
+        }
+
+        return contactA.full_name.localeCompare(contactB.full_name, "es");
+      });
+  }, [school]);
+
+  const filteredActivities = useMemo(() => {
+    if (activityFilter === "all") {
+      return activities;
+    }
+
+    return activities.filter(
+      (activity) => activity.activity_type === activityFilter,
+    );
+  }, [activities, activityFilter]);
+
+  const pendingWorkItems = useMemo(
+    () => workItems.filter(isPendingWorkItem),
+    [workItems],
+  );
 
   return (
     <div className="mx-auto w-full max-w-7xl">
@@ -255,7 +417,8 @@ export default function CRMSchoolDetailPage() {
                 </h1>
 
                 <p className="mt-1 text-sm text-gray-300">
-                  Ficha general del colegio y su perfil comercial.
+                  Información institucional, relaciones y seguimiento comercial
+                  en un mismo lugar.
                 </p>
               </div>
             </div>
@@ -287,20 +450,24 @@ export default function CRMSchoolDetailPage() {
             />
           </section>
 
+          {supportingWarning ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              {supportingWarning}
+            </div>
+          ) : null}
+
           <div className="grid gap-4 xl:grid-cols-12">
-            <div className="space-y-4 xl:col-span-8">
+            <aside className="space-y-4 xl:col-span-3">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                    Datos del colegio
-                  </p>
+                <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                  Colegio
+                </p>
 
-                  <h2 className="mt-1 text-xl font-black text-gray-950">
-                    Información de contacto
-                  </h2>
-                </div>
+                <h2 className="mt-1 text-xl font-black text-gray-950">
+                  Datos principales
+                </h2>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-4 space-y-3">
                   <InfoItem
                     icon={FaPhoneAlt}
                     label="Teléfono"
@@ -327,7 +494,7 @@ export default function CRMSchoolDetailPage() {
                 </div>
 
                 {hasAdditionalData ? (
-                  <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-gray-200 pt-4 text-sm text-gray-600">
+                  <div className="mt-4 space-y-2 border-t border-gray-200 pt-4 text-sm text-gray-600">
                     {hasValue(school.ruc) ? (
                       <p>
                         <span className="font-black text-gray-900">RUC:</span>{" "}
@@ -345,7 +512,7 @@ export default function CRMSchoolDetailPage() {
                     ) : null}
 
                     {hasValue(school.reference) ? (
-                      <p className="basis-full">
+                      <p>
                         <span className="font-black text-gray-900">
                           Referencia:
                         </span>{" "}
@@ -356,23 +523,6 @@ export default function CRMSchoolDetailPage() {
                 ) : null}
               </section>
 
-              <SchoolEducationalServicesSection
-                school={school}
-                onSchoolUpdated={setSchool}
-              />
-
-              <SchoolContactsSection
-                school={school}
-                onSchoolUpdated={setSchool}
-              />
-
-              <SchoolEditorialUsagesSection
-                school={school}
-                onSchoolUpdated={setSchool}
-              />
-            </div>
-
-            <aside className="xl:col-span-4">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-700">
@@ -390,19 +540,25 @@ export default function CRMSchoolDetailPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                  <div className="rounded-2xl bg-gray-50 p-4">
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Prioridad
+                      Prioridad comercial
                     </p>
 
                     <p className="mt-1 font-black text-gray-950">
                       {school.commercial_profile?.priority_display ||
                         "Sin evaluar"}
                     </p>
+
+                    {school.commercial_profile?.priority_score != null ? (
+                      <p className="mt-1 text-sm font-semibold text-gray-500">
+                        Score {school.commercial_profile.priority_score} / 100
+                      </p>
+                    ) : null}
                   </div>
 
-                  <div className="rounded-2xl bg-gray-50 p-4">
+                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Uso de textos
                     </p>
@@ -413,14 +569,287 @@ export default function CRMSchoolDetailPage() {
                     </p>
                   </div>
                 </div>
+              </section>
+            </aside>
 
-                <p className="mt-4 text-xs leading-5 text-gray-500">
-                  Las visitas, llamadas, reuniones y oportunidades se gestionan
-                  en el seguimiento comercial, no en esta ficha general.
-                </p>
+            <main className="xl:col-span-6">
+              <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+                <div className="border-b border-gray-200 p-5">
+                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                    Historial comercial
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-black text-gray-950">
+                    Actividades del colegio
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-6 text-gray-500">
+                    Reúne las actividades registradas desde los contactos
+                    vinculados a este colegio.
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {ACTIVITY_FILTERS.map((filter) => (
+                      <button
+                        key={filter.value}
+                        type="button"
+                        onClick={() => setActivityFilter(filter.value)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
+                          activityFilter === filter.value
+                            ? "bg-gray-950 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {filter.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  {filteredActivities.length > 0 ? (
+                    <div className="space-y-3">
+                      {filteredActivities.slice(0, 12).map((activity) => (
+                        <article
+                          key={activity.id}
+                          className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                        >
+                          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
+                                  {activity.activity_type_display || "Actividad"}
+                                </span>
+
+                                {activity.is_important ? (
+                                  <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-200">
+                                    Importante
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              <h3 className="mt-3 font-black text-gray-950">
+                                {activity.summary}
+                              </h3>
+                            </div>
+
+                            <p className="text-xs font-semibold text-gray-400">
+                              {formatDateTime(activity.occurred_at)}
+                            </p>
+                          </div>
+
+                          {activity.result ? (
+                            <p className="mt-3 text-sm leading-6 text-gray-600">
+                              {activity.result}
+                            </p>
+                          ) : null}
+
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500">
+                            <p>
+                              Registrado por{" "}
+                              <span className="font-black text-gray-700">
+                                {activity.performed_by?.full_name ||
+                                  activity.performed_by?.username ||
+                                  "Usuario CRM"}
+                              </span>
+                            </p>
+
+                            {activity.contact ? (
+                              <Link
+                                to={`/admin/crm/contactos/${activity.contact.id}`}
+                                state={{
+                                  from: `/admin/crm/colegios/${school.id}`,
+                                  fromLabel: school.name,
+                                  fromType: "school",
+                                }}
+                                className="font-black text-red-700 transition hover:text-red-900"
+                              >
+                                {activity.contact.full_name}
+                              </Link>
+                            ) : (
+                              <span className="font-semibold text-gray-400">
+                                Actividad general del colegio
+                              </span>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-10 text-center">
+                      <p className="font-black text-gray-950">
+                        Sin actividades para mostrar
+                      </p>
+
+                      <p className="mt-1 text-sm leading-6 text-gray-500">
+                        Cuando un asesor registre una actividad con un contacto
+                        de este colegio, aparecerá también en esta ficha.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </main>
+
+            <aside className="space-y-4 xl:col-span-3">
+              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                      Relaciones
+                    </p>
+
+                    <h2 className="mt-1 text-xl font-black text-gray-950">
+                      Contactos vinculados
+                    </h2>
+                  </div>
+
+                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-600">
+                    {visibleContacts.length}
+                  </span>
+                </div>
+
+                {visibleContacts.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {visibleContacts.slice(0, 4).map((contact) => (
+                      <Link
+                        key={contact.id}
+                        to={`/admin/crm/contactos/${contact.id}`}
+                        state={{
+                          from: `/admin/crm/colegios/${school.id}`,
+                          fromLabel: school.name,
+                          fromType: "school",
+                        }}
+                        className="block rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
+                            <FaUserTie />
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="break-words text-sm font-black text-gray-950">
+                                {contact.full_name}
+                              </p>
+
+                              {contact.is_primary ? (
+                                <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-black text-red-700 ring-1 ring-red-200">
+                                  Principal
+                                </span>
+                              ) : null}
+                            </div>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                              {contact.position || "Cargo no registrado"}
+                            </p>
+
+                            <p className="mt-1 text-xs font-semibold text-gray-600">
+                              {contact.decision_role_display || "Sin clasificar"}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+
+                    {visibleContacts.length > 4 ? (
+                      <p className="text-center text-xs font-semibold text-gray-500">
+                        + {visibleContacts.length - 4} contacto(s) adicional(es)
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center">
+                    <FaSchool className="mx-auto text-gray-400" />
+                    <p className="mt-2 text-sm font-black text-gray-900">
+                      Sin contactos vigentes
+                    </p>
+                  </div>
+                )}
+              </section>
+
+              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                      Próximas acciones
+                    </p>
+
+                    <h2 className="mt-1 text-xl font-black text-gray-950">
+                      ToDo / Agenda
+                    </h2>
+                  </div>
+
+                  <Link
+                    to="/admin/workspace/calendar"
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                  >
+                    <FaCalendarAlt />
+                    Calendario
+                  </Link>
+                </div>
+
+                {pendingWorkItems.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {pendingWorkItems.slice(0, 5).map((workItem) => (
+                      <article
+                        key={workItem.id}
+                        className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-700 ring-1 ring-gray-200">
+                            <WorkItemIcon type={workItem.type} />
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-black text-gray-950">
+                              {workItem.item?.title || "Acción programada"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                              {formatDateTime(getWorkItemDate(workItem))}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+
+                    {pendingWorkItems.length > 5 ? (
+                      <p className="text-center text-xs font-semibold text-gray-500">
+                        + {pendingWorkItems.length - 5} acción(es) adicional(es)
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center">
+                    <p className="text-sm font-black text-gray-900">
+                      Sin próximas acciones
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-gray-500">
+                      Las tareas, reuniones y recordatorios vinculados al
+                      colegio aparecerán aquí.
+                    </p>
+                  </div>
+                )}
               </section>
             </aside>
           </div>
+
+          <SchoolEducationalServicesSection
+            school={school}
+            onSchoolUpdated={setSchool}
+          />
+
+          <SchoolContactsSection
+            school={school}
+            onSchoolUpdated={setSchool}
+          />
+
+          <SchoolEditorialUsagesSection
+            school={school}
+            onSchoolUpdated={setSchool}
+          />
         </div>
       ) : null}
     </div>
