@@ -1386,12 +1386,24 @@ export default function CRMContactDetailPage() {
           </section>
 
           <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-red-700">
-              Próximas acciones
-            </p>
-            <h2 className="mt-1 text-xl font-black text-gray-950">
-              ToDo / Agenda
-            </h2>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                  Próximas acciones
+                </p>
+                <h2 className="mt-1 text-xl font-black text-gray-950">
+                  ToDo / Agenda
+                </h2>
+              </div>
+
+              <Link
+                to="/admin/workspace/calendar"
+                className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+              >
+                <FaCalendarAlt />
+                Abrir calendario
+              </Link>
+            </div>
 
             {workItems.length > 0 ? (
               <div className="mt-4 space-y-3">
