@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
 import { motion } from "motion/react";
 import {
   FaArrowLeft,
   FaBriefcase,
   FaCalendarAlt,
+  FaEdit,
   FaEnvelope,
   FaExclamationTriangle,
   FaPhoneAlt,
+  FaSave,
   FaSchool,
   FaStar,
   FaTasks,
+  FaTimes,
   FaUserTie,
 } from "react-icons/fa";
 
@@ -18,6 +21,7 @@ import {
   getCRMContact,
   getCRMContactActivities,
   getCRMContactWorkItems,
+  updateCRMContact,
 } from "../../../api/crmApi";
 
 const ACTIVITY_FILTERS = [
@@ -132,13 +136,58 @@ function WorkItemDate({ workItem }) {
   return formatDateTime(item.remind_at);
 }
 
+function contactToEditForm(contact) {
+  const whatsapp = String(contact?.whatsapp || "").trim();
+  const phone = String(contact?.phone || "").trim();
+
+  return {
+    full_name: contact?.full_name || "",
+    position: contact?.position || "",
+    contact_number: whatsapp || phone,
+    alternate_phone:
+      whatsapp && phone && whatsapp !== phone ? phone : "",
+    email: contact?.email || "",
+    decision_role: contact?.decision_role || "",
+    relationship_level: contact?.relationship_level
+      ? String(contact.relationship_level)
+      : "",
+    notes: contact?.notes || "",
+    is_primary: Boolean(contact?.is_primary),
+    is_active: Boolean(contact?.is_active),
+  };
+}
+
+function getReturnContext(locationState) {
+  const from = locationState?.from;
+
+  if (
+    typeof from === "string" &&
+    from.startsWith("/admin/crm/colegios/")
+  ) {
+    return {
+      path: from,
+      label: "Volver al colegio",
+    };
+  }
+
+  return {
+    path: "/admin/crm/contactos",
+    label: "{returnContext.label}",
+  };
+}
+
 export default function CRMContactDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
 
   const [contact, setContact] = useState(null);
   const [activities, setActivities] = useState([]);
   const [workItems, setWorkItems] = useState([]);
   const [activityFilter, setActivityFilter] = useState("all");
+  const [editingContact, setEditingContact] = useState(false);
+  const [editForm, setEditForm] = useState(null);
+  const [savingContact, setSavingContact] = useState(false);
+  const [editErrorMessage, setEditErrorMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -212,6 +261,78 @@ export default function CRMContactDetailPage() {
     return Array.from(ids);
   }, [activities, workItems]);
 
+  const returnContext = getReturnContext(location.state);
+
+  function startContactEdit() {
+    setEditForm(contactToEditForm(contact));
+    setEditErrorMessage("");
+    setEditingContact(true);
+  }
+
+  function cancelContactEdit() {
+    setEditingContact(false);
+    setEditForm(null);
+    setEditErrorMessage("");
+  }
+
+  function updateEditField(field, value) {
+    setEditForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  }
+
+  async function saveContactChanges() {
+    if (!editForm?.full_name?.trim()) {
+      setEditErrorMessage("Ingresa el nombre completo del contacto.");
+      return;
+    }
+
+    if (!editForm.is_active && editForm.is_primary) {
+      setEditErrorMessage(
+        "Un contacto inactivo no puede ser el contacto principal.",
+      );
+      return;
+    }
+
+    const contactNumber = editForm.contact_number.trim();
+    const alternatePhone = editForm.alternate_phone.trim();
+
+    const payload = {
+      full_name: editForm.full_name.trim(),
+      position: editForm.position.trim(),
+      whatsapp: contactNumber,
+      phone: alternatePhone || contactNumber,
+      email: editForm.email.trim(),
+      decision_role: editForm.decision_role,
+      relationship_level: editForm.relationship_level
+        ? Number(editForm.relationship_level)
+        : null,
+      notes: editForm.notes.trim(),
+      is_primary: editForm.is_primary,
+      is_active: editForm.is_active,
+    };
+
+    try {
+      setSavingContact(true);
+      setEditErrorMessage("");
+
+      const updatedContact = await updateCRMContact(id, payload);
+      setContact(updatedContact);
+      setEditingContact(false);
+      setEditForm(null);
+    } catch (error) {
+      setEditErrorMessage(
+        getErrorMessage(
+          error,
+          "No se pudo actualizar el contacto.",
+        ),
+      );
+    } finally {
+      setSavingContact(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-7xl">
@@ -233,10 +354,10 @@ export default function CRMContactDetailPage() {
       <div className="mx-auto w-full max-w-7xl">
         <Link
           className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50"
-          to="/admin/crm/contactos"
+          to={returnContext.path}
         >
           <FaArrowLeft />
-          Volver a contactos
+          {returnContext.label}
         </Link>
 
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -259,10 +380,10 @@ export default function CRMContactDetailPage() {
     <div className="mx-auto w-full max-w-7xl">
       <Link
         className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50"
-        to="/admin/crm/contactos"
+        to={returnContext.path}
       >
         <FaArrowLeft />
-        Volver a contactos
+        {returnContext.label}
       </Link>
 
       <motion.section
@@ -285,6 +406,15 @@ export default function CRMContactDetailPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={startContactEdit}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-700 bg-gray-900 px-3 py-2 text-sm font-black text-white transition hover:border-red-300 hover:bg-red-700"
+            >
+              <FaEdit />
+              Editar contacto
+            </button>
+
             {contact.is_primary ? (
               <span className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-black text-white">
                 Contacto principal
@@ -294,6 +424,228 @@ export default function CRMContactDetailPage() {
           </div>
         </div>
       </motion.section>
+
+      {editingContact && editForm ? (
+        <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                Edición del contacto
+              </p>
+              <h2 className="mt-1 text-xl font-black text-gray-950">
+                Actualizar datos
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Los cambios se guardan en el mismo contacto vinculado al colegio.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={cancelContactEdit}
+              disabled={savingContact}
+              className="inline-flex items-center gap-2 self-start rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+            >
+              <FaTimes />
+              Cerrar
+            </button>
+          </div>
+
+          {editErrorMessage ? (
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+              {editErrorMessage}
+            </div>
+          ) : null}
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Nombre completo
+              </span>
+              <input
+                type="text"
+                value={editForm.full_name}
+                onChange={(event) =>
+                  updateEditField("full_name", event.target.value)
+                }
+                disabled={savingContact}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              />
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Cargo / función
+              </span>
+              <input
+                type="text"
+                value={editForm.position}
+                onChange={(event) =>
+                  updateEditField("position", event.target.value)
+                }
+                disabled={savingContact}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              />
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Celular / WhatsApp
+              </span>
+              <input
+                type="text"
+                value={editForm.contact_number}
+                onChange={(event) =>
+                  updateEditField("contact_number", event.target.value)
+                }
+                disabled={savingContact}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              />
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Teléfono alternativo
+              </span>
+              <input
+                type="text"
+                value={editForm.alternate_phone}
+                onChange={(event) =>
+                  updateEditField("alternate_phone", event.target.value)
+                }
+                disabled={savingContact}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              />
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Correo
+              </span>
+              <input
+                type="email"
+                value={editForm.email}
+                onChange={(event) =>
+                  updateEditField("email", event.target.value)
+                }
+                disabled={savingContact}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              />
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Rol en la decisión
+              </span>
+              <select
+                value={editForm.decision_role}
+                onChange={(event) =>
+                  updateEditField("decision_role", event.target.value)
+                }
+                disabled={savingContact}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              >
+                <option value="">Sin clasificar</option>
+                <option value="decision_maker">Decisor</option>
+                <option value="influencer">Influenciador</option>
+                <option value="other">Otro</option>
+              </select>
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Relacionamiento
+              </span>
+              <select
+                value={editForm.relationship_level}
+                onChange={(event) =>
+                  updateEditField("relationship_level", event.target.value)
+                }
+                disabled={savingContact}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              >
+                <option value="">Sin evaluar</option>
+                <option value="1">1 / 5</option>
+                <option value="2">2 / 5</option>
+                <option value="3">3 / 5</option>
+                <option value="4">4 / 5</option>
+                <option value="5">5 / 5</option>
+              </select>
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Estado
+              </span>
+              <select
+                value={editForm.is_active ? "active" : "inactive"}
+                onChange={(event) =>
+                  updateEditField(
+                    "is_active",
+                    event.target.value === "active",
+                  )
+                }
+                disabled={savingContact}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              >
+                <option value="active">Vigente</option>
+                <option value="inactive">Inactivo</option>
+              </select>
+            </label>
+
+            <label className="flex items-center gap-3 self-end rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+              <input
+                type="checkbox"
+                checked={editForm.is_primary}
+                onChange={(event) =>
+                  updateEditField("is_primary", event.target.checked)
+                }
+                disabled={savingContact || !editForm.is_active}
+                className="h-4 w-4 accent-red-700"
+              />
+              <span className="text-sm font-black text-gray-800">
+                Contacto principal
+              </span>
+            </label>
+
+            <label className="md:col-span-2 xl:col-span-3">
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Observaciones
+              </span>
+              <textarea
+                rows="3"
+                value={editForm.notes}
+                onChange={(event) =>
+                  updateEditField("notes", event.target.value)
+                }
+                disabled={savingContact}
+                className="mt-2 w-full resize-y rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-gray-200 pt-4">
+            <button
+              type="button"
+              onClick={cancelContactEdit}
+              disabled={savingContact}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+            >
+              <FaTimes />
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={saveContactChanges}
+              disabled={savingContact}
+              className="inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <FaSave />
+              {savingContact ? "Guardando..." : "Guardar cambios"}
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <InfoValue
@@ -490,6 +842,11 @@ export default function CRMContactDetailPage() {
                 <Link
                   className="mt-4 flex w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                   to={`/admin/crm/colegios/${school.id}`}
+                  state={{
+                    from: `/admin/crm/contactos/${id}`,
+                    fromLabel: contact.full_name,
+                    fromType: "contact",
+                  }}
                 >
                   Abrir colegio
                 </Link>
