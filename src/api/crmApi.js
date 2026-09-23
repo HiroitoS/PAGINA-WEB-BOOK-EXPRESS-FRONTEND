@@ -234,3 +234,50 @@ export async function getCRMOpportunity(opportunityId) {
 
   return response.data;
 }
+
+export async function getCRMContacts(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/contacts/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+export async function getCRMContact(contactId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/contacts/${contactId}/`,
+  );
+
+  return response.data;
+}
+
+export async function getCRMContactActivities(
+  contactId,
+  params = {},
+) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/contacts/${contactId}/activities/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+export async function getCRMContactWorkItems(
+  contactId,
+  params = {},
+) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/contacts/${contactId}/work-items/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
