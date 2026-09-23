@@ -19,6 +19,9 @@ import {
 
 import {
   createCRMSchoolActivity,
+  createCRMSchoolEvent,
+  createCRMSchoolReminder,
+  createCRMSchoolTask,
   getCRMContact,
   getCRMContactActivities,
   getCRMContactWorkItems,
@@ -111,6 +114,10 @@ function createInitialActivityForm() {
     result: "",
     occurred_at: getCurrentLocalDateTimeValue(),
     is_important: false,
+    schedule_next_action: false,
+    next_action_type: "task",
+    next_action_title: "",
+    next_action_at: "",
   };
 }
 
@@ -413,6 +420,24 @@ export default function CRMContactDetailPage() {
       return;
     }
 
+    let nextActionAt = null;
+
+    if (activityForm.schedule_next_action) {
+      if (!activityForm.next_action_title.trim()) {
+        setActivityErrorMessage("Ingresa el título de la próxima acción.");
+        return;
+      }
+
+      nextActionAt = new Date(activityForm.next_action_at);
+
+      if (Number.isNaN(nextActionAt.getTime())) {
+        setActivityErrorMessage(
+          "Ingresa una fecha y hora válidas para la próxima acción.",
+        );
+        return;
+      }
+    }
+
     const payload = {
       activity_type: activityForm.activity_type,
       summary: activityForm.summary.trim(),
@@ -427,17 +452,52 @@ export default function CRMContactDetailPage() {
       setActivityErrorMessage("");
       setActivitySuccessMessage("");
 
-      await createCRMSchoolActivity(school.id, payload);
+      const createdActivity = await createCRMSchoolActivity(
+        school.id,
+        payload,
+      );
 
-      const activitiesData = await getCRMContactActivities(id, {
-        page_size: 50,
-      });
+      if (activityForm.schedule_next_action && nextActionAt) {
+        const commonWorkItem = {
+          title: activityForm.next_action_title.trim(),
+          contact: Number(id),
+          origin_activity: createdActivity.id,
+        };
+
+        if (activityForm.next_action_type === "event") {
+          await createCRMSchoolEvent(school.id, {
+            ...commonWorkItem,
+            start_at: nextActionAt.toISOString(),
+            event_type: "meeting",
+          });
+        } else if (activityForm.next_action_type === "reminder") {
+          await createCRMSchoolReminder(school.id, {
+            ...commonWorkItem,
+            remind_at: nextActionAt.toISOString(),
+          });
+        } else {
+          await createCRMSchoolTask(school.id, {
+            ...commonWorkItem,
+            due_at: nextActionAt.toISOString(),
+          });
+        }
+      }
+
+      const [activitiesData, workItemsData] = await Promise.all([
+        getCRMContactActivities(id, { page_size: 50 }),
+        getCRMContactWorkItems(id, { page_size: 50 }),
+      ]);
 
       setActivities(normalizeResults(activitiesData));
+      setWorkItems(normalizeResults(workItemsData));
       setRegisteringActivity(false);
       setActivityForm(createInitialActivityForm());
       setActivityFilter("all");
-      setActivitySuccessMessage("La actividad fue registrada correctamente.");
+      setActivitySuccessMessage(
+        activityForm.schedule_next_action
+          ? "La actividad y la próxima acción fueron registradas correctamente."
+          : "La actividad fue registrada correctamente.",
+      );
     } catch (error) {
       setActivityErrorMessage(
         getErrorMessage(
@@ -1031,6 +1091,94 @@ export default function CRMContactDetailPage() {
                         className="mt-2 w-full resize-y rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                       />
                     </label>
+
+                    <div className="md:col-span-2 rounded-2xl border border-gray-200 bg-white p-4">
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={activityForm.schedule_next_action}
+                          onChange={(event) =>
+                            updateActivityField(
+                              "schedule_next_action",
+                              event.target.checked,
+                            )
+                          }
+                          disabled={savingActivity}
+                          className="mt-0.5 h-4 w-4 accent-red-700"
+                        />
+                        <span>
+                          <span className="block text-sm font-black text-gray-950">
+                            Programar próxima acción
+                          </span>
+                          <span className="mt-1 block text-xs leading-5 text-gray-500">
+                            La acción quedará vinculada a este contacto y a su
+                            colegio, y aparecerá también en ToDo / Agenda.
+                          </span>
+                        </span>
+                      </label>
+
+                      {activityForm.schedule_next_action ? (
+                        <div className="mt-4 grid gap-3 md:grid-cols-3">
+                          <label>
+                            <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                              Tipo
+                            </span>
+                            <select
+                              value={activityForm.next_action_type}
+                              onChange={(event) =>
+                                updateActivityField(
+                                  "next_action_type",
+                                  event.target.value,
+                                )
+                              }
+                              disabled={savingActivity}
+                              className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                            >
+                              <option value="task">Tarea</option>
+                              <option value="event">Reunión / cita</option>
+                              <option value="reminder">Recordatorio</option>
+                            </select>
+                          </label>
+
+                          <label className="md:col-span-2">
+                            <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                              Próxima acción
+                            </span>
+                            <input
+                              type="text"
+                              value={activityForm.next_action_title}
+                              onChange={(event) =>
+                                updateActivityField(
+                                  "next_action_title",
+                                  event.target.value,
+                                )
+                              }
+                              disabled={savingActivity}
+                              placeholder="Ej. Enviar propuesta y llamar al director"
+                              className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                            />
+                          </label>
+
+                          <label className="md:col-span-3">
+                            <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                              Fecha y hora programada
+                            </span>
+                            <input
+                              type="datetime-local"
+                              value={activityForm.next_action_at}
+                              onChange={(event) =>
+                                updateActivityField(
+                                  "next_action_at",
+                                  event.target.value,
+                                )
+                              }
+                              disabled={savingActivity}
+                              className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                            />
+                          </label>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div className="mt-4 flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
