@@ -18,12 +18,22 @@ import {
   updateCRMSchoolContact,
 } from "../../../api/crmApi";
 
+const RELATIONSHIP_LEVELS = [
+  { value: "1", label: "Contacto inicial" },
+  { value: "2", label: "Relación en desarrollo" },
+  { value: "3", label: "Buena relación" },
+  { value: "4", label: "Relación sólida" },
+  { value: "5", label: "Relación estratégica" },
+];
+
 const EMPTY_FORM = {
   full_name: "",
   position: "",
   contact_number: "",
   alternate_phone: "",
   email: "",
+  decision_role: "",
+  relationship_level: "",
   notes: "",
   is_primary: false,
   is_active: true,
@@ -65,6 +75,10 @@ function contactToForm(contact) {
     contact_number: contactNumber,
     alternate_phone: alternatePhone,
     email: contact.email || "",
+    decision_role: contact.decision_role || "",
+    relationship_level: contact.relationship_level
+      ? String(contact.relationship_level)
+      : "",
     notes: contact.notes || "",
     is_primary: Boolean(contact.is_primary),
     is_active: Boolean(contact.is_active),
@@ -191,6 +205,10 @@ export default function SchoolContactsSection({
       phone: alternatePhone || contactNumber,
       whatsapp: contactNumber,
       email: form.email.trim(),
+      decision_role: form.decision_role,
+      relationship_level: form.relationship_level
+        ? Number(form.relationship_level)
+        : null,
       notes: form.notes.trim(),
       is_primary: form.is_primary,
       is_active: form.is_active,
@@ -396,6 +414,49 @@ export default function SchoolContactsSection({
               />
             </label>
 
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Rol en la decisión
+              </span>
+
+              <select
+                value={form.decision_role}
+                onChange={(event) =>
+                  updateField("decision_role", event.target.value)
+                }
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
+              >
+                <option value="">Sin clasificar</option>
+                <option value="decision_maker">Decisor</option>
+                <option value="influencer">Influenciador</option>
+                <option value="other">Otro</option>
+              </select>
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Relacionamiento
+              </span>
+
+              <select
+                value={form.relationship_level}
+                onChange={(event) =>
+                  updateField("relationship_level", event.target.value)
+                }
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
+              >
+                <option value="">Sin evaluar</option>
+                {RELATIONSHIP_LEVELS.map((relationship) => (
+                  <option
+                    key={relationship.value}
+                    value={relationship.value}
+                  >
+                    {relationship.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <label className="sm:col-span-2 xl:col-span-3">
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
                 Observaciones
@@ -542,6 +603,22 @@ export default function SchoolContactsSection({
                       <p className="mt-1 text-sm text-gray-500">
                         {contact.position || "Cargo no registrado"}
                       </p>
+
+                      {contact.decision_role_display ||
+                      contact.relationship_level ? (
+                        <p className="mt-1 text-xs font-semibold text-gray-500">
+                          {contact.decision_role_display || "Sin clasificar"}
+                          {contact.relationship_level
+                            ? ` · ${
+                                RELATIONSHIP_LEVELS.find(
+                                  (relationship) =>
+                                    relationship.value ===
+                                    String(contact.relationship_level),
+                                )?.label || "Sin evaluar"
+                              }`
+                            : ""}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 
