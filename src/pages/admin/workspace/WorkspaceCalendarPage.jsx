@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
@@ -9,6 +9,7 @@ import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
 import "@fullcalendar/react/themes/classic/palette.css";
 import {
+  FaArrowLeft,
   FaCalendarAlt,
   FaCheckCircle,
   FaChevronDown,
@@ -813,6 +814,20 @@ function formatWeekDayLabel(value) {
 export default function WorkspaceCalendarPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const returnPath =
+    typeof location.state?.from === "string" &&
+    location.state.from.startsWith("/admin/crm/")
+      ? location.state.from
+      : "";
+
+  const returnLabel =
+    typeof location.state?.fromLabel === "string" &&
+    location.state.fromLabel.trim()
+      ? location.state.fromLabel
+      : "CRM";
+
   const canAssignToOthers = userHasPermission(
     user,
     ["workspaces.assign_work"]
@@ -1381,6 +1396,17 @@ export default function WorkspaceCalendarPage() {
             </div>
 
             <div className="grid gap-2 sm:flex sm:flex-wrap">
+              {returnPath ? (
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-gray-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 sm:py-3"
+                  type="button"
+                  onClick={() => navigate(returnPath)}
+                >
+                  <FaArrowLeft />
+                  Volver a {returnLabel}
+                </button>
+              ) : null}
+
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white px-4 py-2.5 text-sm font-black text-gray-950 transition hover:bg-gray-100 sm:py-3"
                 type="button"
