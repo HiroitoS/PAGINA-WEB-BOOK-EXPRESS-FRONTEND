@@ -32,6 +32,55 @@ const ACTIVITY_FILTERS = [
   { value: "follow_up", label: "Seguimientos" },
 ];
 
+const RELATIONSHIP_LEVELS = [
+  {
+    value: "1",
+    label: "Contacto inicial",
+    description: "Existe comunicación, pero el vínculo todavía es limitado.",
+  },
+  {
+    value: "2",
+    label: "Relación en desarrollo",
+    description: "Hay contacto recurrente y apertura para continuar conversando.",
+  },
+  {
+    value: "3",
+    label: "Buena relación",
+    description: "Existe confianza y comunicación comercial activa.",
+  },
+  {
+    value: "4",
+    label: "Relación sólida",
+    description: "El vínculo es estable y facilita el avance comercial.",
+  },
+  {
+    value: "5",
+    label: "Relación estratégica",
+    description: "Existe alta confianza, acceso y colaboración con el contacto.",
+  },
+];
+
+function getRelationshipLabel(value) {
+  const normalizedValue = String(value ?? "");
+  const option = RELATIONSHIP_LEVELS.find(
+    (relationship) => relationship.value === normalizedValue,
+  );
+
+  return option?.label || "Sin evaluar";
+}
+
+function getRelationshipDescription(value) {
+  const normalizedValue = String(value ?? "");
+  const option = RELATIONSHIP_LEVELS.find(
+    (relationship) => relationship.value === normalizedValue,
+  );
+
+  return (
+    option?.description ||
+    "Selecciona el nivel que mejor describa la relación actual con este contacto."
+  );
+}
+
 function normalizeResults(data) {
   if (Array.isArray(data)) {
     return data;
@@ -565,12 +614,15 @@ export default function CRMContactDetailPage() {
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
               >
                 <option value="">Sin evaluar</option>
-                <option value="1">1 / 5</option>
-                <option value="2">2 / 5</option>
-                <option value="3">3 / 5</option>
-                <option value="4">4 / 5</option>
-                <option value="5">5 / 5</option>
+                {RELATIONSHIP_LEVELS.map((relationship) => (
+                  <option key={relationship.value} value={relationship.value}>
+                    {relationship.label}
+                  </option>
+                ))}
               </select>
+              <span className="mt-2 block text-xs leading-5 text-gray-500">
+                {getRelationshipDescription(editForm.relationship_level)}
+              </span>
             </label>
 
             <label>
@@ -661,11 +713,11 @@ export default function CRMContactDetailPage() {
         <InfoValue
           icon={FaBriefcase}
           label="Relacionamiento"
-          value={
+          value={getRelationshipLabel(
             Number.isInteger(relationshipLevel) && relationshipLevel > 0
-              ? `${relationshipLevel}/5`
-              : "Sin evaluar"
-          }
+              ? relationshipLevel
+              : "",
+          )}
         />
         <InfoValue
           icon={FaStar}
