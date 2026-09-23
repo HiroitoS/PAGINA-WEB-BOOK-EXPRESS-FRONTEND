@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  FaAddressBook,
   FaBars,
   FaBell,
   FaBookOpen,
@@ -139,11 +140,17 @@ const NAV_SECTIONS = [
         permissions: ["crm.view_crm"],
       },
       {
+        label: "Contactos",
+        to: "/admin/crm/contactos",
+        icon: <FaAddressBook />,
+        permissions: ["crm.view_crm"],
+      },
+      {
         label: "Colegios",
         to: "/admin/crm/colegios",
         icon: <FaSchool />,
         permissions: ["crm.view_crm"],
-    },
+      },
     ],
   },
 ];
