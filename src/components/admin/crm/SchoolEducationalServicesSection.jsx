@@ -11,6 +11,7 @@ import {
   createCRMSchoolEducationalService,
   createCRMSchoolPopulation,
   getCRMSchool,
+  getCRMReferenceGrades,
   getCRMReferenceLevels,
   updateCRMSchoolEducationalService,
 } from "../../../api/crmApi";
@@ -24,6 +25,7 @@ const LEVEL_ORDER = {
 };
 
 let temporaryRowCounter = 0;
+let temporaryDetailCounter = 0;
 
 function normalizeText(value) {
   return String(value || "")
@@ -41,6 +43,11 @@ function getErrorMessage(error, fallback) {
   if (data && typeof data === "object") {
     const messages = Object.values(data)
       .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .flatMap((value) =>
+        value && typeof value === "object"
+          ? Object.values(value)
+          : [value],
+      )
       .filter((value) => typeof value === "string" && value.trim());
 
     if (messages.length > 0) {
@@ -51,8 +58,47 @@ function getErrorMessage(error, fallback) {
   return fallback;
 }
 
+function createDetailRow(detail) {
+  return {
+    clientId: `detail-${detail.id}`,
+    id: detail.id,
+    gradeId: String(detail.grade?.id || ""),
+    gradeName: detail.grade?.name || "Grado no registrado",
+    sectionCount: String(detail.section_count ?? ""),
+    studentsPerSection: String(detail.students_per_section ?? ""),
+  };
+}
+
+function createEmptyDetail() {
+  temporaryDetailCounter += 1;
+
+  return {
+    clientId: `new-detail-${temporaryDetailCounter}`,
+    id: null,
+    gradeId: "",
+    gradeName: "",
+    sectionCount: "",
+    studentsPerSection: "",
+  };
+}
+
+function getDetailsSignature(details) {
+  return JSON.stringify(
+    details
+      .map((detail) => ({
+        gradeId: Number(detail.gradeId),
+        sectionCount: Number(detail.sectionCount),
+        studentsPerSection: Number(detail.studentsPerSection),
+      }))
+      .sort((a, b) => a.gradeId - b.gradeId),
+  );
+}
+
 function createServiceRow(service) {
   const population = service.latest_population;
+  const details = Array.isArray(population?.details)
+    ? population.details.map(createDetailRow)
+    : [];
 
   return {
     clientId: `service-${service.id}`,
@@ -65,9 +111,11 @@ function createServiceRow(service) {
       population?.student_count != null
         ? String(population.student_count)
         : "",
+    details,
     originalIsActive: Boolean(service.is_active),
     originalPopulationYear: population?.year ?? null,
     originalStudentCount: population?.student_count ?? null,
+    originalDetailsSignature: getDetailsSignature(details),
   };
 }
 
@@ -82,9 +130,11 @@ function createEmptyRow() {
     isActive: true,
     populationYear: String(CURRENT_YEAR),
     studentCount: "",
+    details: [],
     originalIsActive: true,
     originalPopulationYear: null,
     originalStudentCount: null,
+    originalDetailsSignature: "[]",
   };
 }
 
@@ -96,14 +146,44 @@ function buildRows(school) {
   return school.educational_services.map(createServiceRow);
 }
 
+function calculateDetailTotal(detail) {
+  const sections = Number(detail.sectionCount);
+  const studentsPerSection = Number(detail.studentsPerSection);
+
+  if (
+    !Number.isInteger(sections) ||
+    sections <= 0 ||
+    !Number.isInteger(studentsPerSection) ||
+    studentsPerSection <= 0
+  ) {
+    return 0;
+  }
+
+  return sections * studentsPerSection;
+}
+
+function calculateRowTotal(row) {
+  if (row.details.length > 0) {
+    return row.details.reduce(
+      (total, detail) => total + calculateDetailTotal(detail),
+      0,
+    );
+  }
+
+  const studentCount = Number(row.studentCount);
+
+  return Number.isFinite(studentCount) ? studentCount : 0;
+}
+
 export default function SchoolEducationalServicesSection({
   school,
   onSchoolUpdated,
 }) {
   const [levels, setLevels] = useState([]);
+  const [grades, setGrades] = useState([]);
   const [rows, setRows] = useState(() => buildRows(school));
   const [editing, setEditing] = useState(false);
-  const [loadingLevels, setLoadingLevels] = useState(true);
+  const [loadingReferences, setLoadingReferences] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -111,30 +191,34 @@ export default function SchoolEducationalServicesSection({
   useEffect(() => {
     let ignore = false;
 
-    async function loadLevels() {
+    async function loadReferences() {
       try {
-        const data = await getCRMReferenceLevels();
+        const [levelData, gradeData] = await Promise.all([
+          getCRMReferenceLevels(),
+          getCRMReferenceGrades(),
+        ]);
 
         if (!ignore) {
-          setLevels(data);
+          setLevels(levelData);
+          setGrades(gradeData);
         }
       } catch (error) {
         if (!ignore) {
           setErrorMessage(
             getErrorMessage(
               error,
-              "No se pudieron cargar los niveles educativos.",
+              "No se pudieron cargar los niveles y grados educativos.",
             ),
           );
         }
       } finally {
         if (!ignore) {
-          setLoadingLevels(false);
+          setLoadingReferences(false);
         }
       }
     }
 
-    loadLevels();
+    loadReferences();
 
     return () => {
       ignore = true;
@@ -158,6 +242,19 @@ export default function SchoolEducationalServicesSection({
       });
   }, [levels]);
 
+  const availableGrades = useMemo(() => {
+    return [...grades].sort((a, b) => {
+      const orderA = Number(a.order) || 0;
+      const orderB = Number(b.order) || 0;
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      return a.name.localeCompare(b.name, "es");
+    });
+  }, [grades]);
+
   const selectedLevelIds = useMemo(
     () =>
       new Set(
@@ -170,21 +267,31 @@ export default function SchoolEducationalServicesSection({
 
   const displayRows = editing ? rows : buildRows(school);
 
-  const hasPopulationData = displayRows.some(
-    (row) => row.studentCount !== "",
+  const activePopulationRows = displayRows.filter(
+    (row) =>
+      row.isActive &&
+      (row.studentCount !== "" || row.details.length > 0),
   );
 
-  const currentPopulationTotal = displayRows.reduce((total, row) => {
-    if (!row.isActive || row.studentCount === "") {
-      return total;
-    }
+  const currentPopulationTotal = activePopulationRows.reduce(
+    (total, row) => total + calculateRowTotal(row),
+    0,
+  );
 
-    const studentCount = Number(row.studentCount);
+  const populationYears = [
+    ...new Set(
+      activePopulationRows
+        .map((row) => Number(row.populationYear))
+        .filter((year) => Number.isInteger(year) && year > 0),
+    ),
+  ];
 
-    return Number.isFinite(studentCount)
-      ? total + studentCount
-      : total;
-  }, 0);
+  const campaignLabel =
+    populationYears.length === 1
+      ? `Campaña ${populationYears[0]}`
+      : populationYears.length > 1
+        ? "Vigencia por nivel"
+        : `Campaña ${CURRENT_YEAR}`;
 
   const canAddLevel = availableLevels.some(
     (level) => !selectedLevelIds.has(level.id),
@@ -240,6 +347,59 @@ export default function SchoolEducationalServicesSection({
     );
   }
 
+  function addDetailRow(serviceClientId) {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.clientId === serviceClientId
+          ? {
+              ...row,
+              details: [...row.details, createEmptyDetail()],
+            }
+          : row,
+      ),
+    );
+  }
+
+  function updateDetail(
+    serviceClientId,
+    detailClientId,
+    field,
+    value,
+  ) {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.clientId === serviceClientId
+          ? {
+              ...row,
+              details: row.details.map((detail) =>
+                detail.clientId === detailClientId
+                  ? {
+                      ...detail,
+                      [field]: value,
+                    }
+                  : detail,
+              ),
+            }
+          : row,
+      ),
+    );
+  }
+
+  function removeDetailRow(serviceClientId, detailClientId) {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.clientId === serviceClientId
+          ? {
+              ...row,
+              details: row.details.filter(
+                (detail) => detail.clientId !== detailClientId,
+              ),
+            }
+          : row,
+      ),
+    );
+  }
+
   function validateRows() {
     const levelIds = [];
 
@@ -252,7 +412,53 @@ export default function SchoolEducationalServicesSection({
 
       levelIds.push(levelId);
 
-      if (
+      const hasPopulation =
+        row.details.length > 0 ||
+        String(row.studentCount).trim() !== "";
+
+      if (hasPopulation) {
+        const year = Number(row.populationYear);
+
+        if (!Number.isInteger(year) || year <= 0) {
+          return "El año de población debe ser válido.";
+        }
+      }
+
+      if (row.details.length > 0) {
+        const gradeIds = [];
+
+        for (const detail of row.details) {
+          const gradeId = Number(detail.gradeId);
+          const sectionCount = Number(detail.sectionCount);
+          const studentsPerSection = Number(
+            detail.studentsPerSection,
+          );
+
+          if (!Number.isInteger(gradeId) || gradeId <= 0) {
+            return "Selecciona el grado en todas las filas de población.";
+          }
+
+          if (
+            !Number.isInteger(sectionCount) ||
+            sectionCount <= 0
+          ) {
+            return "La cantidad de secciones debe ser mayor que cero.";
+          }
+
+          if (
+            !Number.isInteger(studentsPerSection) ||
+            studentsPerSection <= 0
+          ) {
+            return "Los alumnos por sección deben ser mayores que cero.";
+          }
+
+          gradeIds.push(gradeId);
+        }
+
+        if (new Set(gradeIds).size !== gradeIds.length) {
+          return "No puedes registrar dos veces el mismo grado en un nivel.";
+        }
+      } else if (
         row.originalStudentCount != null &&
         String(row.studentCount).trim() === ""
       ) {
@@ -260,15 +466,8 @@ export default function SchoolEducationalServicesSection({
           "La población vigente no se elimina dejando el campo vacío. " +
           "Registra un nuevo dato cuando corresponda."
         );
-      }
-
-      if (String(row.studentCount).trim() !== "") {
-        const year = Number(row.populationYear);
+      } else if (String(row.studentCount).trim() !== "") {
         const studentCount = Number(row.studentCount);
-
-        if (!Number.isInteger(year) || year <= 0) {
-          return "El año de población debe ser válido.";
-        }
 
         if (!Number.isInteger(studentCount) || studentCount < 0) {
           return "La cantidad de alumnos debe ser un número válido.";
@@ -321,34 +520,60 @@ export default function SchoolEducationalServicesSection({
           serviceId = service.id;
         }
 
-        if (String(row.studentCount).trim() !== "") {
-          const year = Number(row.populationYear);
-          const studentCount = Number(row.studentCount);
+        const hasPopulation =
+          row.details.length > 0 ||
+          String(row.studentCount).trim() !== "";
 
-          const populationChanged =
-            row.originalPopulationYear !== year ||
-            row.originalStudentCount !== studentCount;
-
-          if (populationChanged) {
-            await createCRMSchoolPopulation(
-              school.id,
-              serviceId,
-              {
-                year,
-                student_count: studentCount,
-                source: "manual",
-                source_detail: "",
-              },
-            );
-          }
+        if (!hasPopulation) {
+          continue;
         }
+
+        const year = Number(row.populationYear);
+        const detailsSignature = getDetailsSignature(row.details);
+        const studentCount =
+          row.details.length > 0
+            ? calculateRowTotal(row)
+            : Number(row.studentCount);
+
+        const populationChanged =
+          row.originalPopulationYear !== year ||
+          row.originalStudentCount !== studentCount ||
+          row.originalDetailsSignature !== detailsSignature;
+
+        if (!populationChanged) {
+          continue;
+        }
+
+        const payload = {
+          year,
+          source: "manual",
+          source_detail: "",
+        };
+
+        if (row.details.length > 0) {
+          payload.details = row.details.map((detail) => ({
+            grade: Number(detail.gradeId),
+            section_count: Number(detail.sectionCount),
+            students_per_section: Number(
+              detail.studentsPerSection,
+            ),
+          }));
+        } else {
+          payload.student_count = studentCount;
+        }
+
+        await createCRMSchoolPopulation(
+          school.id,
+          serviceId,
+          payload,
+        );
       }
 
       const updatedSchool = await getCRMSchool(school.id);
 
       setRows(buildRows(updatedSchool));
       setEditing(false);
-      setSuccessMessage("La cobertura educativa fue actualizada.");
+      setSuccessMessage("La población escolar fue actualizada.");
 
       if (onSchoolUpdated) {
         onSchoolUpdated(updatedSchool);
@@ -357,7 +582,7 @@ export default function SchoolEducationalServicesSection({
       setErrorMessage(
         getErrorMessage(
           error,
-          "No se pudo actualizar la cobertura educativa.",
+          "No se pudo actualizar la población escolar.",
         ),
       );
     } finally {
@@ -369,16 +594,23 @@ export default function SchoolEducationalServicesSection({
     <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-wide text-red-700">
-            Cobertura educativa
-          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <p className="text-xs font-black uppercase tracking-wide text-red-700">
+              Población escolar
+            </p>
+            <span className="text-xs font-bold text-gray-500">
+              {campaignLabel}
+            </span>
+          </div>
 
           <h2 className="mt-1 text-xl font-black text-gray-950">
-            Niveles y población
+            Información vigente del colegio
           </h2>
 
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
-            Registra los niveles que atiende el colegio y la población vigente de cada uno.
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-500">
+            Registra la población por nivel, grado y secciones. Los
+            totales se calculan automáticamente cuando existe
+            desglose.
           </p>
         </div>
 
@@ -389,7 +621,7 @@ export default function SchoolEducationalServicesSection({
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700"
           >
             <FaEdit />
-            Gestionar niveles
+            Gestionar
           </button>
         ) : null}
       </div>
@@ -408,221 +640,452 @@ export default function SchoolEducationalServicesSection({
 
       {!editing ? (
         displayRows.length > 0 ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {displayRows.map((row) => (
-              <article
-                key={row.clientId}
-                className={`rounded-2xl border p-4 ${
-                  row.isActive
-                    ? "border-gray-200 bg-gray-50"
-                    : "border-gray-200 bg-white opacity-70"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-black uppercase tracking-wide text-gray-400">
+          <>
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500">
                       Nivel
-                    </p>
-                    <h3 className="mt-1 break-words text-base font-black text-gray-950">
-                      {row.levelName}
-                    </h3>
-                  </div>
+                    </th>
+                    <th className="px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500">
+                      Grado
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wide text-gray-500">
+                      Secciones
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wide text-gray-500">
+                      Alumnos / sección
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wide text-gray-500">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
 
-                  <span
-                    className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-black ${
-                      row.isActive
-                        ? "bg-gray-950 text-white"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {row.isActive ? "Activo" : "Inactivo"}
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {displayRows.flatMap((row) => {
+                    if (row.details.length > 0) {
+                      return row.details.map((detail, index) => (
+                        <tr key={detail.clientId}>
+                          <td className="px-4 py-3 font-black text-gray-950">
+                            {index === 0 ? row.levelName : ""}
+                            {index === 0 && !row.isActive ? (
+                              <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-black text-gray-500">
+                                Inactivo
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-gray-700">
+                            {detail.gradeName}
+                          </td>
+                          <td className="px-4 py-3 text-center font-semibold text-gray-700">
+                            {detail.sectionCount}
+                          </td>
+                          <td className="px-4 py-3 text-center font-semibold text-gray-700">
+                            {detail.studentsPerSection}
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-gray-950">
+                            {calculateDetailTotal(detail)}
+                          </td>
+                        </tr>
+                      ));
+                    }
+
+                    return [
+                      <tr key={row.clientId}>
+                        <td className="px-4 py-3 font-black text-gray-950">
+                          {row.levelName}
+                          {!row.isActive ? (
+                            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-black text-gray-500">
+                              Inactivo
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500">
+                          Sin desglose
+                        </td>
+                        <td className="px-4 py-3 text-center text-gray-400">
+                          —
+                        </td>
+                        <td className="px-4 py-3 text-center text-gray-400">
+                          —
+                        </td>
+                        <td className="px-4 py-3 text-right font-black text-gray-950">
+                          {row.studentCount !== ""
+                            ? row.studentCount
+                            : "—"}
+                        </td>
+                      </tr>,
+                    ];
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {activePopulationRows.map((row) => (
+                <div
+                  key={row.clientId}
+                  className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 ring-1 ring-gray-200"
+                >
+                  <span className="text-sm font-bold text-gray-600">
+                    {row.levelName}
+                  </span>
+                  <span className="font-black text-gray-950">
+                    {calculateRowTotal(row)} alumnos
                   </span>
                 </div>
+              ))}
 
-                <div className="mt-4">
-                  <p className="text-xs font-black uppercase tracking-wide text-gray-400">
-                    Población vigente
-                  </p>
-
-                  {row.studentCount !== "" ? (
-                    <>
-                      <p className="mt-1 text-2xl font-black text-gray-950">
-                        {row.studentCount}
-                        <span className="ml-1 text-sm font-bold text-gray-500">
-                          alumnos
-                        </span>
-                      </p>
-                      <p className="mt-1 text-xs font-semibold text-gray-500">
-                        Campaña {row.populationYear}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-1 text-sm font-semibold text-gray-500">
-                      Sin registrar
-                    </p>
-                  )}
-                </div>
-              </article>
-            ))}
-
-            <article className="rounded-2xl bg-gray-950 p-4 text-white">
-              <p className="text-xs font-black uppercase tracking-wide text-gray-300">
-                Población total
-              </p>
-              <p className="mt-2 text-3xl font-black">
-                {hasPopulationData ? currentPopulationTotal : "—"}
-              </p>
-              <p className="mt-1 text-sm font-semibold text-gray-300">
-                {hasPopulationData
-                  ? "alumnos en niveles activos"
-                  : "Sin población registrada"}
-              </p>
-            </article>
-          </div>
+              <div className="flex items-center justify-between rounded-xl bg-gray-950 px-4 py-3 text-white">
+                <span className="text-sm font-bold">
+                  Población total
+                </span>
+                <span className="font-black">
+                  {activePopulationRows.length > 0
+                    ? `${currentPopulationTotal} alumnos`
+                    : "Sin registrar"}
+                </span>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
             <FaBookOpen className="mx-auto text-gray-400" />
 
             <p className="mt-2 font-black text-gray-950">
-              Sin niveles educativos registrados
+              Sin población registrada
             </p>
 
             <p className="mt-1 text-sm text-gray-500">
-              Configura los niveles que atiende el colegio.
+              Configura los niveles y registra su población escolar.
             </p>
           </div>
         )
       ) : (
-        <div className="mt-4 space-y-3">
-          {rows.map((row) => (
-            <div
-              key={row.clientId}
-              className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-            >
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <label className="text-xs font-black uppercase tracking-wide text-gray-500">
-                    Nivel educativo
-                  </label>
+        <div className="mt-4 space-y-4">
+          {rows.map((row) => {
+            const selectedGradeIds = new Set(
+              row.details
+                .map((detail) => Number(detail.gradeId))
+                .filter(
+                  (gradeId) =>
+                    Number.isInteger(gradeId) && gradeId > 0,
+                ),
+            );
 
-                  {row.id ? (
-                    <div className="mt-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-black text-gray-900">
-                      {row.levelName}
-                    </div>
-                  ) : (
-                    <select
-                      value={row.levelId}
+            return (
+              <article
+                key={row.clientId}
+                className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+              >
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Nivel educativo
+                    </label>
+
+                    {row.id ? (
+                      <div className="mt-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-black text-gray-900">
+                        {row.levelName}
+                      </div>
+                    ) : (
+                      <select
+                        value={row.levelId}
+                        onChange={(event) =>
+                          updateRow(
+                            row.clientId,
+                            "levelId",
+                            event.target.value,
+                          )
+                        }
+                        disabled={loadingReferences}
+                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
+                      >
+                        <option value="">
+                          Seleccionar nivel
+                        </option>
+
+                        {availableLevels.map((level) => {
+                          const usedByAnotherRow =
+                            selectedLevelIds.has(level.id) &&
+                            Number(row.levelId) !== level.id;
+
+                          return (
+                            <option
+                              key={level.id}
+                              value={level.id}
+                              disabled={usedByAnotherRow}
+                            >
+                              {level.name}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Año / campaña
+                    </label>
+
+                    <input
+                      type="number"
+                      min="1"
+                      value={row.populationYear}
                       onChange={(event) =>
                         updateRow(
                           row.clientId,
-                          "levelId",
+                          "populationYear",
                           event.target.value,
                         )
                       }
-                      disabled={loadingLevels}
                       className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
-                    >
-                      <option value="">
-                        Seleccionar nivel
-                      </option>
+                    />
+                  </div>
 
-                      {availableLevels.map((level) => {
-                        const usedByAnotherRow =
-                          selectedLevelIds.has(level.id) &&
-                          Number(row.levelId) !== level.id;
+                  <div className="flex items-end">
+                    <label className="flex w-full items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={row.isActive}
+                        onChange={(event) =>
+                          updateRow(
+                            row.clientId,
+                            "isActive",
+                            event.target.checked,
+                          )
+                        }
+                        className="h-4 w-4 accent-red-700"
+                      />
+                      Nivel activo
+                    </label>
+                  </div>
+                </div>
 
-                        return (
-                          <option
-                            key={level.id}
-                            value={level.id}
-                            disabled={usedByAnotherRow}
+                {row.details.length > 0 ? (
+                  <div className="mt-4 overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-black uppercase tracking-wide text-gray-500">
+                            Grado
+                          </th>
+                          <th className="px-3 py-2 text-center text-xs font-black uppercase tracking-wide text-gray-500">
+                            Secciones
+                          </th>
+                          <th className="px-3 py-2 text-center text-xs font-black uppercase tracking-wide text-gray-500">
+                            Alumnos / sección
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-black uppercase tracking-wide text-gray-500">
+                            Total
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-black uppercase tracking-wide text-gray-500">
+                            Acción
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-gray-100">
+                        {row.details.map((detail) => (
+                          <tr key={detail.clientId}>
+                            <td className="min-w-52 px-3 py-2">
+                              <select
+                                value={detail.gradeId}
+                                onChange={(event) =>
+                                  updateDetail(
+                                    row.clientId,
+                                    detail.clientId,
+                                    "gradeId",
+                                    event.target.value,
+                                  )
+                                }
+                                disabled={loadingReferences}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-semibold text-gray-900 outline-none transition focus:border-red-500"
+                              >
+                                <option value="">
+                                  Seleccionar grado
+                                </option>
+
+                                {availableGrades.map((grade) => {
+                                  const usedByAnotherDetail =
+                                    selectedGradeIds.has(
+                                      grade.id,
+                                    ) &&
+                                    Number(detail.gradeId) !==
+                                      grade.id;
+
+                                  return (
+                                    <option
+                                      key={grade.id}
+                                      value={grade.id}
+                                      disabled={
+                                        usedByAnotherDetail
+                                      }
+                                    >
+                                      {grade.name}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </td>
+
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={detail.sectionCount}
+                                onChange={(event) =>
+                                  updateDetail(
+                                    row.clientId,
+                                    detail.clientId,
+                                    "sectionCount",
+                                    event.target.value,
+                                  )
+                                }
+                                className="w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-center font-semibold text-gray-900 outline-none transition focus:border-red-500"
+                              />
+                            </td>
+
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={detail.studentsPerSection}
+                                onChange={(event) =>
+                                  updateDetail(
+                                    row.clientId,
+                                    detail.clientId,
+                                    "studentsPerSection",
+                                    event.target.value,
+                                  )
+                                }
+                                className="w-36 rounded-lg border border-gray-300 bg-white px-3 py-2 text-center font-semibold text-gray-900 outline-none transition focus:border-red-500"
+                              />
+                            </td>
+
+                            <td className="px-3 py-2 text-right font-black text-gray-950">
+                              {calculateDetailTotal(detail)}
+                            </td>
+
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeDetailRow(
+                                    row.clientId,
+                                    detail.clientId,
+                                  )
+                                }
+                                className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-black text-red-700 transition hover:bg-red-50"
+                              >
+                                <FaTimes />
+                                Quitar
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+
+                      <tfoot className="bg-gray-50">
+                        <tr>
+                          <td
+                            colSpan="3"
+                            className="px-3 py-2 text-right text-sm font-black text-gray-600"
                           >
-                            {level.name}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  )}
-                </div>
+                            Total del nivel
+                          </td>
+                          <td className="px-3 py-2 text-right font-black text-gray-950">
+                            {calculateRowTotal(row)}
+                          </td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
+                    <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
+                      <div>
+                        <label className="text-xs font-black uppercase tracking-wide text-gray-500">
+                          Población total del nivel
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={row.studentCount}
+                          onChange={(event) =>
+                            updateRow(
+                              row.clientId,
+                              "studentCount",
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Cantidad de alumnos"
+                          className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
+                        />
+                        <p className="mt-2 text-xs leading-5 text-gray-500">
+                          Puedes conservar el total actual o
+                          desglosarlo por grado y secciones.
+                        </p>
+                      </div>
 
-                <div>
-                  <label className="text-xs font-black uppercase tracking-wide text-gray-500">
-                    Alumnos
-                  </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addDetailRow(row.clientId)
+                        }
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-800 transition hover:border-red-300 hover:text-red-700"
+                      >
+                        <FaPlus />
+                        Desglosar por grado
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                  <input
-                    type="number"
-                    min="0"
-                    value={row.studentCount}
-                    onChange={(event) =>
-                      updateRow(
-                        row.clientId,
-                        "studentCount",
-                        event.target.value,
-                      )
-                    }
-                    placeholder="Cantidad"
-                    className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase tracking-wide text-gray-500">
-                    Año de población
-                  </label>
-
-                  <input
-                    type="number"
-                    min="1"
-                    value={row.populationYear}
-                    onChange={(event) =>
-                      updateRow(
-                        row.clientId,
-                        "populationYear",
-                        event.target.value,
-                      )
-                    }
-                    className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-3">
-                <label className="inline-flex items-center gap-2 text-sm font-bold text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={row.isActive}
-                    onChange={(event) =>
-                      updateRow(
-                        row.clientId,
-                        "isActive",
-                        event.target.checked,
-                      )
-                    }
-                    className="h-4 w-4 accent-red-700"
-                  />
-                  Nivel activo
-                </label>
+                {row.details.length > 0 ? (
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => addDetailRow(row.clientId)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-700 transition hover:border-red-300 hover:text-red-700"
+                    >
+                      <FaPlus />
+                      Agregar grado
+                    </button>
+                  </div>
+                ) : null}
 
                 {!row.id ? (
-                  <button
-                    type="button"
-                    onClick={() => removeNewRow(row.clientId)}
-                    className="inline-flex items-center gap-2 text-sm font-black text-red-700 hover:text-red-900"
-                  >
-                    <FaTimes />
-                    Quitar nivel
-                  </button>
+                  <div className="mt-3 border-t border-gray-200 pt-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removeNewRow(row.clientId)
+                      }
+                      className="inline-flex items-center gap-2 text-sm font-black text-red-700 hover:text-red-900"
+                    >
+                      <FaTimes />
+                      Quitar nivel
+                    </button>
+                  </div>
                 ) : null}
-              </div>
-            </div>
-          ))}
+              </article>
+            );
+          })}
 
           <div className="flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
               onClick={addLevelRow}
-              disabled={!canAddLevel || loadingLevels || saving}
+              disabled={
+                !canAddLevel ||
+                loadingReferences ||
+                saving
+              }
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-800 transition hover:border-red-300 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <FaPlus />
@@ -634,7 +1097,7 @@ export default function SchoolEducationalServicesSection({
                 type="button"
                 onClick={cancelEditing}
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <FaTimes />
                 Cancelar
@@ -644,7 +1107,7 @@ export default function SchoolEducationalServicesSection({
                 type="button"
                 onClick={saveChanges}
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <FaSave />
                 {saving ? "Guardando..." : "Guardar cambios"}
