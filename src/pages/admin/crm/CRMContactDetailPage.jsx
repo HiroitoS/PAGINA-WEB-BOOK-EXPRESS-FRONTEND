@@ -18,6 +18,7 @@ import {
 } from "react-icons/fa";
 
 import {
+  createCRMSchoolActivity,
   getCRMContact,
   getCRMContactActivities,
   getCRMContactWorkItems,
@@ -30,6 +31,19 @@ const ACTIVITY_FILTERS = [
   { value: "visit", label: "Visitas" },
   { value: "meeting", label: "Reuniones" },
   { value: "follow_up", label: "Seguimientos" },
+];
+
+const ACTIVITY_TYPES = [
+  { value: "call", label: "Llamada" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "email", label: "Correo" },
+  { value: "meeting", label: "Reunión" },
+  { value: "visit", label: "Visita" },
+  { value: "presentation", label: "Presentación" },
+  { value: "sample_delivery", label: "Entrega de muestra" },
+  { value: "sample_return", label: "Devolución de muestra" },
+  { value: "follow_up", label: "Seguimiento" },
+  { value: "other", label: "Otro" },
 ];
 
 const RELATIONSHIP_LEVELS = [
@@ -79,6 +93,25 @@ function getRelationshipDescription(value) {
     option?.description ||
     "Selecciona el nivel que mejor describa la relación actual con este contacto."
   );
+}
+
+function getCurrentLocalDateTimeValue() {
+  const now = new Date();
+  const timezoneOffset = now.getTimezoneOffset() * 60_000;
+
+  return new Date(now.getTime() - timezoneOffset)
+    .toISOString()
+    .slice(0, 16);
+}
+
+function createInitialActivityForm() {
+  return {
+    activity_type: "visit",
+    summary: "",
+    result: "",
+    occurred_at: getCurrentLocalDateTimeValue(),
+    is_important: false,
+  };
 }
 
 function normalizeResults(data) {
@@ -233,6 +266,11 @@ export default function CRMContactDetailPage() {
   const [activities, setActivities] = useState([]);
   const [workItems, setWorkItems] = useState([]);
   const [activityFilter, setActivityFilter] = useState("all");
+  const [registeringActivity, setRegisteringActivity] = useState(false);
+  const [activityForm, setActivityForm] = useState(createInitialActivityForm);
+  const [savingActivity, setSavingActivity] = useState(false);
+  const [activityErrorMessage, setActivityErrorMessage] = useState("");
+  const [activitySuccessMessage, setActivitySuccessMessage] = useState("");
   const [editingContact, setEditingContact] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [savingContact, setSavingContact] = useState(false);
@@ -329,6 +367,87 @@ export default function CRMContactDetailPage() {
       ...currentForm,
       [field]: value,
     }));
+  }
+
+  function startActivityRegistration() {
+    setActivityForm(createInitialActivityForm());
+    setActivityErrorMessage("");
+    setActivitySuccessMessage("");
+    setRegisteringActivity(true);
+  }
+
+  function cancelActivityRegistration() {
+    setRegisteringActivity(false);
+    setActivityErrorMessage("");
+  }
+
+  function updateActivityField(field, value) {
+    setActivityForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  }
+
+  async function saveCommercialActivity() {
+    if (!school?.id) {
+      setActivityErrorMessage(
+        "Este contacto no tiene un colegio vinculado para registrar la actividad.",
+      );
+      return;
+    }
+
+    if (!activityForm.summary.trim()) {
+      setActivityErrorMessage("Ingresa un resumen de la actividad.");
+      return;
+    }
+
+    if (!activityForm.result.trim()) {
+      setActivityErrorMessage("Ingresa el resultado o detalle de la actividad.");
+      return;
+    }
+
+    const occurredAt = new Date(activityForm.occurred_at);
+
+    if (Number.isNaN(occurredAt.getTime())) {
+      setActivityErrorMessage("Ingresa una fecha y hora válidas.");
+      return;
+    }
+
+    const payload = {
+      activity_type: activityForm.activity_type,
+      summary: activityForm.summary.trim(),
+      result: activityForm.result.trim(),
+      contact: Number(id),
+      occurred_at: occurredAt.toISOString(),
+      is_important: activityForm.is_important,
+    };
+
+    try {
+      setSavingActivity(true);
+      setActivityErrorMessage("");
+      setActivitySuccessMessage("");
+
+      await createCRMSchoolActivity(school.id, payload);
+
+      const activitiesData = await getCRMContactActivities(id, {
+        page_size: 50,
+      });
+
+      setActivities(normalizeResults(activitiesData));
+      setRegisteringActivity(false);
+      setActivityForm(createInitialActivityForm());
+      setActivityFilter("all");
+      setActivitySuccessMessage("La actividad fue registrada correctamente.");
+    } catch (error) {
+      setActivityErrorMessage(
+        getErrorMessage(
+          error,
+          "No se pudo registrar la actividad comercial.",
+        ),
+      );
+    } finally {
+      setSavingActivity(false);
+    }
   }
 
   async function saveContactChanges() {
@@ -774,16 +893,189 @@ export default function CRMContactDetailPage() {
         <main className="xl:col-span-2">
           <section className="rounded-3xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 p-5">
-              <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                Historial comercial
-              </p>
-              <h2 className="mt-1 text-xl font-black text-gray-950">
-                Actividades
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-gray-500">
-                Aquí se reúne la actividad registrada con este contacto sin
-                duplicar información entre contacto y colegio.
-              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                    Historial comercial
+                  </p>
+                  <h2 className="mt-1 text-xl font-black text-gray-950">
+                    Actividades
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-gray-500">
+                    Registra llamadas, visitas, reuniones y seguimientos. El
+                    mismo historial queda relacionado con este contacto y su
+                    colegio.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={startActivityRegistration}
+                  disabled={registeringActivity || !school}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <FaEdit />
+                  Registrar actividad
+                </button>
+              </div>
+
+              {activitySuccessMessage ? (
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                  {activitySuccessMessage}
+                </div>
+              ) : null}
+
+              {registeringActivity ? (
+                <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-black text-gray-950">
+                        Nueva actividad comercial
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                        El contacto y el colegio ya están vinculados
+                        automáticamente.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={cancelActivityRegistration}
+                      disabled={savingActivity}
+                      className="inline-flex items-center gap-2 self-start rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-100 disabled:opacity-50"
+                    >
+                      <FaTimes />
+                      Cerrar
+                    </button>
+                  </div>
+
+                  {activityErrorMessage ? (
+                    <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-800">
+                      {activityErrorMessage}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <label>
+                      <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Tipo de actividad
+                      </span>
+                      <select
+                        value={activityForm.activity_type}
+                        onChange={(event) =>
+                          updateActivityField(
+                            "activity_type",
+                            event.target.value,
+                          )
+                        }
+                        disabled={savingActivity}
+                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                      >
+                        {ACTIVITY_TYPES.map((activityType) => (
+                          <option
+                            key={activityType.value}
+                            value={activityType.value}
+                          >
+                            {activityType.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Fecha y hora
+                      </span>
+                      <input
+                        type="datetime-local"
+                        value={activityForm.occurred_at}
+                        onChange={(event) =>
+                          updateActivityField(
+                            "occurred_at",
+                            event.target.value,
+                          )
+                        }
+                        disabled={savingActivity}
+                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                      />
+                    </label>
+
+                    <label className="md:col-span-2">
+                      <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Resumen
+                      </span>
+                      <input
+                        type="text"
+                        value={activityForm.summary}
+                        onChange={(event) =>
+                          updateActivityField("summary", event.target.value)
+                        }
+                        disabled={savingActivity}
+                        placeholder="Ej. Reunión con el director para revisar propuesta 2027"
+                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                      />
+                    </label>
+
+                    <label className="md:col-span-2">
+                      <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Resultado / detalle
+                      </span>
+                      <textarea
+                        rows="3"
+                        value={activityForm.result}
+                        onChange={(event) =>
+                          updateActivityField("result", event.target.value)
+                        }
+                        disabled={savingActivity}
+                        placeholder="Registra qué se conversó, acuerdos, respuesta del colegio y datos útiles para el siguiente paso."
+                        className="mt-2 w-full resize-y rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="inline-flex items-center gap-2 text-sm font-bold text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={activityForm.is_important}
+                        onChange={(event) =>
+                          updateActivityField(
+                            "is_important",
+                            event.target.checked,
+                          )
+                        }
+                        disabled={savingActivity}
+                        className="h-4 w-4 accent-red-700"
+                      />
+                      Marcar como importante
+                    </label>
+
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={cancelActivityRegistration}
+                        disabled={savingActivity}
+                        className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-100 disabled:opacity-50"
+                      >
+                        <FaTimes />
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={saveCommercialActivity}
+                        disabled={savingActivity}
+                        className="inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <FaSave />
+                        {savingActivity
+                          ? "Guardando..."
+                          : "Guardar actividad"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-4 flex flex-wrap gap-2">
                 {ACTIVITY_FILTERS.map((filter) => (
