@@ -242,6 +242,42 @@ export async function createCRMSchoolActivity(
   return response.data;
 }
 
+export async function createCRMSchoolTask(
+  schoolId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/tasks/`,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function createCRMSchoolEvent(
+  schoolId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/events/`,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function createCRMSchoolReminder(
+  schoolId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/reminders/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function getCRMOpportunities(params = {}) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/opportunities/`,
