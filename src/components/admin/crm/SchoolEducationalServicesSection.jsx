@@ -730,7 +730,7 @@ export default function SchoolEducationalServicesSection({
               </table>
             </div>
 
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
               {activePopulationRows.map((row) => (
                 <div
                   key={row.clientId}
