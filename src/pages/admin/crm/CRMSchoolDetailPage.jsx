@@ -424,7 +424,7 @@ export default function CRMSchoolDetailPage() {
             </div>
           </section>
 
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
             <SummaryItem
               icon={FaUserTie}
               label="Asesor responsable"
@@ -540,7 +540,7 @@ export default function CRMSchoolDetailPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-1 xl:gap-3">
                   <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Prioridad comercial
