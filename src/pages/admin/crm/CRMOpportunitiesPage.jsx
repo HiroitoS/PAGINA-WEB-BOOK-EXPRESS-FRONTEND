@@ -108,12 +108,20 @@ function NewOpportunityPanel({
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const availableCampaigns = campaigns.filter(
-    (campaign) => campaign.status !== "closed",
+  const availableCampaigns = useMemo(
+    () =>
+      campaigns.filter(
+        (campaign) => campaign.status !== "closed",
+      ),
+    [campaigns],
   );
 
-  const availablePipelines = pipelines.filter(
-    (pipeline) => pipeline.is_active,
+  const availablePipelines = useMemo(
+    () =>
+      pipelines.filter(
+        (pipeline) => pipeline.is_active,
+      ),
+    [pipelines],
   );
 
   useEffect(() => {
