@@ -245,7 +245,7 @@ export default function CRMSchoolDetailPage() {
   const [activities, setActivities] = useState([]);
   const [workItems, setWorkItems] = useState([]);
   const [activityFilter, setActivityFilter] = useState("all");
-  const [activeInfoTab, setActiveInfoTab] = useState("population");
+  const [activeInfoTab, setActiveInfoTab] = useState("activity");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [supportingWarning, setSupportingWarning] = useState("");
@@ -574,120 +574,200 @@ export default function CRMSchoolDetailPage() {
 
             <main className="xl:col-span-6">
               <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-                <div className="border-b border-gray-200 p-5">
+                <div className="border-b border-gray-200 px-5 pt-5">
                   <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                    Historial comercial
+                    Espacio de trabajo
                   </p>
 
                   <h2 className="mt-1 text-xl font-black text-gray-950">
-                    Actividades del colegio
+                    Gestión comercial del colegio
                   </h2>
 
                   <p className="mt-1 text-sm leading-6 text-gray-500">
-                    Reúne las actividades registradas desde los contactos
-                    vinculados a este colegio.
+                    Consulta el historial, la población y las editoriales sin salir de la ficha.
                   </p>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {ACTIVITY_FILTERS.map((filter) => (
-                      <button
-                        key={filter.value}
-                        type="button"
-                        onClick={() => setActivityFilter(filter.value)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
-                          activityFilter === filter.value
-                            ? "bg-gray-950 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        {filter.label}
-                      </button>
-                    ))}
+                  <div
+                    className="mt-4 flex gap-2 overflow-x-auto pb-3"
+                    role="tablist"
+                    aria-label="Gestión comercial del colegio"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeInfoTab === "activity"}
+                      onClick={() => setActiveInfoTab("activity")}
+                      className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                        activeInfoTab === "activity"
+                          ? "bg-gray-950 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                      }`}
+                    >
+                      Actividad
+                      <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                        {activities.length}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeInfoTab === "population"}
+                      onClick={() => setActiveInfoTab("population")}
+                      className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                        activeInfoTab === "population"
+                          ? "bg-gray-950 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                      }`}
+                    >
+                      Población
+                      <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                        {school.current_population_total ?? 0}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeInfoTab === "editorials"}
+                      onClick={() => setActiveInfoTab("editorials")}
+                      className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                        activeInfoTab === "editorials"
+                          ? "bg-gray-950 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                      }`}
+                    >
+                      Editoriales
+                      <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                        {Array.isArray(school.editorial_usages)
+                          ? school.editorial_usages.length
+                          : 0}
+                      </span>
+                    </button>
                   </div>
                 </div>
 
-                <div className="p-5">
-                  {filteredActivities.length > 0 ? (
-                    <div className="space-y-3">
-                      {filteredActivities.slice(0, 12).map((activity) => (
-                        <article
-                          key={activity.id}
-                          className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                        >
-                          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
-                                  {activity.activity_type_display || "Actividad"}
-                                </span>
+                {activeInfoTab === "activity" ? (
+                  <>
+                    <div className="border-b border-gray-200 px-5 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        {ACTIVITY_FILTERS.map((filter) => (
+                          <button
+                            key={filter.value}
+                            type="button"
+                            onClick={() => setActivityFilter(filter.value)}
+                            className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
+                              activityFilter === filter.value
+                                ? "bg-gray-950 text-white"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            {filter.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                                {activity.is_important ? (
-                                  <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-200">
-                                    Importante
-                                  </span>
-                                ) : null}
+                    <div className="p-5">
+                      {filteredActivities.length > 0 ? (
+                        <div className="space-y-3">
+                          {filteredActivities.slice(0, 12).map((activity) => (
+                            <article
+                              key={activity.id}
+                              className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                            >
+                              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                                <div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
+                                      {activity.activity_type_display || "Actividad"}
+                                    </span>
+
+                                    {activity.is_important ? (
+                                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-200">
+                                        Importante
+                                      </span>
+                                    ) : null}
+                                  </div>
+
+                                  <h3 className="mt-3 font-black text-gray-950">
+                                    {activity.summary}
+                                  </h3>
+                                </div>
+
+                                <p className="text-xs font-semibold text-gray-400">
+                                  {formatDateTime(activity.occurred_at)}
+                                </p>
                               </div>
 
-                              <h3 className="mt-3 font-black text-gray-950">
-                                {activity.summary}
-                              </h3>
-                            </div>
+                              {activity.result ? (
+                                <p className="mt-3 text-sm leading-6 text-gray-600">
+                                  {activity.result}
+                                </p>
+                              ) : null}
 
-                            <p className="text-xs font-semibold text-gray-400">
-                              {formatDateTime(activity.occurred_at)}
-                            </p>
-                          </div>
+                              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500">
+                                <p>
+                                  Registrado por{" "}
+                                  <span className="font-black text-gray-700">
+                                    {activity.performed_by?.full_name ||
+                                      activity.performed_by?.username ||
+                                      "Usuario CRM"}
+                                  </span>
+                                </p>
 
-                          {activity.result ? (
-                            <p className="mt-3 text-sm leading-6 text-gray-600">
-                              {activity.result}
-                            </p>
-                          ) : null}
+                                {activity.contact ? (
+                                  <Link
+                                    to={`/admin/crm/contactos/${activity.contact.id}`}
+                                    state={{
+                                      from: `/admin/crm/colegios/${school.id}`,
+                                      fromLabel: school.name,
+                                      fromType: "school",
+                                    }}
+                                    className="font-black text-red-700 transition hover:text-red-900"
+                                  >
+                                    {activity.contact.full_name}
+                                  </Link>
+                                ) : (
+                                  <span className="font-semibold text-gray-400">
+                                    Actividad general del colegio
+                                  </span>
+                                )}
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-10 text-center">
+                          <p className="font-black text-gray-950">
+                            Sin actividades para mostrar
+                          </p>
 
-                          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500">
-                            <p>
-                              Registrado por{" "}
-                              <span className="font-black text-gray-700">
-                                {activity.performed_by?.full_name ||
-                                  activity.performed_by?.username ||
-                                  "Usuario CRM"}
-                              </span>
-                            </p>
-
-                            {activity.contact ? (
-                              <Link
-                                to={`/admin/crm/contactos/${activity.contact.id}`}
-                                state={{
-                                  from: `/admin/crm/colegios/${school.id}`,
-                                  fromLabel: school.name,
-                                  fromType: "school",
-                                }}
-                                className="font-black text-red-700 transition hover:text-red-900"
-                              >
-                                {activity.contact.full_name}
-                              </Link>
-                            ) : (
-                              <span className="font-semibold text-gray-400">
-                                Actividad general del colegio
-                              </span>
-                            )}
-                          </div>
-                        </article>
-                      ))}
+                          <p className="mt-1 text-sm leading-6 text-gray-500">
+                            Cuando un asesor registre una actividad con un contacto
+                            de este colegio, aparecerá también en esta ficha.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-10 text-center">
-                      <p className="font-black text-gray-950">
-                        Sin actividades para mostrar
-                      </p>
+                  </>
+                ) : null}
 
-                      <p className="mt-1 text-sm leading-6 text-gray-500">
-                        Cuando un asesor registre una actividad con un contacto
-                        de este colegio, aparecerá también en esta ficha.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {activeInfoTab === "population" ? (
+                  <SchoolEducationalServicesSection
+                    school={school}
+                    onSchoolUpdated={setSchool}
+                    embedded
+                  />
+                ) : null}
+
+                {activeInfoTab === "editorials" ? (
+                  <SchoolEditorialUsagesSection
+                    school={school}
+                    onSchoolUpdated={setSchool}
+                    embedded
+                  />
+                ) : null}
               </section>
             </main>
 
@@ -841,77 +921,7 @@ export default function CRMSchoolDetailPage() {
             </aside>
           </div>
 
-          <section className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Información del colegio
-                </p>
-                <h2 className="mt-1 text-xl font-black text-gray-950">
-                  Gestión institucional y comercial
-                </h2>
-                <p className="mt-1 text-sm leading-6 text-gray-500">
-                  Consulta la población y las editoriales del colegio sin duplicar información.
-                </p>
-              </div>
 
-              <div
-                className="flex gap-2 overflow-x-auto pb-1"
-                role="tablist"
-                aria-label="Información complementaria del colegio"
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeInfoTab === "population"}
-                  onClick={() => setActiveInfoTab("population")}
-                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
-                    activeInfoTab === "population"
-                      ? "bg-gray-950 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
-                  }`}
-                >
-                  Población
-                  <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
-                    {school.current_population_total ?? 0}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeInfoTab === "editorials"}
-                  onClick={() => setActiveInfoTab("editorials")}
-                  className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
-                    activeInfoTab === "editorials"
-                      ? "bg-gray-950 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
-                  }`}
-                >
-                  Editoriales
-                  <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
-                    {Array.isArray(school.editorial_usages)
-                      ? school.editorial_usages.length
-                      : 0}
-                  </span>
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {activeInfoTab === "population" ? (
-            <SchoolEducationalServicesSection
-              school={school}
-              onSchoolUpdated={setSchool}
-            />
-          ) : null}
-
-          {activeInfoTab === "editorials" ? (
-            <SchoolEditorialUsagesSection
-              school={school}
-              onSchoolUpdated={setSchool}
-            />
-          ) : null}
         </div>
       ) : null}
     </div>
