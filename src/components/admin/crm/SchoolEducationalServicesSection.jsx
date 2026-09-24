@@ -178,6 +178,7 @@ function calculateRowTotal(row) {
 export default function SchoolEducationalServicesSection({
   school,
   onSchoolUpdated,
+  embedded = false,
 }) {
   const [levels, setLevels] = useState([]);
   const [grades, setGrades] = useState([]);
@@ -591,7 +592,13 @@ export default function SchoolEducationalServicesSection({
   }
 
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <section
+      className={
+        embedded
+          ? "p-5"
+          : "rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
+      }
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
