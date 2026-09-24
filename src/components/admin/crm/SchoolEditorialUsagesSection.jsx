@@ -87,6 +87,7 @@ function EditorialOriginBadge({ usage }) {
 export default function SchoolEditorialUsagesSection({
   school,
   onSchoolUpdated,
+  embedded = false,
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingUsageId, setEditingUsageId] = useState(null);
@@ -306,7 +307,13 @@ export default function SchoolEditorialUsagesSection({
   }
 
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <section
+      className={
+        embedded
+          ? "p-5"
+          : "rounded-3xl border border-gray-200 bg-white p-5 shadow-sm"
+      }
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-red-700">
