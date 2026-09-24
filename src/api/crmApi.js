@@ -39,6 +39,15 @@ export async function getCRMSchool(schoolId) {
   return response.data;
 }
 
+export async function createCRMSchool(payload) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/schools/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function updateCRMSchool(schoolId, payload) {
   const response = await axiosClient.patch(
     `${CRM_ADMIN_BASE}/schools/${schoolId}/`,
