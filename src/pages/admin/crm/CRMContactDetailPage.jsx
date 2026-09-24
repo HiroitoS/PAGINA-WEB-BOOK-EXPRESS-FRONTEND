@@ -1398,6 +1398,11 @@ export default function CRMContactDetailPage() {
 
               <Link
                 to="/admin/workspace/calendar"
+                state={{
+                  from: `/admin/crm/contactos/${contact.id}`,
+                  fromLabel: contact.full_name,
+                  fromType: "contact",
+                }}
                 className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
               >
                 <FaCalendarAlt />
