@@ -144,9 +144,7 @@ function NewOpportunityPanel({
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-
+  function openPanel() {
     const defaultPipeline =
       String(selectedPipelineId || "")
       || String(
@@ -155,19 +153,18 @@ function NewOpportunityPanel({
           || "",
       );
 
+    const defaultCampaign = String(
+      availableCampaigns[0]?.id || "",
+    );
+
     setForm((currentForm) => ({
       ...currentForm,
       pipeline: currentForm.pipeline || defaultPipeline,
-      campaign:
-        currentForm.campaign
-        || String(availableCampaigns[0]?.id || ""),
+      campaign: currentForm.campaign || defaultCampaign,
     }));
-  }, [
-    availableCampaigns,
-    availablePipelines,
-    open,
-    selectedPipelineId,
-  ]);
+    setErrorMessage("");
+    setOpen(true);
+  }
 
   function closePanel() {
     if (saving) return;
@@ -233,7 +230,7 @@ function NewOpportunityPanel({
       <button
         className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800"
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openPanel}
       >
         <FaPlus className="text-xs" />
         Nueva oportunidad
