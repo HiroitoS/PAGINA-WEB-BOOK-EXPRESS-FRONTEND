@@ -771,7 +771,42 @@ export default function SchoolEducationalServicesSection({
           </div>
         )
       ) : (
-        <div className="mt-4 space-y-4">
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            aria-label="Cerrar gestión de población"
+            onClick={cancelEditing}
+            className="absolute inset-0 bg-gray-950/40"
+          />
+
+          <aside className="absolute inset-y-0 right-0 w-full max-w-4xl overflow-y-auto bg-white shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-gray-200 bg-white px-5 py-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                  Población escolar
+                </p>
+
+                <h3 className="mt-1 text-xl font-black text-gray-950">
+                  Gestionar población
+                </h3>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Registra niveles, grados, secciones y alumnos por sección.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={cancelEditing}
+                disabled={saving}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-950 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Cerrar"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-5">
           {rows.map((row) => {
             const selectedGradeIds = new Set(
               row.details
@@ -1121,6 +1156,8 @@ export default function SchoolEducationalServicesSection({
               </button>
             </div>
           </div>
+            </div>
+          </aside>
         </div>
       )}
     </section>
