@@ -734,24 +734,32 @@ export default function SchoolEducationalServicesSection({
               {activePopulationRows.map((row) => (
                 <div
                   key={row.clientId}
-                  className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 ring-1 ring-gray-200"
+                  className="flex min-h-20 flex-col items-center justify-center rounded-xl bg-gray-50 px-3 py-3 text-center ring-1 ring-gray-200"
                 >
-                  <span className="text-sm font-bold text-gray-600">
+                  <span className="text-xs font-black uppercase tracking-wide text-gray-500">
                     {row.levelName}
                   </span>
-                  <span className="font-black text-gray-950">
-                    {calculateRowTotal(row)} alumnos
+                  <span className="mt-1 text-lg font-black leading-none text-gray-950">
+                    {calculateRowTotal(row)}
+                  </span>
+                  <span className="mt-1 text-xs font-bold text-gray-500">
+                    alumnos
                   </span>
                 </div>
               ))}
 
-              <div className="flex items-center justify-between rounded-xl bg-gray-950 px-4 py-3 text-white">
-                <span className="text-sm font-bold">
+              <div className="flex min-h-20 flex-col items-center justify-center rounded-xl bg-gray-950 px-3 py-3 text-center text-white">
+                <span className="text-xs font-black uppercase tracking-wide text-gray-300">
                   Población total
                 </span>
-                <span className="font-black">
+                <span className="mt-1 text-lg font-black leading-none">
                   {activePopulationRows.length > 0
-                    ? `${currentPopulationTotal} alumnos`
+                    ? currentPopulationTotal
+                    : "—"}
+                </span>
+                <span className="mt-1 text-xs font-bold text-gray-300">
+                  {activePopulationRows.length > 0
+                    ? "alumnos"
                     : "Sin registrar"}
                 </span>
               </div>
@@ -776,10 +784,10 @@ export default function SchoolEducationalServicesSection({
             type="button"
             aria-label="Cerrar gestión de población"
             onClick={cancelEditing}
-            className="absolute inset-0 bg-gray-950/40"
+            className="absolute inset-0 bg-gray-950/25 backdrop-blur-sm"
           />
 
-          <aside className="absolute inset-y-0 right-0 w-full max-w-4xl overflow-y-auto bg-white shadow-2xl">
+          <aside className="absolute inset-y-0 right-0 w-full max-w-4xl overflow-y-auto border-l border-gray-200 bg-white shadow-2xl">
             <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-gray-200 bg-white px-5 py-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-red-700">
