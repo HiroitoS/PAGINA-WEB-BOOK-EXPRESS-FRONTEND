@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 
 import { getCRMSchools } from "../../../api/crmApi";
+import CRMSchoolCreatePanel from "../../../components/admin/crm/CRMSchoolCreatePanel";
 
 const INITIAL_FILTERS = {
   search: "",
@@ -209,13 +210,17 @@ export default function CRMSchoolsPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
-              Total visible
-            </p>
-            <p className="mt-1 text-2xl font-black">
-              {pagination.count}
-            </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <CRMSchoolCreatePanel />
+
+            <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Total visible
+              </p>
+              <p className="mt-1 text-2xl font-black">
+                {pagination.count}
+              </p>
+            </div>
           </div>
         </div>
       </motion.section>
