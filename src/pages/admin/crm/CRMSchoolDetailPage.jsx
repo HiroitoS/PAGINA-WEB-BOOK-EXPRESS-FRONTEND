@@ -130,9 +130,9 @@ function StatusBadge({ isActive }) {
 
 function SummaryItem({ icon: Icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 bg-white px-3 py-3 shadow-sm sm:px-4">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-xs text-white">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-xs text-white sm:h-9 sm:w-9">
           <Icon />
         </div>
 
@@ -224,7 +224,7 @@ function LoadingState() {
   return (
     <div className="space-y-4">
       <div className="h-28 animate-pulse rounded-3xl bg-gray-200" />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
           <div
             key={index}
@@ -456,8 +456,8 @@ export default function CRMSchoolDetailPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-4 xl:grid-cols-12">
-            <aside className="space-y-4 xl:col-span-3">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-12">
+            <aside className="order-3 min-w-0 space-y-4 xl:order-none xl:col-span-3">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-wide text-red-700">
                   Colegio
@@ -467,7 +467,7 @@ export default function CRMSchoolDetailPage() {
                   Datos principales
                 </h2>
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-1 xl:gap-3">
                   <InfoItem
                     icon={FaPhoneAlt}
                     label="Teléfono"
@@ -572,9 +572,9 @@ export default function CRMSchoolDetailPage() {
               </section>
             </aside>
 
-            <main className="xl:col-span-6">
+            <main className="order-1 min-w-0 xl:order-none xl:col-span-6">
               <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-                <div className="border-b border-gray-200 px-5 pt-5">
+                <div className="border-b border-gray-200 px-4 pt-4 sm:px-5 sm:pt-5">
                   <p className="text-xs font-black uppercase tracking-wide text-red-700">
                     Espacio de trabajo
                   </p>
@@ -649,8 +649,8 @@ export default function CRMSchoolDetailPage() {
 
                 {activeInfoTab === "activity" ? (
                   <>
-                    <div className="border-b border-gray-200 px-5 py-4">
-                      <div className="flex flex-wrap gap-2">
+                    <div className="border-b border-gray-200 px-4 py-3 sm:px-5 sm:py-4">
+                      <div className="flex gap-2 overflow-x-auto pb-1">
                         {ACTIVITY_FILTERS.map((filter) => (
                           <button
                             key={filter.value}
@@ -668,7 +668,7 @@ export default function CRMSchoolDetailPage() {
                       </div>
                     </div>
 
-                    <div className="p-5">
+                    <div className="p-4 sm:p-5">
                       {filteredActivities.length > 0 ? (
                         <div className="space-y-3">
                           {filteredActivities.slice(0, 12).map((activity) => (
@@ -771,7 +771,7 @@ export default function CRMSchoolDetailPage() {
               </section>
             </main>
 
-            <aside className="space-y-4 xl:col-span-3">
+            <aside className="order-2 min-w-0 space-y-4 xl:order-none xl:col-span-3">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>
