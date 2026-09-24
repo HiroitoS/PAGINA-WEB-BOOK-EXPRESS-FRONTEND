@@ -310,12 +310,55 @@ export async function createCRMSchoolReminder(
   return response.data;
 }
 
+export async function getCRMCampaigns(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/campaigns/`,
+    {
+      params,
+    },
+  );
+
+  return normalizeList(response.data);
+}
+
+export async function getCRMPipelines(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/pipelines/`,
+    {
+      params,
+    },
+  );
+
+  return normalizeList(response.data);
+}
+
 export async function getCRMOpportunities(params = {}) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/opportunities/`,
     {
       params,
     },
+  );
+
+  return response.data;
+}
+
+export async function createCRMOpportunity(payload) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/`,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function changeCRMOpportunityStage(
+  opportunityId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/change-stage/`,
+    payload,
   );
 
   return response.data;
