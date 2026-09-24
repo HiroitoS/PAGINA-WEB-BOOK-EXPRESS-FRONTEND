@@ -359,10 +359,10 @@ export default function SchoolEditorialUsagesSection({
             type="button"
             aria-label="Cerrar gestión editorial"
             onClick={closeForm}
-            className="absolute inset-0 bg-gray-950/40"
+            className="absolute inset-0 bg-gray-950/25 backdrop-blur-sm"
           />
 
-          <aside className="absolute inset-y-0 right-0 w-full max-w-3xl overflow-y-auto bg-white shadow-2xl">
+          <aside className="absolute inset-y-0 right-0 w-full max-w-3xl overflow-y-auto border-l border-gray-200 bg-white shadow-2xl">
             <form onSubmit={handleSubmit}>
               <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-gray-200 bg-white px-5 py-4">
                 <div>
