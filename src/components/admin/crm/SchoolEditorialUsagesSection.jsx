@@ -645,68 +645,73 @@ export default function SchoolEditorialUsagesSection({
       ) : null}
 
       {usages.length > 0 ? (
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div
+          className={
+            embedded
+              ? "mt-4 space-y-3"
+              : "mt-4 grid gap-3 md:grid-cols-2"
+          }
+        >
           {usages.map((usage) => (
             <article
               key={usage.id}
-              className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+              className="rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:p-4"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-950 ring-1 ring-gray-200">
                     <FaBook />
                   </div>
 
-                    <div className="min-w-0">
-                        <p className="wrap-break-words font-black text-gray-950">
-                            {getEditorialName(usage)}
-                        </p>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="wrap-break-words font-black text-gray-950">
+                        {getEditorialName(usage)}
+                      </p>
 
-                        {usage.product_name ? (
-                            <p className="mt-1 wrap-break-words font-bold text-gray-900">
-                            {usage.product_name}
-                            </p>
-                        ) : null}
-
-                        <p className="mt-1 text-sm text-gray-600">
-                            {usage.area?.name || "Área no especificada"}
-
-                            {usage.service?.level
-                            ? ` · ${usage.service.level}`
-                            : ""}
-                        </p>
+                      <EditorialOriginBadge usage={usage} />
                     </div>
+
+                    {usage.product_name ? (
+                      <p className="mt-1 wrap-break-words text-sm font-bold text-gray-900">
+                        {usage.product_name}
+                      </p>
+                    ) : null}
+
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
+                        {usage.area?.name || "Área no especificada"}
+                        {usage.service?.level
+                          ? ` · ${usage.service.level}`
+                          : ""}
+                      </span>
+
+                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
+                        {usage.year}
+                      </span>
+
+                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
+                        {usage.status_display}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                <EditorialOriginBadge usage={usage} />
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
-                  {usage.year}
-                </span>
-
-                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
-                  {usage.status_display}
-                </span>
-              </div>
-
-              {usage.notes ? (
-                <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm leading-5 text-gray-600 ring-1 ring-gray-200">
-                  {usage.notes}
-                </p>
-              ) : null}
-
-              <div className="mt-4 flex justify-end border-t border-gray-200 pt-3">
                 <button
                   type="button"
                   onClick={() => openEditForm(usage)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                 >
                   <FaEdit />
                   Editar
                 </button>
               </div>
+
+              {usage.notes ? (
+                <p className="mt-3 border-t border-gray-200 pt-3 text-sm leading-5 text-gray-600">
+                  {usage.notes}
+                </p>
+              ) : null}
             </article>
           ))}
         </div>
