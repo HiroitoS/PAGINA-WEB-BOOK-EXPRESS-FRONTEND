@@ -354,33 +354,49 @@ export default function SchoolEditorialUsagesSection({
       ) : null}
 
       {formOpen ? (
-        <form
-          onSubmit={handleSubmit}
-          className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="font-black text-gray-950">
-                {editingUsageId
-                  ? "Editar información editorial"
-                  : "Agregar editorial"}
-              </h3>
+        <div className="fixed inset-0 z-50">
+          <button
+            type="button"
+            aria-label="Cerrar gestión editorial"
+            onClick={closeForm}
+            className="absolute inset-0 bg-gray-950/40"
+          />
 
-              <p className="mt-1 text-xs leading-5 text-gray-500">
-                Si la editorial no aparece, puede registrarse para validación
-                sin agregarla al catálogo de Book Express.
-              </p>
-            </div>
+          <aside className="absolute inset-y-0 right-0 w-full max-w-3xl overflow-y-auto bg-white shadow-2xl">
+            <form onSubmit={handleSubmit}>
+              <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-gray-200 bg-white px-5 py-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                    Inteligencia comercial
+                  </p>
 
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
-              aria-label="Cerrar formulario"
-            >
-              <FaTimes />
-            </button>
-          </div>
+                  <h3 className="mt-1 text-xl font-black text-gray-950">
+                    {editingUsageId
+                      ? "Editar información editorial"
+                      : "Agregar editorial"}
+                  </h3>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Registra la editorial, el producto observado y su situación actual.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  disabled={saving}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-950 disabled:cursor-not-allowed disabled:opacity-60"
+                  aria-label="Cerrar"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+
+              <div className="p-5">
+                <p className="text-xs leading-5 text-gray-500">
+                  Si la editorial no aparece, puede registrarse para validación
+                  sin agregarla al catálogo de Book Express.
+                </p>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <label className="xl:col-span-2">
@@ -622,7 +638,10 @@ export default function SchoolEditorialUsagesSection({
                 : "Guardar"}
             </button>
           </div>
-        </form>
+              </div>
+            </form>
+          </aside>
+        </div>
       ) : null}
 
       {usages.length > 0 ? (
