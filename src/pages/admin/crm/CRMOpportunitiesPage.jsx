@@ -283,7 +283,7 @@ function NewOpportunityPanel({
                   Nombre de la oportunidad
                 </span>
                 <input
-                  className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 caret-gray-900 outline-none transition placeholder:text-gray-400 focus:border-red-400 focus:ring-2 focus:ring-red-100"
                   name="title"
                   placeholder="Ej. Campaña escolar 2027 - Colegio..."
                   value={form.title}
@@ -296,7 +296,7 @@ function NewOpportunityPanel({
                   Colegio
                 </span>
                 <select
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
                   name="school"
                   value={form.school}
                   onChange={handleChange}
@@ -316,7 +316,7 @@ function NewOpportunityPanel({
                     Campaña
                   </span>
                   <select
-                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
                     name="campaign"
                     value={form.campaign}
                     onChange={handleChange}
@@ -335,7 +335,7 @@ function NewOpportunityPanel({
                     Pipeline
                   </span>
                   <select
-                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
                     name="pipeline"
                     value={form.pipeline}
                     onChange={handleChange}
@@ -355,7 +355,7 @@ function NewOpportunityPanel({
                   Observaciones iniciales
                 </span>
                 <textarea
-                  className="mt-2 min-h-28 w-full resize-y rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  className="mt-2 min-h-28 w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 caret-gray-900 outline-none transition placeholder:text-gray-400 focus:border-red-400 focus:ring-2 focus:ring-red-100"
                   name="notes"
                   placeholder="Información útil para iniciar la gestión comercial."
                   value={form.notes}
@@ -798,7 +798,7 @@ export default function CRMOpportunitiesPage() {
               Pipeline
             </span>
             <select
-              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
               value={selectedPipelineId}
               onChange={(event) => setSelectedPipelineId(event.target.value)}
             >
@@ -815,7 +815,7 @@ export default function CRMOpportunitiesPage() {
               Campaña
             </span>
             <select
-              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
               value={selectedCampaignId}
               onChange={(event) => setSelectedCampaignId(event.target.value)}
             >
@@ -833,7 +833,7 @@ export default function CRMOpportunitiesPage() {
               Buscar
             </span>
             <input
-              className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 caret-gray-900 outline-none transition placeholder:text-gray-400 focus:border-red-400 focus:ring-2 focus:ring-red-100"
               placeholder="Colegio, oportunidad o asesor..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
