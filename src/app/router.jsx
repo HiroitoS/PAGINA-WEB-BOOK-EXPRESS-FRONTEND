@@ -59,6 +59,10 @@ const CRMSchoolDetailPage = lazy(
   () => import("../pages/admin/crm/CRMSchoolDetailPage"),
 );
 
+const CRMOpportunitiesPage = lazy(
+  () => import("../pages/admin/crm/CRMOpportunitiesPage"),
+);
+
 function protectRole(element, allowedRoles) {
   return <RequireRole allowedRoles={allowedRoles}>{element}</RequireRole>;
 }
@@ -173,6 +177,13 @@ const router = createBrowserRouter([
             path: "crm/colegios/:id",
             element: protectPermission(
               renderLazyPage(CRMSchoolDetailPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
+            path: "crm/oportunidades",
+            element: protectPermission(
+              renderLazyPage(CRMOpportunitiesPage),
               ["crm.view_crm"],
             ),
           },
