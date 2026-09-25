@@ -184,6 +184,7 @@ export default function CRMOpportunityProjectionSection({
   const [panelOpen, setPanelOpen] = useState(false);
   const [drafts, setDrafts] = useState([]);
   const [activeServiceId, setActiveServiceId] = useState("");
+  const [activeGradeKey, setActiveGradeKey] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [panelError, setPanelError] = useState("");
@@ -191,6 +192,8 @@ export default function CRMOpportunityProjectionSection({
   const [productTargetKey, setProductTargetKey] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [productChoices, setProductChoices] = useState([]);
+  const [productEditorial, setProductEditorial] = useState("");
+  const [productEditorialChoices, setProductEditorialChoices] = useState([]);
   const [productLoading, setProductLoading] = useState(false);
   const [productError, setProductError] = useState("");
 
@@ -263,6 +266,14 @@ export default function CRMOpportunityProjectionSection({
     [activeServiceId, drafts],
   );
 
+  const activeDraft = useMemo(
+    () =>
+      activeDrafts.find((draft) => draft.key === activeGradeKey)
+      || activeDrafts[0]
+      || null,
+    [activeDrafts, activeGradeKey],
+  );
+
   const projectionGroups = useMemo(
     () => getProjectionGroups(projection),
     [projection],
@@ -284,10 +295,13 @@ export default function CRMOpportunityProjectionSection({
 
     setDrafts(nextDrafts);
     setActiveServiceId(firstServiceId ? String(firstServiceId) : "");
+    setActiveGradeKey(nextDrafts[0]?.key || "");
     setNotes(projection?.notes || "");
     setPanelError("");
     setProductTargetKey("");
     setProductChoices([]);
+    setProductEditorial("");
+    setProductEditorialChoices([]);
     setProductSearch("");
     setProductError("");
     setSuccessMessage("");
@@ -300,6 +314,31 @@ export default function CRMOpportunityProjectionSection({
     }
 
     setPanelOpen(false);
+  }
+
+  function resetProductPicker() {
+    setProductTargetKey("");
+    setProductChoices([]);
+    setProductEditorial("");
+    setProductEditorialChoices([]);
+    setProductSearch("");
+    setProductError("");
+  }
+
+  function selectService(serviceId) {
+    const serviceKey = String(serviceId);
+    const firstDraft = drafts.find(
+      (draft) => String(draft.serviceId) === serviceKey,
+    );
+
+    setActiveServiceId(serviceKey);
+    setActiveGradeKey(firstDraft?.key || "");
+    resetProductPicker();
+  }
+
+  function selectGrade(gradeKey) {
+    setActiveGradeKey(gradeKey);
+    resetProductPicker();
   }
 
   function updateDraft(key, changes) {
@@ -332,7 +371,11 @@ export default function CRMOpportunityProjectionSection({
     );
   }
 
-  async function loadProductsForDraft(draft, searchValue = "") {
+  async function loadProductsForDraft(
+    draft,
+    searchValue = "",
+    editorialId = "",
+  ) {
     setProductLoading(true);
     setProductError("");
 
@@ -342,11 +385,13 @@ export default function CRMOpportunityProjectionSection({
         {
           service: draft.serviceId,
           grade: draft.gradeId,
-          search: searchValue || undefined,
+          product_search: searchValue || undefined,
+          editorial: editorialId || undefined,
         },
       );
 
       setProductChoices(data?.results || []);
+      setProductEditorialChoices(data?.editorials || []);
     } catch (error) {
       setProductChoices([]);
       setProductError(
@@ -363,7 +408,9 @@ export default function CRMOpportunityProjectionSection({
   async function openProductPicker(draft) {
     setProductTargetKey(draft.key);
     setProductSearch("");
+    setProductEditorial("");
     setProductChoices([]);
+    setProductEditorialChoices([]);
     setProductError("");
     await loadProductsForDraft(draft);
   }
@@ -377,7 +424,29 @@ export default function CRMOpportunityProjectionSection({
       return;
     }
 
-    await loadProductsForDraft(draft, productSearch.trim());
+    await loadProductsForDraft(
+      draft,
+      productSearch.trim(),
+      productEditorial,
+    );
+  }
+
+  async function handleEditorialChange(value) {
+    const draft = drafts.find(
+      (item) => item.key === productTargetKey,
+    );
+
+    setProductEditorial(value);
+
+    if (!draft) {
+      return;
+    }
+
+    await loadProductsForDraft(
+      draft,
+      productSearch.trim(),
+      value,
+    );
   }
 
   function addProduct(choice) {
@@ -763,33 +832,30 @@ export default function CRMOpportunityProjectionSection({
                   </div>
                 ) : null}
 
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-red-700 ring-1 ring-gray-200">
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-red-700 ring-1 ring-gray-200">
                       <FaUsers />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-black text-gray-950">
-                        Población como punto de partida
+                        Base de población del colegio
                       </p>
-                      <p className="mt-1 text-sm leading-6 text-gray-500">
-                        Los alumnos y secciones vienen de la ficha del
-                        colegio. Aquí puedes ajustar solo la proyección
-                        comercial sin modificar la población histórica.
+                      <p className="mt-0.5 text-xs leading-5 text-gray-500">
+                        Ajusta alumnos y secciones solo para esta proyección.
+                        La población histórica del colegio no se modifica.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+                <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
                   {levelOptions.map((option) => (
                     <button
                       key={option.serviceId}
                       type="button"
-                      onClick={() =>
-                        setActiveServiceId(option.serviceId)
-                      }
-                      className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                      onClick={() => selectService(option.serviceId)}
+                      className={`shrink-0 rounded-xl px-4 py-2 text-sm font-black transition ${
                         activeServiceId === option.serviceId
                           ? "bg-gray-950 text-white"
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -800,293 +866,333 @@ export default function CRMOpportunityProjectionSection({
                   ))}
                 </div>
 
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-black text-gray-950">
-                      Grados del nivel
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Selecciona solo los grados que formarán parte de
-                      esta oportunidad.
-                    </p>
+                <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                  <div className="flex flex-col justify-between gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center">
+                    <div>
+                      <p className="font-black text-gray-950">
+                        Grados de {activeDraft?.levelName || "este nivel"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        Cambia de grado sin salir del panel.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={toggleAllVisibleGrades}
+                      className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50"
+                    >
+                      {activeDrafts.length > 0
+                        && activeDrafts.every((draft) => draft.selected)
+                        ? "Quitar todos"
+                        : "Seleccionar todos"}
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={toggleAllVisibleGrades}
-                    className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50"
-                  >
-                    {activeDrafts.length > 0
-                      && activeDrafts.every((draft) => draft.selected)
-                      ? "Quitar todos"
-                      : "Seleccionar todos"}
-                  </button>
+                  <div className="flex gap-2 overflow-x-auto p-3">
+                    {activeDrafts.map((draft) => (
+                      <button
+                        key={draft.key}
+                        type="button"
+                        onClick={() => selectGrade(draft.key)}
+                        className={`shrink-0 rounded-xl border px-3 py-2 text-left transition ${
+                          activeDraft?.key === draft.key
+                            ? "border-red-700 bg-red-700 text-white"
+                            : draft.selected
+                              ? "border-gray-900 bg-gray-950 text-white"
+                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        <span className="block text-sm font-black">
+                          {draft.gradeName}
+                        </span>
+                        <span
+                          className={`mt-0.5 block text-xs ${
+                            activeDraft?.key === draft.key || draft.selected
+                              ? "text-white/75"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          {draft.selected
+                            ? `${draft.studentCount || 0} alumnos · ${draft.products.length} prod.`
+                            : "No incluido"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="mt-3 space-y-3">
-                  {activeDrafts.map((draft) => (
-                    <div
-                      key={draft.key}
-                      className={`rounded-2xl border p-4 ${
-                        draft.selected
-                          ? "border-red-200 bg-red-50/30"
-                          : "border-gray-200 bg-white"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
+                {activeDraft ? (
+                  <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                      <label className="flex items-center gap-3">
                         <input
                           type="checkbox"
-                          checked={draft.selected}
+                          checked={activeDraft.selected}
                           onChange={(event) =>
-                            updateDraft(draft.key, {
+                            updateDraft(activeDraft.key, {
                               selected: event.target.checked,
                             })
                           }
-                          className="mt-1 h-4 w-4 accent-red-700"
+                          className="h-4 w-4 accent-red-700"
                         />
+                        <span>
+                          <span className="block font-black text-gray-950">
+                            Incluir {activeDraft.gradeName}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-gray-500">
+                            {activeDraft.levelName}
+                          </span>
+                        </span>
+                      </label>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                            <div>
-                              <p className="font-black text-gray-950">
-                                {draft.gradeName}
-                              </p>
-                              <p className="mt-1 text-xs text-gray-500">
-                                {draft.levelName}
-                              </p>
-                            </div>
+                      {activeDraft.selected ? (
+                        <button
+                          type="button"
+                          onClick={() => openProductPicker(activeDraft)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800"
+                        >
+                          <FaPlus />
+                          Agregar producto
+                        </button>
+                      ) : null}
+                    </div>
 
-                            {draft.selected ? (
-                              <button
-                                type="button"
-                                onClick={() => openProductPicker(draft)}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800"
+                    {activeDraft.selected ? (
+                      <>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <label className="text-sm font-bold text-gray-700">
+                            Alumnos proyectados
+                            <input
+                              type="number"
+                              min="1"
+                              value={activeDraft.studentCount}
+                              onChange={(event) =>
+                                updateDraft(activeDraft.key, {
+                                  studentCount: event.target.value,
+                                })
+                              }
+                              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                            />
+                          </label>
+
+                          <label className="text-sm font-bold text-gray-700">
+                            Secciones
+                            <input
+                              type="number"
+                              min="1"
+                              value={activeDraft.sectionCount}
+                              onChange={(event) =>
+                                updateDraft(activeDraft.key, {
+                                  sectionCount: event.target.value,
+                                })
+                              }
+                              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                            />
+                          </label>
+                        </div>
+
+                        {activeDraft.products.length > 0 ? (
+                          <div className="mt-4 space-y-2">
+                            {activeDraft.products.map((product) => (
+                              <div
+                                key={product.id}
+                                className="grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-12 sm:items-center"
                               >
-                                <FaPlus />
-                                Agregar producto
-                              </button>
-                            ) : null}
+                                <div className="min-w-0 sm:col-span-8">
+                                  <p className="truncate text-sm font-black text-gray-950">
+                                    {product.name}
+                                  </p>
+                                  <p className="mt-1 text-xs text-gray-500">
+                                    {product.editorial}
+                                    {" · "}
+                                    {formatCurrency(product.unitPrice)}
+                                  </p>
+                                </div>
+
+                                <label className="text-xs font-bold text-gray-500 sm:col-span-3">
+                                  Cantidad
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={product.quantity}
+                                    onChange={(event) =>
+                                      updateProductQuantity(
+                                        activeDraft.key,
+                                        product.id,
+                                        event.target.value,
+                                      )
+                                    }
+                                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 font-bold text-gray-950 outline-none focus:border-red-400"
+                                  />
+                                </label>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeProduct(
+                                      activeDraft.key,
+                                      product.id,
+                                    )
+                                  }
+                                  className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-700 sm:col-span-1"
+                                  aria-label="Quitar producto"
+                                >
+                                  <FaTrashAlt />
+                                </button>
+                              </div>
+                            ))}
                           </div>
+                        ) : (
+                          <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                            Aún no agregaste productos a este grado.
+                          </div>
+                        )}
 
-                          {draft.selected ? (
-                            <>
-                              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                <label className="text-sm font-bold text-gray-700">
-                                  Alumnos proyectados
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={draft.studentCount}
-                                    onChange={(event) =>
-                                      updateDraft(draft.key, {
-                                        studentCount: event.target.value,
-                                      })
-                                    }
-                                    className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                                  />
-                                </label>
-
-                                <label className="text-sm font-bold text-gray-700">
-                                  Secciones
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={draft.sectionCount}
-                                    onChange={(event) =>
-                                      updateDraft(draft.key, {
-                                        sectionCount: event.target.value,
-                                      })
-                                    }
-                                    className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                                  />
-                                </label>
+                        {productTargetKey === activeDraft.key ? (
+                          <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                                  Catálogo disponible
+                                </p>
+                                <h3 className="mt-1 font-black text-gray-950">
+                                  Productos para {activeDraft.gradeName}
+                                </h3>
                               </div>
 
-                              {draft.products.length > 0 ? (
-                                <div className="mt-4 space-y-2">
-                                  {draft.products.map((product) => (
-                                    <div
-                                      key={product.id}
-                                      className="grid gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:grid-cols-12 sm:items-center"
-                                    >
-                                      <div className="min-w-0 sm:col-span-8">
-                                        <p className="truncate text-sm font-black text-gray-950">
-                                          {product.name}
-                                        </p>
-                                        <p className="mt-1 text-xs text-gray-500">
-                                          {product.editorial}
-                                          {" · "}
-                                          {formatCurrency(product.unitPrice)}
-                                        </p>
-                                      </div>
+                              <button
+                                type="button"
+                                onClick={resetProductPicker}
+                                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600"
+                              >
+                                Cerrar
+                              </button>
+                            </div>
 
-                                      <label className="text-xs font-bold text-gray-500 sm:col-span-3">
-                                        Cantidad
-                                        <input
-                                          type="number"
-                                          min="1"
-                                          value={product.quantity}
-                                          onChange={(event) =>
-                                            updateProductQuantity(
-                                              draft.key,
-                                              product.id,
-                                              event.target.value,
-                                            )
-                                          }
-                                          className="mt-1 w-full rounded-lg border border-gray-200 px-2.5 py-2 font-bold text-gray-950 outline-none focus:border-red-400"
-                                        />
-                                      </label>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                              <select
+                                value={productEditorial}
+                                onChange={(event) =>
+                                  handleEditorialChange(event.target.value)
+                                }
+                                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                              >
+                                <option value="">Todas las editoriales</option>
+                                {productEditorialChoices.map((editorial) => (
+                                  <option
+                                    key={editorial.id}
+                                    value={editorial.id}
+                                  >
+                                    {editorial.name}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <input
+                                type="search"
+                                value={productSearch}
+                                onChange={(event) =>
+                                  setProductSearch(event.target.value)
+                                }
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    handleProductSearch();
+                                  }
+                                }}
+                                placeholder="Buscar libro, área o serie..."
+                                className="min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 sm:col-span-1"
+                              />
+
+                              <button
+                                type="button"
+                                onClick={handleProductSearch}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white"
+                              >
+                                <FaSearch />
+                                Buscar
+                              </button>
+                            </div>
+
+                            {productError ? (
+                              <p className="mt-3 text-sm font-bold text-red-700">
+                                {productError}
+                              </p>
+                            ) : null}
+
+                            {productLoading ? (
+                              <p className="mt-4 text-sm font-bold text-gray-500">
+                                Cargando productos...
+                              </p>
+                            ) : (
+                              <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
+                                {productChoices.map((choice) => {
+                                  const alreadyAdded =
+                                    activeDraft.products.some(
+                                      (product) => product.id === choice.id,
+                                    );
+
+                                  return (
+                                    <div
+                                      key={choice.id}
+                                      className="flex flex-col justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center"
+                                    >
+                                      <div className="min-w-0">
+                                        <div className="flex items-start gap-2">
+                                          <FaBook className="mt-1 shrink-0 text-red-700" />
+                                          <div className="min-w-0">
+                                            <p className="font-black text-gray-950">
+                                              {choice.name}
+                                            </p>
+                                            <p className="mt-1 text-xs text-gray-500">
+                                              {choice.editorial?.name || "Editorial"}
+                                              {choice.area?.name
+                                                ? ` · ${choice.area.name}`
+                                                : ""}
+                                              {" · "}
+                                              {formatCurrency(choice.unit_price)}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
 
                                       <button
                                         type="button"
-                                        onClick={() =>
-                                          removeProduct(
-                                            draft.key,
-                                            product.id,
-                                          )
-                                        }
-                                        className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-700 sm:col-span-1"
-                                        aria-label="Quitar producto"
+                                        disabled={alreadyAdded}
+                                        onClick={() => addProduct(choice)}
+                                        className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black transition ${
+                                          alreadyAdded
+                                            ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                                            : "bg-red-700 text-white hover:bg-red-800"
+                                        }`}
                                       >
-                                        <FaTrashAlt />
+                                        {alreadyAdded ? "Agregado" : "Agregar"}
                                       </button>
                                     </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
-                                  Aún no agregaste productos a este grado.
-                                </div>
-                              )}
+                                  );
+                                })}
 
-                              {productTargetKey === draft.key ? (
-                                <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                      <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                                        Catálogo disponible
-                                      </p>
-                                      <h3 className="mt-1 font-black text-gray-950">
-                                        Agregar productos a {draft.gradeName}
-                                      </h3>
+                                {!productLoading
+                                  && productChoices.length === 0
+                                  && !productError ? (
+                                    <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                                      No hay productos con precio válido para
+                                      este grado y la campaña seleccionada.
                                     </div>
-
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setProductTargetKey("");
-                                        setProductChoices([]);
-                                        setProductSearch("");
-                                        setProductError("");
-                                      }}
-                                      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600"
-                                    >
-                                      Cerrar
-                                    </button>
-                                  </div>
-
-                                  <div className="mt-3 flex gap-2">
-                                    <input
-                                      type="search"
-                                      value={productSearch}
-                                      onChange={(event) =>
-                                        setProductSearch(event.target.value)
-                                      }
-                                      onKeyDown={(event) => {
-                                        if (event.key === "Enter") {
-                                          event.preventDefault();
-                                          handleProductSearch();
-                                        }
-                                      }}
-                                      placeholder="Buscar libro, editorial, área o serie..."
-                                      className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={handleProductSearch}
-                                      className="inline-flex items-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white"
-                                    >
-                                      <FaSearch />
-                                      Buscar
-                                    </button>
-                                  </div>
-
-                                  {productError ? (
-                                    <p className="mt-3 text-sm font-bold text-red-700">
-                                      {productError}
-                                    </p>
                                   ) : null}
-
-                                  {productLoading ? (
-                                    <p className="mt-4 text-sm font-bold text-gray-500">
-                                      Cargando productos...
-                                    </p>
-                                  ) : (
-                                    <div className="mt-4 max-h-72 space-y-2 overflow-y-auto">
-                                      {productChoices.map((choice) => {
-                                        const alreadyAdded = draft.products.some(
-                                          (product) => product.id === choice.id,
-                                        );
-
-                                        return (
-                                          <div
-                                            key={choice.id}
-                                            className="flex flex-col justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center"
-                                          >
-                                            <div className="min-w-0">
-                                              <div className="flex items-start gap-2">
-                                                <FaBook className="mt-1 shrink-0 text-red-700" />
-                                                <div className="min-w-0">
-                                                  <p className="font-black text-gray-950">
-                                                    {choice.name}
-                                                  </p>
-                                                  <p className="mt-1 text-xs text-gray-500">
-                                                    {choice.editorial?.name || "Editorial"}
-                                                    {choice.area?.name
-                                                      ? ` · ${choice.area.name}`
-                                                      : ""}
-                                                    {" · "}
-                                                    {formatCurrency(choice.unit_price)}
-                                                  </p>
-                                                </div>
-                                              </div>
-                                            </div>
-
-                                            <button
-                                              type="button"
-                                              disabled={alreadyAdded}
-                                              onClick={() => addProduct(choice)}
-                                              className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black transition ${
-                                                alreadyAdded
-                                                  ? "cursor-not-allowed bg-gray-100 text-gray-400"
-                                                  : "bg-red-700 text-white hover:bg-red-800"
-                                              }`}
-                                            >
-                                              {alreadyAdded ? "Agregado" : "Agregar"}
-                                            </button>
-                                          </div>
-                                        );
-                                      })}
-
-                                      {!productLoading
-                                        && productChoices.length === 0
-                                        && !productError ? (
-                                          <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
-                                            No hay productos con precio válido para este
-                                            nivel, grado y campaña.
-                                          </div>
-                                        ) : null}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : null}
-                            </>
-                          ) : null}
-                        </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-4 text-sm text-gray-500">
+                        Este grado no forma parte de la proyección.
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                  </div>
+                ) : null}
 
                 <label className="mt-5 block text-sm font-bold text-gray-700">
                   Observaciones
