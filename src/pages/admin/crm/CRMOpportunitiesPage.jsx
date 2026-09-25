@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
+  FaArrowLeft,
   FaBriefcase,
   FaExclamationTriangle,
   FaGripVertical,
@@ -19,6 +20,10 @@ import {
   getCRMPipelines,
   getCRMSchools,
 } from "../../../api/crmApi";
+import {
+  buildNavigationState,
+  resolveReturnContext,
+} from "../../../utils/navigationContext";
 
 const PAGE_SIZE = 100;
 
@@ -442,6 +447,7 @@ function OpportunityCard({
 export default function CRMOpportunitiesPage() {
   const location = useLocation();
   const restoredFilters = location.state?.opportunityFilters || {};
+  const returnContext = resolveReturnContext(location.state);
 
   const [pipelines, setPipelines] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -735,6 +741,17 @@ export default function CRMOpportunitiesPage() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {returnContext.path ? (
+              <Link
+                to={returnContext.path}
+                state={returnContext.state}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-gray-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800"
+              >
+                <FaArrowLeft className="text-xs" />
+                Volver a {returnContext.label || "origen"}
+              </Link>
+            ) : null}
+
             <button
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-black text-white ring-1 ring-white/10 transition hover:bg-white/20"
               type="button"
@@ -926,15 +943,19 @@ export default function CRMOpportunitiesPage() {
                             moving={movingId === opportunity.id}
                             openStages={openStages}
                             opportunity={opportunity}
-                            returnState={{
+                            returnState={buildNavigationState({
                               from: "/admin/crm/oportunidades",
+                              fromLabel: "Oportunidades",
                               fromType: "opportunities",
-                              opportunityFilters: {
-                                pipeline: selectedPipelineId,
-                                campaign: selectedCampaignId,
-                                search,
+                              currentState: {
+                                ...location.state,
+                                opportunityFilters: {
+                                  pipeline: selectedPipelineId,
+                                  campaign: selectedCampaignId,
+                                  search,
+                                },
                               },
-                            }}
+                            })}
                             onDragEnd={handleDragEnd}
                             onDragStart={handleDragStart}
                             onMove={handleMove}
