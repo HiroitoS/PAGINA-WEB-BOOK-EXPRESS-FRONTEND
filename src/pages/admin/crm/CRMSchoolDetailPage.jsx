@@ -30,6 +30,10 @@ import {
 } from "../../../api/crmApi";
 import SchoolEducationalServicesSection from "../../../components/admin/crm/SchoolEducationalServicesSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
+import {
+  buildNavigationState,
+  resolveReturnContext,
+} from "../../../utils/navigationContext";
 
 const ACTIVITY_FILTERS = [
   { value: "all", label: "Todas" },
@@ -384,30 +388,13 @@ export default function CRMSchoolDetailPage() {
       hasValue(school.institution_code) ||
       hasValue(school.reference));
 
-  const cameFromContact =
-    location.state?.fromType === "contact"
-    && typeof location.state?.from === "string";
-
-  const cameFromOpportunities =
-    location.state?.fromType === "opportunities"
-    && typeof location.state?.from === "string";
-
-  const backPath =
-    cameFromContact || cameFromOpportunities
-      ? location.state.from
-      : "/admin/crm/colegios";
-
-  const backLabel = cameFromContact
-    ? "Volver al contacto"
-    : cameFromOpportunities
-      ? "Volver a oportunidades"
-      : "Volver a colegios";
-
-  const backState = cameFromOpportunities
-    ? {
-        opportunityFilters: location.state?.opportunityFilters || {},
-      }
-    : undefined;
+  const returnContext = resolveReturnContext(
+    location.state,
+    {
+      fallbackPath: "/admin/crm/colegios",
+      fallbackLabel: "colegios",
+    },
+  );
 
   const visibleContacts = useMemo(() => {
     const contacts = Array.isArray(school?.contacts)
@@ -511,13 +498,19 @@ export default function CRMSchoolDetailPage() {
       : currentOpportunity;
 
   const opportunityBoardState = displayedOpportunity
-    ? {
-        opportunityFilters: {
-          pipeline: String(displayedOpportunity.pipeline?.id || ""),
-          campaign: String(displayedOpportunity.campaign?.id || ""),
-          search: school?.name || "",
+    ? buildNavigationState({
+        from: `/admin/crm/colegios/${school.id}`,
+        fromLabel: school.name,
+        fromType: "school",
+        currentState: location.state,
+        extra: {
+          opportunityFilters: {
+            pipeline: String(displayedOpportunity.pipeline?.id || ""),
+            campaign: String(displayedOpportunity.campaign?.id || ""),
+            search: school?.name || "",
+          },
         },
-      }
+      })
     : undefined;
 
   async function handleCreateOpportunity() {
@@ -555,8 +548,8 @@ export default function CRMSchoolDetailPage() {
       <div className="mb-3">
         <Link
           className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-          to={backPath}
-          state={backState}
+          to={returnContext.path}
+          state={returnContext.state}
         >
           <FaArrowLeft />
           {backLabel}
@@ -903,11 +896,12 @@ export default function CRMSchoolDetailPage() {
                                 {activity.contact ? (
                                   <Link
                                     to={`/admin/crm/contactos/${activity.contact.id}`}
-                                    state={{
+                                    state={buildNavigationState({
                                       from: `/admin/crm/colegios/${school.id}`,
                                       fromLabel: school.name,
                                       fromType: "school",
-                                    }}
+                                      currentState: location.state,
+                                    })}
                                     className="font-black text-red-700 transition hover:text-red-900"
                                   >
                                     {activity.contact.full_name}
@@ -1148,11 +1142,12 @@ export default function CRMSchoolDetailPage() {
 
                   <Link
                     to="/admin/workspace/calendar"
-                    state={{
+                    state={buildNavigationState({
                       from: `/admin/crm/colegios/${school.id}`,
                       fromLabel: school.name,
                       fromType: "school",
-                    }}
+                      currentState: location.state,
+                    })}
                     className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                   >
                     <FaCalendarAlt />
