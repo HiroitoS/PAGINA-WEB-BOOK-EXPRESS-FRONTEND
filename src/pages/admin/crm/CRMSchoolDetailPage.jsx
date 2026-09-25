@@ -1017,6 +1017,31 @@ export default function CRMSchoolDetailPage() {
                       </p>
                     </div>
 
+                    <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Próxima actividad
+                      </p>
+
+                      {displayedOpportunity.next_activity ? (
+                        <>
+                          <p className="mt-1 text-sm font-black text-gray-950">
+                            {formatDateTime(
+                              displayedOpportunity.next_activity.scheduled_at,
+                            )}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-gray-600">
+                            {displayedOpportunity.next_activity.type_display}
+                            {" · "}
+                            {displayedOpportunity.next_activity.title}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-sm font-black text-gray-400">
+                          Sin próxima actividad
+                        </p>
+                      )}
+                    </div>
+
                     <Link
                       to="/admin/crm/oportunidades"
                       state={opportunityBoardState}
