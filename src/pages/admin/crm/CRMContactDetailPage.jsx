@@ -1187,6 +1187,7 @@ export default function CRMContactDetailPage() {
                       </span>
                       <input
                         type="datetime-local"
+                        max={getCurrentLocalDateTimeValue()}
                         value={activityForm.occurred_at}
                         onChange={(event) =>
                           updateActivityField(
@@ -1197,6 +1198,10 @@ export default function CRMContactDetailPage() {
                         disabled={savingActivity}
                         className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                       />
+                      <span className="mt-2 block text-xs leading-5 text-gray-500">
+                        Registra cuándo ocurrió la actividad. Si aún no se realiza,
+                        prográmala como próxima acción en ToDo / Agenda.
+                      </span>
                     </label>
 
                     <label className="md:col-span-2">
