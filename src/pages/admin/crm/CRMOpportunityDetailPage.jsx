@@ -16,7 +16,6 @@ import {
   getCRMOpportunityAdoptions,
   getCRMOpportunityHistory,
   getCRMOpportunityQuotations,
-  getCRMOpportunityWorkItems,
 } from "../../../api/crmApi";
 import {
   buildNavigationState,
@@ -93,21 +92,6 @@ function getQuotationTotal(quotation) {
   );
 }
 
-function getWorkItemDate(workItem) {
-  if (workItem?.type === "task") {
-    return (
-      workItem.item?.start_at
-      || workItem.item?.due_at
-      || workItem.item?.reminder_at
-    );
-  }
-
-  if (workItem?.type === "event") {
-    return workItem.item?.start_at;
-  }
-
-  return workItem?.item?.remind_at;
-}
 
 function statusBadgeClass(status) {
   if (status === "accepted") {
@@ -138,7 +122,6 @@ export default function CRMOpportunityDetailPage() {
 
   const [opportunity, setOpportunity] = useState(null);
   const [activities, setActivities] = useState([]);
-  const [workItems, setWorkItems] = useState([]);
   const [quotations, setQuotations] = useState([]);
   const [adoptions, setAdoptions] = useState([]);
   const [history, setHistory] = useState([]);
@@ -163,14 +146,12 @@ export default function CRMOpportunityDetailPage() {
         const [
           opportunityData,
           activitiesData,
-          workItemsData,
           quotationsData,
           adoptionsData,
           historyData,
         ] = await Promise.all([
           getCRMOpportunity(id),
           getCRMOpportunityActivities(id, { page_size: 100 }),
-          getCRMOpportunityWorkItems(id, { page_size: 100 }),
           getCRMOpportunityQuotations(id),
           getCRMOpportunityAdoptions(id),
           getCRMOpportunityHistory(id),
@@ -182,7 +163,6 @@ export default function CRMOpportunityDetailPage() {
 
         setOpportunity(opportunityData);
         setActivities(normalizeList(activitiesData));
-        setWorkItems(normalizeList(workItemsData));
         setQuotations(normalizeList(quotationsData));
         setAdoptions(normalizeList(adoptionsData));
         setHistory(normalizeList(historyData));
@@ -217,20 +197,6 @@ export default function CRMOpportunityDetailPage() {
         currentState: location.state,
       }),
     [id, location.state, opportunity?.title],
-  );
-
-  const pendingWorkItems = useMemo(
-    () =>
-      workItems.filter((workItem) => {
-        if (workItem.type !== "task") {
-          return true;
-        }
-
-        return !["completed", "cancelled"].includes(
-          workItem.item?.status,
-        );
-      }),
-    [workItems],
   );
 
   if (loading) {
