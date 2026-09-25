@@ -9,7 +9,7 @@ import {
   FaSyncAlt,
   FaTimes,
 } from "react-icons/fa";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 
 import {
   changeCRMOpportunityStage,
@@ -92,37 +92,31 @@ function categoryBadgeClass(category) {
 
 function NewOpportunityPanel({
   campaigns,
-  pipelines,
   schools,
-  selectedPipelineId,
   onCreated,
 }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    title: "",
     school: "",
-    campaign: "",
-    pipeline: "",
     notes: "",
   });
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const availableCampaigns = useMemo(
+  const activeSchoolCampaigns = useMemo(
     () =>
       campaigns.filter(
-        (campaign) => campaign.status !== "closed",
+        (campaign) =>
+          campaign.campaign_type === "school"
+          && campaign.status === "active",
       ),
     [campaigns],
   );
 
-  const availablePipelines = useMemo(
-    () =>
-      pipelines.filter(
-        (pipeline) => pipeline.is_active,
-      ),
-    [pipelines],
-  );
+  const activeSchoolCampaign =
+    activeSchoolCampaigns.length === 1
+      ? activeSchoolCampaigns[0]
+      : null;
 
   useEffect(() => {
     if (!open) {
@@ -145,23 +139,6 @@ function NewOpportunityPanel({
   }, [open]);
 
   function openPanel() {
-    const defaultPipeline =
-      String(selectedPipelineId || "")
-      || String(
-        availablePipelines.find((pipeline) => pipeline.is_default)?.id
-          || availablePipelines[0]?.id
-          || "",
-      );
-
-    const defaultCampaign = String(
-      availableCampaigns[0]?.id || "",
-    );
-
-    setForm((currentForm) => ({
-      ...currentForm,
-      pipeline: currentForm.pipeline || defaultPipeline,
-      campaign: currentForm.campaign || defaultCampaign,
-    }));
     setErrorMessage("");
     setOpen(true);
   }
@@ -185,9 +162,16 @@ function NewOpportunityPanel({
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!form.title.trim() || !form.school || !form.campaign || !form.pipeline) {
+    if (!form.school) {
+      setErrorMessage("Selecciona el colegio de la oportunidad.");
+      return;
+    }
+
+    if (!activeSchoolCampaign) {
       setErrorMessage(
-        "Completa el nombre, colegio, campaña y pipeline de la oportunidad.",
+        activeSchoolCampaigns.length > 1
+          ? "Hay más de una campaña escolar activa. Regulariza las campañas antes de crear una oportunidad."
+          : "No existe una campaña escolar activa para crear la oportunidad.",
       );
       return;
     }
@@ -197,18 +181,12 @@ function NewOpportunityPanel({
       setErrorMessage("");
 
       const created = await createCRMOpportunity({
-        title: form.title.trim(),
         school: Number(form.school),
-        campaign: Number(form.campaign),
-        pipeline: Number(form.pipeline),
         notes: form.notes.trim(),
       });
 
       setForm({
-        title: "",
         school: "",
-        campaign: "",
-        pipeline: "",
         notes: "",
       });
       setOpen(false);
@@ -256,7 +234,8 @@ function NewOpportunityPanel({
                     Nueva oportunidad
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-gray-500">
-                    Registra el colegio y la campaña que ingresarán al pipeline.
+                    Selecciona el colegio. La campaña, el pipeline, el asesor y
+                    el nombre se resolverán automáticamente.
                   </p>
                 </div>
 
@@ -278,18 +257,19 @@ function NewOpportunityPanel({
                 </div>
               ) : null}
 
-              <label className="block">
-                <span className="text-xs font-black uppercase tracking-wide text-gray-600">
-                  Nombre de la oportunidad
-                </span>
-                <input
-                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 caret-gray-900 outline-none transition placeholder:text-gray-400 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                  name="title"
-                  placeholder="Ej. Campaña escolar 2027 - Colegio..."
-                  value={form.title}
-                  onChange={handleChange}
-                />
-              </label>
+              <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                  Campaña activa
+                </p>
+                <p className="mt-1 font-black text-gray-950">
+                  {activeSchoolCampaign
+                    ? `${activeSchoolCampaign.name} - ${activeSchoolCampaign.year}`
+                    : "Sin campaña escolar activa disponible"}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-gray-500">
+                  El sistema utilizará el pipeline comercial predeterminado.
+                </p>
+              </div>
 
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-wide text-gray-600">
@@ -310,46 +290,6 @@ function NewOpportunityPanel({
                 </select>
               </label>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-black uppercase tracking-wide text-gray-600">
-                    Campaña
-                  </span>
-                  <select
-                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                    name="campaign"
-                    value={form.campaign}
-                    onChange={handleChange}
-                  >
-                    <option value="">Seleccionar campaña</option>
-                    {availableCampaigns.map((campaign) => (
-                      <option key={campaign.id} value={campaign.id}>
-                        {campaign.name} - {campaign.year}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="text-xs font-black uppercase tracking-wide text-gray-600">
-                    Pipeline
-                  </span>
-                  <select
-                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                    name="pipeline"
-                    value={form.pipeline}
-                    onChange={handleChange}
-                  >
-                    <option value="">Seleccionar pipeline</option>
-                    {availablePipelines.map((pipeline) => (
-                      <option key={pipeline.id} value={pipeline.id}>
-                        {pipeline.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-wide text-gray-600">
                   Observaciones iniciales
@@ -363,9 +303,11 @@ function NewOpportunityPanel({
                 />
               </label>
 
-              {availableCampaigns.length === 0 ? (
+              {activeSchoolCampaigns.length !== 1 ? (
                 <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-                  No existe una campaña disponible para registrar nuevas oportunidades.
+                  {activeSchoolCampaigns.length > 1
+                    ? "Hay más de una campaña escolar activa. Debe existir una sola campaña activa antes de registrar nuevas oportunidades."
+                    : "No existe una campaña escolar activa para registrar nuevas oportunidades."}
                 </p>
               ) : null}
 
@@ -380,7 +322,7 @@ function NewOpportunityPanel({
                 </button>
                 <button
                   className="rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={saving || availableCampaigns.length === 0}
+                  disabled={saving || activeSchoolCampaigns.length !== 1}
                   type="submit"
                 >
                   {saving ? "Guardando..." : "Crear oportunidad"}
@@ -398,6 +340,7 @@ function OpportunityCard({
   opportunity,
   openStages,
   moving,
+  returnState,
   onMove,
   onDragStart,
   onDragEnd,
@@ -458,6 +401,7 @@ function OpportunityCard({
         <Link
           className="inline-flex justify-center rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50"
           to={`/admin/crm/colegios/${opportunity.school?.id}`}
+          state={returnState}
         >
           Abrir colegio
         </Link>
@@ -485,13 +429,22 @@ function OpportunityCard({
 }
 
 export default function CRMOpportunitiesPage() {
+  const location = useLocation();
+  const restoredFilters = location.state?.opportunityFilters || {};
+
   const [pipelines, setPipelines] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [schools, setSchools] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
-  const [selectedPipelineId, setSelectedPipelineId] = useState("");
-  const [selectedCampaignId, setSelectedCampaignId] = useState("");
-  const [search, setSearch] = useState("");
+  const [selectedPipelineId, setSelectedPipelineId] = useState(
+    () => String(restoredFilters.pipeline || ""),
+  );
+  const [selectedCampaignId, setSelectedCampaignId] = useState(
+    () => String(restoredFilters.campaign || ""),
+  );
+  const [search, setSearch] = useState(
+    () => String(restoredFilters.search || ""),
+  );
   const [loadingReferences, setLoadingReferences] = useState(true);
   const [loadingBoard, setLoadingBoard] = useState(true);
   const [movingId, setMovingId] = useState(null);
@@ -782,9 +735,7 @@ export default function CRMOpportunitiesPage() {
 
             <NewOpportunityPanel
               campaigns={campaigns}
-              pipelines={pipelines}
               schools={schools}
-              selectedPipelineId={selectedPipelineId}
               onCreated={handleCreated}
             />
           </div>
@@ -793,22 +744,29 @@ export default function CRMOpportunitiesPage() {
 
       <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="grid gap-3 lg:grid-cols-3">
-          <label className="block">
+          <div className="block">
             <span className="text-xs font-black uppercase tracking-wide text-gray-500">
               Pipeline
             </span>
-            <select
-              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-              value={selectedPipelineId}
-              onChange={(event) => setSelectedPipelineId(event.target.value)}
-            >
-              {pipelines.map((pipeline) => (
-                <option key={pipeline.id} value={pipeline.id}>
-                  {pipeline.name}
-                </option>
-              ))}
-            </select>
-          </label>
+
+            {pipelines.length > 1 ? (
+              <select
+                className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                value={selectedPipelineId}
+                onChange={(event) => setSelectedPipelineId(event.target.value)}
+              >
+                {pipelines.map((pipeline) => (
+                  <option key={pipeline.id} value={pipeline.id}>
+                    {pipeline.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="mt-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-semibold text-gray-800">
+                {activePipeline?.name || "Pipeline comercial"}
+              </div>
+            )}
+          </div>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-wide text-gray-500">
@@ -957,6 +915,15 @@ export default function CRMOpportunitiesPage() {
                             moving={movingId === opportunity.id}
                             openStages={openStages}
                             opportunity={opportunity}
+                            returnState={{
+                              from: "/admin/crm/oportunidades",
+                              fromType: "opportunities",
+                              opportunityFilters: {
+                                pipeline: selectedPipelineId,
+                                campaign: selectedCampaignId,
+                                search,
+                              },
+                            }}
                             onDragEnd={handleDragEnd}
                             onDragStart={handleDragStart}
                             onMove={handleMove}
