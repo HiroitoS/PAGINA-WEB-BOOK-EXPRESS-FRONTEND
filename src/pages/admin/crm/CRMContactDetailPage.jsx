@@ -27,6 +27,10 @@ import {
   getCRMContactWorkItems,
   updateCRMContact,
 } from "../../../api/crmApi";
+import {
+  buildNavigationState,
+  resolveReturnContext,
+} from "../../../utils/navigationContext";
 
 const ACTIVITY_FILTERS = [
   { value: "all", label: "Todas" },
@@ -246,25 +250,6 @@ function contactToEditForm(contact) {
   };
 }
 
-function getReturnContext(locationState) {
-  const from = locationState?.from;
-
-  if (
-    typeof from === "string" &&
-    from.startsWith("/admin/crm/colegios/")
-  ) {
-    return {
-      path: from,
-      label: "Volver al colegio",
-    };
-  }
-
-  return {
-    path: "/admin/crm/contactos",
-    label: "Volver a contactos",
-  };
-}
-
 export default function CRMContactDetailPage() {
   const { id } = useParams();
   const location = useLocation();
@@ -356,7 +341,13 @@ export default function CRMContactDetailPage() {
     return Array.from(ids);
   }, [activities, workItems]);
 
-  const returnContext = getReturnContext(location.state);
+  const returnContext = resolveReturnContext(
+    location.state,
+    {
+      fallbackPath: "/admin/crm/contactos",
+      fallbackLabel: "contactos",
+    },
+  );
 
   function startContactEdit() {
     setEditForm(contactToEditForm(contact));
@@ -599,6 +590,7 @@ export default function CRMContactDetailPage() {
         <Link
           className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50"
           to={returnContext.path}
+          state={returnContext.state}
         >
           <FaArrowLeft />
           {returnContext.label}
@@ -1356,11 +1348,12 @@ export default function CRMContactDetailPage() {
                 <Link
                   className="mt-4 flex w-full items-center justify-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                   to={`/admin/crm/colegios/${school.id}`}
-                  state={{
+                  state={buildNavigationState({
                     from: `/admin/crm/contactos/${id}`,
                     fromLabel: contact.full_name,
                     fromType: "contact",
-                  }}
+                    currentState: location.state,
+                  })}
                 >
                   Abrir colegio
                 </Link>
@@ -1398,11 +1391,12 @@ export default function CRMContactDetailPage() {
 
               <Link
                 to="/admin/workspace/calendar"
-                state={{
+                state={buildNavigationState({
                   from: `/admin/crm/contactos/${contact.id}`,
                   fromLabel: contact.full_name,
                   fromType: "contact",
-                }}
+                  currentState: location.state,
+                })}
                 className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
               >
                 <FaCalendarAlt />
