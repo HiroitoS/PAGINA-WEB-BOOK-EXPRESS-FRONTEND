@@ -438,11 +438,11 @@ function OpportunityCard({
 
       <div className="mt-4 flex flex-col gap-2">
         <Link
-          className="inline-flex justify-center rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50"
-          to={`/admin/crm/colegios/${opportunity.school?.id}`}
+          className="inline-flex justify-center rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800"
+          to={`/admin/crm/oportunidades/${opportunity.id}`}
           state={returnState}
         >
-          Abrir colegio
+          Abrir oportunidad
         </Link>
 
         {!isClosed ? (
