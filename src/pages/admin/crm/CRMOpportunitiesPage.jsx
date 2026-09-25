@@ -411,6 +411,28 @@ function OpportunityCard({
           <span className="font-black text-gray-700">Última actividad:</span>{" "}
           {formatDate(opportunity.last_activity_at)}
         </p>
+
+        <div className="rounded-xl bg-gray-50 px-3 py-2.5 ring-1 ring-gray-200">
+          <p className="font-black text-gray-700">
+            Próxima actividad
+          </p>
+
+          {opportunity.next_activity ? (
+            <div className="mt-1.5">
+              <p className="font-black text-gray-950">
+                {formatDate(opportunity.next_activity.scheduled_at)}
+              </p>
+              <p className="mt-1 leading-5 text-gray-600">
+                {opportunity.next_activity.type_display}:{" "}
+                {opportunity.next_activity.title}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-1.5 font-semibold text-gray-400">
+              Sin próxima actividad
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
