@@ -593,7 +593,7 @@ export default function CRMContactDetailPage() {
           state={returnContext.state}
         >
           <FaArrowLeft />
-          {returnContext.label}
+          Volver a {returnContext.label || "contactos"}
         </Link>
 
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -617,9 +617,10 @@ export default function CRMContactDetailPage() {
       <Link
         className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50"
         to={returnContext.path}
+        state={returnContext.state}
       >
         <FaArrowLeft />
-        {returnContext.label}
+        Volver a {returnContext.label || "contactos"}
       </Link>
 
       <motion.section
