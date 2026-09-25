@@ -54,6 +54,17 @@ function formatOwner(owner) {
   return owner.full_name || owner.username || "Asesor asignado";
 }
 
+function formatCampaignName(campaign) {
+  const name = campaign?.name || "Campaña";
+  const year = campaign?.year ? String(campaign.year) : "";
+
+  if (!year || name.includes(year)) {
+    return name;
+  }
+
+  return `${name} - ${year}`;
+}
+
 function formatDate(value) {
   if (!value) {
     return "Sin actividad";
@@ -263,7 +274,7 @@ function NewOpportunityPanel({
                 </p>
                 <p className="mt-1 font-black text-gray-950">
                   {activeSchoolCampaign
-                    ? `${activeSchoolCampaign.name} - ${activeSchoolCampaign.year}`
+                    ? formatCampaignName(activeSchoolCampaign)
                     : "Sin campaña escolar activa disponible"}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-gray-500">
@@ -780,7 +791,7 @@ export default function CRMOpportunitiesPage() {
               <option value="">Todas las campañas</option>
               {campaigns.map((campaign) => (
                 <option key={campaign.id} value={campaign.id}>
-                  {campaign.name} - {campaign.year}
+                  {formatCampaignName(campaign)}
                 </option>
               ))}
             </select>
