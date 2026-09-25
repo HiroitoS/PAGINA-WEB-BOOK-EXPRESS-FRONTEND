@@ -552,7 +552,7 @@ export default function CRMSchoolDetailPage() {
           state={returnContext.state}
         >
           <FaArrowLeft />
-          {backLabel}
+          Volver a {returnContext.label || "colegios"}
         </Link>
       </div>
 
@@ -1075,11 +1075,12 @@ export default function CRMSchoolDetailPage() {
                       <Link
                         key={contact.id}
                         to={`/admin/crm/contactos/${contact.id}`}
-                        state={{
+                        state={buildNavigationState({
                           from: `/admin/crm/colegios/${school.id}`,
                           fromLabel: school.name,
                           fromType: "school",
-                        }}
+                          currentState: location.state,
+                        })}
                         className="block rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
                       >
                         <div className="flex items-start gap-3">
