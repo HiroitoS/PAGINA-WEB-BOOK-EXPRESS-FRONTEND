@@ -17,6 +17,7 @@ import {
   getCRMOpportunityHistory,
   getCRMOpportunityQuotations,
 } from "../../../api/crmApi";
+import CRMOpportunityProjectionSection from "../../../components/admin/crm/CRMOpportunityProjectionSection";
 import {
   buildNavigationState,
   resolveReturnContext,
@@ -25,6 +26,7 @@ import {
 const TABS = [
   { key: "summary", label: "Resumen" },
   { key: "activity", label: "Actividad" },
+  { key: "projection", label: "Proyección" },
   { key: "quotations", label: "Cotizaciones" },
   { key: "adoption", label: "Adopción" },
   { key: "history", label: "Historial" },
@@ -508,6 +510,10 @@ export default function CRMOpportunityDetailPage() {
                 </div>
               )}
             </section>
+          ) : null}
+
+          {activeTab === "projection" ? (
+            <CRMOpportunityProjectionSection opportunityId={id} />
           ) : null}
 
           {activeTab === "quotations" ? (
