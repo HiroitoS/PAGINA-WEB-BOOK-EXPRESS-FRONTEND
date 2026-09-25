@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import {
   FaArrowLeft,
+  FaBriefcase,
   FaBuilding,
   FaCalendarAlt,
   FaChartLine,
@@ -9,6 +10,7 @@ import {
   FaExclamationTriangle,
   FaMapMarkerAlt,
   FaPhoneAlt,
+  FaPlus,
   FaSchool,
   FaStar,
   FaTasks,
@@ -18,6 +20,10 @@ import {
 } from "react-icons/fa";
 
 import {
+  createCRMOpportunity,
+  getCRMCampaigns,
+  getCRMOpportunity,
+  getCRMOpportunities,
   getCRMSchool,
   getCRMSchoolActivities,
   getCRMSchoolWorkItems,
@@ -46,14 +52,24 @@ function normalizeResults(data) {
 }
 
 function getErrorMessage(error, fallback) {
-  const detail = error?.response?.data?.detail;
+  const data = error?.response?.data;
 
-  if (Array.isArray(detail) && detail.length > 0) {
-    return detail.join(" ");
+  if (typeof data?.detail === "string" && data.detail.trim()) {
+    return data.detail;
   }
 
-  if (typeof detail === "string" && detail.trim()) {
-    return detail;
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail.join(" ");
+  }
+
+  if (data && typeof data === "object") {
+    const messages = Object.values(data)
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .filter((value) => typeof value === "string" && value.trim());
+
+    if (messages.length > 0) {
+      return messages.join(" ");
+    }
   }
 
   return fallback;
@@ -244,6 +260,11 @@ export default function CRMSchoolDetailPage() {
   const [school, setSchool] = useState(null);
   const [activities, setActivities] = useState([]);
   const [workItems, setWorkItems] = useState([]);
+  const [schoolOpportunities, setSchoolOpportunities] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
+  const [opportunityDetail, setOpportunityDetail] = useState(null);
+  const [creatingOpportunity, setCreatingOpportunity] = useState(false);
+  const [opportunityError, setOpportunityError] = useState("");
   const [activityFilter, setActivityFilter] = useState("all");
   const [activeInfoTab, setActiveInfoTab] = useState("activity");
   const [loading, setLoading] = useState(true);
@@ -267,9 +288,20 @@ export default function CRMSchoolDetailPage() {
 
         setSchool(schoolData);
 
-        const [activitiesResult, workItemsResult] = await Promise.allSettled([
+        const [
+          activitiesResult,
+          workItemsResult,
+          opportunitiesResult,
+          campaignsResult,
+        ] = await Promise.allSettled([
           getCRMSchoolActivities(id),
           getCRMSchoolWorkItems(id),
+          getCRMOpportunities({
+            school: id,
+            page: 1,
+            page_size: 100,
+          }),
+          getCRMCampaigns(),
         ]);
 
         if (ignore) {
@@ -293,6 +325,34 @@ export default function CRMSchoolDetailPage() {
             currentWarning
               ? `${currentWarning} Tampoco se pudieron cargar las próximas acciones.`
               : "La ficha cargó, pero no se pudieron mostrar las próximas acciones.",
+          );
+        }
+
+        if (opportunitiesResult.status === "fulfilled") {
+          setSchoolOpportunities(
+            normalizeResults(opportunitiesResult.value),
+          );
+        } else {
+          setSchoolOpportunities([]);
+          setSupportingWarning((currentWarning) =>
+            currentWarning
+              ? `${currentWarning} Tampoco se pudo cargar la oportunidad comercial.`
+              : "La ficha cargó, pero no se pudo mostrar la oportunidad comercial.",
+          );
+        }
+
+        if (campaignsResult.status === "fulfilled") {
+          setCampaigns(
+            Array.isArray(campaignsResult.value)
+              ? campaignsResult.value
+              : [],
+          );
+        } else {
+          setCampaigns([]);
+          setSupportingWarning((currentWarning) =>
+            currentWarning
+              ? `${currentWarning} Tampoco se pudo identificar la campaña activa.`
+              : "La ficha cargó, pero no se pudo identificar la campaña activa.",
           );
         }
       } catch (error) {
@@ -325,16 +385,29 @@ export default function CRMSchoolDetailPage() {
       hasValue(school.reference));
 
   const cameFromContact =
-    typeof location.state?.from === "string" &&
-    location.state.from.startsWith("/admin/crm/contactos/");
+    location.state?.fromType === "contact"
+    && typeof location.state?.from === "string";
 
-  const backPath = cameFromContact
-    ? location.state.from
-    : "/admin/crm/colegios";
+  const cameFromOpportunities =
+    location.state?.fromType === "opportunities"
+    && typeof location.state?.from === "string";
+
+  const backPath =
+    cameFromContact || cameFromOpportunities
+      ? location.state.from
+      : "/admin/crm/colegios";
 
   const backLabel = cameFromContact
     ? "Volver al contacto"
-    : "Volver a colegios";
+    : cameFromOpportunities
+      ? "Volver a oportunidades"
+      : "Volver a colegios";
+
+  const backState = cameFromOpportunities
+    ? {
+        opportunityFilters: location.state?.opportunityFilters || {},
+      }
+    : undefined;
 
   const visibleContacts = useMemo(() => {
     const contacts = Array.isArray(school?.contacts)
@@ -367,12 +440,121 @@ export default function CRMSchoolDetailPage() {
     [workItems],
   );
 
+  const activeSchoolCampaigns = useMemo(
+    () =>
+      campaigns.filter(
+        (campaign) =>
+          campaign.campaign_type === "school"
+          && campaign.status === "active",
+      ),
+    [campaigns],
+  );
+
+  const activeSchoolCampaign =
+    activeSchoolCampaigns.length === 1
+      ? activeSchoolCampaigns[0]
+      : null;
+
+  const currentOpportunity = useMemo(() => {
+    const openOpportunities = schoolOpportunities.filter(
+      (opportunity) => !opportunity.is_closed,
+    );
+
+    if (activeSchoolCampaign) {
+      const campaignOpportunity = openOpportunities.find(
+        (opportunity) =>
+          opportunity.campaign?.id === activeSchoolCampaign.id,
+      );
+
+      if (campaignOpportunity) {
+        return campaignOpportunity;
+      }
+    }
+
+    return openOpportunities[0] || null;
+  }, [activeSchoolCampaign, schoolOpportunities]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadOpportunityDetail() {
+      if (!currentOpportunity?.id) {
+        setOpportunityDetail(null);
+        return;
+      }
+
+      try {
+        const detail = await getCRMOpportunity(currentOpportunity.id);
+
+        if (!ignore) {
+          setOpportunityDetail(detail);
+        }
+      } catch {
+        if (!ignore) {
+          setOpportunityDetail(null);
+        }
+      }
+    }
+
+    loadOpportunityDetail();
+
+    return () => {
+      ignore = true;
+    };
+  }, [currentOpportunity?.id]);
+
+  const displayedOpportunity =
+    opportunityDetail?.id === currentOpportunity?.id
+      ? opportunityDetail
+      : currentOpportunity;
+
+  const opportunityBoardState = displayedOpportunity
+    ? {
+        opportunityFilters: {
+          pipeline: String(displayedOpportunity.pipeline?.id || ""),
+          campaign: String(displayedOpportunity.campaign?.id || ""),
+          search: school?.name || "",
+        },
+      }
+    : undefined;
+
+  async function handleCreateOpportunity() {
+    if (!school || creatingOpportunity) {
+      return;
+    }
+
+    try {
+      setCreatingOpportunity(true);
+      setOpportunityError("");
+
+      const created = await createCRMOpportunity({
+        school: school.id,
+      });
+
+      setSchoolOpportunities((currentItems) => [
+        created,
+        ...currentItems.filter((item) => item.id !== created.id),
+      ]);
+      setOpportunityDetail(created);
+    } catch (error) {
+      setOpportunityError(
+        getErrorMessage(
+          error,
+          "No se pudo crear la oportunidad comercial.",
+        ),
+      );
+    } finally {
+      setCreatingOpportunity(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-7xl">
       <div className="mb-3">
         <Link
           className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
           to={backPath}
+          state={backState}
         >
           <FaArrowLeft />
           {backLabel}
@@ -772,6 +954,108 @@ export default function CRMSchoolDetailPage() {
             </main>
 
             <aside className="order-2 min-w-0 space-y-4 xl:order-none xl:col-span-3">
+              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
+                    <FaBriefcase />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                      Oportunidad comercial
+                    </p>
+                    <h2 className="mt-1 text-xl font-black text-gray-950">
+                      {displayedOpportunity
+                        ? displayedOpportunity.campaign?.name
+                        : activeSchoolCampaign?.name || "Campaña escolar"}
+                    </h2>
+                  </div>
+                </div>
+
+                {opportunityError ? (
+                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800">
+                    {opportunityError}
+                  </div>
+                ) : null}
+
+                {displayedOpportunity ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                          Etapa
+                        </p>
+                        <p className="mt-1 text-sm font-black text-gray-950">
+                          {displayedOpportunity.stage?.name || "En curso"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                          Asesor
+                        </p>
+                        <p className="mt-1 text-sm font-black text-gray-950">
+                          {formatOwner(displayedOpportunity.owner)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Contacto principal
+                      </p>
+                      <p className="mt-1 text-sm font-black text-gray-950">
+                        {displayedOpportunity.primary_contact?.full_name
+                          || "Sin contacto principal"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Última actividad
+                      </p>
+                      <p className="mt-1 text-sm font-black text-gray-950">
+                        {displayedOpportunity.last_activity_at
+                          ? formatDateTime(displayedOpportunity.last_activity_at)
+                          : "Sin actividad"}
+                      </p>
+                    </div>
+
+                    <Link
+                      to="/admin/crm/oportunidades"
+                      state={opportunityBoardState}
+                      className="inline-flex w-full items-center justify-center rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800"
+                    >
+                      Abrir oportunidad
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm leading-6 text-gray-600">
+                      {activeSchoolCampaigns.length === 0
+                        ? "No existe una campaña escolar activa para crear una oportunidad."
+                        : activeSchoolCampaigns.length > 1
+                          ? "Hay más de una campaña escolar activa. Regulariza las campañas antes de crear una oportunidad."
+                          : `No existe una oportunidad abierta para ${activeSchoolCampaign.name}.`}
+                    </div>
+
+                    {activeSchoolCampaigns.length === 1 ? (
+                      <button
+                        type="button"
+                        disabled={creatingOpportunity}
+                        onClick={handleCreateOpportunity}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <FaPlus className="text-xs" />
+                        {creatingOpportunity
+                          ? "Creando..."
+                          : "Crear oportunidad"}
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+              </section>
+
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>
