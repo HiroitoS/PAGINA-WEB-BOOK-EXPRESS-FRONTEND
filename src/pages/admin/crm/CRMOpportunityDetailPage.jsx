@@ -4,8 +4,6 @@ import {
   FaBriefcase,
   FaCalendarAlt,
   FaCheckCircle,
-  FaClipboardList,
-  FaFileInvoiceDollar,
   FaHistory,
   FaSchool,
   FaUserTie,
@@ -298,7 +296,7 @@ export default function CRMOpportunityDetailPage() {
             </p>
           </div>
 
-          <div className="grid min-w-0 gap-2 sm:grid-cols-3 xl:min-w-[620px]">
+          <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:min-w-[420px]">
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
               <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
                 Campaña
@@ -317,18 +315,6 @@ export default function CRMOpportunityDetailPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
-              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
-                Próxima acción
-              </p>
-              <p className="mt-1 text-sm font-black">
-                {opportunity.next_activity
-                  ? formatDateTime(
-                      opportunity.next_activity.scheduled_at,
-                    )
-                  : "Sin próxima actividad"}
-              </p>
-            </div>
           </div>
         </div>
 
@@ -355,7 +341,7 @@ export default function CRMOpportunityDetailPage() {
       <div className="mt-4 grid gap-4 xl:grid-cols-12">
         <main className="min-w-0 xl:col-span-9">
           {activeTab === "summary" ? (
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-wide text-red-700">
                   Gestión actual
@@ -364,8 +350,8 @@ export default function CRMOpportunityDetailPage() {
                   Estado comercial
                 </h2>
 
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Etapa
                     </p>
@@ -374,7 +360,7 @@ export default function CRMOpportunityDetailPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Última actividad
                     </p>
@@ -386,125 +372,90 @@ export default function CRMOpportunityDetailPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200 sm:col-span-2">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Próxima actividad
                     </p>
-                    <p className="mt-1 font-black text-gray-950">
-                      {opportunity.next_activity
-                        ? formatDateTime(
-                            opportunity.next_activity.scheduled_at,
-                          )
-                        : "Sin próxima actividad"}
-                    </p>
+
                     {opportunity.next_activity ? (
-                      <p className="mt-1 text-xs leading-5 text-gray-600">
-                        {opportunity.next_activity.type_display}
-                        {" · "}
-                        {opportunity.next_activity.title}
+                      <>
+                        <p className="mt-1 font-black text-gray-950">
+                          {formatDateTime(
+                            opportunity.next_activity.scheduled_at,
+                          )}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-gray-600">
+                          {opportunity.next_activity.type_display}
+                          {" · "}
+                          {opportunity.next_activity.title}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-1 font-black text-gray-400">
+                        Sin próxima actividad
                       </p>
-                    ) : null}
+                    )}
                   </div>
                 </div>
               </section>
 
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Seguimiento
-                </p>
-                <h2 className="mt-1 text-xl font-black text-gray-950">
-                  Actividad y agenda
-                </h2>
-
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("activity")}
-                    className="rounded-2xl bg-gray-50 p-4 text-left ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
-                  >
-                    <p className="text-2xl font-black text-gray-950">
-                      {activities.length}
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                      Historial comercial
                     </p>
-                    <p className="mt-1 text-xs font-bold text-gray-500">
-                      Actividades
-                    </p>
-                  </button>
-
-                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
-                    <p className="text-2xl font-black text-gray-950">
-                      {pendingWorkItems.length}
-                    </p>
-                    <p className="mt-1 text-xs font-bold text-gray-500">
-                      Acciones pendientes
-                    </p>
+                    <h2 className="mt-1 text-xl font-black text-gray-950">
+                      Actividad reciente
+                    </h2>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("quotations")}
-                    className="rounded-2xl bg-gray-50 p-4 text-left ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
-                  >
-                    <p className="text-2xl font-black text-gray-950">
-                      {quotations.length}
-                    </p>
-                    <p className="mt-1 text-xs font-bold text-gray-500">
-                      Cotizaciones
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("adoption")}
-                    className="rounded-2xl bg-gray-50 p-4 text-left ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
-                  >
-                    <p className="text-2xl font-black text-gray-950">
-                      {adoptions.length}
-                    </p>
-                    <p className="mt-1 text-xs font-bold text-gray-500">
-                      Adopciones
-                    </p>
-                  </button>
+                  {activities.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("activity")}
+                      className="rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50"
+                    >
+                      Ver actividad
+                    </button>
+                  ) : null}
                 </div>
-              </section>
 
-              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Próximas acciones
-                </p>
-                <h2 className="mt-1 text-xl font-black text-gray-950">
-                  ToDo / Agenda
-                </h2>
+                {activities.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {activities.slice(0, 2).map((activity) => (
+                      <article
+                        key={activity.id}
+                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                      >
+                        <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                          <div className="min-w-0">
+                            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
+                              {activity.activity_type_display || "Actividad"}
+                            </span>
+                            <p className="mt-3 font-black text-gray-950">
+                              {activity.summary}
+                            </p>
+                          </div>
 
-                {pendingWorkItems.length > 0 ? (
-                  <div className="mt-4 space-y-2">
-                    {pendingWorkItems.slice(0, 4).map((workItem) => {
-                      const isTask = workItem.type === "task";
-                      const target = isTask
-                        ? `/admin/workspace/tasks?task=${workItem.item?.id}&tab=info`
-                        : "/admin/workspace/calendar";
-
-                      return (
-                        <Link
-                          key={workItem.id}
-                          to={target}
-                          state={navigationState}
-                          className="block rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
-                        >
-                          <p className="text-sm font-black text-gray-950">
-                            {workItem.item?.title || "Acción programada"}
+                          <p className="shrink-0 text-xs font-semibold text-gray-400">
+                            {formatDateTime(activity.occurred_at)}
                           </p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            {formatDateTime(getWorkItemDate(workItem))}
+                        </div>
+
+                        {activity.result ? (
+                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
+                            {activity.result}
                           </p>
-                        </Link>
-                      );
-                    })}
+                        ) : null}
+                      </article>
+                    ))}
                   </div>
                 ) : (
                   <div className="mt-4">
                     <EmptyState
-                      title="Sin próximas acciones"
-                      description="Cuando se programe una tarea, evento o recordatorio para esta oportunidad aparecerá aquí."
+                      title="Sin actividad registrada"
+                      description="Las llamadas, visitas, reuniones y seguimientos vinculados a esta oportunidad aparecerán aquí."
                     />
                   </div>
                 )}
@@ -769,113 +720,91 @@ export default function CRMOpportunityDetailPage() {
           ) : null}
         </main>
 
-        <aside className="min-w-0 space-y-4 xl:col-span-3">
+        <aside className="min-w-0 xl:col-span-3">
           <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
-                <FaSchool />
-              </div>
-              <div>
-                <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                  Colegio
-                </p>
-                <p className="font-black text-gray-950">
-                  {opportunity.school?.name || "Colegio"}
-                </p>
-              </div>
-            </div>
+            <p className="text-xs font-black uppercase tracking-wide text-red-700">
+              Relaciones
+            </p>
+            <h2 className="mt-1 text-xl font-black text-gray-950">
+              Contexto de la oportunidad
+            </h2>
 
-            {opportunity.school?.id ? (
-              <Link
-                to={`/admin/crm/colegios/${opportunity.school.id}`}
-                state={navigationState}
-                className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50"
-              >
-                Abrir colegio
-              </Link>
-            ) : null}
-          </section>
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
+                    <FaSchool />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Colegio
+                    </p>
+                    <p className="mt-1 break-words font-black text-gray-950">
+                      {opportunity.school?.name || "Colegio"}
+                    </p>
+                  </div>
+                </div>
 
-          <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
-                <FaUserTie />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                  Contacto principal
-                </p>
-                <p className="break-words font-black text-gray-950">
-                  {opportunity.primary_contact?.full_name
-                    || "Sin contacto principal"}
-                </p>
-              </div>
-            </div>
-
-            {opportunity.primary_contact?.id ? (
-              <Link
-                to={`/admin/crm/contactos/${opportunity.primary_contact.id}`}
-                state={navigationState}
-                className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50"
-              >
-                Abrir contacto
-              </Link>
-            ) : null}
-          </section>
-
-          <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <FaCalendarAlt className="text-red-700" />
-              <div>
-                <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                  Agenda
-                </p>
-                <p className="font-black text-gray-950">
-                  Próximas acciones
-                </p>
-              </div>
-            </div>
-
-            <Link
-              to="/admin/workspace/calendar"
-              state={navigationState}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800"
-            >
-              <FaCalendarAlt />
-              Abrir calendario
-            </Link>
-          </section>
-
-          <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
-                <FaClipboardList className="mx-auto text-gray-500" />
-                <p className="mt-2 text-lg font-black text-gray-950">
-                  {activities.length}
-                </p>
-                <p className="text-xs font-bold text-gray-500">
-                  Actividad
-                </p>
+                {opportunity.school?.id ? (
+                  <Link
+                    to={`/admin/crm/colegios/${opportunity.school.id}`}
+                    state={navigationState}
+                    className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50"
+                  >
+                    Abrir colegio
+                  </Link>
+                ) : null}
               </div>
 
-              <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
-                <FaFileInvoiceDollar className="mx-auto text-gray-500" />
-                <p className="mt-2 text-lg font-black text-gray-950">
-                  {quotations.length}
-                </p>
-                <p className="text-xs font-bold text-gray-500">
-                  Cotizaciones
-                </p>
+              <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
+                    <FaUserTie />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Contacto principal
+                    </p>
+                    <p className="mt-1 break-words font-black text-gray-950">
+                      {opportunity.primary_contact?.full_name
+                        || "Sin contacto principal"}
+                    </p>
+                  </div>
+                </div>
+
+                {opportunity.primary_contact?.id ? (
+                  <Link
+                    to={`/admin/crm/contactos/${opportunity.primary_contact.id}`}
+                    state={navigationState}
+                    className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50"
+                  >
+                    Abrir contacto
+                  </Link>
+                ) : null}
               </div>
 
-              <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
-                <FaCheckCircle className="mx-auto text-gray-500" />
-                <p className="mt-2 text-lg font-black text-gray-950">
-                  {adoptions.length}
-                </p>
-                <p className="text-xs font-bold text-gray-500">
-                  Adopciones
-                </p>
+              <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-red-700 ring-1 ring-gray-200">
+                    <FaCalendarAlt />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Agenda
+                    </p>
+                    <p className="mt-1 font-black text-gray-950">
+                      Calendario comercial
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  to="/admin/workspace/calendar"
+                  state={navigationState}
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800"
+                >
+                  Abrir calendario
+                </Link>
               </div>
             </div>
           </section>
