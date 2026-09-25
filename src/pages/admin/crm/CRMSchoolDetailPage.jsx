@@ -474,17 +474,19 @@ export default function CRMSchoolDetailPage() {
     return openOpportunities[0] || null;
   }, [activeSchoolCampaign, schoolOpportunities]);
 
+  const currentOpportunityId = currentOpportunity?.id || null;
+
   useEffect(() => {
     let ignore = false;
 
     async function loadOpportunityDetail() {
-      if (!currentOpportunity?.id) {
+      if (!currentOpportunityId) {
         setOpportunityDetail(null);
         return;
       }
 
       try {
-        const detail = await getCRMOpportunity(currentOpportunity.id);
+        const detail = await getCRMOpportunity(currentOpportunityId);
 
         if (!ignore) {
           setOpportunityDetail(detail);
@@ -501,7 +503,7 @@ export default function CRMSchoolDetailPage() {
     return () => {
       ignore = true;
     };
-  }, [currentOpportunity?.id]);
+  }, [currentOpportunityId]);
 
   const displayedOpportunity =
     opportunityDetail?.id === currentOpportunity?.id
