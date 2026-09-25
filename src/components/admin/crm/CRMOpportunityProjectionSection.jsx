@@ -58,6 +58,47 @@ function resolveErrorMessage(error, fallback) {
   return fallback;
 }
 
+function calculateProjectedStudents(draft) {
+  const sections = Number(draft.sectionCount);
+  const studentsPerSection = Number(draft.studentsPerSection);
+
+  if (
+    Number.isFinite(sections)
+    && sections > 0
+    && Number.isFinite(studentsPerSection)
+    && studentsPerSection > 0
+  ) {
+    return sections * studentsPerSection;
+  }
+
+  return 0;
+}
+
+function resolveStudentsPerSection({
+  sectionCount,
+  totalStudents,
+  populationStudentsPerSection,
+}) {
+  const sections = Number(sectionCount);
+  const total = Number(totalStudents);
+  const populationValue = Number(populationStudentsPerSection);
+
+  if (Number.isFinite(populationValue) && populationValue > 0) {
+    return populationValue;
+  }
+
+  if (
+    Number.isFinite(sections)
+    && sections > 0
+    && Number.isFinite(total)
+    && total > 0
+  ) {
+    return Math.max(1, Math.round(total / sections));
+  }
+
+  return "";
+}
+
 function buildDrafts(base, projection) {
   const currentGrades = new Map();
   const itemsByGradeLine = new Map();
@@ -84,6 +125,11 @@ function buildDrafts(base, projection) {
         || item.product?.provider?.name
         || "Editorial",
       unitPrice: item.unit_price,
+      priceYear: item.price_year_snapshot,
+      priceCampaign: item.price_campaign_snapshot,
+      priceIsReference:
+        Number(item.price_year_snapshot)
+        !== Number(projection?.campaign_year_snapshot),
       quantity: item.quantity,
     });
   }
@@ -107,8 +153,14 @@ function buildDrafts(base, projection) {
         selected: Boolean(current),
         sectionCount:
           current?.section_count ?? detail.section_count ?? "",
-        studentCount:
-          current?.student_count ?? detail.student_count ?? "",
+        studentsPerSection: resolveStudentsPerSection({
+          sectionCount:
+            current?.section_count ?? detail.section_count ?? "",
+          totalStudents:
+            current?.student_count ?? detail.student_count ?? "",
+          populationStudentsPerSection:
+            current ? null : detail.students_per_section,
+        }),
         products: current
           ? itemsByGradeLine.get(String(current.id)) || []
           : [],
@@ -132,7 +184,11 @@ function buildDrafts(base, projection) {
       gradeName: current.grade?.name || current.grade_name_snapshot,
       selected: true,
       sectionCount: current.section_count ?? "",
-      studentCount: current.student_count ?? "",
+      studentsPerSection: resolveStudentsPerSection({
+        sectionCount: current.section_count ?? "",
+        totalStudents: current.student_count ?? "",
+        populationStudentsPerSection: null,
+      }),
       products: itemsByGradeLine.get(String(current.id)) || [],
     });
   }
@@ -276,6 +332,16 @@ export default function CRMOpportunityProjectionSection({
 
   const projectionGroups = useMemo(
     () => getProjectionGroups(projection),
+    [projection],
+  );
+
+  const hasReferencePrices = useMemo(
+    () =>
+      (projection?.items || []).some(
+        (item) =>
+          Number(item.price_year_snapshot)
+          !== Number(projection?.campaign_year_snapshot),
+      ),
     [projection],
   );
 
@@ -471,7 +537,10 @@ export default function CRMOpportunityProjectionSection({
           name: choice.name,
           editorial: choice.editorial?.name || "Editorial",
           unitPrice: choice.unit_price,
-          quantity: Number(draft.studentCount) || 1,
+          priceYear: choice.price_year,
+          priceCampaign: choice.price_campaign,
+          priceIsReference: Boolean(choice.price_is_reference),
+          quantity: calculateProjectedStudents(draft) || 1,
         },
       ],
     });
@@ -523,12 +592,14 @@ export default function CRMOpportunityProjectionSection({
     }
 
     const invalidPopulation = selectedDrafts.find(
-      (draft) => Number(draft.studentCount) < 1,
+      (draft) =>
+        Number(draft.sectionCount) < 1
+        || Number(draft.studentsPerSection) < 1,
     );
 
     if (invalidPopulation) {
       setPanelError(
-        `Revisa los alumnos proyectados de ${invalidPopulation.gradeName}.`,
+        `Revisa las secciones y alumnos por sección de ${invalidPopulation.gradeName}.`,
       );
       return;
     }
@@ -551,7 +622,7 @@ export default function CRMOpportunityProjectionSection({
         section_count: draft.sectionCount
           ? Number(draft.sectionCount)
           : null,
-        student_count: Number(draft.studentCount),
+        student_count: calculateProjectedStudents(draft),
       })),
       items: selectedDrafts.flatMap((draft) =>
         draft.products.map((product) => ({
@@ -708,6 +779,20 @@ export default function CRMOpportunityProjectionSection({
                 </p>
               </div>
             </div>
+
+            {hasReferencePrices ? (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <p className="text-sm font-black text-amber-900">
+                  Proyección con precios referenciales
+                </p>
+                <p className="mt-1 text-xs leading-5 text-amber-800">
+                  Algunos productos usan el último precio anterior disponible.
+                  La campaña sigue siendo {projection.campaign_year_snapshot};
+                  estos importes sirven para planificación y deberán revisarse
+                  cuando se carguen los precios definitivos de la campaña.
+                </p>
+              </div>
+            ) : null}
 
             {projection.editorial_totals?.length > 0 ? (
               <div className="mt-4 flex flex-wrap gap-2">
@@ -914,7 +999,7 @@ export default function CRMOpportunityProjectionSection({
                           }`}
                         >
                           {draft.selected
-                            ? `${draft.studentCount || 0} alumnos · ${draft.products.length} prod.`
+                            ? `${calculateProjectedStudents(draft)} alumnos · ${draft.products.length} prod.`
                             : "No incluido"}
                         </span>
                       </button>
@@ -960,22 +1045,7 @@ export default function CRMOpportunityProjectionSection({
 
                     {activeDraft.selected ? (
                       <>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          <label className="text-sm font-bold text-gray-700">
-                            Alumnos proyectados
-                            <input
-                              type="number"
-                              min="1"
-                              value={activeDraft.studentCount}
-                              onChange={(event) =>
-                                updateDraft(activeDraft.key, {
-                                  studentCount: event.target.value,
-                                })
-                              }
-                              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                            />
-                          </label>
-
+                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
                           <label className="text-sm font-bold text-gray-700">
                             Secciones
                             <input
@@ -990,6 +1060,30 @@ export default function CRMOpportunityProjectionSection({
                               className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
                             />
                           </label>
+
+                          <label className="text-sm font-bold text-gray-700">
+                            Alumnos por sección
+                            <input
+                              type="number"
+                              min="1"
+                              value={activeDraft.studentsPerSection}
+                              onChange={(event) =>
+                                updateDraft(activeDraft.key, {
+                                  studentsPerSection: event.target.value,
+                                })
+                              }
+                              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                            />
+                          </label>
+
+                          <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+                            <p className="text-sm font-bold text-gray-700">
+                              Total proyectado
+                            </p>
+                            <p className="mt-1.5 text-lg font-black text-gray-950">
+                              {calculateProjectedStudents(activeDraft)}
+                            </p>
+                          </div>
                         </div>
 
                         {activeDraft.products.length > 0 ? (
@@ -1007,6 +1101,9 @@ export default function CRMOpportunityProjectionSection({
                                     {product.editorial}
                                     {" · "}
                                     {formatCurrency(product.unitPrice)}
+                                    {product.priceYear
+                                      ? ` · ${product.priceIsReference ? "Referencial " : ""}${product.priceYear}`
+                                      : ""}
                                   </p>
                                 </div>
 
@@ -1115,6 +1212,16 @@ export default function CRMOpportunityProjectionSection({
                               </button>
                             </div>
 
+                            {productChoices.some(
+                              (choice) => choice.price_is_reference,
+                            ) ? (
+                              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                                Estos productos usan el último precio anterior
+                                disponible como referencia para planificar la
+                                campaña {projectionBase?.campaign?.year}.
+                              </div>
+                            ) : null}
+
                             {productError ? (
                               <p className="mt-3 text-sm font-bold text-red-700">
                                 {productError}
@@ -1152,6 +1259,9 @@ export default function CRMOpportunityProjectionSection({
                                                 : ""}
                                               {" · "}
                                               {formatCurrency(choice.unit_price)}
+                                              {choice.price_year
+                                                ? ` · ${choice.price_is_reference ? "Referencial " : ""}${choice.price_year}`
+                                                : ""}
                                             </p>
                                           </div>
                                         </div>
@@ -1177,8 +1287,8 @@ export default function CRMOpportunityProjectionSection({
                                   && productChoices.length === 0
                                   && !productError ? (
                                     <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
-                                      No hay productos con precio válido para
-                                      este grado y la campaña seleccionada.
+                                      No hay productos compatibles con este
+                                      grado, editorial y búsqueda.
                                     </div>
                                   ) : null}
                               </div>
