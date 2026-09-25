@@ -162,9 +162,6 @@ export default function CRMOpportunityDetailPage() {
 
     async function loadOpportunityWorkspace() {
       try {
-        setLoading(true);
-        setErrorMessage("");
-
         const [
           opportunityData,
           activitiesData,
@@ -191,6 +188,7 @@ export default function CRMOpportunityDetailPage() {
         setQuotations(normalizeList(quotationsData));
         setAdoptions(normalizeList(adoptionsData));
         setHistory(normalizeList(historyData));
+        setErrorMessage("");
       } catch (error) {
         if (!ignore) {
           setErrorMessage(
@@ -657,7 +655,7 @@ export default function CRMOpportunityDetailPage() {
                 <div className="mt-4">
                   <EmptyState
                     title="Aún no hay cotizaciones"
-                    description="La oportunidad está lista para recibir su propuesta comercial cuando habilitemos el formulario conectado al catálogo."
+                    description="Cuando se registre una propuesta comercial para esta oportunidad, aparecerá aquí con su versión y estado."
                   />
                 </div>
               )}
