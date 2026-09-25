@@ -368,9 +368,7 @@ export default function CRMOpportunityProjectionSection({
     await loadProductsForDraft(draft);
   }
 
-  async function handleProductSearch(event) {
-    event.preventDefault();
-
+  async function handleProductSearch() {
     const draft = drafts.find(
       (item) => item.key === productTargetKey,
     );
@@ -909,9 +907,9 @@ export default function CRMOpportunityProjectionSection({
                                   {draft.products.map((product) => (
                                     <div
                                       key={product.id}
-                                      className="grid gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_120px_40px] sm:items-center"
+                                      className="grid gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:grid-cols-12 sm:items-center"
                                     >
-                                      <div className="min-w-0">
+                                      <div className="min-w-0 sm:col-span-8">
                                         <p className="truncate text-sm font-black text-gray-950">
                                           {product.name}
                                         </p>
@@ -922,7 +920,7 @@ export default function CRMOpportunityProjectionSection({
                                         </p>
                                       </div>
 
-                                      <label className="text-xs font-bold text-gray-500">
+                                      <label className="text-xs font-bold text-gray-500 sm:col-span-3">
                                         Cantidad
                                         <input
                                           type="number"
@@ -947,7 +945,7 @@ export default function CRMOpportunityProjectionSection({
                                             product.id,
                                           )
                                         }
-                                        className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-700"
+                                        className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-700 sm:col-span-1"
                                         aria-label="Quitar producto"
                                       >
                                         <FaTrashAlt />
@@ -994,10 +992,7 @@ export default function CRMOpportunityProjectionSection({
                       </button>
                     </div>
 
-                    <form
-                      onSubmit={handleProductSearch}
-                      className="mt-3 flex gap-2"
-                    >
+                    <div className="mt-3 flex gap-2">
                       <input
                         type="search"
                         value={productSearch}
@@ -1008,13 +1003,14 @@ export default function CRMOpportunityProjectionSection({
                         className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
                       />
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={handleProductSearch}
                         className="inline-flex items-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white"
                       >
                         <FaSearch />
                         Buscar
                       </button>
-                    </form>
+                    </div>
 
                     {productError ? (
                       <p className="mt-3 text-sm font-bold text-red-700">
