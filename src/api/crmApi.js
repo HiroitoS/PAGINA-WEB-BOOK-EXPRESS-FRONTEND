@@ -371,6 +371,53 @@ export async function getCRMOpportunity(opportunityId) {
 
   return response.data;
 }
+export async function getCRMOpportunityActivities(
+  opportunityId,
+  params = {},
+) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/activities/`,
+    { params },
+  );
+
+  return response.data;
+}
+
+export async function getCRMOpportunityWorkItems(
+  opportunityId,
+  params = {},
+) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/work-items/`,
+    { params },
+  );
+
+  return response.data;
+}
+
+export async function getCRMOpportunityHistory(opportunityId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/history/`,
+  );
+
+  return response.data;
+}
+
+export async function getCRMOpportunityQuotations(opportunityId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/quotations/`,
+  );
+
+  return response.data;
+}
+
+export async function getCRMOpportunityAdoptions(opportunityId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/adoptions/`,
+  );
+
+  return response.data;
+}
 
 export async function getCRMContacts(params = {}) {
   const response = await axiosClient.get(
