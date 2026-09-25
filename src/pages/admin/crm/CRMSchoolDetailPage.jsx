@@ -1183,28 +1183,46 @@ export default function CRMSchoolDetailPage() {
 
                 {pendingWorkItems.length > 0 ? (
                   <div className="mt-4 space-y-3">
-                    {pendingWorkItems.slice(0, 5).map((workItem) => (
-                      <article
-                        key={workItem.id}
-                        className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-700 ring-1 ring-gray-200">
-                            <WorkItemIcon type={workItem.type} />
-                          </div>
+                    {pendingWorkItems.slice(0, 5).map((workItem) => {
+                      const isTask = workItem.type === "task";
+                      const target = isTask
+                        ? `/admin/workspace/tasks?task=${workItem.item?.id}&tab=info`
+                        : "/admin/workspace/calendar";
 
-                          <div className="min-w-0">
-                            <p className="break-words text-sm font-black text-gray-950">
-                              {workItem.item?.title || "Acción programada"}
-                            </p>
+                      return (
+                        <Link
+                          key={workItem.id}
+                          to={target}
+                          state={buildNavigationState({
+                            from: `/admin/crm/colegios/${school.id}`,
+                            fromLabel: school.name,
+                            fromType: "school",
+                            currentState: location.state,
+                          })}
+                          className="block rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-700 ring-1 ring-gray-200">
+                              <WorkItemIcon type={workItem.type} />
+                            </div>
 
-                            <p className="mt-1 text-xs text-gray-500">
-                              {formatDateTime(getWorkItemDate(workItem))}
-                            </p>
+                            <div className="min-w-0">
+                              <p className="break-words text-sm font-black text-gray-950">
+                                {workItem.item?.title || "Acción programada"}
+                              </p>
+
+                              <p className="mt-1 text-xs text-gray-500">
+                                {formatDateTime(getWorkItemDate(workItem))}
+                              </p>
+
+                              <p className="mt-1 text-xs font-bold text-red-700">
+                                {isTask ? "Abrir tarea" : "Abrir en calendario"}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </article>
-                    ))}
+                        </Link>
+                      );
+                    })}
 
                     {pendingWorkItems.length > 5 ? (
                       <p className="text-center text-xs font-semibold text-gray-500">
