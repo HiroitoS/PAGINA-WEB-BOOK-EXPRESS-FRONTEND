@@ -1043,7 +1043,7 @@ export default function CRMSchoolDetailPage() {
                     </div>
 
                     <Link
-                      to="/admin/crm/oportunidades"
+                      to={`/admin/crm/oportunidades/${displayedOpportunity.id}`}
                       state={opportunityBoardState}
                       className="inline-flex w-full items-center justify-center rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800"
                     >
