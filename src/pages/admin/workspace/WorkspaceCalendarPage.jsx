@@ -1353,21 +1353,6 @@ export default function WorkspaceCalendarPage() {
     forceCalendarRender(viewName, getCurrentCalendarDate());
   }
 
-  function moveCalendarPeriod(direction) {
-    const calendarApi = calendarRef.current?.getApi();
-
-    if (!calendarApi) {
-      return;
-    }
-
-    if (direction === "previous") {
-      calendarApi.prev();
-      return;
-    }
-
-    calendarApi.next();
-  }
-
   function goToToday() {
     const today = formatDateOnly(new Date());
 
@@ -1569,13 +1554,8 @@ export default function WorkspaceCalendarPage() {
               <div className="flex flex-wrap gap-2">
                 <CalendarViewButton
                   active={false}
-                  label="Ir a hoy"
+                  label="Hoy"
                   onClick={goToToday}
-                />
-                <CalendarViewButton
-                  active={calendarView === "dayGridMonth"}
-                  label="Mes"
-                  onClick={() => changeCalendarView("dayGridMonth")}
                 />
                 <CalendarViewButton
                   active={calendarView === "timeGridWeek"}
@@ -1583,28 +1563,14 @@ export default function WorkspaceCalendarPage() {
                   onClick={() => changeCalendarView("timeGridWeek")}
                 />
                 <CalendarViewButton
-                  active={calendarView === "timeGridDay"}
-                  label="Día"
-                  onClick={() => changeCalendarView("timeGridDay")}
-                />
-
-                <span className="mx-1 hidden h-8 w-px bg-gray-200 xl:block" />
-
-                <CalendarViewButton
-                  active={false}
-                  label="Anterior"
-                  onClick={() => moveCalendarPeriod("previous")}
-                />
-                <CalendarViewButton
-                  active={false}
-                  label="Siguiente"
-                  onClick={() => moveCalendarPeriod("next")}
+                  active={calendarView === "dayGridMonth"}
+                  label="Mes"
+                  onClick={() => changeCalendarView("dayGridMonth")}
                 />
               </div>
 
               <p className="text-xs font-bold text-gray-500">
-                Navega entre periodos con Anterior / Siguiente. Vista horaria:
-                7:00 a. m. a 9:00 p. m.
+                Usa las flechas del calendario para avanzar o retroceder el periodo.
               </p>
             </div>
 
@@ -1691,7 +1657,7 @@ export default function WorkspaceCalendarPage() {
                       events={fullCalendarEvents}
                       expandRows
                       headerToolbar={{
-                        left: "",
+                        left: "prev,next",
                         center: "title",
                         right: "",
                       }}
