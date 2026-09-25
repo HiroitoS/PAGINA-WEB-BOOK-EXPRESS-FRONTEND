@@ -1354,21 +1354,10 @@ export default function WorkspaceCalendarPage() {
   }
 
   function goToToday() {
-    const today = formatDateOnly(new Date());
-
-    forceCalendarRender(calendarView, today);
-
-    const todayDate = new Date();
-    const start = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
-    const end = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0);
-
-    start.setDate(start.getDate() - 14);
-    end.setDate(end.getDate() + 14);
-
-    setCalendarRange({
-      start: start.toISOString().slice(0, 10),
-      end: end.toISOString().slice(0, 10),
-    });
+    forceCalendarRender(
+      "timeGridDay",
+      formatDateOnly(new Date()),
+    );
   }
 
   function renderEventContent(eventInfo) {
@@ -1553,7 +1542,7 @@ export default function WorkspaceCalendarPage() {
             <div className="mb-3 hidden flex-col gap-3 border-t border-gray-100 pt-3 lg:flex lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap gap-2">
                 <CalendarViewButton
-                  active={false}
+                  active={calendarView === "timeGridDay"}
                   label="Hoy"
                   onClick={goToToday}
                 />
@@ -1587,14 +1576,15 @@ export default function WorkspaceCalendarPage() {
               </div>
             )}
 
-            <div className="todo-calendar rounded-2xl border border-gray-100 bg-white p-2 sm:p-3">
+            <div className="todo-calendar relative rounded-2xl border border-gray-100 bg-white p-2 sm:p-3">
               {isLoading ? (
-                <div className="flex min-h-80 items-center justify-center text-sm font-bold text-gray-500">
-                  <FaSpinner className="mr-3 animate-spin" />
-                  Cargando calendario...
+                <div className="pointer-events-none absolute right-3 top-3 z-20 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/95 px-3 py-2 text-xs font-black text-gray-600 shadow-sm">
+                  <FaSpinner className="animate-spin" />
+                  Actualizando
                 </div>
-              ) : (
-                <>
+              ) : null}
+
+              <>
                   <div className="block lg:hidden">
                     {mobileViewMode === "agenda" ? (
                       <MobileCalendarList
@@ -1681,7 +1671,6 @@ export default function WorkspaceCalendarPage() {
                     />
                   </div>
                 </>
-              )}
             </div>
 
             <p className="mt-3 text-xs font-semibold leading-5 text-gray-500">
