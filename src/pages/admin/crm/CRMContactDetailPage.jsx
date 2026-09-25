@@ -25,6 +25,7 @@ import {
   getCRMContact,
   getCRMContactActivities,
   getCRMContactWorkItems,
+  getCRMOpportunities,
   updateCRMContact,
 } from "../../../api/crmApi";
 import {
@@ -111,8 +112,9 @@ function getCurrentLocalDateTimeValue() {
     .slice(0, 16);
 }
 
-function createInitialActivityForm() {
+function createInitialActivityForm(opportunityId = "") {
   return {
+    opportunity: opportunityId ? String(opportunityId) : "",
     activity_type: "visit",
     summary: "",
     result: "",
@@ -257,6 +259,7 @@ export default function CRMContactDetailPage() {
   const [contact, setContact] = useState(null);
   const [activities, setActivities] = useState([]);
   const [workItems, setWorkItems] = useState([]);
+  const [schoolOpportunities, setSchoolOpportunities] = useState([]);
   const [activityFilter, setActivityFilter] = useState("all");
   const [registeringActivity, setRegisteringActivity] = useState(false);
   const [activityForm, setActivityForm] = useState(createInitialActivityForm);
@@ -279,16 +282,35 @@ export default function CRMContactDetailPage() {
         setLoading(true);
         setErrorMessage("");
 
-        const [contactData, activitiesData, workItemsData] = await Promise.all([
-          getCRMContact(id),
+        const contactData = await getCRMContact(id);
+
+        if (ignore) {
+          return;
+        }
+
+        const schoolId = contactData?.school?.id;
+
+        const [
+          activitiesData,
+          workItemsData,
+          opportunitiesData,
+        ] = await Promise.all([
           getCRMContactActivities(id, { page_size: 50 }),
           getCRMContactWorkItems(id, { page_size: 50 }),
+          schoolId
+            ? getCRMOpportunities({
+                school: schoolId,
+                page: 1,
+                page_size: 100,
+              })
+            : Promise.resolve({ results: [] }),
         ]);
 
         if (!ignore) {
           setContact(contactData);
           setActivities(normalizeResults(activitiesData));
           setWorkItems(normalizeResults(workItemsData));
+          setSchoolOpportunities(normalizeResults(opportunitiesData));
         }
       } catch (error) {
         if (!ignore) {
@@ -322,6 +344,25 @@ export default function CRMContactDetailPage() {
       (activity) => activity.activity_type === activityFilter,
     );
   }, [activities, activityFilter]);
+
+  const openOpportunities = useMemo(
+    () =>
+      schoolOpportunities.filter(
+        (opportunity) => !opportunity.is_closed,
+      ),
+    [schoolOpportunities],
+  );
+
+  const opportunityById = useMemo(
+    () =>
+      new Map(
+        schoolOpportunities.map((opportunity) => [
+          opportunity.id,
+          opportunity,
+        ]),
+      ),
+    [schoolOpportunities],
+  );
 
   const relatedOpportunityIds = useMemo(() => {
     const ids = new Set();
@@ -369,7 +410,14 @@ export default function CRMContactDetailPage() {
   }
 
   function startActivityRegistration() {
-    setActivityForm(createInitialActivityForm());
+    const defaultOpportunityId =
+      openOpportunities.length === 1
+        ? openOpportunities[0].id
+        : "";
+
+    setActivityForm(
+      createInitialActivityForm(defaultOpportunityId),
+    );
     setActivityErrorMessage("");
     setActivitySuccessMessage("");
     setActivityWarningMessage("");
@@ -431,6 +479,10 @@ export default function CRMContactDetailPage() {
       }
     }
 
+    const selectedOpportunityId = activityForm.opportunity
+      ? Number(activityForm.opportunity)
+      : null;
+
     const payload = {
       activity_type: activityForm.activity_type,
       summary: activityForm.summary.trim(),
@@ -438,6 +490,9 @@ export default function CRMContactDetailPage() {
       contact: Number(id),
       occurred_at: occurredAt.toISOString(),
       is_important: activityForm.is_important,
+      ...(selectedOpportunityId
+        ? { opportunity: selectedOpportunityId }
+        : {}),
     };
 
     try {
@@ -454,10 +509,17 @@ export default function CRMContactDetailPage() {
       let nextActionCreated = false;
 
       if (activityForm.schedule_next_action && nextActionAt) {
+        const linkedOpportunityId =
+          createdActivity.opportunity_id
+          || selectedOpportunityId;
+
         const commonWorkItem = {
           title: activityForm.next_action_title.trim(),
           contact: Number(id),
           origin_activity: createdActivity.id,
+          ...(linkedOpportunityId
+            ? { opportunity: linkedOpportunityId }
+            : {}),
         };
 
         try {
@@ -490,13 +552,23 @@ export default function CRMContactDetailPage() {
         }
       }
 
-      const [activitiesData, workItemsData] = await Promise.all([
+      const [
+        activitiesData,
+        workItemsData,
+        opportunitiesData,
+      ] = await Promise.all([
         getCRMContactActivities(id, { page_size: 50 }),
         getCRMContactWorkItems(id, { page_size: 50 }),
+        getCRMOpportunities({
+          school: school.id,
+          page: 1,
+          page_size: 100,
+        }),
       ]);
 
       setActivities(normalizeResults(activitiesData));
       setWorkItems(normalizeResults(workItemsData));
+      setSchoolOpportunities(normalizeResults(opportunitiesData));
       setRegisteringActivity(false);
       setActivityForm(createInitialActivityForm());
       setActivityFilter("all");
@@ -1031,6 +1103,58 @@ export default function CRMContactDetailPage() {
                   ) : null}
 
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <div className="md:col-span-2">
+                      <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Oportunidad relacionada
+                      </p>
+
+                      {openOpportunities.length === 0 ? (
+                        <div className="mt-2 rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-600">
+                          No existe una oportunidad abierta. La actividad quedará vinculada al contacto y al colegio.
+                        </div>
+                      ) : openOpportunities.length === 1 ? (
+                        <div className="mt-2 rounded-xl border border-red-100 bg-red-50 px-3 py-3">
+                          <p className="text-sm font-black text-gray-950">
+                            {openOpportunities[0].title}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-600">
+                            {openOpportunities[0].campaign?.name || "Campaña"}
+                            {" · "}
+                            {openOpportunities[0].stage?.name || "En curso"}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <select
+                            value={activityForm.opportunity}
+                            onChange={(event) =>
+                              updateActivityField(
+                                "opportunity",
+                                event.target.value,
+                              )
+                            }
+                            disabled={savingActivity}
+                            className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                          >
+                            <option value="">
+                              Actividad general del colegio
+                            </option>
+                            {openOpportunities.map((opportunity) => (
+                              <option
+                                key={opportunity.id}
+                                value={opportunity.id}
+                              >
+                                {opportunity.title}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="mt-2 text-xs leading-5 text-amber-700">
+                            Hay varias oportunidades abiertas. Selecciona la que corresponda para mantener la trazabilidad correcta.
+                          </p>
+                        </>
+                      )}
+                    </div>
+
                     <label>
                       <span className="text-xs font-black uppercase tracking-wide text-gray-500">
                         Tipo de actividad
@@ -1126,8 +1250,9 @@ export default function CRMContactDetailPage() {
                             Programar próxima acción
                           </span>
                           <span className="mt-1 block text-xs leading-5 text-gray-500">
-                            La acción quedará vinculada a este contacto y a su
-                            colegio, y aparecerá también en ToDo / Agenda.
+                            La acción conservará el mismo contexto comercial:
+                            contacto, colegio y oportunidad cuando corresponda,
+                            y aparecerá también en ToDo / Agenda.
                           </span>
                         </span>
                       </label>
@@ -1277,6 +1402,14 @@ export default function CRMContactDetailPage() {
                                 Importante
                               </span>
                             ) : null}
+
+                            {activity.opportunity_id ? (
+                              <span className="rounded-full bg-gray-950 px-2.5 py-1 text-xs font-black text-white">
+                                {opportunityById.get(activity.opportunity_id)?.campaign?.name
+                                  || opportunityById.get(activity.opportunity_id)?.title
+                                  || "Oportunidad vinculada"}
+                              </span>
+                            ) : null}
                           </div>
 
                           <h3 className="mt-3 font-black text-gray-950">
@@ -1424,6 +1557,14 @@ export default function CRMContactDetailPage() {
                         <p className="mt-1 text-xs text-gray-500">
                           {WorkItemDate({ workItem })}
                         </p>
+
+                        {workItem.opportunity_id ? (
+                          <p className="mt-1 text-xs font-bold text-red-700">
+                            {opportunityById.get(workItem.opportunity_id)?.campaign?.name
+                              || opportunityById.get(workItem.opportunity_id)?.title
+                              || "Oportunidad vinculada"}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </article>
