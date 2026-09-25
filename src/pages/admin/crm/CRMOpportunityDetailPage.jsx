@@ -239,7 +239,7 @@ export default function CRMOpportunityDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[45vh] items-center justify-center">
+      <div className="flex min-h-80 items-center justify-center">
         <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm font-bold text-gray-600 shadow-sm">
           Cargando oportunidad...
         </div>
@@ -267,7 +267,7 @@ export default function CRMOpportunityDetailPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1600px]">
+    <div className="mx-auto w-full max-w-screen-2xl">
       <div className="mb-4">
         <Link
           to={returnContext.path}
@@ -855,7 +855,7 @@ export default function CRMOpportunityDetailPage() {
                 <p className="mt-2 text-lg font-black text-gray-950">
                   {activities.length}
                 </p>
-                <p className="text-[11px] font-bold text-gray-500">
+                <p className="text-xs font-bold text-gray-500">
                   Actividad
                 </p>
               </div>
@@ -865,7 +865,7 @@ export default function CRMOpportunityDetailPage() {
                 <p className="mt-2 text-lg font-black text-gray-950">
                   {quotations.length}
                 </p>
-                <p className="text-[11px] font-bold text-gray-500">
+                <p className="text-xs font-bold text-gray-500">
                   Cotizaciones
                 </p>
               </div>
@@ -875,7 +875,7 @@ export default function CRMOpportunityDetailPage() {
                 <p className="mt-2 text-lg font-black text-gray-950">
                   {adoptions.length}
                 </p>
-                <p className="text-[11px] font-bold text-gray-500">
+                <p className="text-xs font-bold text-gray-500">
                   Adopciones
                 </p>
               </div>
