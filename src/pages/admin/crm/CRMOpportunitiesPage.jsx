@@ -358,6 +358,7 @@ function OpportunityCard({
   moving,
   returnState,
   onMove,
+  onCloseAsLost,
   onDragStart,
   onDragEnd,
 }) {
@@ -445,24 +446,178 @@ function OpportunityCard({
         </Link>
 
         {!isClosed ? (
-          <select
-            aria-label="Mover oportunidad"
-            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:opacity-50"
-            disabled={moving}
-            value={opportunity.stage?.id || ""}
-            onChange={(event) =>
-              onMove(opportunity, Number(event.target.value))
-            }
-          >
-            {openStages.map((stage) => (
-              <option key={stage.id} value={stage.id}>
-                {stage.name}
-              </option>
-            ))}
-          </select>
+          <>
+            <select
+              aria-label="Mover oportunidad"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:opacity-50"
+              disabled={moving}
+              value={opportunity.stage?.id || ""}
+              onChange={(event) =>
+                onMove(opportunity, Number(event.target.value))
+              }
+            >
+              {openStages.map((stage) => (
+                <option key={stage.id} value={stage.id}>
+                  {stage.name}
+                </option>
+              ))}
+            </select>
+
+            <button
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={moving}
+              onClick={() => onCloseAsLost(opportunity)}
+            >
+              <FaExclamationTriangle />
+              Cerrar como no concretada
+            </button>
+          </>
         ) : null}
       </div>
     </article>
+  );
+}
+
+function LostClosurePanel({
+  opportunity,
+  lostStage,
+  saving,
+  onCancel,
+  onConfirm,
+}) {
+  const [reason, setReason] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    setReason("");
+    setErrorMessage("");
+  }, [opportunity?.id]);
+
+  if (!opportunity) {
+    return null;
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    const cleanedReason = reason.trim();
+
+    if (!cleanedReason) {
+      setErrorMessage(
+        "Registra el motivo por el que la oportunidad no se concretó.",
+      );
+      return;
+    }
+
+    if (!lostStage) {
+      setErrorMessage(
+        "El pipeline no tiene una etapa de cierre perdido disponible.",
+      );
+      return;
+    }
+
+    setErrorMessage("");
+    onConfirm(cleanedReason);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <button
+        aria-label="Cerrar panel"
+        className="absolute inset-0 bg-black/50"
+        type="button"
+        onClick={saving ? undefined : onCancel}
+      />
+
+      <section className="relative z-10 flex h-full w-full max-w-lg flex-col bg-white shadow-2xl">
+        <header className="border-b border-gray-200 px-5 py-4 sm:px-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                Cierre comercial
+              </p>
+              <h2 className="mt-1 text-xl font-black text-gray-950">
+                Oportunidad no concretada
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-gray-500">
+                Registra el motivo para conservar la trazabilidad de la campaña.
+              </p>
+            </div>
+
+            <button
+              aria-label="Cerrar"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+              type="button"
+              disabled={saving}
+              onClick={onCancel}
+            >
+              <FaTimes />
+            </button>
+          </div>
+        </header>
+
+        <form
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={handleSubmit}
+        >
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+            <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+              <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Colegio
+              </p>
+              <p className="mt-1 font-black text-gray-950">
+                {opportunity.school?.name || "Colegio"}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-gray-500">
+                {opportunity.campaign?.name || "Campaña comercial"}
+              </p>
+            </div>
+
+            {errorMessage ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+                {errorMessage}
+              </div>
+            ) : null}
+
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-gray-600">
+                Motivo del cierre
+              </span>
+              <textarea
+                className="mt-2 min-h-36 w-full resize-y rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm leading-6 text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                value={reason}
+                disabled={saving}
+                placeholder="Ej. El colegio continuará con su propuesta actual durante esta campaña."
+                onChange={(event) => setReason(event.target.value)}
+              />
+              <span className="mt-2 block text-xs leading-5 text-gray-500">
+                La oportunidad quedará cerrada y el motivo permanecerá en su historial comercial.
+              </span>
+            </label>
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-gray-200 bg-white p-5 sm:flex-row sm:justify-end sm:px-6">
+            <button
+              className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+              type="button"
+              disabled={saving}
+              onClick={onCancel}
+            >
+              Cancelar
+            </button>
+
+            <button
+              className="rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+              type="submit"
+              disabled={saving}
+            >
+              {saving ? "Cerrando..." : "Confirmar cierre"}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }
 
@@ -487,6 +642,8 @@ export default function CRMOpportunitiesPage() {
   const [loadingReferences, setLoadingReferences] = useState(true);
   const [loadingBoard, setLoadingBoard] = useState(true);
   const [movingId, setMovingId] = useState(null);
+  const [closingOpportunity, setClosingOpportunity] = useState(null);
+  const [closingAsLost, setClosingAsLost] = useState(false);
   const [draggedOpportunityId, setDraggedOpportunityId] = useState(null);
   const [dragOverStageId, setDragOverStageId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -633,6 +790,11 @@ export default function CRMOpportunitiesPage() {
     [stages],
   );
 
+  const lostStage = useMemo(
+    () => stages.find((stage) => stage.category === "lost") || null,
+    [stages],
+  );
+
   const opportunitiesByStage = useMemo(() => {
     const grouped = new Map();
 
@@ -695,6 +857,54 @@ export default function CRMOpportunitiesPage() {
       setMovingId(null);
       setDraggedOpportunityId(null);
       setDragOverStageId(null);
+    }
+  }
+
+  function openLostClosure(opportunity) {
+    setErrorMessage("");
+    setClosingOpportunity(opportunity);
+  }
+
+  function closeLostClosure() {
+    if (closingAsLost) return;
+
+    setClosingOpportunity(null);
+  }
+
+  async function confirmLostClosure(reason) {
+    if (!closingOpportunity || !lostStage || closingAsLost) {
+      return;
+    }
+
+    try {
+      setClosingAsLost(true);
+      setErrorMessage("");
+
+      const updated = await changeCRMOpportunityStage(
+        closingOpportunity.id,
+        {
+          stage: lostStage.id,
+          note: reason,
+        },
+      );
+
+      setOpportunities((currentOpportunities) =>
+        currentOpportunities.map((currentOpportunity) =>
+          currentOpportunity.id === closingOpportunity.id
+            ? updated
+            : currentOpportunity,
+        ),
+      );
+      setClosingOpportunity(null);
+    } catch (error) {
+      setErrorMessage(
+        getErrorMessage(
+          error,
+          "No se pudo cerrar la oportunidad como no concretada.",
+        ),
+      );
+    } finally {
+      setClosingAsLost(false);
     }
   }
 
@@ -981,6 +1191,7 @@ export default function CRMOpportunitiesPage() {
                             onDragEnd={handleDragEnd}
                             onDragStart={handleDragStart}
                             onMove={handleMove}
+                            onCloseAsLost={openLostClosure}
                           />
                         ))
                       ) : (
@@ -998,6 +1209,14 @@ export default function CRMOpportunitiesPage() {
           </div>
         )}
       </section>
+
+      <LostClosurePanel
+        opportunity={closingOpportunity}
+        lostStage={lostStage}
+        saving={closingAsLost}
+        onCancel={closeLostClosure}
+        onConfirm={confirmLostClosure}
+      />
 
       <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 text-sm leading-6 text-gray-600 shadow-sm">
         <span className="font-black text-gray-950">Importante:</span>{" "}
