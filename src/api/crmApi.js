@@ -371,6 +371,54 @@ export async function getCRMOpportunity(opportunityId) {
 
   return response.data;
 }
+export async function getCRMOpportunityProjectionBase(opportunityId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/projection-base/`,
+  );
+
+  return response.data;
+}
+
+export async function getCRMOpportunityProjection(opportunityId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/projection/`,
+  );
+
+  return response.data;
+}
+
+export async function saveCRMOpportunityProjection(
+  opportunityId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/projection/`,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function getCRMOpportunityProjectionHistory(opportunityId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/projection-history/`,
+  );
+
+  return response.data;
+}
+
+export async function getCRMOpportunityProjectionProducts(
+  opportunityId,
+  params,
+) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/projection-products/`,
+    { params },
+  );
+
+  return response.data;
+}
+
 export async function getCRMOpportunityActivities(
   opportunityId,
   params = {},
