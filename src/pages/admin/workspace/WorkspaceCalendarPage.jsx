@@ -1353,6 +1353,21 @@ export default function WorkspaceCalendarPage() {
     forceCalendarRender(viewName, getCurrentCalendarDate());
   }
 
+  function moveCalendarPeriod(direction) {
+    const calendarApi = calendarRef.current?.getApi();
+
+    if (!calendarApi) {
+      return;
+    }
+
+    if (direction === "previous") {
+      calendarApi.prev();
+      return;
+    }
+
+    calendarApi.next();
+  }
+
   function goToToday() {
     const today = formatDateOnly(new Date());
 
@@ -1521,10 +1536,19 @@ export default function WorkspaceCalendarPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <LegendItem className="border-red-100 bg-red-50 text-red-700" label="Tareas" />
-                <LegendItem className="border-blue-100 bg-blue-50 text-blue-700" label="Eventos" />
+                <LegendItem
+                  className="border-red-100 bg-red-50 text-red-700"
+                  dotClassName="bg-red-700"
+                  label="Tareas"
+                />
+                <LegendItem
+                  className="border-blue-100 bg-blue-50 text-blue-700"
+                  dotClassName="bg-blue-600"
+                  label="Eventos"
+                />
                 <LegendItem
                   className="border-yellow-100 bg-yellow-50 text-yellow-800"
+                  dotClassName="bg-yellow-500"
                   label="Recordatorios"
                 />
               </div>
@@ -1542,8 +1566,12 @@ export default function WorkspaceCalendarPage() {
             </div>
 
             <div className="mb-3 hidden flex-col gap-3 border-t border-gray-100 pt-3 lg:flex lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                <CalendarViewButton active={false} label="Hoy" onClick={goToToday} />
+              <div className="flex flex-wrap gap-2">
+                <CalendarViewButton
+                  active={false}
+                  label="Ir a hoy"
+                  onClick={goToToday}
+                />
                 <CalendarViewButton
                   active={calendarView === "dayGridMonth"}
                   label="Mes"
@@ -1559,10 +1587,24 @@ export default function WorkspaceCalendarPage() {
                   label="Día"
                   onClick={() => changeCalendarView("timeGridDay")}
                 />
+
+                <span className="mx-1 hidden h-8 w-px bg-gray-200 xl:block" />
+
+                <CalendarViewButton
+                  active={false}
+                  label="Anterior"
+                  onClick={() => moveCalendarPeriod("previous")}
+                />
+                <CalendarViewButton
+                  active={false}
+                  label="Siguiente"
+                  onClick={() => moveCalendarPeriod("next")}
+                />
               </div>
 
               <p className="text-xs font-bold text-gray-500">
-                Vista compacta: 7:00 a. m. a 9:00 p. m.
+                Navega entre periodos con Anterior / Siguiente. Vista horaria:
+                7:00 a. m. a 9:00 p. m.
               </p>
             </div>
 
@@ -1649,7 +1691,7 @@ export default function WorkspaceCalendarPage() {
                       events={fullCalendarEvents}
                       expandRows
                       headerToolbar={{
-                        left: "prev,next",
+                        left: "",
                         center: "title",
                         right: "",
                       }}
@@ -2306,9 +2348,15 @@ function CalendarDrawer({ children, subtitle, title, onClose }) {
   );
 }
 
-function LegendItem({ className, label }) {
+function LegendItem({ className, dotClassName, label }) {
   return (
-    <div className={`rounded-full border px-2 py-2 text-center text-xs font-black ${className}`}>
+    <div
+      className={`flex items-center justify-center gap-2 rounded-full border px-2 py-2 text-center text-xs font-black ${className}`}
+    >
+      <span
+        className={`h-2 w-2 shrink-0 rounded-full ${dotClassName}`}
+        aria-hidden="true"
+      />
       {label}
     </div>
   );
