@@ -117,16 +117,44 @@ function normalizeList(data) {
   return getResults(data);
 }
 
+function parseCalendarDate(value) {
+  if (value instanceof Date) {
+    return new Date(value.getTime());
+  }
+
+  if (typeof value === "string") {
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+
+      return new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+      );
+    }
+  }
+
+  return new Date(value);
+}
+
 function formatDateOnly(value) {
-  const date = value instanceof Date ? value : new Date(value);
+  const date = parseCalendarDate(value);
 
-  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+  if (Number.isNaN(date.getTime())) {
+    return formatDateOnly(new Date());
+  }
 
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function formatMonthTitle(value) {
-  const date = value ? new Date(value) : new Date();
+  const date = value ? parseCalendarDate(value) : new Date();
 
   if (Number.isNaN(date.getTime())) return "Mes actual";
 
@@ -137,7 +165,7 @@ function formatMonthTitle(value) {
 }
 
 function formatDateTitle(value) {
-  const date = value ? new Date(value) : new Date();
+  const date = value ? parseCalendarDate(value) : new Date();
 
   if (Number.isNaN(date.getTime())) return "Fecha";
 
@@ -220,8 +248,8 @@ function getInitialCalendarRange() {
   end.setDate(end.getDate() + 14);
 
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: formatDateOnly(start),
+    end: formatDateOnly(end),
   };
 }
 
@@ -717,11 +745,11 @@ function groupItemsByMobilePeriod(items) {
 }
 
 function getDateKey(value) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) return "sin-fecha";
 
-  return date.toISOString().slice(0, 10);
+  return formatDateOnly(date);
 }
 
 function getItemsForDate(items, dateKey) {
@@ -729,7 +757,7 @@ function getItemsForDate(items, dateKey) {
 }
 
 function getMonthCalendarDays(monthDate) {
-  const baseDate = new Date(monthDate);
+  const baseDate = parseCalendarDate(monthDate);
 
   if (Number.isNaN(baseDate.getTime())) return [];
 
@@ -749,7 +777,7 @@ function getMonthCalendarDays(monthDate) {
 }
 
 function moveMonth(value, amount) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) return formatDateOnly(new Date());
 
@@ -759,7 +787,7 @@ function moveMonth(value, amount) {
 }
 
 function getStartOfWeek(value) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) {
     const today = new Date();
@@ -781,7 +809,7 @@ function getWeekCalendarDays(value) {
 }
 
 function moveWeek(value, amount) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) return formatDateOnly(new Date());
 
@@ -806,7 +834,7 @@ function formatWeekRangeTitle(value) {
 }
 
 function formatWeekDayLabel(value) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) return "Día";
 
@@ -1095,7 +1123,7 @@ export default function WorkspaceCalendarPage() {
   }
 
   function openEventForm() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = formatDateOnly(new Date());
 
     setEventForm(buildEventFormFromDate(today));
     setShowEventForm(true);
