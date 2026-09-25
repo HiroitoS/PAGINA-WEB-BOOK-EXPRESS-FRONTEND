@@ -40,6 +40,10 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import { getResults } from "../../../utils/formatters";
+import {
+  buildNavigationState,
+  resolveReturnContext,
+} from "../../../utils/navigationContext";
 
 const INITIAL_EVENT_FORM = {
   title: "",
@@ -816,17 +820,7 @@ export default function WorkspaceCalendarPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const returnPath =
-    typeof location.state?.from === "string" &&
-    location.state.from.startsWith("/admin/crm/")
-      ? location.state.from
-      : "";
-
-  const returnLabel =
-    typeof location.state?.fromLabel === "string" &&
-    location.state.fromLabel.trim()
-      ? location.state.fromLabel
-      : "CRM";
+  const returnContext = resolveReturnContext(location.state);
 
   const canAssignToOthers = userHasPermission(
     user,
@@ -1272,7 +1266,17 @@ export default function WorkspaceCalendarPage() {
       const taskId = item.task_id || item.task || getCalendarRealId(item);
 
       if (taskId) {
-        navigate(`/admin/workspace/tasks?task=${taskId}&tab=info`);
+        navigate(
+          `/admin/workspace/tasks?task=${taskId}&tab=info`,
+          {
+            state: buildNavigationState({
+              from: "/admin/workspace/calendar",
+              fromLabel: "Calendario",
+              fromType: "calendar",
+              currentState: location.state,
+            }),
+          },
+        );
       }
 
       return;
@@ -1396,14 +1400,19 @@ export default function WorkspaceCalendarPage() {
             </div>
 
             <div className="grid gap-2 sm:flex sm:flex-wrap">
-              {returnPath ? (
+              {returnContext.path ? (
                 <button
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-gray-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 sm:py-3"
                   type="button"
-                  onClick={() => navigate(returnPath)}
+                  onClick={() =>
+                    navigate(
+                      returnContext.path,
+                      { state: returnContext.state },
+                    )
+                  }
                 >
                   <FaArrowLeft />
-                  Volver a {returnLabel}
+                  Volver a {returnContext.label || "origen"}
                 </button>
               ) : null}
 
