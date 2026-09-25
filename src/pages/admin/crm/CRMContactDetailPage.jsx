@@ -1545,35 +1545,53 @@ export default function CRMContactDetailPage() {
 
             {workItems.length > 0 ? (
               <div className="mt-4 space-y-3">
-                {workItems.slice(0, 6).map((workItem) => (
-                  <article
-                    key={workItem.id}
-                    className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-700 ring-1 ring-gray-200">
-                        <WorkItemIcon type={workItem.type} />
-                      </div>
+                {workItems.slice(0, 6).map((workItem) => {
+                  const isTask = workItem.type === "task";
+                  const target = isTask
+                    ? `/admin/workspace/tasks?task=${workItem.item?.id}&tab=info`
+                    : "/admin/workspace/calendar";
 
-                      <div className="min-w-0">
-                        <p className="break-words text-sm font-black text-gray-950">
-                          {workItem.item?.title || "Acción programada"}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {WorkItemDate({ workItem })}
-                        </p>
+                  return (
+                    <Link
+                      key={workItem.id}
+                      to={target}
+                      state={buildNavigationState({
+                        from: `/admin/crm/contactos/${contact.id}`,
+                        fromLabel: contact.full_name,
+                        fromType: "contact",
+                        currentState: location.state,
+                      })}
+                      className="block rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-700 ring-1 ring-gray-200">
+                          <WorkItemIcon type={workItem.type} />
+                        </div>
 
-                        {workItem.opportunity_id ? (
-                          <p className="mt-1 text-xs font-bold text-red-700">
-                            {opportunityById.get(workItem.opportunity_id)?.campaign?.name
-                              || opportunityById.get(workItem.opportunity_id)?.title
-                              || "Oportunidad vinculada"}
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-black text-gray-950">
+                            {workItem.item?.title || "Acción programada"}
                           </p>
-                        ) : null}
+                          <p className="mt-1 text-xs text-gray-500">
+                            {WorkItemDate({ workItem })}
+                          </p>
+
+                          {workItem.opportunity_id ? (
+                            <p className="mt-1 text-xs font-bold text-red-700">
+                              {opportunityById.get(workItem.opportunity_id)?.campaign?.name
+                                || opportunityById.get(workItem.opportunity_id)?.title
+                                || "Oportunidad vinculada"}
+                            </p>
+                          ) : null}
+
+                          <p className="mt-1 text-xs font-bold text-red-700">
+                            {isTask ? "Abrir tarea" : "Abrir en calendario"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </Link>
+                  );
+                })}
 
                 {workItems.length > 6 ? (
                   <p className="text-center text-xs font-semibold text-gray-500">
