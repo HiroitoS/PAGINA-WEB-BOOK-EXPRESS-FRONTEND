@@ -748,7 +748,7 @@ export default function CRMOpportunityProjectionSection({
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                  Venta proyectada
+                  Valor PVP proyectado
                 </p>
                 <p className="mt-1 text-xl font-black text-gray-950">
                   {formatCurrency(projection.total_amount)}
