@@ -958,6 +958,128 @@ export default function CRMOpportunityProjectionSection({
                                   Aún no agregaste productos a este grado.
                                 </div>
                               )}
+
+                              {productTargetKey === draft.key ? (
+                                <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                      <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                                        Catálogo disponible
+                                      </p>
+                                      <h3 className="mt-1 font-black text-gray-950">
+                                        Agregar productos a {draft.gradeName}
+                                      </h3>
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setProductTargetKey("");
+                                        setProductChoices([]);
+                                        setProductSearch("");
+                                        setProductError("");
+                                      }}
+                                      className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600"
+                                    >
+                                      Cerrar
+                                    </button>
+                                  </div>
+
+                                  <div className="mt-3 flex gap-2">
+                                    <input
+                                      type="search"
+                                      value={productSearch}
+                                      onChange={(event) =>
+                                        setProductSearch(event.target.value)
+                                      }
+                                      onKeyDown={(event) => {
+                                        if (event.key === "Enter") {
+                                          event.preventDefault();
+                                          handleProductSearch();
+                                        }
+                                      }}
+                                      placeholder="Buscar libro, editorial, área o serie..."
+                                      className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={handleProductSearch}
+                                      className="inline-flex items-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white"
+                                    >
+                                      <FaSearch />
+                                      Buscar
+                                    </button>
+                                  </div>
+
+                                  {productError ? (
+                                    <p className="mt-3 text-sm font-bold text-red-700">
+                                      {productError}
+                                    </p>
+                                  ) : null}
+
+                                  {productLoading ? (
+                                    <p className="mt-4 text-sm font-bold text-gray-500">
+                                      Cargando productos...
+                                    </p>
+                                  ) : (
+                                    <div className="mt-4 max-h-72 space-y-2 overflow-y-auto">
+                                      {productChoices.map((choice) => {
+                                        const alreadyAdded = draft.products.some(
+                                          (product) => product.id === choice.id,
+                                        );
+
+                                        return (
+                                          <div
+                                            key={choice.id}
+                                            className="flex flex-col justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center"
+                                          >
+                                            <div className="min-w-0">
+                                              <div className="flex items-start gap-2">
+                                                <FaBook className="mt-1 shrink-0 text-red-700" />
+                                                <div className="min-w-0">
+                                                  <p className="font-black text-gray-950">
+                                                    {choice.name}
+                                                  </p>
+                                                  <p className="mt-1 text-xs text-gray-500">
+                                                    {choice.editorial?.name || "Editorial"}
+                                                    {choice.area?.name
+                                                      ? ` · ${choice.area.name}`
+                                                      : ""}
+                                                    {" · "}
+                                                    {formatCurrency(choice.unit_price)}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            <button
+                                              type="button"
+                                              disabled={alreadyAdded}
+                                              onClick={() => addProduct(choice)}
+                                              className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black transition ${
+                                                alreadyAdded
+                                                  ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                                                  : "bg-red-700 text-white hover:bg-red-800"
+                                              }`}
+                                            >
+                                              {alreadyAdded ? "Agregado" : "Agregar"}
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+
+                                      {!productLoading
+                                        && productChoices.length === 0
+                                        && !productError ? (
+                                          <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                                            No hay productos con precio válido para este
+                                            nivel, grado y campaña.
+                                          </div>
+                                        ) : null}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : null}
                             </>
                           ) : null}
                         </div>
@@ -965,131 +1087,6 @@ export default function CRMOpportunityProjectionSection({
                     </div>
                   ))}
                 </div>
-
-                {productTargetKey ? (
-                  <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                          Catálogo disponible
-                        </p>
-                        <h3 className="mt-1 font-black text-gray-950">
-                          Agregar productos
-                        </h3>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setProductTargetKey("");
-                          setProductChoices([]);
-                          setProductSearch("");
-                          setProductError("");
-                        }}
-                        className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600"
-                      >
-                        Cerrar
-                      </button>
-                    </div>
-
-                    <div className="mt-3 flex gap-2">
-                      <input
-                        type="search"
-                        value={productSearch}
-                        onChange={(event) =>
-                          setProductSearch(event.target.value)
-                        }
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            handleProductSearch();
-                          }
-                        }}
-                        placeholder="Buscar libro, editorial, área o serie..."
-                        className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleProductSearch}
-                        className="inline-flex items-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white"
-                      >
-                        <FaSearch />
-                        Buscar
-                      </button>
-                    </div>
-
-                    {productError ? (
-                      <p className="mt-3 text-sm font-bold text-red-700">
-                        {productError}
-                      </p>
-                    ) : null}
-
-                    {productLoading ? (
-                      <p className="mt-4 text-sm font-bold text-gray-500">
-                        Cargando productos...
-                      </p>
-                    ) : (
-                      <div className="mt-4 max-h-72 space-y-2 overflow-y-auto">
-                        {productChoices.map((choice) => {
-                          const targetDraft = drafts.find(
-                            (draft) => draft.key === productTargetKey,
-                          );
-                          const alreadyAdded = targetDraft?.products.some(
-                            (product) => product.id === choice.id,
-                          );
-
-                          return (
-                            <div
-                              key={choice.id}
-                              className="flex flex-col justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center"
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-start gap-2">
-                                  <FaBook className="mt-1 shrink-0 text-red-700" />
-                                  <div className="min-w-0">
-                                    <p className="font-black text-gray-950">
-                                      {choice.name}
-                                    </p>
-                                    <p className="mt-1 text-xs text-gray-500">
-                                      {choice.editorial?.name || "Editorial"}
-                                      {choice.area?.name
-                                        ? ` · ${choice.area.name}`
-                                        : ""}
-                                      {" · "}
-                                      {formatCurrency(choice.unit_price)}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                disabled={alreadyAdded}
-                                onClick={() => addProduct(choice)}
-                                className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black transition ${
-                                  alreadyAdded
-                                    ? "cursor-not-allowed bg-gray-100 text-gray-400"
-                                    : "bg-red-700 text-white hover:bg-red-800"
-                                }`}
-                              >
-                                {alreadyAdded ? "Agregado" : "Agregar"}
-                              </button>
-                            </div>
-                          );
-                        })}
-
-                        {!productLoading
-                          && productChoices.length === 0
-                          && !productError ? (
-                            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
-                              No hay productos con precio válido para este
-                              nivel, grado y campaña.
-                            </div>
-                          ) : null}
-                      </div>
-                    )}
-                  </div>
-                ) : null}
 
                 <label className="mt-5 block text-sm font-bold text-gray-700">
                   Observaciones
