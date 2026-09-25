@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
 import {
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
+import {
+  FaArrowLeft,
   FaCheckCircle,
   FaChevronDown,
   FaClock,
@@ -29,6 +34,7 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import { getResults } from "../../../utils/formatters";
+import { resolveReturnContext } from "../../../utils/navigationContext";
 
 const INITIAL_TASK_FORM = {
   title: "",
@@ -515,7 +521,10 @@ function getMobileTaskSections({
 
 export default function WorkspaceTasksPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const returnContext = resolveReturnContext(location.state);
   const linkedTaskId = searchParams.get("task");
   const linkedTab = searchParams.get("tab");
   const linkedCommentId = searchParams.get("comment");
@@ -1076,6 +1085,22 @@ export default function WorkspaceTasksPage() {
             </div>
 
             <div className="grid gap-2 sm:flex sm:flex-wrap">
+              {returnContext.path ? (
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-gray-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 sm:py-3"
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      returnContext.path,
+                      { state: returnContext.state },
+                    )
+                  }
+                >
+                  <FaArrowLeft />
+                  Volver a {returnContext.label || "origen"}
+                </button>
+              ) : null}
+
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white px-4 py-2.5 text-sm font-black text-gray-950 transition hover:bg-gray-100 sm:py-3"
                 type="button"
