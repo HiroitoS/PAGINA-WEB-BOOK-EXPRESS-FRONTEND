@@ -489,11 +489,6 @@ function LostClosurePanel({
   const [reason, setReason] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    setReason("");
-    setErrorMessage("");
-  }, [opportunity?.id]);
-
   if (!opportunity) {
     return null;
   }
@@ -1211,6 +1206,7 @@ export default function CRMOpportunitiesPage() {
       </section>
 
       <LostClosurePanel
+        key={closingOpportunity?.id || "closed"}
         opportunity={closingOpportunity}
         lostStage={lostStage}
         saving={closingAsLost}
