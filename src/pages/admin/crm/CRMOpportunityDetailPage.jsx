@@ -15,9 +15,9 @@ import {
   getCRMOpportunityActivities,
   getCRMOpportunityAdoptions,
   getCRMOpportunityHistory,
-  getCRMOpportunityQuotations,
 } from "../../../api/crmApi";
 import CRMOpportunityProjectionSection from "../../../components/admin/crm/CRMOpportunityProjectionSection";
+import CRMOpportunityQuotationSection from "../../../components/admin/crm/CRMOpportunityQuotationSection";
 import {
   buildNavigationState,
   resolveReturnContext,
@@ -72,41 +72,6 @@ function formatOwner(owner) {
   return owner.full_name || owner.username || "Asesor asignado";
 }
 
-function formatCurrency(value) {
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) {
-    return "S/ 0.00";
-  }
-
-  return new Intl.NumberFormat("es-PE", {
-    style: "currency",
-    currency: "PEN",
-    minimumFractionDigits: 2,
-  }).format(number);
-}
-
-function getQuotationTotal(quotation) {
-  return (quotation.items || []).reduce(
-    (total, item) =>
-      total + Number(item.school_price || 0) * Number(item.quantity || 0),
-    0,
-  );
-}
-
-
-function statusBadgeClass(status) {
-  if (status === "accepted") {
-    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
-  }
-
-  if (status === "sent") {
-    return "bg-blue-50 text-blue-700 ring-blue-200";
-  }
-
-  return "bg-gray-100 text-gray-700 ring-gray-200";
-}
-
 function EmptyState({ title, description }) {
   return (
     <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-10 text-center">
@@ -124,7 +89,6 @@ export default function CRMOpportunityDetailPage() {
 
   const [opportunity, setOpportunity] = useState(null);
   const [activities, setActivities] = useState([]);
-  const [quotations, setQuotations] = useState([]);
   const [adoptions, setAdoptions] = useState([]);
   const [history, setHistory] = useState([]);
   const [activeTab, setActiveTab] = useState("summary");
@@ -148,13 +112,11 @@ export default function CRMOpportunityDetailPage() {
         const [
           opportunityData,
           activitiesData,
-          quotationsData,
           adoptionsData,
           historyData,
         ] = await Promise.all([
           getCRMOpportunity(id),
           getCRMOpportunityActivities(id, { page_size: 100 }),
-          getCRMOpportunityQuotations(id),
           getCRMOpportunityAdoptions(id),
           getCRMOpportunityHistory(id),
         ]);
@@ -165,7 +127,6 @@ export default function CRMOpportunityDetailPage() {
 
         setOpportunity(opportunityData);
         setActivities(normalizeList(activitiesData));
-        setQuotations(normalizeList(quotationsData));
         setAdoptions(normalizeList(adoptionsData));
         setHistory(normalizeList(historyData));
         setErrorMessage("");
@@ -517,72 +478,15 @@ export default function CRMOpportunityDetailPage() {
           ) : null}
 
           {activeTab === "quotations" ? (
-            <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                Propuesta comercial
-              </p>
-              <h2 className="mt-1 text-xl font-black text-gray-950">
-                Cotizaciones
-              </h2>
-
-              {quotations.length > 0 ? (
-                <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                  {quotations.map((quotation) => (
-                    <article
-                      key={quotation.id}
-                      className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                            Cotización v{quotation.version}
-                          </p>
-                          <p className="mt-1 text-lg font-black text-gray-950">
-                            {formatCurrency(getQuotationTotal(quotation))}
-                          </p>
-                        </div>
-
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-black ring-1 ${statusBadgeClass(
-                            quotation.status,
-                          )}`}
-                        >
-                          {quotation.status_display || quotation.status}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                        <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                          <p className="font-bold text-gray-500">Productos</p>
-                          <p className="mt-1 font-black text-gray-950">
-                            {quotation.items?.length || 0}
-                          </p>
-                        </div>
-                        <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                          <p className="font-bold text-gray-500">Creada</p>
-                          <p className="mt-1 font-black text-gray-950">
-                            {formatDateTime(quotation.created_at)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {quotation.notes ? (
-                        <p className="mt-3 text-sm leading-6 text-gray-600">
-                          {quotation.notes}
-                        </p>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4">
-                  <EmptyState
-                    title="Aún no hay cotizaciones"
-                    description="Cuando se registre una propuesta comercial para esta oportunidad, aparecerá aquí con su versión y estado."
-                  />
-                </div>
-              )}
-            </section>
+            <CRMOpportunityQuotationSection
+              opportunityId={id}
+              onOpportunityChanged={() => {
+                getCRMOpportunity(id)
+                  .then((data) => setOpportunity(data))
+                  .catch(() => undefined);
+              }}
+              onGoToAdoption={() => setActiveTab("adoption")}
+            />
           ) : null}
 
           {activeTab === "adoption" ? (
