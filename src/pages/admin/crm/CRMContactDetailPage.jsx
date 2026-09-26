@@ -987,7 +987,7 @@ export default function CRMContactDetailPage() {
       </section>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-4">
-        <aside className="space-y-4">
+        <aside className="space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
           <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-red-700">
               Contacto
@@ -1031,7 +1031,7 @@ export default function CRMContactDetailPage() {
           </section>
         </aside>
 
-        <main className="xl:col-span-2">
+        <main className="xl:col-span-2 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
           <section className="rounded-3xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1459,7 +1459,7 @@ export default function CRMContactDetailPage() {
           </section>
         </main>
 
-        <aside className="space-y-4">
+        <aside className="space-y-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
           <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-red-700">
               Relaciones
