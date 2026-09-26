@@ -106,14 +106,13 @@ export default function CRMOpportunityAdoptionSection({
   );
 
   useEffect(() => {
+    if (!opportunity?.id || !opportunity?.school?.id) {
+      return undefined;
+    }
+
     let ignore = false;
 
     async function loadAdoptionContext() {
-      if (!opportunity?.id || !opportunity?.school?.id) {
-        setLoading(false);
-        return;
-      }
-
       try {
         const [quotationData, contactData] = await Promise.all([
           getCRMOpportunityQuotations(opportunity.id),
