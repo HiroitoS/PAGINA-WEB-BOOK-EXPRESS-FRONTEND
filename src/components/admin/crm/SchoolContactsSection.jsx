@@ -109,7 +109,7 @@ function ContactValue({ icon: Icon, label, value }) {
           {label}
         </p>
 
-        <p className="mt-0.5 break-words text-sm font-semibold text-gray-700">
+        <p className="mt-0.5 wrap-break-words text-sm font-semibold text-gray-700">
           {value || "No registrado"}
         </p>
       </div>
@@ -596,7 +596,7 @@ export default function SchoolContactsSection({
                     </div>
 
                     <div className="min-w-0">
-                      <p className="break-words font-black text-gray-950">
+                      <p className="wrap-break-words font-black text-gray-950">
                         {contact.full_name}
                       </p>
 
