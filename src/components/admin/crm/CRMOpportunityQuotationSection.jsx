@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   FaCheckCircle,
+  FaEdit,
   FaExclamationTriangle,
   FaFileInvoiceDollar,
   FaPaperPlane,
@@ -16,6 +17,7 @@ import {
   getCRMOpportunityProjection,
   getCRMOpportunityQuotations,
   sendCRMOpportunityQuotation,
+  updateCRMOpportunityQuotationDraft,
 } from "../../../api/crmApi";
 
 const STANDARD_DISCOUNT = 20;
@@ -151,6 +153,7 @@ export default function CRMOpportunityQuotationSection({
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingQuotationId, setEditingQuotationId] = useState(null);
   const [draftItems, setDraftItems] = useState([]);
   const [draftNotes, setDraftNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -244,31 +247,65 @@ export default function CRMOpportunityQuotationSection({
     }
   }
 
-  function openQuotationDrawer() {
+  function openQuotationDrawer(quotation = null) {
     if (!projection?.items?.length) {
       setErrorMessage(
-        "La proyección vigente debe tener productos antes de crear una cotización.",
+        "La proyección vigente debe tener productos antes de trabajar una cotización.",
       );
       return;
     }
 
-    const nextItems = projection.items.map((item) => ({
-      projection_item: item.id,
-      product_name: item.product_name_snapshot || item.product?.name || "Producto",
-      provider_name:
-        item.provider_name_snapshot || item.product?.provider?.name || "Editorial",
-      grade_name: item.grade_name_snapshot || "Sin grado",
-      quantity: String(item.quantity || 1),
-      pvp: String(item.unit_price || "0.00"),
-      school_discount_percent: String(STANDARD_DISCOUNT),
-      parent_price: String(item.unit_price || "0.00"),
-      school_commission: "0.00",
-      price_year_snapshot: item.price_year_snapshot,
-      price_campaign_snapshot: item.price_campaign_snapshot,
-    }));
+    if (
+      quotation
+      && quotation.source_projection?.id
+      && quotation.source_projection.id !== projection.id
+    ) {
+      setErrorMessage(
+        "Esta cotización nació de una proyección anterior. Conserva esa versión y crea una nueva cotización desde la proyección vigente.",
+      );
+      return;
+    }
 
+    const quotationItems = quotation?.items || [];
+
+    const nextItems = projection.items.map((item) => {
+      const quotationItem = quotationItems.find(
+        (candidate) => candidate.product?.id === item.product?.id,
+      );
+
+      return {
+        projection_item: item.id,
+        product_name:
+          item.product_name_snapshot || item.product?.name || "Producto",
+        provider_name:
+          item.provider_name_snapshot
+          || item.product?.provider?.name
+          || "Editorial",
+        grade_name: item.grade_name_snapshot || "Sin grado",
+        quantity: String(
+          quotationItem?.quantity ?? item.quantity ?? 1,
+        ),
+        pvp: String(quotationItem?.pvp ?? item.unit_price ?? "0.00"),
+        school_discount_percent: String(
+          quotationItem?.school_discount_percent ?? STANDARD_DISCOUNT,
+        ),
+        parent_price: String(
+          quotationItem?.parent_price ?? item.unit_price ?? "0.00",
+        ),
+        school_commission: String(
+          quotationItem?.school_commission ?? "0.00",
+        ),
+        price_year_snapshot:
+          quotationItem?.price_year_snapshot ?? item.price_year_snapshot,
+        price_campaign_snapshot:
+          quotationItem?.price_campaign_snapshot
+          ?? item.price_campaign_snapshot,
+      };
+    });
+
+    setEditingQuotationId(quotation?.id || null);
     setDraftItems(nextItems);
-    setDraftNotes("");
+    setDraftNotes(quotation?.notes || "");
     setErrorMessage("");
     setSuccessMessage("");
     setDrawerOpen(true);
@@ -287,7 +324,7 @@ export default function CRMOpportunityQuotationSection({
     );
   }
 
-  async function handleCreateQuotation() {
+  async function handleSaveQuotation() {
     const invalidItem = draftItems.find((item) => {
       const quantity = Number(item.quantity);
       const discount = Number(item.school_discount_percent);
@@ -329,21 +366,32 @@ export default function CRMOpportunityQuotationSection({
         notes: draftNotes.trim(),
       };
 
-      const quotation = await createCRMOpportunityQuotationFromProjection(
-        opportunityId,
-        payload,
-      );
+      const quotation = editingQuotationId
+        ? await updateCRMOpportunityQuotationDraft(
+            opportunityId,
+            editingQuotationId,
+            payload,
+          )
+        : await createCRMOpportunityQuotationFromProjection(
+            opportunityId,
+            payload,
+          );
 
       setDrawerOpen(false);
+      setEditingQuotationId(null);
       setSuccessMessage(
-        `Cotización v${quotation.version} creada como borrador.`,
+        editingQuotationId
+          ? `Cotización v${quotation.version} actualizada correctamente.`
+          : `Cotización v${quotation.version} creada como borrador.`,
       );
       refreshWorkspace();
     } catch (error) {
       setErrorMessage(
         getErrorMessage(
           error,
-          "No se pudo crear la cotización desde la proyección.",
+          editingQuotationId
+            ? "No se pudo actualizar el borrador de la cotización."
+            : "No se pudo crear la cotización desde la proyección.",
         ),
       );
     } finally {
@@ -453,7 +501,7 @@ export default function CRMOpportunityQuotationSection({
 
           <button
             type="button"
-            onClick={openQuotationDrawer}
+            onClick={() => openQuotationDrawer()}
             disabled={!projection?.items?.length}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
@@ -531,6 +579,18 @@ export default function CRMOpportunityQuotationSection({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
+                      {quotation.status === "draft" ? (
+                        <button
+                          type="button"
+                          onClick={() => openQuotationDrawer(quotation)}
+                          disabled={busy}
+                          className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-800 transition hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          <FaEdit />
+                          Editar borrador
+                        </button>
+                      ) : null}
+
                       {quotation.status === "draft"
                       && quotation.requires_discount_approval ? (
                         <button
@@ -751,7 +811,11 @@ export default function CRMOpportunityQuotationSection({
                   CRM comercial
                 </p>
                 <h3 className="mt-1 text-2xl font-black text-gray-950">
-                  Nueva cotización
+                  {editingQuotationId
+                    ? `Editar cotización v${quotations.find(
+                        (quotation) => quotation.id === editingQuotationId,
+                      )?.version || ""}`
+                    : "Nueva cotización"}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500">
                   Base: proyección v{projection?.version || "—"} ·{" "}
@@ -761,7 +825,10 @@ export default function CRMOpportunityQuotationSection({
 
               <button
                 type="button"
-                onClick={() => setDrawerOpen(false)}
+                onClick={() => {
+                  setDrawerOpen(false);
+                  setEditingQuotationId(null);
+                }}
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:bg-gray-50"
                 aria-label="Cerrar cotización"
               >
@@ -955,12 +1022,16 @@ export default function CRMOpportunityQuotationSection({
               </button>
               <button
                 type="button"
-                onClick={handleCreateQuotation}
+                onClick={handleSaveQuotation}
                 disabled={saving}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700 disabled:opacity-50"
               >
                 <FaCheckCircle />
-                {saving ? "Guardando..." : "Guardar borrador"}
+                {saving
+                  ? "Guardando..."
+                  : editingQuotationId
+                    ? "Guardar cambios"
+                    : "Guardar borrador"}
               </button>
             </div>
           </div>
