@@ -210,6 +210,19 @@ export default function CRMOpportunityQuotationSection({
     };
   }, [opportunityId, refreshKey]);
 
+  const editableDraft = useMemo(
+    () =>
+      quotations.find(
+        (quotation) =>
+          quotation.status === "draft"
+          && (
+            !quotation.source_projection?.id
+            || quotation.source_projection.id === projection?.id
+          ),
+      ) || null,
+    [projection?.id, quotations],
+  );
+
   const draftTotals = useMemo(
     () =>
       draftItems.reduce(
@@ -501,12 +514,12 @@ export default function CRMOpportunityQuotationSection({
 
           <button
             type="button"
-            onClick={() => openQuotationDrawer()}
+            onClick={() => openQuotationDrawer(editableDraft)}
             disabled={!projection?.items?.length}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            <FaPlus />
-            Nueva cotización
+            {editableDraft ? <FaEdit /> : <FaPlus />}
+            {editableDraft ? "Continuar borrador" : "Nueva cotización"}
           </button>
         </div>
 
