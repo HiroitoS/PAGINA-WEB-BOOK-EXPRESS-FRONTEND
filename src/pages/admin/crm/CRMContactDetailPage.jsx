@@ -644,7 +644,7 @@ export default function CRMContactDetailPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <div className="h-40 animate-pulse rounded-3xl bg-gray-200" />
-        <div className="mt-4 grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-4 xl:overflow-hidden">
+        <div className="mt-4 grid gap-4 xl:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => (
             <div
               key={index}
@@ -660,7 +660,7 @@ export default function CRMContactDetailPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <Link
-          className="inline-flex items-center gap-2 self-start rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50 xl:shrink-0"
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50"
           to={returnContext.path}
           state={returnContext.state}
         >
@@ -685,7 +685,7 @@ export default function CRMContactDetailPage() {
   const relationshipLevel = Number(contact.relationship_level);
 
   return (
-    <div className={`mx-auto w-full max-w-7xl ${editingContact ? "" : "xl:flex xl:h-[calc(100vh-7rem)] xl:flex-col xl:overflow-hidden"}`}>
+    <div className="mx-auto w-full max-w-7xl">
       <Link
         className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50"
         to={returnContext.path}
@@ -698,7 +698,7 @@ export default function CRMContactDetailPage() {
       <motion.section
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mt-3 rounded-3xl bg-gray-950 px-5 py-5 text-white shadow-sm sm:px-7 xl:shrink-0"
+        className="mt-3 rounded-3xl bg-gray-950 px-5 py-5 text-white shadow-sm sm:px-7"
       >
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div className="min-w-0">
@@ -959,7 +959,7 @@ export default function CRMContactDetailPage() {
         </section>
       ) : null}
 
-      <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:shrink-0 xl:grid-cols-4">
+      <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <InfoValue
           icon={FaSchool}
           label="Colegio"
@@ -987,7 +987,7 @@ export default function CRMContactDetailPage() {
       </section>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-4">
-        <aside className="space-y-4 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <aside className="space-y-4 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
           <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-red-700">
               Contacto
@@ -1031,7 +1031,7 @@ export default function CRMContactDetailPage() {
           </section>
         </aside>
 
-        <main className="xl:col-span-2 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <main className="xl:col-span-2 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
           <section className="rounded-3xl border border-gray-200 bg-white shadow-sm">
             <div className="border-b border-gray-100 p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1459,7 +1459,7 @@ export default function CRMContactDetailPage() {
           </section>
         </main>
 
-        <aside className="space-y-4 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <aside className="space-y-4 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
           <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-red-700">
               Relaciones
