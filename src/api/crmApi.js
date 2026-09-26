@@ -527,6 +527,18 @@ export async function getCRMOpportunityAdoptions(opportunityId) {
   return response.data;
 }
 
+export async function confirmCRMOpportunityAdoption(
+  opportunityId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/adoptions/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function getCRMContacts(params = {}) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/contacts/`,
