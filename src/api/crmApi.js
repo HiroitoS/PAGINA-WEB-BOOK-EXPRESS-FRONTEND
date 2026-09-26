@@ -459,6 +459,53 @@ export async function getCRMOpportunityQuotations(opportunityId) {
   return response.data;
 }
 
+export async function createCRMOpportunityQuotationFromProjection(
+  opportunityId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/quotations/from-projection/`,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function approveCRMOpportunityQuotationDiscount(
+  opportunityId,
+  quotationId,
+  payload = {},
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/quotations/${quotationId}/approve-discount/`,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function sendCRMOpportunityQuotation(
+  opportunityId,
+  quotationId,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/quotations/${quotationId}/send/`,
+  );
+
+  return response.data;
+}
+
+export async function acceptCRMOpportunityQuotation(
+  opportunityId,
+  quotationId,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/quotations/${quotationId}/accept/`,
+  );
+
+  return response.data;
+}
+
 export async function getCRMOpportunityAdoptions(opportunityId) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/adoptions/`,
