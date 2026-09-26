@@ -197,8 +197,8 @@ export default function CRMOpportunityDetailPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-2xl flex-col xl:h-[calc(100vh-7rem)] xl:overflow-hidden">
-      <div className="mb-4 xl:shrink-0">
+    <div className="mx-auto w-full max-w-screen-2xl">
+      <div className="mb-4">
         <Link
           to={returnContext.path}
           state={returnContext.state}
@@ -209,7 +209,7 @@ export default function CRMOpportunityDetailPage() {
         </Link>
       </div>
 
-      <section className="overflow-hidden rounded-3xl bg-gray-950 text-white shadow-sm xl:shrink-0">
+      <section className="overflow-hidden rounded-3xl bg-gray-950 text-white shadow-sm">
         <div className="flex flex-col justify-between gap-5 px-5 py-5 sm:px-7 xl:flex-row xl:items-end">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -272,8 +272,8 @@ export default function CRMOpportunityDetailPage() {
         </div>
       </section>
 
-      <div className="mt-4 grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-12 xl:overflow-hidden">
-        <main className="min-w-0 xl:col-span-9 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+      <div className="mt-4 grid gap-4 xl:grid-cols-12">
+        <main className="min-w-0 xl:col-span-9 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
           {activeTab === "summary" ? (
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -550,7 +550,7 @@ export default function CRMOpportunityDetailPage() {
           ) : null}
         </main>
 
-        <aside className="min-w-0 xl:col-span-3 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <aside className="min-w-0 xl:col-span-3 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
           <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-red-700">
               Relaciones
