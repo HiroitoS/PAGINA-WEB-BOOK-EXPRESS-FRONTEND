@@ -273,7 +273,7 @@ export default function CRMOpportunityDetailPage() {
       </section>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-12">
-        <main className="min-w-0 xl:col-span-9">
+        <main className="min-w-0 xl:col-span-9 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
           {activeTab === "summary" ? (
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -550,7 +550,7 @@ export default function CRMOpportunityDetailPage() {
           ) : null}
         </main>
 
-        <aside className="min-w-0 xl:col-span-3">
+        <aside className="min-w-0 xl:col-span-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
           <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-red-700">
               Relaciones
