@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
@@ -9,6 +9,7 @@ import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
 import "@fullcalendar/react/themes/classic/palette.css";
 import {
+  FaArrowLeft,
   FaCalendarAlt,
   FaCheckCircle,
   FaChevronDown,
@@ -39,6 +40,10 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import { getResults } from "../../../utils/formatters";
+import {
+  buildNavigationState,
+  resolveReturnContext,
+} from "../../../utils/navigationContext";
 
 const INITIAL_EVENT_FORM = {
   title: "",
@@ -112,16 +117,44 @@ function normalizeList(data) {
   return getResults(data);
 }
 
+function parseCalendarDate(value) {
+  if (value instanceof Date) {
+    return new Date(value.getTime());
+  }
+
+  if (typeof value === "string") {
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+
+      return new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+      );
+    }
+  }
+
+  return new Date(value);
+}
+
 function formatDateOnly(value) {
-  const date = value instanceof Date ? value : new Date(value);
+  const date = parseCalendarDate(value);
 
-  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+  if (Number.isNaN(date.getTime())) {
+    return formatDateOnly(new Date());
+  }
 
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function formatMonthTitle(value) {
-  const date = value ? new Date(value) : new Date();
+  const date = value ? parseCalendarDate(value) : new Date();
 
   if (Number.isNaN(date.getTime())) return "Mes actual";
 
@@ -132,7 +165,7 @@ function formatMonthTitle(value) {
 }
 
 function formatDateTitle(value) {
-  const date = value ? new Date(value) : new Date();
+  const date = value ? parseCalendarDate(value) : new Date();
 
   if (Number.isNaN(date.getTime())) return "Fecha";
 
@@ -215,8 +248,8 @@ function getInitialCalendarRange() {
   end.setDate(end.getDate() + 14);
 
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: formatDateOnly(start),
+    end: formatDateOnly(end),
   };
 }
 
@@ -712,11 +745,11 @@ function groupItemsByMobilePeriod(items) {
 }
 
 function getDateKey(value) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) return "sin-fecha";
 
-  return date.toISOString().slice(0, 10);
+  return formatDateOnly(date);
 }
 
 function getItemsForDate(items, dateKey) {
@@ -724,7 +757,7 @@ function getItemsForDate(items, dateKey) {
 }
 
 function getMonthCalendarDays(monthDate) {
-  const baseDate = new Date(monthDate);
+  const baseDate = parseCalendarDate(monthDate);
 
   if (Number.isNaN(baseDate.getTime())) return [];
 
@@ -744,7 +777,7 @@ function getMonthCalendarDays(monthDate) {
 }
 
 function moveMonth(value, amount) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) return formatDateOnly(new Date());
 
@@ -754,7 +787,7 @@ function moveMonth(value, amount) {
 }
 
 function getStartOfWeek(value) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) {
     const today = new Date();
@@ -776,7 +809,7 @@ function getWeekCalendarDays(value) {
 }
 
 function moveWeek(value, amount) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) return formatDateOnly(new Date());
 
@@ -801,7 +834,7 @@ function formatWeekRangeTitle(value) {
 }
 
 function formatWeekDayLabel(value) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
 
   if (Number.isNaN(date.getTime())) return "Día";
 
@@ -813,6 +846,10 @@ function formatWeekDayLabel(value) {
 export default function WorkspaceCalendarPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const returnContext = resolveReturnContext(location.state);
+
   const canAssignToOthers = userHasPermission(
     user,
     ["workspaces.assign_work"]
@@ -1086,7 +1123,7 @@ export default function WorkspaceCalendarPage() {
   }
 
   function openEventForm() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = formatDateOnly(new Date());
 
     setEventForm(buildEventFormFromDate(today));
     setShowEventForm(true);
@@ -1257,7 +1294,17 @@ export default function WorkspaceCalendarPage() {
       const taskId = item.task_id || item.task || getCalendarRealId(item);
 
       if (taskId) {
-        navigate(`/admin/workspace/tasks?task=${taskId}&tab=info`);
+        navigate(
+          `/admin/workspace/tasks?task=${taskId}&tab=info`,
+          {
+            state: buildNavigationState({
+              from: "/admin/workspace/calendar",
+              fromLabel: "Calendario",
+              fromType: "calendar",
+              currentState: location.state,
+            }),
+          },
+        );
       }
 
       return;
@@ -1335,21 +1382,10 @@ export default function WorkspaceCalendarPage() {
   }
 
   function goToToday() {
-    const today = formatDateOnly(new Date());
-
-    forceCalendarRender(calendarView, today);
-
-    const todayDate = new Date();
-    const start = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
-    const end = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0);
-
-    start.setDate(start.getDate() - 14);
-    end.setDate(end.getDate() + 14);
-
-    setCalendarRange({
-      start: start.toISOString().slice(0, 10),
-      end: end.toISOString().slice(0, 10),
-    });
+    forceCalendarRender(
+      "timeGridDay",
+      formatDateOnly(new Date()),
+    );
   }
 
   function renderEventContent(eventInfo) {
@@ -1381,6 +1417,22 @@ export default function WorkspaceCalendarPage() {
             </div>
 
             <div className="grid gap-2 sm:flex sm:flex-wrap">
+              {returnContext.path ? (
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-gray-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 sm:py-3"
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      returnContext.path,
+                      { state: returnContext.state },
+                    )
+                  }
+                >
+                  <FaArrowLeft />
+                  Volver a {returnContext.label || "origen"}
+                </button>
+              ) : null}
+
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white px-4 py-2.5 text-sm font-black text-gray-950 transition hover:bg-gray-100 sm:py-3"
                 type="button"
@@ -1486,10 +1538,19 @@ export default function WorkspaceCalendarPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <LegendItem className="border-red-100 bg-red-50 text-red-700" label="Tareas" />
-                <LegendItem className="border-blue-100 bg-blue-50 text-blue-700" label="Eventos" />
+                <LegendItem
+                  className="border-red-100 bg-red-50 text-red-700"
+                  dotClassName="bg-red-700"
+                  label="Tareas"
+                />
+                <LegendItem
+                  className="border-blue-100 bg-blue-50 text-blue-700"
+                  dotClassName="bg-blue-600"
+                  label="Eventos"
+                />
                 <LegendItem
                   className="border-yellow-100 bg-yellow-50 text-yellow-800"
+                  dotClassName="bg-yellow-500"
                   label="Recordatorios"
                 />
               </div>
@@ -1507,12 +1568,11 @@ export default function WorkspaceCalendarPage() {
             </div>
 
             <div className="mb-3 hidden flex-col gap-3 border-t border-gray-100 pt-3 lg:flex lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                <CalendarViewButton active={false} label="Hoy" onClick={goToToday} />
+              <div className="flex flex-wrap gap-2">
                 <CalendarViewButton
-                  active={calendarView === "dayGridMonth"}
-                  label="Mes"
-                  onClick={() => changeCalendarView("dayGridMonth")}
+                  active={calendarView === "timeGridDay"}
+                  label="Hoy"
+                  onClick={goToToday}
                 />
                 <CalendarViewButton
                   active={calendarView === "timeGridWeek"}
@@ -1520,14 +1580,14 @@ export default function WorkspaceCalendarPage() {
                   onClick={() => changeCalendarView("timeGridWeek")}
                 />
                 <CalendarViewButton
-                  active={calendarView === "timeGridDay"}
-                  label="Día"
-                  onClick={() => changeCalendarView("timeGridDay")}
+                  active={calendarView === "dayGridMonth"}
+                  label="Mes"
+                  onClick={() => changeCalendarView("dayGridMonth")}
                 />
               </div>
 
               <p className="text-xs font-bold text-gray-500">
-                Vista compacta: 7:00 a. m. a 9:00 p. m.
+                Usa las flechas del calendario para avanzar o retroceder el periodo.
               </p>
             </div>
 
@@ -1544,14 +1604,15 @@ export default function WorkspaceCalendarPage() {
               </div>
             )}
 
-            <div className="todo-calendar rounded-2xl border border-gray-100 bg-white p-2 sm:p-3">
+            <div className="todo-calendar relative rounded-2xl border border-gray-100 bg-white p-2 sm:p-3">
               {isLoading ? (
-                <div className="flex min-h-80 items-center justify-center text-sm font-bold text-gray-500">
-                  <FaSpinner className="mr-3 animate-spin" />
-                  Cargando calendario...
+                <div className="pointer-events-none absolute right-3 top-3 z-20 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/95 px-3 py-2 text-xs font-black text-gray-600 shadow-sm">
+                  <FaSpinner className="animate-spin" />
+                  Actualizando
                 </div>
-              ) : (
-                <>
+              ) : null}
+
+              <>
                   <div className="block lg:hidden">
                     {mobileViewMode === "agenda" ? (
                       <MobileCalendarList
@@ -1638,7 +1699,6 @@ export default function WorkspaceCalendarPage() {
                     />
                   </div>
                 </>
-              )}
             </div>
 
             <p className="mt-3 text-xs font-semibold leading-5 text-gray-500">
@@ -2271,9 +2331,15 @@ function CalendarDrawer({ children, subtitle, title, onClose }) {
   );
 }
 
-function LegendItem({ className, label }) {
+function LegendItem({ className, dotClassName, label }) {
   return (
-    <div className={`rounded-full border px-2 py-2 text-center text-xs font-black ${className}`}>
+    <div
+      className={`flex items-center justify-center gap-2 rounded-full border px-2 py-2 text-center text-xs font-black ${className}`}
+    >
+      <span
+        className={`h-2 w-2 shrink-0 rounded-full ${dotClassName}`}
+        aria-hidden="true"
+      />
       {label}
     </div>
   );

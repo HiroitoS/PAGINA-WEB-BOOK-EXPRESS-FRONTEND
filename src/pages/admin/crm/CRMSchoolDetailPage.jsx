@@ -1,34 +1,86 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useParams } from "react-router";
 import {
   FaArrowLeft,
-  FaBookOpen,
+  FaBriefcase,
   FaBuilding,
+  FaCalendarAlt,
   FaChartLine,
   FaEnvelope,
   FaExclamationTriangle,
   FaMapMarkerAlt,
   FaPhoneAlt,
+  FaPlus,
   FaSchool,
+  FaStar,
+  FaTasks,
   FaUserTie,
   FaUsers,
   FaWhatsapp,
 } from "react-icons/fa";
 
-import { getCRMSchool } from "../../../api/crmApi";
+import {
+  createCRMOpportunity,
+  getCRMCampaigns,
+  getCRMOpportunity,
+  getCRMOpportunities,
+  getCRMSchool,
+  getCRMSchoolActivities,
+  getCRMSchoolWorkItems,
+} from "../../../api/crmApi";
+import SchoolEducationalServicesSection from "../../../components/admin/crm/SchoolEducationalServicesSection";
+import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
+import {
+  buildNavigationState,
+  resolveReturnContext,
+} from "../../../utils/navigationContext";
 
-function getErrorMessage(error, fallback) {
-  const detail = error?.response?.data?.detail;
+const ACTIVITY_FILTERS = [
+  { value: "all", label: "Todas" },
+  { value: "call", label: "Llamadas" },
+  { value: "visit", label: "Visitas" },
+  { value: "meeting", label: "Reuniones" },
+  { value: "follow_up", label: "Seguimientos" },
+];
 
-  if (Array.isArray(detail) && detail.length > 0) {
-    return detail.join(" ");
+function normalizeResults(data) {
+  if (Array.isArray(data)) {
+    return data;
   }
 
-  if (typeof detail === "string" && detail.trim()) {
-    return detail;
+  if (Array.isArray(data?.results)) {
+    return data.results;
+  }
+
+  return [];
+}
+
+function getErrorMessage(error, fallback) {
+  const data = error?.response?.data;
+
+  if (typeof data?.detail === "string" && data.detail.trim()) {
+    return data.detail;
+  }
+
+  if (Array.isArray(data?.detail) && data.detail.length > 0) {
+    return data.detail.join(" ");
+  }
+
+  if (data && typeof data === "object") {
+    const messages = Object.values(data)
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .filter((value) => typeof value === "string" && value.trim());
+
+    if (messages.length > 0) {
+      return messages.join(" ");
+    }
   }
 
   return fallback;
+}
+
+function hasValue(value) {
+  return value !== null && value !== undefined && String(value).trim() !== "";
 }
 
 function formatLocation(school) {
@@ -38,7 +90,9 @@ function formatLocation(school) {
 }
 
 function formatOwner(owner) {
-  if (!owner) return "Sin asesor asignado";
+  if (!owner) {
+    return "Sin asesor asignado";
+  }
 
   return owner.full_name || owner.username || "Asesor asignado";
 }
@@ -47,36 +101,43 @@ function formatTeam(team) {
   return team?.name || "Sin equipo comercial";
 }
 
-function formatPopulation(school) {
-  const population = school?.current_population_total ?? school?.estimated_students;
-
-  return population != null ? String(population) : "Sin información";
-}
-
 function formatSegment(segment) {
-  return segment && segment !== "OUT" ? `Segmento ${segment}` : "Fuera del objetivo base";
+  if (!segment || segment === "OUT") {
+    return "Fuera del objetivo base";
+  }
+
+  return `Segmento ${segment}`;
 }
 
-function formatDate(value) {
-  if (!value) return "No registrado";
+function formatPopulation(school) {
+  return (
+    school?.current_population_total ??
+    school?.estimated_students ??
+    "Sin información"
+  );
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "Sin fecha";
+  }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "No registrado";
+    return "Sin fecha";
   }
 
   return new Intl.DateTimeFormat("es-PE", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(date);
 }
 
 function StatusBadge({ isActive }) {
   return (
     <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${
         isActive
           ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
           : "bg-gray-100 text-gray-600 ring-1 ring-gray-200"
@@ -89,9 +150,9 @@ function StatusBadge({ isActive }) {
 
 function SummaryItem({ icon: Icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
+    <div className="rounded-2xl border border-gray-200 bg-white px-3 py-3 shadow-sm sm:px-4">
+      <div className="flex items-center gap-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-xs text-white sm:h-9 sm:w-9">
           <Icon />
         </div>
 
@@ -109,60 +170,194 @@ function SummaryItem({ icon: Icon, label, value }) {
   );
 }
 
-function ContactItem({ icon: Icon, label, value }) {
+function InfoItem({ icon: Icon, label, value }) {
   return (
-    <div className="rounded-2xl bg-gray-50 p-4">
-      <div className="flex items-start gap-3">
-        <div className="mt-1 text-gray-500">
-          <Icon />
-        </div>
+    <div className="flex min-w-0 items-start gap-3 rounded-2xl bg-gray-50 px-3 py-3 ring-1 ring-gray-200">
+      <div className="mt-0.5 shrink-0 text-gray-500">
+        <Icon />
+      </div>
 
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-            {label}
-          </p>
+      <div className="min-w-0">
+        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+          {label}
+        </p>
 
-          <p className="mt-1 break-words text-sm font-semibold text-gray-900">
-            {value || "No registrado"}
-          </p>
-        </div>
+        <p className="mt-1 break-words text-sm font-semibold text-gray-900">
+          {value || "No registrado"}
+        </p>
       </div>
     </div>
   );
 }
 
+function WorkItemIcon({ type }) {
+  if (type === "event") {
+    return <FaCalendarAlt />;
+  }
+
+  if (type === "task") {
+    return <FaTasks />;
+  }
+
+  return <FaStar />;
+}
+
+function getWorkItemDate(workItem) {
+  const item = workItem?.item || {};
+
+  if (workItem?.type === "event") {
+    return item.start_at;
+  }
+
+  if (workItem?.type === "task") {
+    return item.due_at || item.reminder_at;
+  }
+
+  return item.remind_at;
+}
+
+function isPendingWorkItem(workItem) {
+  const item = workItem?.item || {};
+
+  if (workItem?.type === "task") {
+    return !["completed", "cancelled"].includes(item.status);
+  }
+
+  if (workItem?.type === "reminder") {
+    return !["completed", "dismissed"].includes(item.status);
+  }
+
+  if (workItem?.type === "event") {
+    if (!item.start_at) {
+      return true;
+    }
+
+    const startAt = new Date(item.start_at);
+
+    return Number.isNaN(startAt.getTime()) || startAt >= new Date();
+  }
+
+  return true;
+}
+
 function LoadingState() {
   return (
     <div className="space-y-4">
-      <div className="h-40 animate-pulse rounded-3xl bg-gray-200" />
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="h-40 animate-pulse rounded-3xl bg-gray-200" />
-        <div className="h-40 animate-pulse rounded-3xl bg-gray-200" />
+      <div className="h-28 animate-pulse rounded-3xl bg-gray-200" />
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div
+            key={index}
+            className="h-20 animate-pulse rounded-2xl bg-gray-200"
+          />
+        ))}
       </div>
+      <div className="h-72 animate-pulse rounded-3xl bg-gray-200" />
     </div>
   );
 }
 
 export default function CRMSchoolDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
 
   const [school, setSchool] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [workItems, setWorkItems] = useState([]);
+  const [schoolOpportunities, setSchoolOpportunities] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
+  const [opportunityDetail, setOpportunityDetail] = useState(null);
+  const [creatingOpportunity, setCreatingOpportunity] = useState(false);
+  const [opportunityError, setOpportunityError] = useState("");
+  const [activityFilter, setActivityFilter] = useState("all");
+  const [activeInfoTab, setActiveInfoTab] = useState("activity");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [supportingWarning, setSupportingWarning] = useState("");
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadSchool() {
+    async function loadSchoolWorkspace() {
       try {
         setLoading(true);
         setErrorMessage("");
+        setSupportingWarning("");
 
-        const data = await getCRMSchool(id);
+        const schoolData = await getCRMSchool(id);
 
-        if (!ignore) {
-          setSchool(data);
+        if (ignore) {
+          return;
+        }
+
+        setSchool(schoolData);
+
+        const [
+          activitiesResult,
+          workItemsResult,
+          opportunitiesResult,
+          campaignsResult,
+        ] = await Promise.allSettled([
+          getCRMSchoolActivities(id),
+          getCRMSchoolWorkItems(id),
+          getCRMOpportunities({
+            school: id,
+            page: 1,
+            page_size: 100,
+          }),
+          getCRMCampaigns(),
+        ]);
+
+        if (ignore) {
+          return;
+        }
+
+        if (activitiesResult.status === "fulfilled") {
+          setActivities(normalizeResults(activitiesResult.value));
+        } else {
+          setActivities([]);
+          setSupportingWarning(
+            "La ficha cargó, pero no se pudo mostrar el historial comercial.",
+          );
+        }
+
+        if (workItemsResult.status === "fulfilled") {
+          setWorkItems(normalizeResults(workItemsResult.value));
+        } else {
+          setWorkItems([]);
+          setSupportingWarning((currentWarning) =>
+            currentWarning
+              ? `${currentWarning} Tampoco se pudieron cargar las próximas acciones.`
+              : "La ficha cargó, pero no se pudieron mostrar las próximas acciones.",
+          );
+        }
+
+        if (opportunitiesResult.status === "fulfilled") {
+          setSchoolOpportunities(
+            normalizeResults(opportunitiesResult.value),
+          );
+        } else {
+          setSchoolOpportunities([]);
+          setSupportingWarning((currentWarning) =>
+            currentWarning
+              ? `${currentWarning} Tampoco se pudo cargar la oportunidad comercial.`
+              : "La ficha cargó, pero no se pudo mostrar la oportunidad comercial.",
+          );
+        }
+
+        if (campaignsResult.status === "fulfilled") {
+          setCampaigns(
+            Array.isArray(campaignsResult.value)
+              ? campaignsResult.value
+              : [],
+          );
+        } else {
+          setCampaigns([]);
+          setSupportingWarning((currentWarning) =>
+            currentWarning
+              ? `${currentWarning} Tampoco se pudo identificar la campaña activa.`
+              : "La ficha cargó, pero no se pudo identificar la campaña activa.",
+          );
         }
       } catch (error) {
         if (!ignore) {
@@ -180,22 +375,184 @@ export default function CRMSchoolDetailPage() {
       }
     }
 
-    loadSchool();
+    loadSchoolWorkspace();
 
     return () => {
       ignore = true;
     };
   }, [id]);
 
+  const hasAdditionalData =
+    school &&
+    (hasValue(school.ruc) ||
+      hasValue(school.institution_code) ||
+      hasValue(school.reference));
+
+  const returnContext = resolveReturnContext(
+    location.state,
+    {
+      fallbackPath: "/admin/crm/colegios",
+      fallbackLabel: "colegios",
+    },
+  );
+
+  const visibleContacts = useMemo(() => {
+    const contacts = Array.isArray(school?.contacts)
+      ? [...school.contacts]
+      : [];
+
+    return contacts
+      .filter((contact) => contact.is_active)
+      .sort((contactA, contactB) => {
+        if (contactA.is_primary !== contactB.is_primary) {
+          return contactA.is_primary ? -1 : 1;
+        }
+
+        return contactA.full_name.localeCompare(contactB.full_name, "es");
+      });
+  }, [school]);
+
+  const filteredActivities = useMemo(() => {
+    if (activityFilter === "all") {
+      return activities;
+    }
+
+    return activities.filter(
+      (activity) => activity.activity_type === activityFilter,
+    );
+  }, [activities, activityFilter]);
+
+  const pendingWorkItems = useMemo(
+    () => workItems.filter(isPendingWorkItem),
+    [workItems],
+  );
+
+  const activeSchoolCampaigns = useMemo(
+    () =>
+      campaigns.filter(
+        (campaign) =>
+          campaign.campaign_type === "school"
+          && campaign.status === "active",
+      ),
+    [campaigns],
+  );
+
+  const activeSchoolCampaign =
+    activeSchoolCampaigns.length === 1
+      ? activeSchoolCampaigns[0]
+      : null;
+
+  const currentOpportunity = useMemo(() => {
+    const openOpportunities = schoolOpportunities.filter(
+      (opportunity) => !opportunity.is_closed,
+    );
+
+    if (activeSchoolCampaign) {
+      const campaignOpportunity = openOpportunities.find(
+        (opportunity) =>
+          opportunity.campaign?.id === activeSchoolCampaign.id,
+      );
+
+      if (campaignOpportunity) {
+        return campaignOpportunity;
+      }
+    }
+
+    return openOpportunities[0] || null;
+  }, [activeSchoolCampaign, schoolOpportunities]);
+
+  const currentOpportunityId = currentOpportunity?.id || null;
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadOpportunityDetail() {
+      if (!currentOpportunityId) {
+        setOpportunityDetail(null);
+        return;
+      }
+
+      try {
+        const detail = await getCRMOpportunity(currentOpportunityId);
+
+        if (!ignore) {
+          setOpportunityDetail(detail);
+        }
+      } catch {
+        if (!ignore) {
+          setOpportunityDetail(null);
+        }
+      }
+    }
+
+    loadOpportunityDetail();
+
+    return () => {
+      ignore = true;
+    };
+  }, [currentOpportunityId]);
+
+  const displayedOpportunity =
+    opportunityDetail?.id === currentOpportunity?.id
+      ? opportunityDetail
+      : currentOpportunity;
+
+  const opportunityBoardState = displayedOpportunity
+    ? buildNavigationState({
+        from: `/admin/crm/colegios/${school.id}`,
+        fromLabel: school.name,
+        fromType: "school",
+        currentState: location.state,
+        extra: {
+          opportunityFilters: {
+            pipeline: String(displayedOpportunity.pipeline?.id || ""),
+            campaign: String(displayedOpportunity.campaign?.id || ""),
+            search: school?.name || "",
+          },
+        },
+      })
+    : undefined;
+
+  async function handleCreateOpportunity() {
+    if (!school || creatingOpportunity) {
+      return;
+    }
+
+    try {
+      setCreatingOpportunity(true);
+      setOpportunityError("");
+
+      const created = await createCRMOpportunity({
+        school: school.id,
+      });
+
+      setSchoolOpportunities((currentItems) => [
+        created,
+        ...currentItems.filter((item) => item.id !== created.id),
+      ]);
+      setOpportunityDetail(created);
+    } catch (error) {
+      setOpportunityError(
+        getErrorMessage(
+          error,
+          "No se pudo crear la oportunidad comercial.",
+        ),
+      );
+    } finally {
+      setCreatingOpportunity(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-7xl">
-      <div className="mb-4">
+      <div className="mb-3">
         <Link
-          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-          to="/admin/crm/colegios"
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+          to={returnContext.path}
+          state={returnContext.state}
         >
           <FaArrowLeft />
-          Volver a colegios
+          Volver a {returnContext.label || "colegios"}
         </Link>
       </div>
 
@@ -220,315 +577,127 @@ export default function CRMSchoolDetailPage() {
       ) : null}
 
       {!loading && !errorMessage && school ? (
-        <div className="space-y-5">
-          <section className="overflow-hidden rounded-3xl bg-gray-950 text-white shadow-sm">
-            <div className="px-5 py-6 sm:px-7 lg:px-8">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-xs font-black uppercase tracking-wide text-red-300">
-                      CRM Comercial · Ficha institucional
-                    </p>
+        <div className="space-y-4">
+          <section className="rounded-3xl bg-gray-950 px-5 py-5 text-white shadow-sm sm:px-7">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs font-black uppercase tracking-wide text-red-300">
+                  CRM Comercial · Colegio
+                </p>
 
-                    <StatusBadge isActive={school.is_active} />
-                  </div>
+                <StatusBadge isActive={school.is_active} />
+              </div>
 
-                  <h1 className="mt-3 break-words text-2xl font-black sm:text-3xl lg:text-4xl">
-                    {school.name}
-                  </h1>
+              <div>
+                <h1 className="break-words text-2xl font-black sm:text-3xl">
+                  {school.name}
+                </h1>
 
-                  <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-300">
-                    Información institucional, contactos y responsabilidad
-                    comercial del colegio.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 sm:flex">
-                  <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
-                    <p className="text-xs font-bold uppercase text-gray-400">
-                      Código de institución
-                    </p>
-
-                    <p className="mt-1 font-black">
-                      {school.institution_code || "No registrado"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
-                    <p className="text-xs font-bold uppercase text-gray-400">
-                      RUC
-                    </p>
-
-                    <p className="mt-1 font-black">
-                      {school.ruc || "No registrado"}
-                    </p>
-                  </div>
-                </div>
+                <p className="mt-1 text-sm text-gray-300">
+                  Información institucional, relaciones y seguimiento comercial
+                  en un mismo lugar.
+                </p>
               </div>
             </div>
           </section>
 
-          <section>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <SummaryItem
-                icon={FaUserTie}
-                label="Asesor responsable"
-                value={formatOwner(school.owner)}
-              />
+          <section className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+            <SummaryItem
+              icon={FaUserTie}
+              label="Asesor responsable"
+              value={formatOwner(school.owner)}
+            />
 
-              <SummaryItem
-                icon={FaUsers}
-                label="Equipo comercial"
-                value={formatTeam(school.team)}
-              />
+            <SummaryItem
+              icon={FaUsers}
+              label="Equipo comercial"
+              value={formatTeam(school.team)}
+            />
 
-              <SummaryItem
-                icon={FaMapMarkerAlt}
-                label="Ubicación"
-                value={formatLocation(school) || "Sin ubicación registrada"}
-              />
+            <SummaryItem
+              icon={FaMapMarkerAlt}
+              label="Ubicación"
+              value={formatLocation(school) || "Sin ubicación registrada"}
+            />
 
-              <SummaryItem
-                icon={FaBuilding}
-                label="Población vigente"
-                value={formatPopulation(school)}
-              />
-            </div>
+            <SummaryItem
+              icon={FaBuilding}
+              label="Población"
+              value={formatPopulation(school)}
+            />
           </section>
 
-          <div className="grid gap-5 xl:grid-cols-3">
-            <div className="space-y-5 xl:col-span-2">
-              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                    Información institucional
-                  </p>
+          {supportingWarning ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              {supportingWarning}
+            </div>
+          ) : null}
 
-                  <h2 className="mt-1 text-xl font-black text-gray-950">
-                    Datos principales
-                  </h2>
-                </div>
+          <div className="grid min-w-0 gap-4 xl:grid-cols-12">
+            <aside className="order-3 min-w-0 space-y-4 xl:order-none xl:col-span-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                  Colegio
+                </p>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <ContactItem
+                <h2 className="mt-1 text-xl font-black text-gray-950">
+                  Datos principales
+                </h2>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-1 xl:gap-3">
+                  <InfoItem
                     icon={FaPhoneAlt}
                     label="Teléfono"
                     value={school.phone}
                   />
 
-                  <ContactItem
+                  <InfoItem
                     icon={FaWhatsapp}
                     label="WhatsApp"
                     value={school.whatsapp}
                   />
 
-                  <ContactItem
+                  <InfoItem
                     icon={FaEnvelope}
                     label="Correo"
                     value={school.email}
                   />
 
-                  <ContactItem
+                  <InfoItem
                     icon={FaMapMarkerAlt}
                     label="Dirección"
                     value={school.address}
                   />
                 </div>
 
-                {school.reference ? (
-                  <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Referencia
-                    </p>
+                {hasAdditionalData ? (
+                  <div className="mt-4 space-y-2 border-t border-gray-200 pt-4 text-sm text-gray-600">
+                    {hasValue(school.ruc) ? (
+                      <p>
+                        <span className="font-black text-gray-900">RUC:</span>{" "}
+                        {school.ruc}
+                      </p>
+                    ) : null}
 
-                    <p className="mt-2 text-sm leading-6 text-gray-700">
-                      {school.reference}
-                    </p>
+                    {hasValue(school.institution_code) ? (
+                      <p>
+                        <span className="font-black text-gray-900">
+                          Código de institución:
+                        </span>{" "}
+                        {school.institution_code}
+                      </p>
+                    ) : null}
+
+                    {hasValue(school.reference) ? (
+                      <p>
+                        <span className="font-black text-gray-900">
+                          Referencia:
+                        </span>{" "}
+                        {school.reference}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
-              </section>
-
-              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                      Personas de contacto
-                    </p>
-
-                    <h2 className="mt-1 text-xl font-black text-gray-950">
-                      Contactos del colegio
-                    </h2>
-                  </div>
-
-                  <span className="rounded-full bg-gray-950 px-3 py-1 text-xs font-black text-white">
-                    {school.contacts?.length || 0}
-                  </span>
-                </div>
-
-                {Array.isArray(school.contacts) &&
-                school.contacts.length > 0 ? (
-                  <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                    {school.contacts.map((contact) => (
-                      <article
-                        key={contact.id}
-                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="break-words font-black text-gray-950">
-                              {contact.full_name}
-                            </p>
-
-                            <p className="mt-1 text-sm text-gray-500">
-                              {contact.position || "Cargo no registrado"}
-                            </p>
-                          </div>
-
-                          {contact.is_primary ? (
-                            <span className="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-100">
-                              Principal
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-4 space-y-2 text-sm text-gray-600">
-                          <p>
-                            <span className="font-black text-gray-900">
-                              Teléfono:
-                            </span>{" "}
-                            {contact.phone ||
-                              contact.whatsapp ||
-                              "No registrado"}
-                          </p>
-
-                          <p className="break-words">
-                            <span className="font-black text-gray-900">
-                              Correo:
-                            </span>{" "}
-                            {contact.email || "No registrado"}
-                          </p>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-8 text-center">
-                    <FaUsers className="mx-auto text-gray-400" />
-
-                    <p className="mt-3 font-black text-gray-950">
-                      Sin contactos registrados
-                    </p>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                      Este colegio todavía no tiene personas de contacto
-                      registradas.
-                    </p>
-                  </div>
-                )}
-              </section>
-
-              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                    Inteligencia comercial
-                  </p>
-                  <h2 className="mt-1 text-xl font-black text-gray-950">
-                    Editoriales identificadas
-                  </h2>
-                </div>
-
-                {Array.isArray(school.editorial_usages) &&
-                school.editorial_usages.length > 0 ? (
-                  <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                    {school.editorial_usages.map((usage) => (
-                      <article
-                        key={usage.id}
-                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                      >
-                        <p className="font-black text-gray-950">
-                          {usage.provider?.name || "Editorial no registrada"}
-                        </p>
-                        <p className="mt-1 text-sm text-gray-600">
-                          {usage.area?.name || "Área no especificada"}
-                          {usage.service?.level ? ` · ${usage.service.level}` : ""}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
-                          <span className="rounded-full bg-white px-2.5 py-1 text-gray-700 ring-1 ring-gray-200">
-                            {usage.year}
-                          </span>
-                          <span className="rounded-full bg-white px-2.5 py-1 text-gray-700 ring-1 ring-gray-200">
-                            {usage.status_display}
-                          </span>
-                          <span className="rounded-full bg-white px-2.5 py-1 text-gray-700 ring-1 ring-gray-200">
-                            {usage.source_display}
-                          </span>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-7 text-center">
-                    <p className="font-black text-gray-950">
-                      Sin editoriales registradas
-                    </p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Aún no hay información comercial de editoriales para este colegio.
-                    </p>
-                  </div>
-                )}
-              </section>
-            </div>
-
-            <div className="space-y-5">
-              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Cobertura educativa
-                </p>
-
-                <h2 className="mt-1 text-lg font-black text-gray-950">
-                  Servicios educativos
-                </h2>
-
-                {Array.isArray(school.educational_services) &&
-                school.educational_services.length > 0 ? (
-                  <div className="mt-4 space-y-3">
-                    {school.educational_services.map((service) => (
-                      <article
-                        key={service.id}
-                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
-                            <FaBookOpen />
-                          </div>
-
-                          <div className="min-w-0">
-                            <p className="font-black text-gray-950">
-                              {service.level?.name || "Nivel no registrado"}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-500">
-                              Código modular: {service.modular_code || "No registrado"}
-                            </p>
-                            {service.modality ? (
-                              <p className="mt-1 text-xs text-gray-500">
-                                {service.modality}
-                              </p>
-                            ) : null}
-                            <p className="mt-2 text-sm font-bold text-gray-700">
-                              {service.latest_population?.student_count != null
-                                ? `${service.latest_population.student_count} alumnos · ${service.latest_population.year}`
-                                : "Población sin registrar"}
-                            </p>
-                          </div>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm leading-6 text-gray-500">
-                    No hay servicios educativos registrados.
-                  </p>
-                )}
               </section>
 
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -536,90 +705,548 @@ export default function CRMSchoolDetailPage() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-700">
                     <FaChartLine />
                   </div>
+
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-red-700">
                       Perfil comercial
                     </p>
+
                     <h2 className="mt-1 text-lg font-black text-gray-950">
                       {formatSegment(school.segment)}
                     </h2>
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-3 text-sm">
-                  <div className="rounded-2xl bg-gray-50 p-4">
+                <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-1 xl:gap-3">
+                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Prioridad
+                      Prioridad comercial
                     </p>
+
                     <p className="mt-1 font-black text-gray-950">
-                      {school.commercial_profile?.priority_display || "Sin evaluar"}
+                      {school.commercial_profile?.priority_display ||
+                        "Sin evaluar"}
                     </p>
+
+                    {school.commercial_profile?.priority_score != null ? (
+                      <p className="mt-1 text-sm font-semibold text-gray-500">
+                        Score {school.commercial_profile.priority_score} / 100
+                      </p>
+                    ) : null}
                   </div>
 
-                  <div className="rounded-2xl bg-gray-50 p-4">
+                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Uso de textos
                     </p>
+
                     <p className="mt-1 font-black text-gray-950">
-                      {school.commercial_profile?.textbook_usage_display || "Sin información"}
+                      {school.commercial_profile?.textbook_usage_display ||
+                        "Sin información"}
                     </p>
                   </div>
                 </div>
+              </section>
+            </aside>
+
+            <main className="order-1 min-w-0 xl:order-none xl:col-span-6 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+              <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+                <div className="border-b border-gray-200 px-4 pt-4 sm:px-5 sm:pt-5">
+                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                    Espacio de trabajo
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-black text-gray-950">
+                    Gestión comercial del colegio
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-6 text-gray-500">
+                    Consulta el historial, la población y las editoriales sin salir de la ficha.
+                  </p>
+
+                  <div
+                    className="mt-4 flex gap-2 overflow-x-auto pb-3"
+                    role="tablist"
+                    aria-label="Gestión comercial del colegio"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeInfoTab === "activity"}
+                      onClick={() => setActiveInfoTab("activity")}
+                      className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                        activeInfoTab === "activity"
+                          ? "bg-gray-950 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                      }`}
+                    >
+                      Actividad
+                      <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                        {activities.length}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeInfoTab === "population"}
+                      onClick={() => setActiveInfoTab("population")}
+                      className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                        activeInfoTab === "population"
+                          ? "bg-gray-950 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                      }`}
+                    >
+                      Población
+                      <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                        {school.current_population_total ?? 0}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeInfoTab === "editorials"}
+                      onClick={() => setActiveInfoTab("editorials")}
+                      className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                        activeInfoTab === "editorials"
+                          ? "bg-gray-950 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                      }`}
+                    >
+                      Editoriales
+                      <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                        {Array.isArray(school.editorial_usages)
+                          ? school.editorial_usages.length
+                          : 0}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {activeInfoTab === "activity" ? (
+                  <>
+                    <div className="border-b border-gray-200 px-4 py-3 sm:px-5 sm:py-4">
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {ACTIVITY_FILTERS.map((filter) => (
+                          <button
+                            key={filter.value}
+                            type="button"
+                            onClick={() => setActivityFilter(filter.value)}
+                            className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
+                              activityFilter === filter.value
+                                ? "bg-gray-950 text-white"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            {filter.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-4 sm:p-5">
+                      {filteredActivities.length > 0 ? (
+                        <div className="space-y-3">
+                          {filteredActivities.slice(0, 12).map((activity) => (
+                            <article
+                              key={activity.id}
+                              className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                            >
+                              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                                <div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
+                                      {activity.activity_type_display || "Actividad"}
+                                    </span>
+
+                                    {activity.is_important ? (
+                                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-200">
+                                        Importante
+                                      </span>
+                                    ) : null}
+                                  </div>
+
+                                  <h3 className="mt-3 font-black text-gray-950">
+                                    {activity.summary}
+                                  </h3>
+                                </div>
+
+                                <p className="text-xs font-semibold text-gray-400">
+                                  {formatDateTime(activity.occurred_at)}
+                                </p>
+                              </div>
+
+                              {activity.result ? (
+                                <p className="mt-3 text-sm leading-6 text-gray-600">
+                                  {activity.result}
+                                </p>
+                              ) : null}
+
+                              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500">
+                                <p>
+                                  Registrado por{" "}
+                                  <span className="font-black text-gray-700">
+                                    {activity.performed_by?.full_name ||
+                                      activity.performed_by?.username ||
+                                      "Usuario CRM"}
+                                  </span>
+                                </p>
+
+                                {activity.contact ? (
+                                  <Link
+                                    to={`/admin/crm/contactos/${activity.contact.id}`}
+                                    state={buildNavigationState({
+                                      from: `/admin/crm/colegios/${school.id}`,
+                                      fromLabel: school.name,
+                                      fromType: "school",
+                                      currentState: location.state,
+                                    })}
+                                    className="font-black text-red-700 transition hover:text-red-900"
+                                  >
+                                    {activity.contact.full_name}
+                                  </Link>
+                                ) : (
+                                  <span className="font-semibold text-gray-400">
+                                    Actividad general del colegio
+                                  </span>
+                                )}
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-10 text-center">
+                          <p className="font-black text-gray-950">
+                            Sin actividades para mostrar
+                          </p>
+
+                          <p className="mt-1 text-sm leading-6 text-gray-500">
+                            Cuando un asesor registre una actividad con un contacto
+                            de este colegio, aparecerá también en esta ficha.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : null}
+
+                {activeInfoTab === "population" ? (
+                  <SchoolEducationalServicesSection
+                    school={school}
+                    onSchoolUpdated={setSchool}
+                    embedded
+                  />
+                ) : null}
+
+                {activeInfoTab === "editorials" ? (
+                  <SchoolEditorialUsagesSection
+                    school={school}
+                    onSchoolUpdated={setSchool}
+                    embedded
+                  />
+                ) : null}
+              </section>
+            </main>
+
+            <aside className="order-2 min-w-0 space-y-4 xl:order-none xl:col-span-3 xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
+                    <FaBriefcase />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                      Oportunidad comercial
+                    </p>
+                    <h2 className="mt-1 text-xl font-black text-gray-950">
+                      {displayedOpportunity
+                        ? displayedOpportunity.campaign?.name
+                        : activeSchoolCampaign?.name || "Campaña escolar"}
+                    </h2>
+                  </div>
+                </div>
+
+                {opportunityError ? (
+                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800">
+                    {opportunityError}
+                  </div>
+                ) : null}
+
+                {displayedOpportunity ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                          Etapa
+                        </p>
+                        <p className="mt-1 text-sm font-black text-gray-950">
+                          {displayedOpportunity.stage?.name || "En curso"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                          Asesor
+                        </p>
+                        <p className="mt-1 text-sm font-black text-gray-950">
+                          {formatOwner(displayedOpportunity.owner)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Contacto principal
+                      </p>
+                      <p className="mt-1 text-sm font-black text-gray-950">
+                        {displayedOpportunity.primary_contact?.full_name
+                          || "Sin contacto principal"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Última actividad
+                      </p>
+                      <p className="mt-1 text-sm font-black text-gray-950">
+                        {displayedOpportunity.last_activity_at
+                          ? formatDateTime(displayedOpportunity.last_activity_at)
+                          : "Sin actividad"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Próxima actividad
+                      </p>
+
+                      {displayedOpportunity.next_activity ? (
+                        <>
+                          <p className="mt-1 text-sm font-black text-gray-950">
+                            {formatDateTime(
+                              displayedOpportunity.next_activity.scheduled_at,
+                            )}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-gray-600">
+                            {displayedOpportunity.next_activity.type_display}
+                            {" · "}
+                            {displayedOpportunity.next_activity.title}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-sm font-black text-gray-400">
+                          Sin próxima actividad
+                        </p>
+                      )}
+                    </div>
+
+                    <Link
+                      to={`/admin/crm/oportunidades/${displayedOpportunity.id}`}
+                      state={opportunityBoardState}
+                      className="inline-flex w-full items-center justify-center rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800"
+                    >
+                      Abrir oportunidad
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm leading-6 text-gray-600">
+                      {activeSchoolCampaigns.length === 0
+                        ? "No existe una campaña escolar activa para crear una oportunidad."
+                        : activeSchoolCampaigns.length > 1
+                          ? "Hay más de una campaña escolar activa. Regulariza las campañas antes de crear una oportunidad."
+                          : `No existe una oportunidad abierta para ${activeSchoolCampaign.name}.`}
+                    </div>
+
+                    {activeSchoolCampaigns.length === 1 ? (
+                      <button
+                        type="button"
+                        disabled={creatingOpportunity}
+                        onClick={handleCreateOpportunity}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <FaPlus className="text-xs" />
+                        {creatingOpportunity
+                          ? "Creando..."
+                          : "Crear oportunidad"}
+                      </button>
+                    ) : null}
+                  </div>
+                )}
               </section>
 
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Seguimiento
-                </p>
-
-                <h2 className="mt-1 text-lg font-black text-gray-950">
-                  Observaciones
-                </h2>
-
-                <p className="mt-4 whitespace-pre-line text-sm leading-6 text-gray-600">
-                  {school.notes || "Sin observaciones registradas."}
-                </p>
-              </section>
-
-              <section className="rounded-3xl border border-gray-200 bg-gray-950 p-5 text-white shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
-                    <FaSchool />
-                  </div>
-
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
-                      Registro CRM
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                      Relaciones
                     </p>
 
-                    <p className="font-black">
-                      Colegio #{school.id}
+                    <h2 className="mt-1 text-xl font-black text-gray-950">
+                      Contactos vinculados
+                    </h2>
+                  </div>
+
+                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-600">
+                    {visibleContacts.length}
+                  </span>
+                </div>
+
+                {visibleContacts.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {visibleContacts.slice(0, 4).map((contact) => (
+                      <Link
+                        key={contact.id}
+                        to={`/admin/crm/contactos/${contact.id}`}
+                        state={buildNavigationState({
+                          from: `/admin/crm/colegios/${school.id}`,
+                          fromLabel: school.name,
+                          fromType: "school",
+                          currentState: location.state,
+                        })}
+                        className="block rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
+                            <FaUserTie />
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="break-words text-sm font-black text-gray-950">
+                                {contact.full_name}
+                              </p>
+
+                              {contact.is_primary ? (
+                                <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-black text-red-700 ring-1 ring-red-200">
+                                  Principal
+                                </span>
+                              ) : null}
+                            </div>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                              {contact.position || "Cargo no registrado"}
+                            </p>
+
+                            <p className="mt-1 text-xs font-semibold text-gray-600">
+                              {contact.decision_role_display || "Sin clasificar"}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+
+                    {visibleContacts.length > 4 ? (
+                      <p className="text-center text-xs font-semibold text-gray-500">
+                        + {visibleContacts.length - 4} contacto(s) adicional(es)
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center">
+                    <FaSchool className="mx-auto text-gray-400" />
+                    <p className="mt-2 text-sm font-black text-gray-900">
+                      Sin contactos vigentes
                     </p>
                   </div>
-                </div>
-
-                <div className="mt-4 border-t border-white/10 pt-4">
-                  <p className="text-xs text-gray-400">
-                    Registrado
-                  </p>
-
-                  <p className="mt-1 text-sm font-bold">
-                    {formatDate(school.created_at)}
-                  </p>
-                </div>
-
-                <div className="mt-3">
-                  <p className="text-xs text-gray-400">
-                    Última actualización
-                  </p>
-
-                  <p className="mt-1 text-sm font-bold">
-                    {formatDate(school.updated_at)}
-                  </p>
-                </div>
+                )}
               </section>
-            </div>
+
+              <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                      Próximas acciones
+                    </p>
+
+                    <h2 className="mt-1 text-xl font-black text-gray-950">
+                      ToDo / Agenda
+                    </h2>
+                  </div>
+
+                  <Link
+                    to="/admin/workspace/calendar"
+                    state={buildNavigationState({
+                      from: `/admin/crm/colegios/${school.id}`,
+                      fromLabel: school.name,
+                      fromType: "school",
+                      currentState: location.state,
+                    })}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                  >
+                    <FaCalendarAlt />
+                    Calendario
+                  </Link>
+                </div>
+
+                {pendingWorkItems.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {pendingWorkItems.slice(0, 5).map((workItem) => {
+                      const isTask = workItem.type === "task";
+                      const target = isTask
+                        ? `/admin/workspace/tasks?task=${workItem.item?.id}&tab=info`
+                        : "/admin/workspace/calendar";
+
+                      return (
+                        <Link
+                          key={workItem.id}
+                          to={target}
+                          state={buildNavigationState({
+                            from: `/admin/crm/colegios/${school.id}`,
+                            fromLabel: school.name,
+                            fromType: "school",
+                            currentState: location.state,
+                          })}
+                          className="block rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200 transition hover:bg-red-50 hover:ring-red-200"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-gray-700 ring-1 ring-gray-200">
+                              <WorkItemIcon type={workItem.type} />
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="break-words text-sm font-black text-gray-950">
+                                {workItem.item?.title || "Acción programada"}
+                              </p>
+
+                              <p className="mt-1 text-xs text-gray-500">
+                                {formatDateTime(getWorkItemDate(workItem))}
+                              </p>
+
+                              <p className="mt-1 text-xs font-bold text-red-700">
+                                {isTask ? "Abrir tarea" : "Abrir en calendario"}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+
+                    {pendingWorkItems.length > 5 ? (
+                      <p className="text-center text-xs font-semibold text-gray-500">
+                        + {pendingWorkItems.length - 5} acción(es) adicional(es)
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center">
+                    <p className="text-sm font-black text-gray-900">
+                      Sin próximas acciones
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-gray-500">
+                      Las tareas, reuniones y recordatorios vinculados al
+                      colegio aparecerán aquí.
+                    </p>
+                  </div>
+                )}
+              </section>
+            </aside>
           </div>
+
+
         </div>
       ) : null}
     </div>

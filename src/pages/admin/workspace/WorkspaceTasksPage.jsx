@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
 import {
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
+import {
+  FaArrowLeft,
   FaCheckCircle,
   FaChevronDown,
   FaClock,
@@ -29,6 +34,7 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import { getResults } from "../../../utils/formatters";
+import { resolveReturnContext } from "../../../utils/navigationContext";
 
 const INITIAL_TASK_FORM = {
   title: "",
@@ -515,7 +521,10 @@ function getMobileTaskSections({
 
 export default function WorkspaceTasksPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const returnContext = resolveReturnContext(location.state);
   const linkedTaskId = searchParams.get("task");
   const linkedTab = searchParams.get("tab");
   const linkedCommentId = searchParams.get("comment");
@@ -919,7 +928,23 @@ export default function WorkspaceTasksPage() {
     );
   }
 
+  function returnToContext() {
+    if (!returnContext.path) {
+      return;
+    }
+
+    navigate(
+      returnContext.path,
+      { state: returnContext.state },
+    );
+  }
+
   function closeTaskDetail() {
+    if (linkedTaskId && returnContext.path) {
+      returnToContext();
+      return;
+    }
+
     if (linkedTaskId) {
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete("task");
@@ -1076,6 +1101,22 @@ export default function WorkspaceTasksPage() {
             </div>
 
             <div className="grid gap-2 sm:flex sm:flex-wrap">
+              {returnContext.path ? (
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-gray-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 sm:py-3"
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      returnContext.path,
+                      { state: returnContext.state },
+                    )
+                  }
+                >
+                  <FaArrowLeft />
+                  Volver a {returnContext.label || "origen"}
+                </button>
+              ) : null}
+
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white px-4 py-2.5 text-sm font-black text-gray-950 transition hover:bg-gray-100 sm:py-3"
                 type="button"
@@ -1256,6 +1297,8 @@ export default function WorkspaceTasksPage() {
           onRegisterManagement={handleRegisterManagement}
           onReopenTask={handleReopenTask}
           onClose={closeTaskDetail}
+          onReturn={returnContext.path ? returnToContext : null}
+          returnLabel={returnContext.label}
           onManagementChange={setManagementForm}
           onEditTaskChange={handleEditTaskFormChange}
           onSetDetailTab={setDetailTab}
@@ -1943,6 +1986,8 @@ function TaskDetailPanel({
   onRegisterManagement,
   onReopenTask,
   onClose,
+  onReturn,
+  returnLabel,
   onManagementChange,
   onEditTaskChange,
   onSetDetailTab,
@@ -2032,6 +2077,17 @@ function TaskDetailPanel({
       >
         {/* CABECERA FIJA */}
         <header className="shrink-0 border-b border-gray-200 bg-white px-4 py-4 sm:px-5">
+          {onReturn ? (
+            <button
+              className="mb-3 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+              type="button"
+              onClick={onReturn}
+            >
+              <FaArrowLeft />
+              Volver a {returnLabel || "origen"}
+            </button>
+          ) : null}
+
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-wide text-red-700">

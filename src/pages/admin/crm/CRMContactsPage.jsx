@@ -4,23 +4,24 @@ import { motion } from "motion/react";
 import {
   FaChevronLeft,
   FaChevronRight,
+  FaEnvelope,
   FaExclamationTriangle,
-  FaSchool,
+  FaPhoneAlt,
   FaSearch,
+  FaSchool,
+  FaUserTie,
 } from "react-icons/fa";
 
-import { getCRMSchools } from "../../../api/crmApi";
-import CRMSchoolCreatePanel from "../../../components/admin/crm/CRMSchoolCreatePanel";
+import { getCRMContacts } from "../../../api/crmApi";
+import CRMContactCreatePanel from "../../../components/admin/crm/CRMContactCreatePanel";
+
+const PAGE_SIZE = 25;
 
 const INITIAL_FILTERS = {
   search: "",
+  decision_role: "",
   is_active: "true",
-  department: "",
-  province: "",
-  district: "",
 };
-
-const PAGE_SIZE = 25;
 
 function getErrorMessage(error, fallback) {
   const detail = error?.response?.data?.detail;
@@ -53,34 +54,34 @@ function buildParams(filters, page) {
   return params;
 }
 
-function formatLocation(school) {
-  return [school?.district, school?.province, school?.department]
-    .filter(Boolean)
-    .join(", ");
-}
-
-function formatOwner(owner) {
-  if (!owner) {
-    return "Sin asesor asignado";
-  }
-
-  return owner.full_name || owner.username || "Asesor asignado";
-}
-
-function formatTeam(team) {
-  return team?.name || "Sin equipo";
-}
-
-function SchoolStatusBadge({ isActive }) {
+function ContactStatusBadge({ active }) {
   return (
     <span
       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${
-        isActive
+        active
           ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
           : "bg-gray-100 text-gray-600 ring-1 ring-gray-200"
       }`}
     >
-      {isActive ? "Activo" : "Inactivo"}
+      {active ? "Vigente" : "Inactivo"}
+    </span>
+  );
+}
+
+function RelationshipBadge({ value }) {
+  const level = Number(value);
+
+  if (!Number.isInteger(level) || level < 1) {
+    return (
+      <span className="text-sm font-semibold text-gray-400">
+        Sin evaluar
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex rounded-full bg-gray-950 px-2.5 py-1 text-xs font-black text-white">
+      Relación {level}/5
     </span>
   );
 }
@@ -102,23 +103,47 @@ function EmptyState() {
   return (
     <div className="rounded-3xl border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-gray-700 ring-1 ring-gray-200">
-        <FaSchool />
+        <FaUserTie />
       </div>
 
       <p className="mt-4 text-base font-black text-gray-950">
-        No encontramos colegios.
+        No encontramos contactos.
       </p>
 
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-500">
-        Ajusta los filtros para encontrar instituciones de la cartera comercial.
+        Ajusta los filtros o registra contactos desde la ficha del colegio.
       </p>
     </div>
   );
 }
 
-export default function CRMSchoolsPage() {
+function ContactChannel({ contact }) {
+  const phone = contact.whatsapp || contact.phone;
+
+  if (phone) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-gray-700">
+        <FaPhoneAlt className="text-xs text-gray-400" />
+        <span>{phone}</span>
+      </div>
+    );
+  }
+
+  if (contact.email) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-gray-700">
+        <FaEnvelope className="text-xs text-gray-400" />
+        <span className="break-all">{contact.email}</span>
+      </div>
+    );
+  }
+
+  return <span className="text-sm text-gray-400">Sin contacto registrado</span>;
+}
+
+export default function CRMContactsPage() {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
-  const [schools, setSchools] = useState([]);
+  const [contacts, setContacts] = useState([]);
   const [pagination, setPagination] = useState({
     count: 0,
     next: null,
@@ -127,6 +152,7 @@ export default function CRMSchoolsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((pagination.count || 0) / PAGE_SIZE)),
@@ -141,10 +167,10 @@ export default function CRMSchoolsPage() {
         setLoading(true);
         setErrorMessage("");
 
-        const data = await getCRMSchools(buildParams(filters, page));
+        const data = await getCRMContacts(buildParams(filters, page));
 
         if (!ignore) {
-          setSchools(Array.isArray(data?.results) ? data.results : []);
+          setContacts(Array.isArray(data?.results) ? data.results : []);
           setPagination({
             count: Number(data?.count || 0),
             next: data?.next || null,
@@ -156,7 +182,7 @@ export default function CRMSchoolsPage() {
           setErrorMessage(
             getErrorMessage(
               error,
-              "No se pudo cargar la cartera de colegios.",
+              "No se pudo cargar la lista de contactos.",
             ),
           );
         }
@@ -171,7 +197,7 @@ export default function CRMSchoolsPage() {
       ignore = true;
       clearTimeout(timeoutId);
     };
-  }, [filters, page]);
+  }, [filters, page, refreshKey]);
 
   function handleFilterChange(event) {
     const { name, value } = event.target;
@@ -202,28 +228,43 @@ export default function CRMSchoolsPage() {
             </p>
 
             <h1 className="mt-1 text-2xl font-black sm:text-3xl">
-              Colegios
+              Contactos
             </h1>
 
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-300">
-              Consulta y gestiona la cartera institucional de Book Express.
+              Centraliza a directores, coordinadores y personas clave vinculadas
+              a los colegios de la cartera comercial.
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <CRMSchoolCreatePanel />
-
-            <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
-              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
-                Total visible
-              </p>
-              <p className="mt-1 text-2xl font-black">
-                {pagination.count}
-              </p>
-            </div>
+          <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+              Total visible
+            </p>
+            <p className="mt-1 text-2xl font-black">{pagination.count}</p>
           </div>
         </div>
       </motion.section>
+
+      <section className="mt-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-red-700">
+              Gestión de contactos
+            </p>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
+              Registra una persona y vincúlala desde el inicio con el colegio al
+              que pertenece.
+            </p>
+          </div>
+
+          <CRMContactCreatePanel
+            onCreated={() =>
+              setRefreshKey((currentKey) => currentKey + 1)
+            }
+          />
+        </div>
+      </section>
 
       <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
@@ -232,7 +273,7 @@ export default function CRMSchoolsPage() {
               Filtros
             </p>
             <h2 className="mt-1 text-lg font-black text-gray-950">
-              Buscar colegios
+              Buscar contactos
             </h2>
           </div>
 
@@ -245,18 +286,30 @@ export default function CRMSchoolsPage() {
           </button>
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
-          <label className="relative xl:col-span-2">
+        <div className="mt-3 grid gap-3 lg:grid-cols-4">
+          <label className="relative lg:col-span-2">
             <span className="sr-only">Buscar</span>
             <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
             <input
               className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
               name="search"
-              placeholder="Nombre, código modular, RUC, teléfono..."
+              placeholder="Nombre, cargo, colegio, correo o celular..."
               value={filters.search}
               onChange={handleFilterChange}
             />
           </label>
+
+          <select
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+            name="decision_role"
+            value={filters.decision_role}
+            onChange={handleFilterChange}
+          >
+            <option value="">Todos los roles</option>
+            <option value="decision_maker">Decisor</option>
+            <option value="influencer">Influenciador</option>
+            <option value="other">Otro</option>
+          </select>
 
           <select
             className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
@@ -265,25 +318,9 @@ export default function CRMSchoolsPage() {
             onChange={handleFilterChange}
           >
             <option value="">Todos los estados</option>
-            <option value="true">Activos</option>
+            <option value="true">Vigentes</option>
             <option value="false">Inactivos</option>
           </select>
-
-          <input
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="province"
-            placeholder="Provincia"
-            value={filters.province}
-            onChange={handleFilterChange}
-          />
-
-          <input
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="district"
-            placeholder="Distrito"
-            value={filters.district}
-            onChange={handleFilterChange}
-          />
         </div>
       </section>
 
@@ -291,9 +328,7 @@ export default function CRMSchoolsPage() {
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
           <div className="flex items-start gap-3">
             <FaExclamationTriangle className="mt-0.5 shrink-0 text-red-700" />
-            <p className="text-sm leading-6 text-red-800">
-              {errorMessage}
-            </p>
+            <p className="text-sm leading-6 text-red-800">{errorMessage}</p>
           </div>
         </div>
       ) : null}
@@ -301,18 +336,17 @@ export default function CRMSchoolsPage() {
       <section className="mt-4 rounded-3xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-4 sm:px-5">
           <h2 className="text-lg font-black text-gray-950">
-            Cartera de colegios
+            Personas vinculadas a colegios
           </h2>
-
           <p className="mt-1 text-xs text-gray-500">
-            Selecciona una institución para abrir su ficha comercial.
+            Cada contacto mantiene su relación con el colegio y su historial comercial.
           </p>
         </div>
 
         <div className="p-4 sm:p-5">
           {loading ? (
             <LoadingRows />
-          ) : schools.length === 0 ? (
+          ) : contacts.length === 0 ? (
             <EmptyState />
           ) : (
             <>
@@ -320,65 +354,60 @@ export default function CRMSchoolsPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead>
                     <tr className="text-left text-xs font-black uppercase tracking-wide text-gray-500">
+                      <th className="px-3 py-3">Contacto</th>
                       <th className="px-3 py-3">Colegio</th>
-                      <th className="px-3 py-3">Ubicación</th>
-                      <th className="px-3 py-3">Responsable</th>
-                      <th className="px-3 py-3">Alumnos</th>
+                      <th className="px-3 py-3">Rol</th>
+                      <th className="px-3 py-3">Relación</th>
+                      <th className="px-3 py-3">Contacto</th>
                       <th className="px-3 py-3">Estado</th>
                       <th className="px-3 py-3 text-right">Acción</th>
                     </tr>
                   </thead>
 
                   <tbody className="divide-y divide-gray-100">
-                    {schools.map((school) => (
+                    {contacts.map((contact) => (
                       <tr
-                        key={school.id}
+                        key={contact.id}
                         className="align-middle transition hover:bg-gray-50"
                       >
                         <td className="px-3 py-4">
                           <p className="font-black text-gray-950">
-                            {school.name}
+                            {contact.full_name}
                           </p>
-
                           <p className="mt-1 text-xs text-gray-500">
-                            {school.institution_code
-                              ? `Cód. institución ${school.institution_code}`
-                              : school.modular_code
-                                ? `Cód. modular ${school.modular_code}`
-                                : school.ruc
-                                  ? `RUC ${school.ruc}`
-                                  : "Sin código registrado"}
+                            {contact.position || "Cargo no registrado"}
                           </p>
-                        </td>
-
-                        <td className="px-3 py-4 text-sm text-gray-600">
-                          {formatLocation(school) || "Sin ubicación"}
                         </td>
 
                         <td className="px-3 py-4">
-                          <p className="text-sm font-bold text-gray-900">
-                            {formatOwner(school.owner)}
-                          </p>
-
-                          <p className="mt-1 text-xs text-gray-500">
-                            {formatTeam(school.team)}
-                          </p>
+                          <div className="flex items-start gap-2">
+                            <FaSchool className="mt-0.5 shrink-0 text-gray-400" />
+                            <span className="text-sm font-bold text-gray-800">
+                              {contact.school?.name || "Sin colegio"}
+                            </span>
+                          </div>
                         </td>
 
-                        <td className="px-3 py-4 text-sm font-bold text-gray-700">
-                          {school.current_population_total ??
-                            school.estimated_students ??
-                            "—"}
+                        <td className="px-3 py-4 text-sm font-semibold text-gray-700">
+                          {contact.decision_role_display || "Sin clasificar"}
                         </td>
 
                         <td className="px-3 py-4">
-                          <SchoolStatusBadge isActive={school.is_active} />
+                          <RelationshipBadge value={contact.relationship_level} />
+                        </td>
+
+                        <td className="px-3 py-4">
+                          <ContactChannel contact={contact} />
+                        </td>
+
+                        <td className="px-3 py-4">
+                          <ContactStatusBadge active={contact.is_active} />
                         </td>
 
                         <td className="px-3 py-4 text-right">
                           <Link
                             className="inline-flex rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
-                            to={`/admin/crm/colegios/${school.id}`}
+                            to={`/admin/crm/contactos/${contact.id}`}
                           >
                             Ver ficha
                           </Link>
@@ -390,46 +419,52 @@ export default function CRMSchoolsPage() {
               </div>
 
               <div className="space-y-3 lg:hidden">
-                {schools.map((school) => (
+                {contacts.map((contact) => (
                   <article
-                    key={school.id}
+                    key={contact.id}
                     className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="break-words text-base font-black text-gray-950">
-                          {school.name}
+                          {contact.full_name}
                         </p>
-
                         <p className="mt-1 text-xs text-gray-500">
-                          {formatLocation(school) || "Sin ubicación"}
+                          {contact.position || "Cargo no registrado"}
                         </p>
                       </div>
 
-                      <SchoolStatusBadge isActive={school.is_active} />
+                      <ContactStatusBadge active={contact.is_active} />
                     </div>
 
-                    <div className="mt-3 grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
-                      <p>
-                        <span className="font-black text-gray-900">
-                          Asesor:
-                        </span>{" "}
-                        {formatOwner(school.owner)}
+                    <div className="mt-3 rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                      <p className="text-xs font-black uppercase tracking-wide text-gray-400">
+                        Colegio
                       </p>
+                      <p className="mt-1 text-sm font-black text-gray-900">
+                        {contact.school?.name || "Sin colegio"}
+                      </p>
+                    </div>
 
-                      <p>
-                        <span className="font-black text-gray-900">
-                          Alumnos:
-                        </span>{" "}
-                        {school.current_population_total ??
-                          school.estimated_students ??
-                          "—"}
-                      </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-gray-700 ring-1 ring-gray-200">
+                        {contact.decision_role_display || "Sin clasificar"}
+                      </span>
+                      <RelationshipBadge value={contact.relationship_level} />
+                      {contact.is_primary ? (
+                        <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-200">
+                          Principal
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-3">
+                      <ContactChannel contact={contact} />
                     </div>
 
                     <Link
                       className="mt-4 flex w-full items-center justify-center rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700"
-                      to={`/admin/crm/colegios/${school.id}`}
+                      to={`/admin/crm/contactos/${contact.id}`}
                     >
                       Ver ficha
                     </Link>
@@ -437,36 +472,30 @@ export default function CRMSchoolsPage() {
                 ))}
               </div>
 
-              <div className="mt-5 flex flex-col justify-between gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center">
+              <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-gray-500">
-                  Página {page} de {totalPages} · {pagination.count} colegio(s)
+                  Página {page} de {totalPages} · {pagination.count} contacto(s)
                 </p>
 
                 <div className="flex gap-2">
                   <button
-                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    disabled={!pagination.previous}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                     type="button"
-                    onClick={() =>
-                      setPage((currentPage) =>
-                        Math.max(1, currentPage - 1),
-                      )
-                    }
+                    disabled={!pagination.previous || loading}
+                    onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
                   >
-                    <FaChevronLeft className="text-xs" />
+                    <FaChevronLeft />
                     Anterior
                   </button>
 
                   <button
-                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    disabled={!pagination.next}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                     type="button"
-                    onClick={() =>
-                      setPage((currentPage) => currentPage + 1)
-                    }
+                    disabled={!pagination.next || loading}
+                    onClick={() => setPage((currentPage) => currentPage + 1)}
                   >
                     Siguiente
-                    <FaChevronRight className="text-xs" />
+                    <FaChevronRight />
                   </button>
                 </div>
               </div>
