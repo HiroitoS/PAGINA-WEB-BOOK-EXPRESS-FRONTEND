@@ -3,7 +3,6 @@ import {
   FaArrowLeft,
   FaBriefcase,
   FaCalendarAlt,
-  FaCheckCircle,
   FaHistory,
   FaSchool,
   FaUserTie,
@@ -16,6 +15,7 @@ import {
   getCRMOpportunityAdoptions,
   getCRMOpportunityHistory,
 } from "../../../api/crmApi";
+import CRMOpportunityAdoptionSection from "../../../components/admin/crm/CRMOpportunityAdoptionSection";
 import CRMOpportunityProjectionSection from "../../../components/admin/crm/CRMOpportunityProjectionSection";
 import CRMOpportunityQuotationSection from "../../../components/admin/crm/CRMOpportunityQuotationSection";
 import {
@@ -92,6 +92,7 @@ export default function CRMOpportunityDetailPage() {
   const [adoptions, setAdoptions] = useState([]);
   const [history, setHistory] = useState([]);
   const [activeTab, setActiveTab] = useState("summary");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -149,7 +150,11 @@ export default function CRMOpportunityDetailPage() {
     return () => {
       ignore = true;
     };
-  }, [id]);
+  }, [id, refreshKey]);
+
+  function refreshWorkspace() {
+    setRefreshKey((current) => current + 1);
+  }
 
   const navigationState = useMemo(
     () =>
@@ -480,68 +485,17 @@ export default function CRMOpportunityDetailPage() {
           {activeTab === "quotations" ? (
             <CRMOpportunityQuotationSection
               opportunityId={id}
-              onOpportunityChanged={() => {
-                getCRMOpportunity(id)
-                  .then((data) => setOpportunity(data))
-                  .catch(() => undefined);
-              }}
+              onOpportunityChanged={refreshWorkspace}
               onGoToAdoption={() => setActiveTab("adoption")}
             />
           ) : null}
 
           {activeTab === "adoption" ? (
-            <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                Cierre comercial
-              </p>
-              <h2 className="mt-1 text-xl font-black text-gray-950">
-                Adopción
-              </h2>
-
-              {adoptions.length > 0 ? (
-                <div className="mt-4 space-y-3">
-                  {adoptions.map((adoption) => (
-                    <article
-                      key={adoption.id}
-                      className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4"
-                    >
-                      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                        <div>
-                          <div className="flex items-center gap-2 text-emerald-700">
-                            <FaCheckCircle />
-                            <p className="font-black">
-                              Adopción v{adoption.version}
-                            </p>
-                          </div>
-                          <p className="mt-2 text-sm font-black text-gray-950">
-                            {adoption.authorized_contact_name_snapshot
-                              || adoption.authorized_contact?.full_name
-                              || "Contacto autorizado"}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-600">
-                            {adoption.items?.length || 0} producto(s) adoptado(s)
-                          </p>
-                        </div>
-
-                        <div className="text-left text-xs text-gray-600 sm:text-right">
-                          <p>Firma: {formatDateTime(adoption.signed_at)}</p>
-                          <p className="mt-1">
-                            Confirmación: {formatDateTime(adoption.confirmed_at)}
-                          </p>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4">
-                  <EmptyState
-                    title="Sin adopción confirmada"
-                    description="La adopción aparecerá aquí después de aceptar una cotización y registrar la confirmación autorizada del colegio."
-                  />
-                </div>
-              )}
-            </section>
+            <CRMOpportunityAdoptionSection
+              opportunity={opportunity}
+              adoptions={adoptions}
+              onAdoptionConfirmed={refreshWorkspace}
+            />
           ) : null}
 
           {activeTab === "history" ? (
