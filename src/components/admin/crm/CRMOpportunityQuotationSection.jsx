@@ -210,6 +210,28 @@ export default function CRMOpportunityQuotationSection({
     };
   }, [opportunityId, refreshKey]);
 
+  useEffect(() => {
+    if (!drawerOpen) {
+      return undefined;
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape" && !saving) {
+        setDrawerOpen(false);
+        setEditingQuotationId(null);
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [drawerOpen, saving]);
+
   const editableDraft = useMemo(
     () =>
       quotations.find(
@@ -322,6 +344,15 @@ export default function CRMOpportunityQuotationSection({
     setErrorMessage("");
     setSuccessMessage("");
     setDrawerOpen(true);
+  }
+
+  function closeQuotationDrawer() {
+    if (saving) {
+      return;
+    }
+
+    setDrawerOpen(false);
+    setEditingQuotationId(null);
   }
 
   function updateDraftItem(index, field, value) {
@@ -512,15 +543,17 @@ export default function CRMOpportunityQuotationSection({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => openQuotationDrawer(editableDraft)}
-            disabled={!projection?.items?.length}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
-          >
-            {editableDraft ? <FaEdit /> : <FaPlus />}
-            {editableDraft ? "Continuar borrador" : "Nueva cotización"}
-          </button>
+          {!editableDraft ? (
+            <button
+              type="button"
+              onClick={() => openQuotationDrawer()}
+              disabled={!projection?.items?.length}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              <FaPlus />
+              Nueva cotización
+            </button>
+          ) : null}
         </div>
 
         {successMessage ? (
@@ -816,8 +849,15 @@ export default function CRMOpportunityQuotationSection({
       </section>
 
       {drawerOpen ? (
-        <div className="fixed inset-0 z-50 flex justify-end bg-gray-950/60">
-          <div className="flex h-full w-full max-w-5xl flex-col bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex justify-end bg-gray-950/60 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="Cerrar cotización"
+            className="absolute inset-0 cursor-default"
+            onClick={closeQuotationDrawer}
+          />
+
+          <div className="relative z-10 flex h-full w-full max-w-5xl flex-col bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 sm:px-6">
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-red-700">
@@ -838,10 +878,7 @@ export default function CRMOpportunityQuotationSection({
 
               <button
                 type="button"
-                onClick={() => {
-                  setDrawerOpen(false);
-                  setEditingQuotationId(null);
-                }}
+                onClick={closeQuotationDrawer}
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-500 transition hover:bg-gray-50"
                 aria-label="Cerrar cotización"
               >
@@ -1027,7 +1064,7 @@ export default function CRMOpportunityQuotationSection({
             <div className="flex flex-col-reverse gap-2 border-t border-gray-200 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
               <button
                 type="button"
-                onClick={() => setDrawerOpen(false)}
+                onClick={closeQuotationDrawer}
                 disabled={saving}
                 className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-black text-gray-700 disabled:opacity-50"
               >
