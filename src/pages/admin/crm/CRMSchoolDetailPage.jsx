@@ -242,7 +242,7 @@ function isPendingWorkItem(workItem) {
 
 function LoadingState() {
   return (
-    <div className="space-y-4 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:space-y-0 xl:gap-4 xl:overflow-hidden">
+    <div className="space-y-4">
       <div className="h-28 animate-pulse rounded-3xl bg-gray-200" />
       <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
@@ -544,8 +544,8 @@ export default function CRMSchoolDetailPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl xl:flex xl:h-[calc(100vh-7rem)] xl:flex-col xl:overflow-hidden">
-      <div className="mb-3 xl:shrink-0">
+    <div className="mx-auto w-full max-w-7xl">
+      <div className="mb-3">
         <Link
           className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
           to={returnContext.path}
@@ -633,8 +633,8 @@ export default function CRMSchoolDetailPage() {
             </div>
           ) : null}
 
-          <div className="grid min-w-0 gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-12 xl:overflow-hidden">
-            <aside className="order-3 min-w-0 space-y-4 xl:order-none xl:col-span-3 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+          <div className="grid min-w-0 gap-4 xl:grid-cols-12">
+            <aside className="order-3 min-w-0 space-y-4 xl:order-none xl:col-span-3 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-wide text-red-700">
                   Colegio
@@ -749,7 +749,7 @@ export default function CRMSchoolDetailPage() {
               </section>
             </aside>
 
-            <main className="order-1 min-w-0 xl:order-none xl:col-span-6 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+            <main className="order-1 min-w-0 xl:order-none xl:col-span-6 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
               <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
                 <div className="border-b border-gray-200 px-4 pt-4 sm:px-5 sm:pt-5">
                   <p className="text-xs font-black uppercase tracking-wide text-red-700">
@@ -949,7 +949,7 @@ export default function CRMSchoolDetailPage() {
               </section>
             </main>
 
-            <aside className="order-2 min-w-0 space-y-4 xl:order-none xl:col-span-3 xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+            <aside className="order-2 min-w-0 space-y-4 xl:order-none xl:col-span-3 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
