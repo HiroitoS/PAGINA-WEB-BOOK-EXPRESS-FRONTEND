@@ -43,6 +43,16 @@ function formatDateTime(value, fallback = "Sin fecha") {
   }).format(date);
 }
 
+function formatMoney(value) {
+  const amount = Number(value || 0);
+
+  return new Intl.NumberFormat("es-PE", {
+    style: "currency",
+    currency: "PEN",
+    minimumFractionDigits: 2,
+  }).format(Number.isFinite(amount) ? amount : 0);
+}
+
 function toLocalDateTimeInputValue(date = new Date()) {
   const pad = (value) => String(value).padStart(2, "0");
 
@@ -103,6 +113,11 @@ export default function CRMOpportunityAdoptionSection({
   const currentAdoption = useMemo(
     () => adoptions.find((adoption) => adoption.is_current) || null,
     [adoptions],
+  );
+
+  const latestAcceptedQuotation = useMemo(
+    () => acceptedQuotations[0] || null,
+    [acceptedQuotations],
   );
 
   useEffect(() => {
@@ -312,6 +327,66 @@ export default function CRMOpportunityAdoptionSection({
           </div>
         ) : null}
 
+        {!currentAdoption && latestAcceptedQuotation ? (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/40">
+            <div className="flex flex-col justify-between gap-2 border-b border-emerald-200 px-4 py-3 sm:flex-row sm:items-center">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                  Cotización aceptada
+                </p>
+                <p className="mt-1 font-black text-gray-950">
+                  Cotización v{latestAcceptedQuotation.version}
+                </p>
+              </div>
+              <p className="text-xs font-bold text-gray-500">
+                {latestAcceptedQuotation.items?.length || 0} producto(s)
+              </p>
+            </div>
+
+            <div className="divide-y divide-emerald-100">
+              {(latestAcceptedQuotation.items || []).map((item) => (
+                <div
+                  key={item.id}
+                  className="grid gap-3 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_90px_120px]"
+                >
+                  <div className="min-w-0">
+                    <p className="font-black text-gray-950">
+                      {item.product_name_snapshot}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {item.provider_name_snapshot || "Editorial"}
+                      {item.level_name_snapshot
+                        ? ` · ${item.level_name_snapshot}`
+                        : ""}
+                      {item.grade_name_snapshot
+                        ? ` · ${item.grade_name_snapshot}`
+                        : ""}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-400">
+                      Cantidad
+                    </p>
+                    <p className="mt-1 font-black text-gray-950">
+                      {item.quantity}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-400">
+                      Precio colegio
+                    </p>
+                    <p className="mt-1 font-black text-gray-950">
+                      {formatMoney(item.school_price)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {!currentAdoption
         && acceptedQuotations.length > 0
         && contacts.length === 0 ? (
@@ -349,6 +424,28 @@ export default function CRMOpportunityAdoptionSection({
                     <p className="mt-1 text-xs text-gray-600">
                       {adoption.items?.length || 0} producto(s) adoptado(s)
                     </p>
+
+                    {adoption.items?.length ? (
+                      <div className="mt-3 space-y-2">
+                        {adoption.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="rounded-xl bg-white/80 px-3 py-2 text-xs text-gray-700 ring-1 ring-emerald-100"
+                          >
+                            <p className="font-black text-gray-950">
+                              {item.product_name_snapshot}
+                            </p>
+                            <p className="mt-1">
+                              {item.provider_name_snapshot || "Editorial"}
+                              {" · "}
+                              {item.quantity} unidad(es)
+                              {" · "}
+                              {formatMoney(item.school_price)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="text-left text-xs text-gray-600 sm:text-right">
