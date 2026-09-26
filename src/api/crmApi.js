@@ -471,6 +471,19 @@ export async function createCRMOpportunityQuotationFromProjection(
   return response.data;
 }
 
+export async function updateCRMOpportunityQuotationDraft(
+  opportunityId,
+  quotationId,
+  payload,
+) {
+  const response = await axiosClient.patch(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/quotations/${quotationId}/draft/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function approveCRMOpportunityQuotationDiscount(
   opportunityId,
   quotationId,
