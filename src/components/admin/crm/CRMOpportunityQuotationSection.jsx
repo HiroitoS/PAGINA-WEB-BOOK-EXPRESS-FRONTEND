@@ -10,6 +10,8 @@ import {
   FaTimes,
 } from "react-icons/fa";
 
+import { useAuth } from "../../../hooks/useAuth";
+
 import {
   acceptCRMOpportunityQuotation,
   approveCRMOpportunityQuotationDiscount,
@@ -146,6 +148,10 @@ export default function CRMOpportunityQuotationSection({
   onOpportunityChanged,
   onGoToAdoption,
 }) {
+  const { hasPermission, hasRole } = useAuth();
+  const canApproveDiscount =
+    hasRole(["ADMINISTRADOR"]) || hasPermission(["crm.supervise_crm"]);
+
   const [quotations, setQuotations] = useState([]);
   const [projection, setProjection] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -638,7 +644,18 @@ export default function CRMOpportunityQuotationSection({
                       ) : null}
 
                       {quotation.status === "draft"
-                      && quotation.requires_discount_approval ? (
+                      && quotation.requires_discount_approval
+                      && quotation.discount_approval_status === "approved" ? (
+                        <span className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800">
+                          <FaShieldAlt />
+                          Descuento aprobado
+                        </span>
+                      ) : null}
+
+                      {quotation.status === "draft"
+                      && quotation.requires_discount_approval
+                      && quotation.discount_approval_status !== "approved"
+                      && canApproveDiscount ? (
                         <button
                           type="button"
                           onClick={() => {
@@ -653,10 +670,18 @@ export default function CRMOpportunityQuotationSection({
                           className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-900 disabled:opacity-50"
                         >
                           <FaShieldAlt />
-                          {quotation.discount_approval_status === "approved"
-                            ? "Descuento aprobado"
-                            : "Aprobar descuento"}
+                          Aprobar descuento
                         </button>
+                      ) : null}
+
+                      {quotation.status === "draft"
+                      && quotation.requires_discount_approval
+                      && quotation.discount_approval_status !== "approved"
+                      && !canApproveDiscount ? (
+                        <span className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800">
+                          <FaShieldAlt />
+                          Pendiente de aprobación comercial
+                        </span>
                       ) : null}
 
                       {quotation.status === "draft" ? (
