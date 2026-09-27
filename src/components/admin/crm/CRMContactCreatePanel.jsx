@@ -18,6 +18,8 @@ const EMPTY_FORM = {
   contactNumber: "",
   alternatePhone: "",
   email: "",
+  decisionRole: "",
+  relationshipLevel: "",
   isPrimary: false,
 };
 
@@ -151,6 +153,10 @@ export default function CRMContactCreatePanel({ onCreated }) {
       whatsapp: contactNumber,
       phone: alternatePhone || contactNumber,
       email: form.email.trim(),
+      decision_role: form.decisionRole,
+      relationship_level: form.relationshipLevel
+        ? Number(form.relationshipLevel)
+        : null,
       is_primary: form.isPrimary,
       is_active: true,
     };
@@ -342,6 +348,48 @@ export default function CRMContactCreatePanel({ onCreated }) {
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
               />
             </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Rol en la decisión
+              </span>
+              <select
+                value={form.decisionRole}
+                onChange={(event) =>
+                  updateField("decisionRole", event.target.value)
+                }
+                disabled={saving}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              >
+                <option value="">Sin clasificar</option>
+                <option value="decision_maker">Decisor</option>
+                <option value="influencer">Influenciador</option>
+                <option value="other">Otro</option>
+              </select>
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Relacionamiento
+              </span>
+              <select
+                value={form.relationshipLevel}
+                onChange={(event) =>
+                  updateField("relationshipLevel", event.target.value)
+                }
+                disabled={saving}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              >
+                <option value="">Sin evaluar</option>
+                <option value="1">Contacto inicial</option>
+                <option value="2">Relación en desarrollo</option>
+                <option value="3">Buena relación</option>
+                <option value="4">Relación sólida</option>
+                <option value="5">Relación estratégica</option>
+              </select>
+            </label>
+
+            <div className="hidden xl:block" aria-hidden="true" />
 
             <label className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 md:col-span-2 xl:col-span-3">
               <input
