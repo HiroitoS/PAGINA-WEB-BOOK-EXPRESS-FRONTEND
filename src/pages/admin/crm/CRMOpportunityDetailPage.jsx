@@ -599,6 +599,18 @@ export default function CRMOpportunityDetailPage() {
                       {opportunity.primary_contact?.full_name
                         || "Sin contacto principal"}
                     </p>
+
+                    {opportunity.primary_contact?.position ? (
+                      <p className="mt-1 text-xs font-semibold text-gray-600">
+                        {opportunity.primary_contact.position}
+                      </p>
+                    ) : null}
+
+                    {opportunity.primary_contact?.decision_role_display ? (
+                      <p className="mt-1 text-xs font-bold text-red-700">
+                        {opportunity.primary_contact.decision_role_display}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
