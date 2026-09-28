@@ -503,14 +503,14 @@ export default function CRMOpportunityQuotationSection({
     try {
       await sendCRMOpportunityQuotation(opportunityId, quotation.id);
       setSuccessMessage(
-        `Cotización v${quotation.version} marcada como enviada.`,
+        `Envío de la cotización v${quotation.version} registrado correctamente.`,
       );
       refreshWorkspace();
     } catch (error) {
       setErrorMessage(
         getErrorMessage(
           error,
-          "No se pudo marcar la cotización como enviada.",
+          "No se pudo registrar el envío de la cotización.",
         ),
       );
     } finally {
@@ -525,14 +525,14 @@ export default function CRMOpportunityQuotationSection({
     try {
       await acceptCRMOpportunityQuotation(opportunityId, quotation.id);
       setSuccessMessage(
-        `Cotización v${quotation.version} marcada como aceptada.`,
+        `Aceptación del colegio registrada para la cotización v${quotation.version}.`,
       );
       refreshWorkspace();
     } catch (error) {
       setErrorMessage(
         getErrorMessage(
           error,
-          "No se pudo marcar la cotización como aceptada.",
+          "No se pudo registrar la aceptación del colegio.",
         ),
       );
     } finally {
@@ -720,7 +720,7 @@ export default function CRMOpportunityQuotationSection({
                           className="inline-flex items-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
                         >
                           <FaPaperPlane />
-                          Marcar enviada
+                          Registrar envío
                         </button>
                       ) : null}
 
@@ -732,7 +732,7 @@ export default function CRMOpportunityQuotationSection({
                           className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700 disabled:opacity-50"
                         >
                           <FaCheckCircle />
-                          Marcar aceptada
+                          Registrar aceptación del colegio
                         </button>
                       ) : null}
 
