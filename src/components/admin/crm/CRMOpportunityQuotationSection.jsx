@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FaCheckCircle,
   FaEdit,
@@ -166,6 +166,8 @@ export default function CRMOpportunityQuotationSection({
   const [actionId, setActionId] = useState(null);
   const [approvalQuotationId, setApprovalQuotationId] = useState(null);
   const [approvalNote, setApprovalNote] = useState("");
+  const approvalPanelRef = useRef(null);
+  const approvalNoteRef = useRef(null);
 
   useEffect(() => {
     let ignore = false;
@@ -215,6 +217,24 @@ export default function CRMOpportunityQuotationSection({
       ignore = true;
     };
   }, [opportunityId, refreshKey]);
+
+  useEffect(() => {
+    if (!approvalQuotationId) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      approvalPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      approvalNoteRef.current?.focus({ preventScroll: true });
+    }, 80);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [approvalQuotationId]);
 
   useEffect(() => {
     if (!drawerOpen) {
@@ -659,18 +679,28 @@ export default function CRMOpportunityQuotationSection({
                         <button
                           type="button"
                           onClick={() => {
+                            const isClosing =
+                              approvalQuotationId === quotation.id;
+
                             setApprovalQuotationId(
-                              approvalQuotationId === quotation.id
-                                ? null
-                                : quotation.id,
+                              isClosing ? null : quotation.id,
                             );
                             setApprovalNote("");
                           }}
                           disabled={busy}
-                          className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-900 disabled:opacity-50"
+                          aria-expanded={
+                            approvalQuotationId === quotation.id
+                          }
+                          className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black transition disabled:opacity-50 ${
+                            approvalQuotationId === quotation.id
+                              ? "border-amber-500 bg-amber-100 text-amber-950 ring-2 ring-amber-200"
+                              : "border-amber-300 bg-amber-50 text-amber-900 hover:border-amber-400 hover:bg-amber-100"
+                          }`}
                         >
                           <FaShieldAlt />
-                          Aprobar descuento
+                          {approvalQuotationId === quotation.id
+                            ? "Completar aprobación"
+                            : "Aprobar descuento"}
                         </button>
                       ) : null}
 
@@ -789,7 +819,25 @@ export default function CRMOpportunityQuotationSection({
 
                   {approvalQuotationId === quotation.id
                   && quotation.discount_approval_status !== "approved" ? (
-                    <div className="mx-4 mb-4 rounded-xl border border-gray-200 bg-white p-4">
+                    <div
+                      ref={approvalPanelRef}
+                      className="mx-4 mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm ring-1 ring-amber-100"
+                    >
+                      <div className="mb-3 flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-900">
+                          <FaShieldAlt />
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-950">
+                            Sustento de aprobación comercial
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-gray-600">
+                            Registra el motivo o condición que autoriza este
+                            descuento antes de confirmarlo.
+                          </p>
+                        </div>
+                      </div>
+
                       <label
                         htmlFor={`approval-note-${quotation.id}`}
                         className="text-xs font-black uppercase tracking-wide text-gray-600"
@@ -797,12 +845,13 @@ export default function CRMOpportunityQuotationSection({
                         Observación de aprobación
                       </label>
                       <textarea
+                        ref={approvalNoteRef}
                         id={`approval-note-${quotation.id}`}
                         value={approvalNote}
                         onChange={(event) => setApprovalNote(event.target.value)}
-                        rows={2}
+                        rows={3}
                         placeholder="Motivo o condición autorizada por el supervisor..."
-                        className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                        className="mt-2 w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
                       />
                       <div className="mt-3 flex justify-end gap-2">
                         <button
