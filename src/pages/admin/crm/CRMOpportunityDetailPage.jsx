@@ -15,6 +15,7 @@ import {
   getCRMOpportunityAdoptions,
   getCRMOpportunityHistory,
 } from "../../../api/crmApi";
+import CRMOpportunityActivitySection from "../../../components/admin/crm/CRMOpportunityActivitySection";
 import CRMOpportunityAdoptionSection from "../../../components/admin/crm/CRMOpportunityAdoptionSection";
 import CRMOpportunityProjectionSection from "../../../components/admin/crm/CRMOpportunityProjectionSection";
 import CRMOpportunityQuotationSection from "../../../components/admin/crm/CRMOpportunityQuotationSection";
@@ -398,84 +399,11 @@ export default function CRMOpportunityDetailPage() {
           ) : null}
 
           {activeTab === "activity" ? (
-            <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-              <div>
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Historial comercial
-                </p>
-                <h2 className="mt-1 text-xl font-black text-gray-950">
-                  Actividades de la oportunidad
-                </h2>
-              </div>
-
-              {activities.length > 0 ? (
-                <div className="mt-4 space-y-3">
-                  {activities.map((activity) => (
-                    <article
-                      key={activity.id}
-                      className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                    >
-                      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
-                              {activity.activity_type_display || "Actividad"}
-                            </span>
-                            {activity.is_important ? (
-                              <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-200">
-                                Importante
-                              </span>
-                            ) : null}
-                          </div>
-
-                          <h3 className="mt-3 font-black text-gray-950">
-                            {activity.summary}
-                          </h3>
-                        </div>
-
-                        <p className="text-xs font-semibold text-gray-400">
-                          {formatDateTime(activity.occurred_at)}
-                        </p>
-                      </div>
-
-                      {activity.result ? (
-                        <p className="mt-3 text-sm leading-6 text-gray-600">
-                          {activity.result}
-                        </p>
-                      ) : null}
-
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500">
-                        <span>
-                          Registrado por{" "}
-                          <strong className="text-gray-700">
-                            {activity.performed_by?.full_name
-                              || activity.performed_by?.username
-                              || "Usuario CRM"}
-                          </strong>
-                        </span>
-
-                        {activity.contact ? (
-                          <Link
-                            to={`/admin/crm/contactos/${activity.contact.id}`}
-                            state={navigationState}
-                            className="font-black text-red-700 hover:text-red-900"
-                          >
-                            {activity.contact.full_name}
-                          </Link>
-                        ) : null}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4">
-                  <EmptyState
-                    title="Sin actividad registrada"
-                    description="Las llamadas, visitas, reuniones y seguimientos vinculados a esta oportunidad aparecerán aquí."
-                  />
-                </div>
-              )}
-            </section>
+            <CRMOpportunityActivitySection
+              opportunity={opportunity}
+              activities={activities}
+              onChanged={refreshWorkspace}
+            />
           ) : null}
 
           {activeTab === "projection" ? (
