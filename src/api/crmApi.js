@@ -431,6 +431,18 @@ export async function getCRMOpportunityActivities(
   return response.data;
 }
 
+export async function createCRMOpportunityActivity(
+  opportunityId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/activities/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function getCRMOpportunityWorkItems(
   opportunityId,
   params = {},
