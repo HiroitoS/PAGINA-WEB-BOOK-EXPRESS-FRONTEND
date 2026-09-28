@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  FaArrowLeft,
   FaCheckCircle,
   FaEdit,
   FaExclamationTriangle,
@@ -147,6 +148,7 @@ export default function CRMOpportunityQuotationSection({
   opportunityId,
   onOpportunityChanged,
   onGoToAdoption,
+  onGoToProjection,
 }) {
   const { hasPermission, hasRole } = useAuth();
   const canApproveDiscount =
@@ -396,15 +398,12 @@ export default function CRMOpportunityQuotationSection({
 
   async function handleSaveQuotation() {
     const invalidItem = draftItems.find((item) => {
-      const quantity = Number(item.quantity);
       const discount = Number(item.school_discount_percent);
       const parentPrice = Number(item.parent_price);
       const commission = Number(item.school_commission);
 
       return (
-        !Number.isInteger(quantity)
-        || quantity < 1
-        || !Number.isFinite(discount)
+        !Number.isFinite(discount)
         || discount < 0
         || discount > 100
         || !Number.isFinite(parentPrice)
@@ -416,7 +415,7 @@ export default function CRMOpportunityQuotationSection({
 
     if (invalidItem) {
       setErrorMessage(
-        "Revisa cantidades, descuentos, precio PPFF y comisión antes de guardar.",
+        "Revisa descuentos, precio PPFF y comisión antes de guardar.",
       );
       return;
     }
@@ -428,7 +427,6 @@ export default function CRMOpportunityQuotationSection({
       const payload = {
         items: draftItems.map((item) => ({
           projection_item: item.projection_item,
-          quantity: Number(item.quantity),
           school_discount_percent: item.school_discount_percent,
           parent_price: item.parent_price,
           school_commission: item.school_commission,
@@ -961,6 +959,34 @@ export default function CRMOpportunityQuotationSection({
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+              <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-black">
+                    Productos y cantidades bloqueados desde Proyección
+                  </p>
+                  <p className="mt-1 leading-5 text-blue-800">
+                    Si cambia la población, grado, producto o cantidad,
+                    actualiza primero la Proyección y luego genera una nueva
+                    cotización.
+                  </p>
+                </div>
+
+                {onGoToProjection ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeQuotationDrawer();
+                      onGoToProjection();
+                    }}
+                    disabled={saving}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-3 py-2 text-xs font-black text-blue-900 transition hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    <FaArrowLeft />
+                    Volver a Proyección
+                  </button>
+                ) : null}
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                   <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
@@ -1035,23 +1061,15 @@ export default function CRMOpportunityQuotationSection({
                       </div>
 
                       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        <label className="text-xs font-bold text-gray-600">
+                        <div className="text-xs font-bold text-gray-600">
                           Cantidad
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={item.quantity}
-                            onChange={(event) =>
-                              updateDraftItem(
-                                index,
-                                "quantity",
-                                event.target.value,
-                              )
-                            }
-                            className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                          />
-                        </label>
+                          <div className="mt-1.5 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-black text-gray-950">
+                            {item.quantity}
+                            <span className="ml-2 text-xs font-bold text-gray-500">
+                              Desde Proyección
+                            </span>
+                          </div>
+                        </div>
 
                         <label className="text-xs font-bold text-gray-600">
                           Descuento colegio %
