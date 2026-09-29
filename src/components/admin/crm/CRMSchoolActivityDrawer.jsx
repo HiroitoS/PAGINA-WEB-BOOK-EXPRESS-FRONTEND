@@ -208,8 +208,8 @@ export default function CRMSchoolActivityDrawer({
         const commonWorkItem = {
           title: form.next_action_title.trim(),
           origin_activity: createdActivity.id,
+          opportunity: opportunityId,
           ...(contactId ? { contact: contactId } : {}),
-          ...(opportunityId ? { opportunity: opportunityId } : {}),
         };
 
         try {
