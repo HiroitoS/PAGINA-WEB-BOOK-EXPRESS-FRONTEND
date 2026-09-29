@@ -665,7 +665,7 @@ export default function SchoolEditorialUsagesSection({
 
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="wrap-break-words font-black text-gray-950">
+                      <p className="wrap-wrap-break-word font-black text-gray-950">
                         {getEditorialName(usage)}
                       </p>
 
@@ -673,7 +673,7 @@ export default function SchoolEditorialUsagesSection({
                     </div>
 
                     {usage.product_name ? (
-                      <p className="mt-1 wrap-break-words text-sm font-bold text-gray-900">
+                      <p className="mt-1 wrap-wrap-break-word text-sm font-bold text-gray-900">
                         {usage.product_name}
                       </p>
                     ) : null}

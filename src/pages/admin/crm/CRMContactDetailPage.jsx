@@ -196,7 +196,7 @@ function InfoValue({ icon: Icon, label, value }) {
           <p className="text-xs font-black uppercase tracking-wide text-gray-400">
             {label}
           </p>
-          <p className="mt-1 break-words text-sm font-bold text-gray-900">
+          <p className="mt-1 wrap-break-word text-sm font-bold text-gray-900">
             {value || "No registrado"}
           </p>
         </div>
@@ -705,7 +705,7 @@ export default function CRMContactDetailPage() {
             <p className="text-xs font-black uppercase tracking-wide text-red-300">
               CRM Comercial · Contacto
             </p>
-            <h1 className="mt-1 break-words text-2xl font-black sm:text-3xl">
+            <h1 className="mt-1 wrap-break-word text-2xl font-black sm:text-3xl">
               {contact.full_name}
             </h1>
             <p className="mt-2 text-sm text-gray-300">
@@ -1475,7 +1475,7 @@ export default function CRMContactDetailPage() {
                     <FaSchool />
                   </div>
                   <div className="min-w-0">
-                    <p className="break-words font-black text-gray-950">
+                    <p className="wrap-break-word font-black text-gray-950">
                       {school.name}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
@@ -1569,7 +1569,7 @@ export default function CRMContactDetailPage() {
                         </div>
 
                         <div className="min-w-0">
-                          <p className="break-words text-sm font-black text-gray-950">
+                          <p className="wrap-break-word text-sm font-black text-gray-950">
                             {workItem.item?.title || "Acción programada"}
                           </p>
                           <p className="mt-1 text-xs text-gray-500">

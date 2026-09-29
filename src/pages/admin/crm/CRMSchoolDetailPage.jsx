@@ -161,7 +161,7 @@ function SummaryItem({ icon: Icon, label, value }) {
             {label}
           </p>
 
-          <p className="mt-1 break-words text-sm font-black text-gray-950">
+          <p className="mt-1 wrap-break-word text-sm font-black text-gray-950">
             {value}
           </p>
         </div>
@@ -182,7 +182,7 @@ function InfoItem({ icon: Icon, label, value }) {
           {label}
         </p>
 
-        <p className="mt-1 break-words text-sm font-semibold text-gray-900">
+        <p className="mt-1 wrap-break-word text-sm font-semibold text-gray-900">
           {value || "No registrado"}
         </p>
       </div>
@@ -589,7 +589,7 @@ export default function CRMSchoolDetailPage() {
               </div>
 
               <div>
-                <h1 className="break-words text-2xl font-black sm:text-3xl">
+                <h1 className="wrap-break-word text-2xl font-black sm:text-3xl">
                   {school.name}
                 </h1>
 
@@ -634,7 +634,7 @@ export default function CRMSchoolDetailPage() {
           ) : null}
 
           <div className="grid min-w-0 gap-4 xl:grid-cols-12">
-            <aside className="order-3 min-w-0 space-y-4 xl:order-none xl:col-span-3 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
+            <aside className="order-3 min-w-0 space-y-4 xl:order-0 xl:col-span-3 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-wide text-red-700">
                   Colegio
@@ -749,7 +749,7 @@ export default function CRMSchoolDetailPage() {
               </section>
             </aside>
 
-            <main className="order-1 min-w-0 xl:order-none xl:col-span-6 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
+            <main className="order-1 min-w-0 xl:order-0 xl:col-span-6 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
               <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
                 <div className="border-b border-gray-200 px-4 pt-4 sm:px-5 sm:pt-5">
                   <p className="text-xs font-black uppercase tracking-wide text-red-700">
@@ -949,7 +949,7 @@ export default function CRMSchoolDetailPage() {
               </section>
             </main>
 
-            <aside className="order-2 min-w-0 space-y-4 xl:order-none xl:col-span-3 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
+            <aside className="order-2 min-w-0 space-y-4 xl:order-0 xl:col-span-3 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
@@ -1115,7 +1115,7 @@ export default function CRMSchoolDetailPage() {
 
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="break-words text-sm font-black text-gray-950">
+                              <p className="wrap-break-word text-sm font-black text-gray-950">
                                 {contact.full_name}
                               </p>
 
@@ -1207,7 +1207,7 @@ export default function CRMSchoolDetailPage() {
                             </div>
 
                             <div className="min-w-0">
-                              <p className="break-words text-sm font-black text-gray-950">
+                              <p className="wrap-break-word text-sm font-black text-gray-950">
                                 {workItem.item?.title || "Acción programada"}
                               </p>
 

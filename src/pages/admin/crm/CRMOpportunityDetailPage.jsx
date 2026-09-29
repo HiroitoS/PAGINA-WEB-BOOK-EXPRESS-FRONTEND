@@ -223,7 +223,7 @@ export default function CRMOpportunityDetailPage() {
               </span>
             </div>
 
-            <h1 className="mt-3 break-words text-2xl font-black sm:text-3xl">
+            <h1 className="mt-3 wrap-break-word text-2xl font-black sm:text-3xl">
               {opportunity.school?.name || opportunity.title}
             </h1>
             <p className="mt-1 text-sm text-gray-300">
@@ -501,7 +501,7 @@ export default function CRMOpportunityDetailPage() {
                     <p className="text-xs font-black uppercase tracking-wide text-gray-500">
                       Colegio
                     </p>
-                    <p className="mt-1 break-words font-black text-gray-950">
+                    <p className="mt-1 wrap-break-word font-black text-gray-950">
                       {opportunity.school?.name || "Colegio"}
                     </p>
                   </div>
@@ -527,7 +527,7 @@ export default function CRMOpportunityDetailPage() {
                     <p className="text-xs font-black uppercase tracking-wide text-gray-500">
                       Contacto principal
                     </p>
-                    <p className="mt-1 break-words font-black text-gray-950">
+                    <p className="mt-1 wrap-break-word font-black text-gray-950">
                       {opportunity.primary_contact?.full_name
                         || "Sin contacto principal"}
                     </p>
