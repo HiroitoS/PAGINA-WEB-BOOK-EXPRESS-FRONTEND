@@ -28,6 +28,7 @@ import {
   getCRMSchoolActivities,
   getCRMSchoolWorkItems,
 } from "../../../api/crmApi";
+import CRMSchoolActivityDrawer from "../../../components/admin/crm/CRMSchoolActivityDrawer";
 import SchoolEducationalServicesSection from "../../../components/admin/crm/SchoolEducationalServicesSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
 import {
@@ -38,7 +39,9 @@ import {
 const ACTIVITY_FILTERS = [
   { value: "all", label: "Todas" },
   { value: "call", label: "Llamadas" },
-  { value: "visit", label: "Visitas" },
+  { value: "visit", label: "Visitas coordinadas" },
+  { value: "cold_visit", label: "Visitas en frío" },
+  { value: "presentation", label: "Presentaciones" },
   { value: "meeting", label: "Reuniones" },
   { value: "follow_up", label: "Seguimientos" },
 ];
@@ -463,6 +466,30 @@ export default function CRMSchoolDetailPage() {
 
   const currentOpportunityId = currentOpportunity?.id || null;
 
+  async function refreshCommercialActivityData() {
+    const [activitiesResult, workItemsResult] = await Promise.allSettled([
+      getCRMSchoolActivities(id),
+      getCRMSchoolWorkItems(id),
+    ]);
+
+    if (activitiesResult.status === "fulfilled") {
+      setActivities(normalizeResults(activitiesResult.value));
+    }
+
+    if (workItemsResult.status === "fulfilled") {
+      setWorkItems(normalizeResults(workItemsResult.value));
+    }
+
+    if (currentOpportunityId) {
+      try {
+        const detail = await getCRMOpportunity(currentOpportunityId);
+        setOpportunityDetail(detail);
+      } catch {
+        // La actividad ya se guardó; el detalle se refrescará en la próxima carga.
+      }
+    }
+  }
+
   useEffect(() => {
     let ignore = false;
 
@@ -827,21 +854,30 @@ export default function CRMSchoolDetailPage() {
                 {activeInfoTab === "activity" ? (
                   <>
                     <div className="border-b border-gray-200 px-4 py-3 sm:px-5 sm:py-4">
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {ACTIVITY_FILTERS.map((filter) => (
-                          <button
-                            key={filter.value}
-                            type="button"
-                            onClick={() => setActivityFilter(filter.value)}
-                            className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
-                              activityFilter === filter.value
-                                ? "bg-gray-950 text-white"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            }`}
-                          >
-                            {filter.label}
-                          </button>
-                        ))}
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {ACTIVITY_FILTERS.map((filter) => (
+                            <button
+                              key={filter.value}
+                              type="button"
+                              onClick={() => setActivityFilter(filter.value)}
+                              className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
+                                activityFilter === filter.value
+                                  ? "bg-gray-950 text-white"
+                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              }`}
+                            >
+                              {filter.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <CRMSchoolActivityDrawer
+                          school={school}
+                          contacts={visibleContacts}
+                          opportunities={schoolOpportunities}
+                          onChanged={refreshCommercialActivityData}
+                        />
                       </div>
                     </div>
 
@@ -922,8 +958,8 @@ export default function CRMSchoolDetailPage() {
                           </p>
 
                           <p className="mt-1 text-sm leading-6 text-gray-500">
-                            Cuando un asesor registre una actividad con un contacto
-                            de este colegio, aparecerá también en esta ficha.
+                            Las gestiones del colegio aparecerán aquí aunque todavía
+                            no exista contacto u oportunidad comercial.
                           </p>
                         </div>
                       )}
