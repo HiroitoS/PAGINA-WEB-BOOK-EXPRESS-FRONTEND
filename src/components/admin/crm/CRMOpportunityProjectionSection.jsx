@@ -130,7 +130,6 @@ function buildDrafts(base, projection) {
       priceIsReference:
         Number(item.price_year_snapshot)
         !== Number(projection?.campaign_year_snapshot),
-      quantity: item.quantity,
     });
   }
 
@@ -561,7 +560,6 @@ export default function CRMOpportunityProjectionSection({
           priceYear: choice.price_year,
           priceCampaign: choice.price_campaign,
           priceIsReference: Boolean(choice.price_is_reference),
-          quantity: calculateProjectedStudents(draft) || 1,
         },
       ],
     });
@@ -577,25 +575,6 @@ export default function CRMOpportunityProjectionSection({
     updateDraft(draftKey, {
       products: draft.products.filter(
         (product) => product.id !== productId,
-      ),
-    });
-  }
-
-  function updateProductQuantity(draftKey, productId, value) {
-    const draft = drafts.find((item) => item.key === draftKey);
-
-    if (!draft) {
-      return;
-    }
-
-    updateDraft(draftKey, {
-      products: draft.products.map((product) =>
-        product.id === productId
-          ? {
-              ...product,
-              quantity: value,
-            }
-          : product,
       ),
     });
   }
@@ -625,17 +604,6 @@ export default function CRMOpportunityProjectionSection({
       return;
     }
 
-    const invalidQuantity = selectedDrafts
-      .flatMap((draft) => draft.products)
-      .find((product) => Number(product.quantity) < 1);
-
-    if (invalidQuantity) {
-      setPanelError(
-        "Todas las cantidades de productos deben ser mayores a cero.",
-      );
-      return;
-    }
-
     const payload = {
       grades: selectedDrafts.map((draft) => ({
         service: draft.serviceId,
@@ -650,7 +618,6 @@ export default function CRMOpportunityProjectionSection({
           service: draft.serviceId,
           grade: draft.gradeId,
           product: product.id,
-          quantity: Number(product.quantity),
         })),
       ),
       notes: notes.trim(),
@@ -1114,6 +1081,11 @@ export default function CRMOpportunityProjectionSection({
                           </div>
                         </div>
 
+                        <p className="mt-2 text-xs leading-5 text-gray-500">
+                          La cantidad de cada producto se actualiza automáticamente
+                          con el total proyectado del grado.
+                        </p>
+
                         {activeDraft.products.length > 0 ? (
                           <div className="mt-4 space-y-2">
                             {activeDraft.products.map((product) => (
@@ -1135,22 +1107,12 @@ export default function CRMOpportunityProjectionSection({
                                   </p>
                                 </div>
 
-                                <label className="text-xs font-bold text-gray-500 sm:col-span-3">
-                                  Cantidad
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={product.quantity}
-                                    onChange={(event) =>
-                                      updateProductQuantity(
-                                        activeDraft.key,
-                                        product.id,
-                                        event.target.value,
-                                      )
-                                    }
-                                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2.5 py-2 font-bold text-gray-950 outline-none focus:border-red-400"
-                                  />
-                                </label>
+                                <div className="text-xs font-bold text-gray-500 sm:col-span-3">
+                                  Cantidad automática
+                                  <div className="mt-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 font-black text-gray-950">
+                                    {calculateProjectedStudents(activeDraft)}
+                                  </div>
+                                </div>
 
                                 <button
                                   type="button"
