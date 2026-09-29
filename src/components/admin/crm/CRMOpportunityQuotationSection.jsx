@@ -827,6 +827,25 @@ export default function CRMOpportunityQuotationSection({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
+                      {canViewFinancials && quotation.commercial_analysis ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAnalysisQuotationId(
+                              analysisQuotationId === quotation.id
+                                ? null
+                                : quotation.id,
+                            )
+                          }
+                          className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-800 transition hover:bg-gray-50"
+                        >
+                          <FaFileInvoiceDollar />
+                          {analysisQuotationId === quotation.id
+                            ? "Ocultar análisis"
+                            : "Ver análisis interno"}
+                        </button>
+                      ) : null}
+
                       {quotation.status === "draft" ? (
                         <button
                           type="button"
@@ -953,7 +972,13 @@ export default function CRMOpportunityQuotationSection({
                     </div>
                   </div>
 
-                  <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <div
+                    className={`grid gap-3 p-4 sm:grid-cols-2 ${
+                      canViewFinancials
+                        ? "xl:grid-cols-4"
+                        : "xl:grid-cols-3"
+                    }`}
+                  >
                     <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
                       <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                         Unidades
@@ -972,21 +997,144 @@ export default function CRMOpportunityQuotationSection({
                     </div>
                     <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
                       <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                        Precio colegio
+                        P.IE total
                       </p>
                       <p className="mt-1 text-lg font-black text-gray-950">
                         {formatCurrency(totals.school)}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                        Costo editorial
-                      </p>
-                      <p className="mt-1 text-lg font-black text-gray-950">
-                        {formatCurrency(totals.cost)}
-                      </p>
-                    </div>
+                    {canViewFinancials ? (
+                      <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                          Costo editorial
+                        </p>
+                        <p className="mt-1 text-lg font-black text-gray-950">
+                          {formatCurrency(totals.cost)}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
+
+                  {canViewFinancials
+                  && analysisQuotationId === quotation.id
+                  && quotation.commercial_analysis ? (
+                    <div className="mx-4 mb-4 rounded-2xl border border-gray-200 bg-white p-4">
+                      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                            Análisis comercial · Interno
+                          </p>
+                          <p className="mt-1 text-sm font-bold text-gray-600">
+                            Información visible solo para supervisión comercial.
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-gray-950 px-3 py-1 text-xs font-black text-white">
+                          Margen {formatPercent(
+                            quotation.commercial_analysis.margin_percent,
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                        <div className="rounded-xl bg-gray-50 p-3">
+                          <p className="text-xs font-bold uppercase text-gray-500">
+                            Venta P.IE
+                          </p>
+                          <p className="mt-1 font-black text-gray-950">
+                            {formatCurrency(
+                              quotation.commercial_analysis.sales_total,
+                            )}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-gray-50 p-3">
+                          <p className="text-xs font-bold uppercase text-gray-500">
+                            Costo editorial
+                          </p>
+                          <p className="mt-1 font-black text-gray-950">
+                            {formatCurrency(
+                              quotation.commercial_analysis.cost_total,
+                            )}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-gray-50 p-3">
+                          <p className="text-xs font-bold uppercase text-gray-500">
+                            Incentivos
+                          </p>
+                          <p className="mt-1 font-black text-gray-950">
+                            {formatCurrency(
+                              quotation.commercial_analysis.commission_total,
+                            )}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-gray-50 p-3">
+                          <p className="text-xs font-bold uppercase text-gray-500">
+                            Margen comercial
+                          </p>
+                          <p className="mt-1 font-black text-gray-950">
+                            {formatCurrency(
+                              quotation.commercial_analysis.margin_total,
+                            )}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-gray-50 p-3">
+                          <p className="text-xs font-bold uppercase text-gray-500">
+                            Margen %
+                          </p>
+                          <p className="mt-1 font-black text-gray-950">
+                            {formatPercent(
+                              quotation.commercial_analysis.margin_percent,
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {Object.entries(
+                          quotation.commercial_analysis.products_by_band || {},
+                        ).map(([band, total]) => (
+                          <span
+                            key={band}
+                            className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${profitabilityBadgeClass(
+                              band,
+                            )}`}
+                          >
+                            {band === "green"
+                              ? "Verde"
+                              : band === "amber"
+                                ? "Ámbar"
+                                : band === "red"
+                                  ? "Rojo"
+                                  : band === "loss"
+                                    ? "Pérdida"
+                                    : "Sin clasificar"}: {total}
+                          </span>
+                        ))}
+                      </div>
+
+                      {quotation.commercial_analysis.margin_by_editorial?.length ? (
+                        <div className="mt-4 border-t border-gray-200 pt-3">
+                          <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                            Margen proyectado por editorial
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {quotation.commercial_analysis.margin_by_editorial.map(
+                              (editorial) => (
+                                <span
+                                  key={editorial.editorial}
+                                  className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-bold text-gray-700"
+                                >
+                                  {editorial.editorial}:{" "}
+                                  <strong>
+                                    {formatCurrency(editorial.margin_total)}
+                                  </strong>
+                                </span>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   {reopenQuotationId === quotation.id
                   && quotation.status === "accepted"
