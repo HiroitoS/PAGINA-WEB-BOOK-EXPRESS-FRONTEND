@@ -67,6 +67,10 @@ const CRMOpportunityDetailPage = lazy(
   () => import("../pages/admin/crm/CRMOpportunityDetailPage"),
 );
 
+const CRMQuotationPrintPage = lazy(
+  () => import("../pages/admin/crm/CRMQuotationPrintPage"),
+);
+
 function protectRole(element, allowedRoles) {
   return <RequireRole allowedRoles={allowedRoles}>{element}</RequireRole>;
 }
@@ -138,6 +142,13 @@ const router = createBrowserRouter([
     path: "/admin",
     element: <RequireAuth />,
     children: [
+      {
+        path: "crm/oportunidades/:opportunityId/cotizaciones/:quotationId/imprimir",
+        element: protectPermission(
+          renderLazyPage(CRMQuotationPrintPage),
+          ["crm.view_crm"],
+        ),
+      },
       {
         element: <AdminLayout />,
         children: [
