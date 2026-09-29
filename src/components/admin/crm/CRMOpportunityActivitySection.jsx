@@ -8,24 +8,9 @@ import {
 import {
   createCRMOpportunityActivity,
   createCRMSchoolEvent,
-  createCRMSchoolReminder,
-  createCRMSchoolTask,
   getCRMSchoolContacts,
 } from "../../../api/crmApi";
-
-const ACTIVITY_TYPES = [
-  { value: "call", label: "Llamada" },
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "email", label: "Correo" },
-  { value: "meeting", label: "Reunión" },
-  { value: "visit", label: "Visita coordinada" },
-  { value: "cold_visit", label: "Visita en frío" },
-  { value: "presentation", label: "Presentación de producto" },
-  { value: "sample_delivery", label: "Entrega de muestra" },
-  { value: "sample_return", label: "Devolución de muestra" },
-  { value: "follow_up", label: "Seguimiento" },
-  { value: "other", label: "Otro" },
-];
+import { CRM_CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
 
 function normalizeList(data) {
   if (Array.isArray(data)) {
@@ -57,7 +42,7 @@ function createInitialForm(primaryContactId = "") {
     occurred_at: getCurrentLocalDateTimeValue(),
     is_important: false,
     schedule_next_action: false,
-    next_action_type: "task",
+    next_action_type: "visit",
     next_action_title: "",
     next_action_at: "",
   };
@@ -270,23 +255,11 @@ export default function CRMOpportunityActivitySection({
         };
 
         try {
-          if (form.next_action_type === "event") {
-            await createCRMSchoolEvent(opportunity.school.id, {
-              ...commonWorkItem,
-              start_at: nextActionAt.toISOString(),
-              event_type: "meeting",
-            });
-          } else if (form.next_action_type === "reminder") {
-            await createCRMSchoolReminder(opportunity.school.id, {
-              ...commonWorkItem,
-              remind_at: nextActionAt.toISOString(),
-            });
-          } else {
-            await createCRMSchoolTask(opportunity.school.id, {
-              ...commonWorkItem,
-              due_at: nextActionAt.toISOString(),
-            });
-          }
+          await createCRMSchoolEvent(opportunity.school.id, {
+            ...commonWorkItem,
+            start_at: nextActionAt.toISOString(),
+            event_type: form.next_action_type,
+          });
 
           nextActionCreated = true;
         } catch (nextActionError) {
@@ -508,7 +481,7 @@ export default function CRMOpportunityActivitySection({
                     disabled={saving}
                     className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                   >
-                    {ACTIVITY_TYPES.map((activityType) => (
+                    {CRM_ACTIVITY_TYPES.map((activityType) => (
                       <option
                         key={activityType.value}
                         value={activityType.value}
@@ -596,7 +569,7 @@ export default function CRMOpportunityActivitySection({
                     <div className="mt-4 grid gap-3 md:grid-cols-3">
                       <label>
                         <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                          Tipo
+                          Tipo de próxima actividad
                         </span>
                         <select
                           value={form.next_action_type}
@@ -609,9 +582,14 @@ export default function CRMOpportunityActivitySection({
                           disabled={saving}
                           className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                         >
-                          <option value="task">Tarea</option>
-                          <option value="event">Reunión / cita</option>
-                          <option value="reminder">Recordatorio</option>
+                          {CRM_ACTIVITY_TYPES.map((activityType) => (
+                            <option
+                              key={activityType.value}
+                              value={activityType.value}
+                            >
+                              {activityType.label}
+                            </option>
+                          ))}
                         </select>
                       </label>
 
