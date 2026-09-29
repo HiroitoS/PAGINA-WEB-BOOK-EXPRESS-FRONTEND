@@ -7,6 +7,7 @@ import {
   FaFileInvoiceDollar,
   FaPaperPlane,
   FaPlus,
+  FaPrint,
   FaShieldAlt,
   FaTimes,
   FaUndoAlt,
@@ -827,6 +828,21 @@ export default function CRMOpportunityQuotationSection({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            `/admin/crm/oportunidades/${opportunityId}/cotizaciones/${quotation.id}/imprimir`,
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }
+                        className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-800 transition hover:bg-gray-50"
+                      >
+                        <FaPrint />
+                        Imprimir cotización
+                      </button>
+
                       {canViewFinancials && quotation.commercial_analysis ? (
                         <button
                           type="button"
