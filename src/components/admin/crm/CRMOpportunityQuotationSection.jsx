@@ -1503,6 +1503,19 @@ export default function CRMOpportunityQuotationSection({
                 </div>
               ) : null}
 
+              {canViewFinancials ? (
+                <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                  <p className="font-black text-gray-950">
+                    Análisis comercial interno
+                  </p>
+                  <p className="mt-1 leading-5">
+                    Costos, incentivos, margen y semáforo son información
+                    reservada para supervisión comercial. El cálculo oficial
+                    se realiza en el backend al guardar el borrador.
+                  </p>
+                </div>
+              ) : null}
+
               <div className="mt-5 space-y-3">
                 {draftItems.map((item, index) => {
                   const priceYear = Number(item.price_year_snapshot);
@@ -1512,6 +1525,16 @@ export default function CRMOpportunityQuotationSection({
                     && Number.isFinite(campaignYear)
                     && priceYear > 0
                     && priceYear < campaignYear;
+                  const pvp = Number(item.pvp || 0);
+                  const discount = Number(item.school_discount_percent || 0);
+                  const schoolPrice =
+                    Number.isFinite(pvp) && Number.isFinite(discount)
+                      ? pvp * (1 - discount / 100)
+                      : 0;
+                  const hasSavedFinancialAnalysis =
+                    canViewFinancials
+                    && item.supplier_cost !== ""
+                    && item.commercial_margin_unit !== "";
 
                   return (
                     <article
@@ -1524,8 +1547,11 @@ export default function CRMOpportunityQuotationSection({
                             {item.product_name}
                           </p>
                           <p className="mt-1 text-xs font-bold text-gray-500">
-                            {item.provider_name} · {item.grade_name} · PVP{" "}
-                            {formatCurrency(item.pvp)}
+                            {item.provider_name} · {item.level_name} ·{" "}
+                            {item.area_name} · {item.grade_name}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Código: {item.product_code || "Sin código"}
                           </p>
                           {referencePrice ? (
                             <p className="mt-1 text-xs font-black text-amber-700">
@@ -1533,6 +1559,16 @@ export default function CRMOpportunityQuotationSection({
                             </p>
                           ) : null}
                         </div>
+
+                        {hasSavedFinancialAnalysis ? (
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${profitabilityBadgeClass(
+                              item.profitability_band,
+                            )}`}
+                          >
+                            {item.profitability_band_display}
+                          </span>
+                        ) : null}
                       </div>
 
                       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1546,8 +1582,15 @@ export default function CRMOpportunityQuotationSection({
                           </div>
                         </div>
 
+                        <div className="text-xs font-bold text-gray-600">
+                          PVP
+                          <div className="mt-1.5 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-black text-gray-950">
+                            {formatCurrency(item.pvp)}
+                          </div>
+                        </div>
+
                         <label className="text-xs font-bold text-gray-600">
-                          Descuento colegio %
+                          Descuento I.E. %
                           <input
                             type="number"
                             min="0"
@@ -1565,47 +1608,180 @@ export default function CRMOpportunityQuotationSection({
                           />
                         </label>
 
-                        <label className="text-xs font-bold text-gray-600">
-                          Precio PPFF
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.parent_price}
-                            onChange={(event) =>
-                              updateDraftItem(
-                                index,
-                                "parent_price",
-                                event.target.value,
-                              )
-                            }
-                            className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                          />
-                        </label>
-
-                        <label className="text-xs font-bold text-gray-600">
-                          Comisión colegio
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.school_commission}
-                            onChange={(event) =>
-                              updateDraftItem(
-                                index,
-                                "school_commission",
-                                event.target.value,
-                              )
-                            }
-                            className="mt-1.5 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                          />
-                        </label>
+                        <div className="text-xs font-bold text-gray-600">
+                          P.IE
+                          <div className="mt-1.5 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2.5 text-sm font-black text-gray-950">
+                            {formatCurrency(schoolPrice)}
+                          </div>
+                        </div>
                       </div>
+
+                      {item.commercial_line === "reading_plan" ? (
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <label className="text-xs font-bold text-gray-600">
+                            Mes de lectura
+                            <select
+                              value={item.reading_month}
+                              onChange={(event) =>
+                                updateDraftItem(
+                                  index,
+                                  "reading_month",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                            >
+                              <option value="">Por definir</option>
+                              {READING_MONTHS.map((month) => (
+                                <option
+                                  key={month.value}
+                                  value={month.value}
+                                >
+                                  {month.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                      ) : null}
+
+                      {canViewFinancials ? (
+                        <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                                Condición interna
+                              </p>
+                              <p className="mt-1 text-xs leading-5 text-gray-500">
+                                El incentivo y el análisis de margen no se
+                                muestran al asesor ni en la cotización del
+                                colegio.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            <label className="text-xs font-bold text-gray-600">
+                              Modalidad del incentivo
+                              <select
+                                value={item.commission_mode}
+                                onChange={(event) =>
+                                  updateDraftItem(
+                                    index,
+                                    "commission_mode",
+                                    event.target.value,
+                                  )
+                                }
+                                className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                              >
+                                <option value="per_unit">Por unidad</option>
+                                <option value="total">Monto total</option>
+                              </select>
+                            </label>
+
+                            <label className="text-xs font-bold text-gray-600">
+                              Incentivo / comisión
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.commission_amount}
+                                onChange={(event) =>
+                                  updateDraftItem(
+                                    index,
+                                    "commission_amount",
+                                    event.target.value,
+                                  )
+                                }
+                                className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                              />
+                            </label>
+                          </div>
+
+                          {hasSavedFinancialAnalysis ? (
+                            <>
+                              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Costo editorial
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatCurrency(item.supplier_cost)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Margen unitario
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatCurrency(
+                                      item.commercial_margin_unit,
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Margen proyectado
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatCurrency(
+                                      item.commercial_margin_total,
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Margen %
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatPercent(
+                                      item.commercial_margin_percent,
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Máximo para verde
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {item.max_green_discount_percent === ""
+                                      ? "—"
+                                      : formatPercent(
+                                          item.max_green_discount_percent,
+                                        )}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Espacio de negociación
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {item.green_discount_headroom_points === ""
+                                      ? "—"
+                                      : `${Number(
+                                          item.green_discount_headroom_points,
+                                        ).toFixed(2)} pt`}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="mt-3 text-xs font-bold text-amber-700">
+                                Estos indicadores corresponden al último
+                                borrador guardado. Al guardar los cambios, el
+                                backend recalculará el semáforo y los márgenes.
+                              </p>
+                            </>
+                          ) : (
+                            <p className="mt-3 text-xs font-bold text-gray-500">
+                              El análisis de margen y semáforo se calculará al
+                              guardar el borrador.
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}
               </div>
-
               <label
                 htmlFor="quotation-notes"
                 className="mt-5 block text-xs font-black uppercase tracking-wide text-gray-600"
