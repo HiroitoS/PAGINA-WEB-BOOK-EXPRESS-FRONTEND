@@ -7,7 +7,7 @@ import {
   getCRMOpportunityQuotations,
   getCRMSchool,
 } from "../../../api/crmApi";
-import logoBookExpress from "../../../assets/brand/logo-book-express-transparente.png";
+import logoBookExpress from "../../../assets/brand/logo-book-express-negro-recortado.png";
 
 const MONTH_LABELS = {
   1: "Enero",
@@ -166,7 +166,7 @@ export default function CRMQuotationPrintPage() {
     const previousTitle = document.title;
     const schoolName = opportunity.school?.name || "Colegio";
 
-    document.title = `Cotizacion_v${quotation.version}_${schoolName}`;
+    document.title = `Cotizacion_${schoolName}`;
 
     return () => {
       document.title = previousTitle;
@@ -257,30 +257,34 @@ export default function CRMQuotationPrintPage() {
       <main className="mx-auto w-full max-w-7xl bg-white p-7 shadow-sm print:max-w-none print:p-0 print:shadow-none">
         <header className="flex items-start justify-between gap-8 border-b-2 border-gray-950 pb-5">
           <div className="flex items-start gap-4">
-            <img
-              src={logoBookExpress}
-              alt="Book Express"
-              className="h-16 w-auto object-contain"
-            />
-            <div>
-              <p className="text-lg font-black text-gray-950">
+            <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-xl bg-white">
+              <img
+                src={logoBookExpress}
+                alt="Book Express"
+                className="max-h-16 w-auto object-contain"
+              />
+            </div>
+            <div className="pt-1">
+              <p className="text-xl font-black leading-tight text-gray-950">
                 Distribuidora y Comercializadora Book Express SAC
               </p>
-              <p className="mt-1 text-xs font-semibold text-gray-600">
+              <p className="mt-2 text-sm font-semibold text-gray-600">
                 RUC 20601658811 · Huancayo, Junín, Perú
               </p>
             </div>
           </div>
 
-          <div className="text-right">
-            <p className="text-xs font-black uppercase tracking-widest text-red-700">
+          <div className="min-w-52 text-right">
+            <p className="text-sm font-black uppercase tracking-widest text-red-700">
               Cotización comercial
             </p>
-            <h1 className="mt-1 text-2xl font-black text-gray-950">
-              Cotización v{quotation.version}
-            </h1>
-            <p className="mt-1 text-xs font-semibold text-gray-500">
+            <p className="mt-2 text-sm font-bold text-gray-700">
               {formatDate(quotation.created_at)}
+            </p>
+            <p className="mt-1 text-xs font-semibold text-gray-500">
+              {opportunity.campaign?.name
+                || quotation.campaign_name_snapshot
+                || "Campaña comercial"}
             </p>
             {isDraft ? (
               <span className="mt-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-amber-800 ring-1 ring-amber-200">
@@ -421,8 +425,7 @@ export default function CRMQuotationPrintPage() {
 
         <footer className="mt-7 border-t border-gray-200 pt-4 text-xs leading-5 text-gray-500">
           <p>
-            Documento generado desde la versión v{quotation.version} de la
-            cotización comercial registrada en Book Express.
+            Cotización comercial preparada por Book Express para la institución educativa indicada.
           </p>
           {isDraft ? (
             <p className="mt-1 font-bold text-amber-800">
