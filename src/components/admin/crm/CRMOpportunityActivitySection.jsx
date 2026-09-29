@@ -10,7 +10,7 @@ import {
   createCRMSchoolEvent,
   getCRMSchoolContacts,
 } from "../../../api/crmApi";
-import { CRM_CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
+import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
 
 function normalizeList(data) {
   if (Array.isArray(data)) {

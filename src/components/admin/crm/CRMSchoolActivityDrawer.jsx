@@ -9,7 +9,7 @@ import {
   createCRMSchoolActivity,
   createCRMSchoolEvent,
 } from "../../../api/crmApi";
-import { CRM_CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
+import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
 
 function getCurrentLocalDateTimeValue() {
   const now = new Date();
