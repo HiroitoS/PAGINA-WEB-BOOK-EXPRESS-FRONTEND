@@ -854,24 +854,26 @@ export default function CRMSchoolDetailPage() {
                 {activeInfoTab === "activity" ? (
                   <>
                     <div className="border-b border-gray-200 px-4 py-3 sm:px-5 sm:py-4">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="flex gap-2 overflow-x-auto pb-1">
-                          {ACTIVITY_FILTERS.map((filter) => (
-                            <button
-                              key={filter.value}
-                              type="button"
-                              onClick={() => setActivityFilter(filter.value)}
-                              className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
-                                activityFilter === filter.value
-                                  ? "bg-gray-950 text-white"
-                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              }`}
-                            >
-                              {filter.label}
-                            </button>
-                          ))}
-                        </div>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {ACTIVITY_FILTERS.map((filter) => (
+                          <button
+                            key={filter.value}
+                            type="button"
+                            onClick={() => setActivityFilter(filter.value)}
+                            className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
+                              activityFilter === filter.value
+                                ? "bg-gray-950 text-white"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            {filter.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
+                    <div className="p-4 sm:p-5">
+                      <div className="mb-4 flex justify-end">
                         <CRMSchoolActivityDrawer
                           school={school}
                           contacts={visibleContacts}
@@ -879,9 +881,6 @@ export default function CRMSchoolDetailPage() {
                           onChanged={refreshCommercialActivityData}
                         />
                       </div>
-                    </div>
-
-                    <div className="p-4 sm:p-5">
                       {filteredActivities.length > 0 ? (
                         <div className="space-y-3">
                           {filteredActivities.slice(0, 12).map((activity) => (

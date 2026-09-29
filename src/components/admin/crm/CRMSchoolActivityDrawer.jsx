@@ -266,11 +266,11 @@ export default function CRMSchoolActivityDrawer({
 
   return (
     <>
-      <div className="flex flex-col items-stretch gap-2 sm:items-end">
+      <div className="inline-flex flex-col items-end gap-2">
         <button
           type="button"
           onClick={openDrawer}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
         >
           <FaEdit />
           Registrar actividad
