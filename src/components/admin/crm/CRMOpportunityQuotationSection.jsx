@@ -27,6 +27,21 @@ import {
 
 const STANDARD_DISCOUNT = 20;
 
+const READING_MONTHS = [
+  { value: "1", label: "Enero" },
+  { value: "2", label: "Febrero" },
+  { value: "3", label: "Marzo" },
+  { value: "4", label: "Abril" },
+  { value: "5", label: "Mayo" },
+  { value: "6", label: "Junio" },
+  { value: "7", label: "Julio" },
+  { value: "8", label: "Agosto" },
+  { value: "9", label: "Septiembre" },
+  { value: "10", label: "Octubre" },
+  { value: "11", label: "Noviembre" },
+  { value: "12", label: "Diciembre" },
+];
+
 function normalizeList(data) {
   if (Array.isArray(data)) {
     return data;
@@ -51,6 +66,32 @@ function formatCurrency(value) {
     currency: "PEN",
     minimumFractionDigits: 2,
   }).format(number);
+}
+
+function formatPercent(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return "0.00 %";
+  }
+
+  return `${number.toFixed(2)} %`;
+}
+
+function profitabilityBadgeClass(status) {
+  if (status === "green") {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  }
+
+  if (status === "amber") {
+    return "bg-amber-50 text-amber-800 ring-amber-200";
+  }
+
+  if (status === "red" || status === "loss") {
+    return "bg-red-50 text-red-700 ring-red-200";
+  }
+
+  return "bg-gray-100 text-gray-600 ring-gray-200";
 }
 
 function formatDateTime(value, fallback = "Sin fecha") {
@@ -156,6 +197,7 @@ export default function CRMOpportunityQuotationSection({
   const { hasPermission, hasRole } = useAuth();
   const canApproveDiscount =
     hasRole(["ADMINISTRADOR"]) || hasPermission(["crm.supervise_crm"]);
+  const canViewFinancials = canApproveDiscount;
 
   const [quotations, setQuotations] = useState([]);
   const [projection, setProjection] = useState(null);
@@ -174,6 +216,7 @@ export default function CRMOpportunityQuotationSection({
   const [acceptanceQuotationId, setAcceptanceQuotationId] = useState(null);
   const [reopenQuotationId, setReopenQuotationId] = useState(null);
   const [reopenReason, setReopenReason] = useState("");
+  const [analysisQuotationId, setAnalysisQuotationId] = useState(null);
   const approvalPanelRef = useRef(null);
   const approvalNoteRef = useRef(null);
 
@@ -354,11 +397,31 @@ export default function CRMOpportunityQuotationSection({
         projection_item: item.id,
         product_name:
           item.product_name_snapshot || item.product?.name || "Producto",
+        product_code:
+          quotationItem?.product_code_snapshot
+          ?? item.product?.code
+          ?? "",
         provider_name:
           item.provider_name_snapshot
           || item.product?.provider?.name
           || "Editorial",
-        grade_name: item.grade_name_snapshot || "Sin grado",
+        level_name:
+          quotationItem?.level_name_snapshot
+          ?? item.level_name_snapshot
+          ?? "Sin nivel",
+        area_name:
+          quotationItem?.area_name_snapshot
+          ?? item.area_name_snapshot
+          ?? "Sin área",
+        grade_name:
+          quotationItem?.grade_name_snapshot
+          ?? item.grade_name_snapshot
+          ?? "Sin grado",
+        commercial_line:
+          quotationItem?.commercial_line
+          ?? item.commercial_line
+          ?? "other",
+        reading_month: String(quotationItem?.reading_month ?? ""),
         quantity: String(
           quotationItem?.quantity ?? item.quantity ?? 1,
         ),
@@ -369,8 +432,30 @@ export default function CRMOpportunityQuotationSection({
         parent_price: String(
           quotationItem?.parent_price ?? item.unit_price ?? "0.00",
         ),
-        school_commission: String(
-          quotationItem?.school_commission ?? "0.00",
+        supplier_cost: String(quotationItem?.supplier_cost ?? ""),
+        commission_mode:
+          quotationItem?.commission_mode ?? "per_unit",
+        commission_amount: String(
+          quotationItem?.commission_input_amount ?? "0.00",
+        ),
+        commercial_margin_unit: String(
+          quotationItem?.commercial_margin_unit ?? "",
+        ),
+        commercial_margin_total: String(
+          quotationItem?.commercial_margin_total ?? "",
+        ),
+        commercial_margin_percent: String(
+          quotationItem?.commercial_margin_percent ?? "",
+        ),
+        profitability_band:
+          quotationItem?.profitability_band ?? "unclassified",
+        profitability_band_display:
+          quotationItem?.profitability_band_display ?? "Sin clasificar",
+        max_green_discount_percent: String(
+          quotationItem?.max_green_discount_percent ?? "",
+        ),
+        green_discount_headroom_points: String(
+          quotationItem?.green_discount_headroom_points ?? "",
         ),
         price_year_snapshot:
           quotationItem?.price_year_snapshot ?? item.price_year_snapshot,
@@ -414,7 +499,9 @@ export default function CRMOpportunityQuotationSection({
     const invalidItem = draftItems.find((item) => {
       const discount = Number(item.school_discount_percent);
       const parentPrice = Number(item.parent_price);
-      const commission = Number(item.school_commission);
+      const readingMonth =
+        item.reading_month === "" ? null : Number(item.reading_month);
+      const commission = Number(item.commission_amount || 0);
 
       return (
         !Number.isFinite(discount)
@@ -422,14 +509,24 @@ export default function CRMOpportunityQuotationSection({
         || discount > 100
         || !Number.isFinite(parentPrice)
         || parentPrice < 0
-        || !Number.isFinite(commission)
-        || commission < 0
+        || (
+          readingMonth !== null
+          && (
+            !Number.isInteger(readingMonth)
+            || readingMonth < 1
+            || readingMonth > 12
+          )
+        )
+        || (
+          canViewFinancials
+          && (!Number.isFinite(commission) || commission < 0)
+        )
       );
     });
 
     if (invalidItem) {
       setErrorMessage(
-        "Revisa descuentos, precio PPFF y comisión antes de guardar.",
+        "Revisa el descuento, mes de lectura e incentivo antes de guardar.",
       );
       return;
     }
@@ -439,12 +536,25 @@ export default function CRMOpportunityQuotationSection({
 
     try {
       const payload = {
-        items: draftItems.map((item) => ({
-          projection_item: item.projection_item,
-          school_discount_percent: item.school_discount_percent,
-          parent_price: item.parent_price,
-          school_commission: item.school_commission,
-        })),
+        items: draftItems.map((item) => {
+          const quotationItem = {
+            projection_item: item.projection_item,
+            school_discount_percent: item.school_discount_percent,
+            parent_price: item.parent_price,
+            reading_month:
+              item.reading_month === ""
+                ? null
+                : Number(item.reading_month),
+          };
+
+          if (canViewFinancials) {
+            quotationItem.commission_mode = item.commission_mode;
+            quotationItem.commission_amount =
+              item.commission_amount || "0.00";
+          }
+
+          return quotationItem;
+        }),
         notes: draftNotes.trim(),
       };
 
