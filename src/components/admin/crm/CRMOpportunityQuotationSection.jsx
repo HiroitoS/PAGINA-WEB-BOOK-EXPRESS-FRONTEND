@@ -1149,6 +1149,111 @@ export default function CRMOpportunityQuotationSection({
                           </div>
                         </div>
                       ) : null}
+
+                      <details className="mt-4 border-t border-gray-200 pt-3">
+                        <summary className="cursor-pointer list-none rounded-xl bg-gray-50 px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-700 transition hover:bg-gray-100">
+                          Ver rentabilidad por producto ({quotation.items?.length || 0})
+                        </summary>
+
+                        <div className="mt-3 space-y-3">
+                          {(quotation.items || []).map((item) => (
+                            <article
+                              key={item.id}
+                              className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                            >
+                              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                                <div className="min-w-0">
+                                  <p className="break-words text-sm font-black text-gray-950">
+                                    {item.product_name_snapshot}
+                                  </p>
+                                  <p className="mt-1 text-xs font-bold text-gray-500">
+                                    {item.provider_name_snapshot} · {item.commercial_line_display || "Sin línea comercial"} · {item.quantity} unidad(es)
+                                  </p>
+                                </div>
+
+                                <span
+                                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ring-1 ${profitabilityBadgeClass(
+                                    item.profitability_band,
+                                  )}`}
+                                >
+                                  {item.profitability_band_display || "Sin clasificar"}
+                                </span>
+                              </div>
+
+                              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    P.IE unitario
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatCurrency(item.school_price)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Costo editorial
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatCurrency(item.supplier_cost)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Incentivo unitario
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatCurrency(item.school_commission)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Margen unitario
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatCurrency(item.commercial_margin_unit)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Margen proyectado
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatCurrency(item.commercial_margin_total)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Margen %
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatPercent(item.commercial_margin_percent)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Máximo para verde
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {item.max_green_discount_percent == null
+                                      ? "—"
+                                      : formatPercent(item.max_green_discount_percent)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Espacio de negociación
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {item.green_discount_headroom_points == null
+                                      ? "—"
+                                      : `${Number(item.green_discount_headroom_points).toFixed(2)} pt`}
+                                  </p>
+                                </div>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      </details>
                     </div>
                   ) : null}
 
