@@ -26,6 +26,7 @@ import {
 } from "../../../utils/navigationContext";
 
 const PAGE_SIZE = 100;
+const QUOTATION_SENT_STAGE_CODE = "cotizacion_enviada";
 
 function getErrorMessage(error, fallback) {
   const data = error?.response?.data;
@@ -363,10 +364,12 @@ function OpportunityCard({
   onDragEnd,
 }) {
   const isClosed = Boolean(opportunity.is_closed);
+  const isQuotationSentStage =
+    opportunity.stage?.code === QUOTATION_SENT_STAGE_CODE;
 
   return (
     <article
-      draggable={!isClosed && !moving}
+      draggable={!isClosed && !isQuotationSentStage && !moving}
       className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
       onDragStart={(event) => onDragStart(event, opportunity)}
       onDragEnd={onDragEnd}
@@ -447,21 +450,32 @@ function OpportunityCard({
 
         {!isClosed ? (
           <>
-            <select
-              aria-label="Mover oportunidad"
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:opacity-50"
-              disabled={moving}
-              value={opportunity.stage?.id || ""}
-              onChange={(event) =>
-                onMove(opportunity, Number(event.target.value))
-              }
-            >
-              {openStages.map((stage) => (
-                <option key={stage.id} value={stage.id}>
-                  {stage.name}
-                </option>
-              ))}
-            </select>
+            {isQuotationSentStage ? (
+              <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs leading-5 text-blue-900">
+                <span className="font-black">Etapa automática.</span>{" "}
+                Si el colegio solicita cambios, usa
+                {" "}
+                <span className="font-black">Reabrir negociación</span>
+                {" "}
+                desde la cotización; la oportunidad conserva este hito.
+              </div>
+            ) : (
+              <select
+                aria-label="Mover oportunidad"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:opacity-50"
+                disabled={moving}
+                value={opportunity.stage?.id || ""}
+                onChange={(event) =>
+                  onMove(opportunity, Number(event.target.value))
+                }
+              >
+                {openStages.map((stage) => (
+                  <option key={stage.id} value={stage.id}>
+                    {stage.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
             <button
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -781,7 +795,12 @@ export default function CRMOpportunitiesPage() {
   );
 
   const openStages = useMemo(
-    () => stages.filter((stage) => stage.category === "open"),
+    () =>
+      stages.filter(
+        (stage) =>
+          stage.category === "open"
+          && stage.code !== QUOTATION_SENT_STAGE_CODE,
+      ),
     [stages],
   );
 
@@ -819,6 +838,20 @@ export default function CRMOpportunitiesPage() {
       || targetStage.id === opportunity.stage?.id
       || movingId
     ) {
+      return;
+    }
+
+    if (targetStage.code === QUOTATION_SENT_STAGE_CODE) {
+      setErrorMessage(
+        "Cotización enviada se actualiza automáticamente al marcar una cotización como enviada.",
+      );
+      return;
+    }
+
+    if (opportunity.stage?.code === QUOTATION_SENT_STAGE_CODE) {
+      setErrorMessage(
+        "Una oportunidad con cotización enviada no retrocede manualmente. Si el colegio solicita cambios, usa Reabrir negociación desde la cotización.",
+      );
       return;
     }
 
@@ -921,7 +954,10 @@ export default function CRMOpportunitiesPage() {
     event.preventDefault();
     setDragOverStageId(null);
 
-    if (stage.category !== "open") {
+    if (
+      stage.category !== "open"
+      || stage.code === QUOTATION_SENT_STAGE_CODE
+    ) {
       return;
     }
 
@@ -1124,7 +1160,8 @@ export default function CRMOpportunitiesPage() {
                   opportunitiesByStage.get(stage.id) || [];
                 const isDragTarget =
                   dragOverStageId === stage.id
-                  && stage.category === "open";
+                  && stage.category === "open"
+                  && stage.code !== QUOTATION_SENT_STAGE_CODE;
 
                 return (
                   <section
@@ -1135,7 +1172,13 @@ export default function CRMOpportunitiesPage() {
                         : "border-gray-200 bg-gray-50"
                     }`}
                     onDragOver={(event) => {
-                      if (stage.category !== "open") return;
+                      if (
+                        stage.category !== "open"
+                        || stage.code === QUOTATION_SENT_STAGE_CODE
+                      ) {
+                        return;
+                      }
+
                       event.preventDefault();
                       event.dataTransfer.dropEffect = "move";
                       setDragOverStageId(stage.id);
@@ -1153,7 +1196,9 @@ export default function CRMOpportunitiesPage() {
                           {stage.name}
                         </p>
                         <p className="mt-1 text-xs text-gray-500">
-                          {categoryLabel(stage.category)}
+                          {stage.code === QUOTATION_SENT_STAGE_CODE
+                            ? "Automática al enviar cotización"
+                            : categoryLabel(stage.category)}
                         </p>
                       </div>
 
