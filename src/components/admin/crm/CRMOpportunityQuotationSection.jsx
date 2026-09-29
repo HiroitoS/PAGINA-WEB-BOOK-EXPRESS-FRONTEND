@@ -168,6 +168,7 @@ export default function CRMOpportunityQuotationSection({
   const [actionId, setActionId] = useState(null);
   const [approvalQuotationId, setApprovalQuotationId] = useState(null);
   const [approvalNote, setApprovalNote] = useState("");
+  const [acceptanceQuotationId, setAcceptanceQuotationId] = useState(null);
   const approvalPanelRef = useRef(null);
   const approvalNoteRef = useRef(null);
 
@@ -503,14 +504,14 @@ export default function CRMOpportunityQuotationSection({
     try {
       await sendCRMOpportunityQuotation(opportunityId, quotation.id);
       setSuccessMessage(
-        `Envío de la cotización v${quotation.version} registrado correctamente.`,
+        `Cotización v${quotation.version} marcada como enviada correctamente.`,
       );
       refreshWorkspace();
     } catch (error) {
       setErrorMessage(
         getErrorMessage(
           error,
-          "No se pudo registrar el envío de la cotización.",
+          "No se pudo marcar la cotización como enviada.",
         ),
       );
     } finally {
@@ -524,6 +525,7 @@ export default function CRMOpportunityQuotationSection({
 
     try {
       await acceptCRMOpportunityQuotation(opportunityId, quotation.id);
+      setAcceptanceQuotationId(null);
       setSuccessMessage(
         `Aceptación del colegio registrada para la cotización v${quotation.version}.`,
       );
@@ -708,7 +710,7 @@ export default function CRMOpportunityQuotationSection({
                       && !canApproveDiscount ? (
                         <span className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800">
                           <FaShieldAlt />
-                          Pendiente de aprobación comercial
+                          Pendiente de aprobación de descuento
                         </span>
                       ) : null}
 
@@ -720,14 +722,20 @@ export default function CRMOpportunityQuotationSection({
                           className="inline-flex items-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
                         >
                           <FaPaperPlane />
-                          Registrar envío
+                          Marcar como enviada
                         </button>
                       ) : null}
 
                       {quotation.status === "sent" ? (
                         <button
                           type="button"
-                          onClick={() => handleAcceptQuotation(quotation)}
+                          onClick={() =>
+                            setAcceptanceQuotationId(
+                              acceptanceQuotationId === quotation.id
+                                ? null
+                                : quotation.id,
+                            )
+                          }
                           disabled={busy}
                           className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700 disabled:opacity-50"
                         >
@@ -784,6 +792,56 @@ export default function CRMOpportunityQuotationSection({
                     </div>
                   </div>
 
+                  {quotation.status === "draft" ? (
+                    <div className="mx-4 mb-4 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs leading-5 text-gray-600">
+                      <span className="font-black text-gray-800">
+                        Marcar como enviada
+                      </span>{" "}
+                      solo registra que esta versión ya fue enviada al colegio.
+                      No envía correo ni WhatsApp automáticamente.
+                    </div>
+                  ) : null}
+
+                  {acceptanceQuotationId === quotation.id
+                  && quotation.status === "sent" ? (
+                    <div className="mx-4 mb-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700">
+                          <FaCheckCircle />
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-950">
+                            ¿Registrar aceptación de la cotización v{quotation.version}?
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-gray-600">
+                            Se registrará que el colegio aceptó esta versión.
+                            Las demás cotizaciones abiertas de la oportunidad
+                            pasarán a estado Reemplazada.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setAcceptanceQuotationId(null)}
+                          disabled={busy}
+                          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 disabled:opacity-50"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAcceptQuotation(quotation)}
+                          disabled={busy}
+                          className="rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {busy ? "Registrando..." : "Confirmar aceptación"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
                   {referencePrice ? (
                     <div className="mx-4 mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                       <FaExclamationTriangle className="mt-0.5 shrink-0" />
@@ -808,7 +866,7 @@ export default function CRMOpportunityQuotationSection({
                           Descuento superior al 20 %
                         </p>
                         <p className="mt-1 leading-5">
-                          Esta versión necesita aprobación comercial antes de
+                          Esta versión necesita aprobación del descuento antes de
                           poder marcarse como enviada.
                         </p>
                       </div>
@@ -827,7 +885,7 @@ export default function CRMOpportunityQuotationSection({
                         </div>
                         <div>
                           <p className="font-black text-gray-950">
-                            Sustento de aprobación comercial
+                            Sustento de aprobación de descuento
                           </p>
                           <p className="mt-1 text-xs leading-5 text-gray-600">
                             Registra el motivo o condición que autoriza este
@@ -890,7 +948,7 @@ export default function CRMOpportunityQuotationSection({
                       </p>
                       <p>
                         <span className="font-black text-gray-800">
-                          Aprobación:
+                          Aprobación de descuento:
                         </span>{" "}
                         {quotation.discount_approval_status_display
                           || "No requerida"}

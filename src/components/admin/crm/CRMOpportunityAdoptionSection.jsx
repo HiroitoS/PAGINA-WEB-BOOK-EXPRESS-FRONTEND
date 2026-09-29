@@ -261,7 +261,7 @@ export default function CRMOpportunityAdoptionSection({
       setErrorMessage(
         getErrorMessage(
           error,
-          "No se pudo confirmar la adopción.",
+          "No se pudo registrar la adopción.",
         ),
       );
     } finally {
@@ -291,8 +291,9 @@ export default function CRMOpportunityAdoptionSection({
               Adopción
             </h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
-              Confirma la adopción únicamente cuando el colegio haya aceptado
-              formalmente la propuesta comercial.
+              Registra la adopción formal después de que el colegio haya
+              aceptado la cotización. Este paso identifica al contacto que
+              autorizó el acuerdo y cierra la oportunidad como ganada.
             </p>
           </div>
 
@@ -304,7 +305,7 @@ export default function CRMOpportunityAdoptionSection({
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               <FaFileSignature />
-              Confirmar adopción
+              Registrar adopción
             </button>
           ) : null}
         </div>
@@ -321,8 +322,22 @@ export default function CRMOpportunityAdoptionSection({
               Aún no hay una cotización aceptada
             </p>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-500">
-              Primero marca la cotización como enviada y luego como aceptada.
-              La adopción se confirma después de ese paso.
+              Primero marca la cotización como enviada y registra la
+              aceptación del colegio. Luego podrás registrar la adopción.
+            </p>
+          </div>
+        ) : null}
+
+        {!currentAdoption
+        && acceptedQuotations.length > 0
+        && contacts.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-black">
+              Falta registrar un contacto del colegio
+            </p>
+            <p className="mt-1 leading-6">
+              Registra al director, promotor o responsable que autorizó la
+              adopción antes de continuar.
             </p>
           </div>
         ) : null}
@@ -384,20 +399,6 @@ export default function CRMOpportunityAdoptionSection({
                 </div>
               ))}
             </div>
-          </div>
-        ) : null}
-
-        {!currentAdoption
-        && acceptedQuotations.length > 0
-        && contacts.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <p className="font-black">
-              Falta registrar un contacto del colegio
-            </p>
-            <p className="mt-1 leading-6">
-              La adopción necesita identificar al directivo o contacto que
-              autorizó la propuesta.
-            </p>
           </div>
         ) : null}
 
@@ -479,7 +480,7 @@ export default function CRMOpportunityAdoptionSection({
                   CRM comercial
                 </p>
                 <h3 className="mt-1 text-2xl font-black text-gray-950">
-                  Confirmar adopción
+                  Registrar adopción
                 </h3>
                 <p className="mt-1 text-sm text-gray-500">
                   {opportunity.school?.name || "Colegio"} ·{" "}
@@ -573,9 +574,9 @@ export default function CRMOpportunityAdoptionSection({
               </div>
 
               <div className="mt-5 rounded-2xl bg-gray-50 px-4 py-3 text-xs leading-5 text-gray-600 ring-1 ring-gray-200">
-                Al confirmar, los productos, cantidades y condiciones de la
-                cotización aceptada quedarán registrados como evidencia de la
-                adopción y la oportunidad pasará a cierre ganado.
+                Al registrar la adopción, los productos, cantidades y
+                condiciones de la cotización aceptada quedarán como evidencia
+                del acuerdo y la oportunidad pasará a cierre ganado.
               </div>
             </div>
 
@@ -595,7 +596,7 @@ export default function CRMOpportunityAdoptionSection({
                 className="inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <FaCheckCircle />
-                {saving ? "Confirmando..." : "Confirmar adopción"}
+                {saving ? "Confirmando..." : "Registrar adopción"}
               </button>
             </div>
           </section>
