@@ -330,6 +330,16 @@ export default function CRMQuotationPrintPage() {
                 {opportunity.primary_contact?.position || "No registrado"}
               </p>
               <p>
+                <span className="font-black text-gray-950">Teléfono:</span>{" "}
+                {opportunity.primary_contact?.whatsapp
+                  || opportunity.primary_contact?.phone
+                  || "No registrado"}
+              </p>
+              <p>
+                <span className="font-black text-gray-950">Correo:</span>{" "}
+                {opportunity.primary_contact?.email || "No registrado"}
+              </p>
+              <p>
                 <span className="font-black text-gray-950">Asesor:</span>{" "}
                 {formatOwner(opportunity.owner)}
               </p>
