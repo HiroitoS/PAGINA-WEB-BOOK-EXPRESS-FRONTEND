@@ -596,7 +596,7 @@ export default function CRMOpportunityAdoptionSection({
                 className="inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <FaCheckCircle />
-                {saving ? "Confirmando..." : "Registrar adopción"}
+                {saving ? "Registrando..." : "Registrar adopción"}
               </button>
             </div>
           </section>
