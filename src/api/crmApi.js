@@ -531,6 +531,19 @@ export async function acceptCRMOpportunityQuotation(
   return response.data;
 }
 
+export async function reopenCRMOpportunityQuotationNegotiation(
+  opportunityId,
+  quotationId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/quotations/${quotationId}/reopen-negotiation/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function getCRMOpportunityAdoptions(opportunityId) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/adoptions/`,

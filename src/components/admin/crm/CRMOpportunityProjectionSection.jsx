@@ -293,6 +293,27 @@ export default function CRMOpportunityProjectionSection({
     };
   }, [opportunityId]);
 
+  useEffect(() => {
+    if (!panelOpen) {
+      return undefined;
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape" && !saving) {
+        setPanelOpen(false);
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [panelOpen, saving]);
+
   const levelOptions = useMemo(() => {
     const seen = new Set();
     const options = [];
@@ -881,8 +902,15 @@ export default function CRMOpportunityProjectionSection({
       </section>
 
       {panelOpen ? (
-        <div className="fixed inset-0 z-50 flex justify-end bg-gray-950/55">
-          <div className="flex h-full w-full max-w-4xl flex-col bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex justify-end bg-gray-950/55 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="Cerrar proyección"
+            className="absolute inset-0 cursor-default"
+            onClick={closeEditor}
+          />
+
+          <div className="relative z-10 flex h-full w-full max-w-4xl flex-col bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 sm:px-6">
               <div>
                 <p className="text-xs font-black uppercase tracking-wide text-red-700">

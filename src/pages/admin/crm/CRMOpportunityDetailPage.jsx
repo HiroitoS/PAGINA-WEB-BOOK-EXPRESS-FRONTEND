@@ -416,6 +416,9 @@ export default function CRMOpportunityDetailPage() {
               onOpportunityChanged={refreshWorkspace}
               onGoToAdoption={() => setActiveTab("adoption")}
               onGoToProjection={() => setActiveTab("projection")}
+              hasCurrentAdoption={adoptions.some(
+                (adoption) => adoption.is_current,
+              )}
             />
           ) : null}
 

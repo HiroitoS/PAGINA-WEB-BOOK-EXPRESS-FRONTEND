@@ -9,6 +9,7 @@ import {
   FaPlus,
   FaShieldAlt,
   FaTimes,
+  FaUndoAlt,
 } from "react-icons/fa";
 
 import { useAuth } from "../../../hooks/useAuth";
@@ -19,6 +20,7 @@ import {
   createCRMOpportunityQuotationFromProjection,
   getCRMOpportunityProjection,
   getCRMOpportunityQuotations,
+  reopenCRMOpportunityQuotationNegotiation,
   sendCRMOpportunityQuotation,
   updateCRMOpportunityQuotationDraft,
 } from "../../../api/crmApi";
@@ -149,6 +151,7 @@ export default function CRMOpportunityQuotationSection({
   onOpportunityChanged,
   onGoToAdoption,
   onGoToProjection,
+  hasCurrentAdoption = false,
 }) {
   const { hasPermission, hasRole } = useAuth();
   const canApproveDiscount =
@@ -169,6 +172,8 @@ export default function CRMOpportunityQuotationSection({
   const [approvalQuotationId, setApprovalQuotationId] = useState(null);
   const [approvalNote, setApprovalNote] = useState("");
   const [acceptanceQuotationId, setAcceptanceQuotationId] = useState(null);
+  const [reopenQuotationId, setReopenQuotationId] = useState(null);
+  const [reopenReason, setReopenReason] = useState("");
   const approvalPanelRef = useRef(null);
   const approvalNoteRef = useRef(null);
 
@@ -272,6 +277,14 @@ export default function CRMOpportunityQuotationSection({
           ),
       ) || null,
     [projection?.id, quotations],
+  );
+
+  const acceptedQuotation = useMemo(
+    () =>
+      quotations.find(
+        (quotation) => quotation.status === "accepted",
+      ) || null,
+    [quotations],
   );
 
   const draftTotals = useMemo(
@@ -542,6 +555,43 @@ export default function CRMOpportunityQuotationSection({
     }
   }
 
+  async function handleReopenNegotiation(quotation) {
+    const reason = reopenReason.trim();
+
+    if (!reason) {
+      setErrorMessage(
+        "Registra el motivo por el que se reabre la negociación.",
+      );
+      return;
+    }
+
+    setActionId(quotation.id);
+    setErrorMessage("");
+
+    try {
+      await reopenCRMOpportunityQuotationNegotiation(
+        opportunityId,
+        quotation.id,
+        { reason },
+      );
+      setReopenQuotationId(null);
+      setReopenReason("");
+      setSuccessMessage(
+        `Negociación reabierta desde la cotización v${quotation.version}. Ya puedes actualizar la Proyección o crear una nueva cotización.`,
+      );
+      refreshWorkspace();
+    } catch (error) {
+      setErrorMessage(
+        getErrorMessage(
+          error,
+          "No se pudo reabrir la negociación.",
+        ),
+      );
+    } finally {
+      setActionId(null);
+    }
+  }
+
   if (loading) {
     return (
       <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -569,7 +619,7 @@ export default function CRMOpportunityQuotationSection({
             </p>
           </div>
 
-          {!editableDraft ? (
+          {!editableDraft && !acceptedQuotation ? (
             <button
               type="button"
               onClick={() => openQuotationDrawer()}
@@ -581,6 +631,19 @@ export default function CRMOpportunityQuotationSection({
             </button>
           ) : null}
         </div>
+
+        {acceptedQuotation && !hasCurrentAdoption ? (
+          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <p className="font-black">
+              Hay una cotización aceptada
+            </p>
+            <p className="mt-1 leading-6">
+              Si el colegio mantiene el acuerdo, continúa a Adopción. Si pidió
+              cambios antes de formalizarla, reabre la negociación y conserva
+              esta versión como historial.
+            </p>
+          </div>
+        ) : null}
 
         {successMessage ? (
           <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
@@ -615,6 +678,9 @@ export default function CRMOpportunityQuotationSection({
                 quotation.requires_discount_approval
                 && quotation.discount_approval_status !== "approved";
               const busy = actionId === quotation.id;
+              const statusLabel = quotation.reopened_at
+                ? "Aceptación reabierta"
+                : quotation.status_display || quotation.status;
 
               return (
                 <article
@@ -636,7 +702,7 @@ export default function CRMOpportunityQuotationSection({
                               quotation.status,
                             )}`}
                           >
-                            {quotation.status_display || quotation.status}
+                            {statusLabel}
                           </span>
                           {quotation.source_projection?.version ? (
                             <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-600">
@@ -744,6 +810,26 @@ export default function CRMOpportunityQuotationSection({
                         </button>
                       ) : null}
 
+                      {quotation.status === "accepted"
+                      && !hasCurrentAdoption ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const isClosing =
+                              reopenQuotationId === quotation.id;
+                            setReopenQuotationId(
+                              isClosing ? null : quotation.id,
+                            );
+                            setReopenReason("");
+                          }}
+                          disabled={busy}
+                          className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
+                        >
+                          <FaUndoAlt />
+                          Reabrir negociación
+                        </button>
+                      ) : null}
+
                       {quotation.status === "accepted" && onGoToAdoption ? (
                         <button
                           type="button"
@@ -751,7 +837,7 @@ export default function CRMOpportunityQuotationSection({
                           className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
                         >
                           <FaCheckCircle />
-                          Ir a adopción
+                          {hasCurrentAdoption ? "Ver adopción" : "Ir a adopción"}
                         </button>
                       ) : null}
                     </div>
@@ -791,6 +877,79 @@ export default function CRMOpportunityQuotationSection({
                       </p>
                     </div>
                   </div>
+
+                  {reopenQuotationId === quotation.id
+                  && quotation.status === "accepted"
+                  && !hasCurrentAdoption ? (
+                    <div className="mx-4 mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-900">
+                          <FaUndoAlt />
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-950">
+                            Reabrir negociación
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-gray-600">
+                            La cotización v{quotation.version} conservará su
+                            aceptación como historial, pero dejará de ser la
+                            versión vigente. Luego podrás modificar la
+                            Proyección si cambió población/productos o crear
+                            una nueva cotización si solo cambian condiciones.
+                          </p>
+                        </div>
+                      </div>
+
+                      <label
+                        htmlFor={`reopen-reason-${quotation.id}`}
+                        className="mt-4 block text-xs font-black uppercase tracking-wide text-gray-600"
+                      >
+                        Motivo de reapertura
+                      </label>
+                      <textarea
+                        id={`reopen-reason-${quotation.id}`}
+                        value={reopenReason}
+                        onChange={(event) => setReopenReason(event.target.value)}
+                        rows={3}
+                        disabled={busy}
+                        placeholder="Ej. El colegio modificó la población o solicita nuevas condiciones..."
+                        className="mt-2 w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:opacity-50"
+                      />
+
+                      <div className="mt-3 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReopenQuotationId(null);
+                            setReopenReason("");
+                          }}
+                          disabled={busy}
+                          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 disabled:opacity-50"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleReopenNegotiation(quotation)}
+                          disabled={busy || !reopenReason.trim()}
+                          className="rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {busy ? "Reabriendo..." : "Confirmar reapertura"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {quotation.reopened_at ? (
+                    <div className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
+                      <p className="font-black">
+                        Aceptación reabierta {formatDateTime(quotation.reopened_at)}
+                      </p>
+                      <p className="mt-1">
+                        {quotation.reopen_reason || "Sin motivo registrado."}
+                      </p>
+                    </div>
+                  ) : null}
 
                   {quotation.status === "draft" ? (
                     <div className="mx-4 mb-4 rounded-xl border border-gray-200 bg-white px-4 py-3 text-xs leading-5 text-gray-600">
