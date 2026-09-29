@@ -11,3 +11,10 @@ export const CRM_ACTIVITY_TYPES = [
   { value: "follow_up", label: "Seguimiento" },
   { value: "other", label: "Otro" },
 ];
+
+export function getCRMActivityTypeLabel(value) {
+  return (
+    CRM_ACTIVITY_TYPES.find((activityType) => activityType.value === value)
+      ?.label || ""
+  );
+}

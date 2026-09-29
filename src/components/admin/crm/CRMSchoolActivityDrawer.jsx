@@ -100,7 +100,13 @@ export default function CRMSchoolActivityDrawer({
   }, [drawerOpen, saving]);
 
   function openDrawer() {
-    setForm(createInitialForm());
+    const initialForm = createInitialForm();
+
+    if (openOpportunities.length === 1) {
+      initialForm.opportunity = String(openOpportunities[0].id);
+    }
+
+    setForm(initialForm);
     setErrorMessage("");
     setWarningMessage("");
     setDrawerOpen(true);

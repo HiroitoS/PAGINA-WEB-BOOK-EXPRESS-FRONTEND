@@ -31,6 +31,7 @@ import {
 import CRMSchoolActivityDrawer from "../../../components/admin/crm/CRMSchoolActivityDrawer";
 import SchoolEducationalServicesSection from "../../../components/admin/crm/SchoolEducationalServicesSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
+import { getCRMActivityTypeLabel } from "../../../utils/crmActivityTypes";
 import {
   buildNavigationState,
   resolveReturnContext,
@@ -219,6 +220,21 @@ function getWorkItemDate(workItem) {
   return item.remind_at;
 }
 
+function getWorkItemTypeLabel(workItem) {
+  if (workItem?.type === "event") {
+    return (
+      getCRMActivityTypeLabel(workItem.item?.event_type)
+      || "Evento"
+    );
+  }
+
+  if (workItem?.type === "task") {
+    return "Tarea";
+  }
+
+  return "Recordatorio";
+}
+
 function isPendingWorkItem(workItem) {
   const item = workItem?.item || {};
 
@@ -274,6 +290,9 @@ export default function CRMSchoolDetailPage() {
   const [opportunityError, setOpportunityError] = useState("");
   const [activityFilter, setActivityFilter] = useState("all");
   const [activeInfoTab, setActiveInfoTab] = useState("activity");
+  const [showAllActivities, setShowAllActivities] = useState(false);
+  const [showAllContacts, setShowAllContacts] = useState(false);
+  const [showAllWorkItems, setShowAllWorkItems] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [supportingWarning, setSupportingWarning] = useState("");
@@ -425,10 +444,22 @@ export default function CRMSchoolDetailPage() {
     );
   }, [activities, activityFilter]);
 
+  const displayedActivities = showAllActivities
+    ? filteredActivities
+    : filteredActivities.slice(0, 12);
+
+  const displayedContacts = showAllContacts
+    ? visibleContacts
+    : visibleContacts.slice(0, 4);
+
   const pendingWorkItems = useMemo(
     () => workItems.filter(isPendingWorkItem),
     [workItems],
   );
+
+  const displayedWorkItems = showAllWorkItems
+    ? pendingWorkItems
+    : pendingWorkItems.slice(0, 5);
 
   const activeSchoolCampaigns = useMemo(
     () =>
@@ -859,7 +890,10 @@ export default function CRMSchoolDetailPage() {
                           <button
                             key={filter.value}
                             type="button"
-                            onClick={() => setActivityFilter(filter.value)}
+                            onClick={() => {
+                              setActivityFilter(filter.value);
+                              setShowAllActivities(false);
+                            }}
                             className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
                               activityFilter === filter.value
                                 ? "bg-gray-950 text-white"
@@ -883,7 +917,7 @@ export default function CRMSchoolDetailPage() {
                       </div>
                       {filteredActivities.length > 0 ? (
                         <div className="space-y-3">
-                          {filteredActivities.slice(0, 12).map((activity) => (
+                          {displayedActivities.map((activity) => (
                             <article
                               key={activity.id}
                               className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
@@ -949,6 +983,20 @@ export default function CRMSchoolDetailPage() {
                               </div>
                             </article>
                           ))}
+
+                          {filteredActivities.length > 12 ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowAllActivities((current) => !current)
+                              }
+                              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-black text-gray-700 transition hover:bg-gray-50 hover:text-red-700"
+                            >
+                              {showAllActivities
+                                ? "Mostrar menos"
+                                : `Ver más (${filteredActivities.length - 12})`}
+                            </button>
+                          ) : null}
                         </div>
                       ) : (
                         <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-10 text-center">
@@ -1131,7 +1179,7 @@ export default function CRMSchoolDetailPage() {
 
                 {visibleContacts.length > 0 ? (
                   <div className="mt-4 space-y-3">
-                    {visibleContacts.slice(0, 4).map((contact) => (
+                    {displayedContacts.map((contact) => (
                       <Link
                         key={contact.id}
                         to={`/admin/crm/contactos/${contact.id}`}
@@ -1174,9 +1222,17 @@ export default function CRMSchoolDetailPage() {
                     ))}
 
                     {visibleContacts.length > 4 ? (
-                      <p className="text-center text-xs font-semibold text-gray-500">
-                        + {visibleContacts.length - 4} contacto(s) adicional(es)
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowAllContacts((current) => !current)
+                        }
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-black text-gray-700 transition hover:bg-gray-50 hover:text-red-700"
+                      >
+                        {showAllContacts
+                          ? "Mostrar menos"
+                          : `Ver todos (${visibleContacts.length})`}
+                      </button>
                     ) : null}
                   </div>
                 ) : (
@@ -1218,7 +1274,7 @@ export default function CRMSchoolDetailPage() {
 
                 {pendingWorkItems.length > 0 ? (
                   <div className="mt-4 space-y-3">
-                    {pendingWorkItems.slice(0, 5).map((workItem) => {
+                    {displayedWorkItems.map((workItem) => {
                       const isTask = workItem.type === "task";
                       const target = isTask
                         ? `/admin/workspace/tasks?task=${workItem.item?.id}&tab=info`
@@ -1242,7 +1298,11 @@ export default function CRMSchoolDetailPage() {
                             </div>
 
                             <div className="min-w-0">
-                              <p className="wrap-break-word text-sm font-black text-gray-950">
+                              <span className="inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
+                                {getWorkItemTypeLabel(workItem)}
+                              </span>
+
+                              <p className="mt-2 wrap-break-word text-sm font-black text-gray-950">
                                 {workItem.item?.title || "Acción programada"}
                               </p>
 
@@ -1260,9 +1320,17 @@ export default function CRMSchoolDetailPage() {
                     })}
 
                     {pendingWorkItems.length > 5 ? (
-                      <p className="text-center text-xs font-semibold text-gray-500">
-                        + {pendingWorkItems.length - 5} acción(es) adicional(es)
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowAllWorkItems((current) => !current)
+                        }
+                        className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-black text-gray-700 transition hover:bg-gray-50 hover:text-red-700"
+                      >
+                        {showAllWorkItems
+                          ? "Mostrar menos"
+                          : `Ver todas (${pendingWorkItems.length})`}
+                      </button>
                     ) : null}
                   </div>
                 ) : (
