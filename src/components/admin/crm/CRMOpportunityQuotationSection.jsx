@@ -1163,7 +1163,7 @@ export default function CRMOpportunityQuotationSection({
                             >
                               <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
                                 <div className="min-w-0">
-                                  <p className="break-words text-sm font-black text-gray-950">
+                                  <p className="wrap-break-word text-sm font-black text-gray-950">
                                     {item.product_name_snapshot}
                                   </p>
                                   <p className="mt-1 text-xs font-bold text-gray-500">
