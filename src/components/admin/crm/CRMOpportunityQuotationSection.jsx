@@ -1045,7 +1045,7 @@ export default function CRMOpportunityQuotationSection({
                           </p>
                         </div>
                         <span className="rounded-full bg-gray-950 px-3 py-1 text-xs font-black text-white">
-                          Margen {formatPercent(
+                          Margen sobre venta {formatPercent(
                             quotation.commercial_analysis.margin_percent,
                           )}
                         </span>
@@ -1094,12 +1094,15 @@ export default function CRMOpportunityQuotationSection({
                         </div>
                         <div className="rounded-xl bg-gray-50 p-3">
                           <p className="text-xs font-bold uppercase text-gray-500">
-                            Margen %
+                            Margen sobre venta (P.IE)
                           </p>
                           <p className="mt-1 font-black text-gray-950">
                             {formatPercent(
                               quotation.commercial_analysis.margin_percent,
                             )}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-gray-500">
+                            Margen comercial ÷ Venta P.IE
                           </p>
                         </div>
                       </div>
@@ -1183,6 +1186,22 @@ export default function CRMOpportunityQuotationSection({
                               <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                                 <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
                                   <p className="text-xs font-bold uppercase text-gray-500">
+                                    PVP unitario
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatCurrency(item.pvp)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Descuento I.E.
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {formatPercent(item.school_discount_percent)}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
                                     P.IE unitario
                                   </p>
                                   <p className="mt-1 font-black text-gray-950">
@@ -1223,10 +1242,13 @@ export default function CRMOpportunityQuotationSection({
                                 </div>
                                 <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
                                   <p className="text-xs font-bold uppercase text-gray-500">
-                                    Margen %
+                                    Margen sobre venta (P.IE)
                                   </p>
                                   <p className="mt-1 font-black text-gray-950">
                                     {formatPercent(item.commercial_margin_percent)}
+                                  </p>
+                                  <p className="mt-1 text-xs font-semibold text-gray-500">
+                                    Margen unitario ÷ P.IE
                                   </p>
                                 </div>
                                 <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
@@ -1852,7 +1874,7 @@ export default function CRMOpportunityQuotationSection({
                                 </div>
                                 <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
                                   <p className="text-xs font-bold uppercase text-gray-500">
-                                    Margen %
+                                    Margen sobre venta (P.IE)
                                   </p>
                                   <p className="mt-1 font-black text-gray-950">
                                     {formatPercent(
