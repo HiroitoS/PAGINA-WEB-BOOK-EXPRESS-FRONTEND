@@ -192,6 +192,13 @@ export default function CRMQuotationPrintPage() {
     [quotation],
   );
 
+  const showReadingMonth =
+    quotation?.commercial_line === "reading_plan"
+    || (
+      !quotation?.commercial_line
+      && documentRows.some((item) => item.readingMonth !== "—")
+    );
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
@@ -359,34 +366,36 @@ export default function CRMQuotationPrintPage() {
 
         <section className="mt-5">
           <div className="overflow-hidden rounded-2xl border border-gray-300">
-            <table className="w-full table-fixed border-collapse text-xs">
+            <table className="w-full table-auto border-collapse text-xs">
               <thead className="bg-gray-950 text-white">
                 <tr>
-                  <th className="w-[11%] px-2 py-3 text-center align-middle font-black">
+                  <th className="px-2 py-3 text-center align-middle font-black">
                     Editorial
                   </th>
-                  <th className="w-[8%] px-2 py-3 text-center align-middle font-black">
+                  <th className="px-2 py-3 text-center align-middle font-black">
                     Nivel
                   </th>
-                  <th className="w-[9%] px-2 py-3 text-center align-middle font-black">
+                  <th className="px-2 py-3 text-center align-middle font-black">
                     Área
                   </th>
-                  <th className="w-[9%] px-2 py-3 text-center align-middle font-black">
+                  <th className="px-2 py-3 text-center align-middle font-black">
                     Grado
                   </th>
-                  <th className="w-[9%] px-2 py-3 text-center align-middle font-black">
-                    Mes lectura
-                  </th>
-                  <th className="w-[10%] px-2 py-3 text-center align-middle font-black">
+                  {showReadingMonth ? (
+                    <th className="px-2 py-3 text-center align-middle font-black">
+                      Mes lectura
+                    </th>
+                  ) : null}
+                  <th className="px-2 py-3 text-center align-middle font-black">
                     Código
                   </th>
-                  <th className="w-[24%] px-2 py-3 text-center align-middle font-black">
+                  <th className="min-w-72 px-2 py-3 text-center align-middle font-black">
                     Producto
                   </th>
-                  <th className="w-[10%] px-2 py-3 text-center align-middle font-black">
+                  <th className="whitespace-nowrap px-2 py-3 text-center align-middle font-black">
                     PVP
                   </th>
-                  <th className="w-[10%] px-2 py-3 text-center align-middle font-black">
+                  <th className="whitespace-nowrap px-2 py-3 text-center align-middle font-black">
                     P.IE
                   </th>
                 </tr>
@@ -397,23 +406,33 @@ export default function CRMQuotationPrintPage() {
                     key={item.id}
                     className="border-t border-gray-200 align-top"
                   >
-                    <td className="px-2 py-3 font-bold text-gray-900">
+                    <td className="px-2 py-3 text-center font-bold text-gray-900">
                       {item.editorial}
                     </td>
-                    <td className="px-2 py-3 text-gray-700">{item.level}</td>
-                    <td className="px-2 py-3 text-gray-700">{item.area}</td>
-                    <td className="px-2 py-3 text-gray-700">{item.grade}</td>
-                    <td className="px-2 py-3 text-gray-700">
-                      {item.readingMonth}
+                    <td className="px-2 py-3 text-center text-gray-700">
+                      {item.level}
                     </td>
-                    <td className="px-2 py-3 text-gray-700">{item.code}</td>
-                    <td className="px-2 py-3 font-bold text-gray-950">
+                    <td className="px-2 py-3 text-center text-gray-700">
+                      {item.area}
+                    </td>
+                    <td className="px-2 py-3 text-center text-gray-700">
+                      {item.grade}
+                    </td>
+                    {showReadingMonth ? (
+                      <td className="px-2 py-3 text-center text-gray-700">
+                        {item.readingMonth}
+                      </td>
+                    ) : null}
+                    <td className="px-2 py-3 text-center text-gray-700">
+                      {item.code}
+                    </td>
+                    <td className="px-3 py-3 text-left font-bold leading-5 text-gray-950">
                       {item.product}
                     </td>
-                    <td className="px-2 py-3 text-right font-bold text-gray-900">
+                    <td className="whitespace-nowrap px-2 py-3 text-center font-bold text-gray-900">
                       {formatCurrency(item.pvp)}
                     </td>
-                    <td className="px-2 py-3 text-right font-black text-gray-950">
+                    <td className="whitespace-nowrap px-2 py-3 text-center font-black text-gray-950">
                       {formatCurrency(item.schoolPrice)}
                     </td>
                   </tr>
