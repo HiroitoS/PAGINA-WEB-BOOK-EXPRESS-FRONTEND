@@ -18,6 +18,16 @@ import {
   saveCRMOpportunityProjection,
 } from "../../../api/crmApi";
 
+const COMMERCIAL_LINES = [
+  { value: "school_text", label: "Texto escolar" },
+  { value: "reading_plan", label: "Plan lector" },
+];
+
+function commercialLineLabel(value) {
+  return COMMERCIAL_LINES.find((item) => item.value === value)?.label
+    || "Sin clasificar";
+}
+
 function formatCurrency(value) {
   const number = Number(value);
 
@@ -240,6 +250,7 @@ export default function CRMOpportunityProjectionSection({
   const [drafts, setDrafts] = useState([]);
   const [activeServiceId, setActiveServiceId] = useState("");
   const [activeGradeKey, setActiveGradeKey] = useState("");
+  const [commercialLine, setCommercialLine] = useState("school_text");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [panelError, setPanelError] = useState("");
@@ -382,6 +393,11 @@ export default function CRMOpportunityProjectionSection({
     setDrafts(nextDrafts);
     setActiveServiceId(firstServiceId ? String(firstServiceId) : "");
     setActiveGradeKey(nextDrafts[0]?.key || "");
+    setCommercialLine(
+      ["school_text", "reading_plan"].includes(projection?.commercial_line)
+        ? projection.commercial_line
+        : "school_text",
+    );
     setNotes(projection?.notes || "");
     setPanelError("");
     setProductTargetKey("");
@@ -457,6 +473,36 @@ export default function CRMOpportunityProjectionSection({
     );
   }
 
+  function handleCommercialLineChange(value) {
+    if (value === commercialLine) {
+      return;
+    }
+
+    const hasSelectedProducts = drafts.some(
+      (draft) => draft.products.length > 0,
+    );
+
+    if (
+      hasSelectedProducts
+      && !window.confirm(
+        "Cambiar la línea comercial quitará los productos seleccionados. "
+        + "La versión anterior seguirá en el historial cuando guardes.",
+      )
+    ) {
+      return;
+    }
+
+    setCommercialLine(value);
+    setDrafts((current) =>
+      current.map((draft) => ({
+        ...draft,
+        products: [],
+      })),
+    );
+    resetProductPicker();
+    setPanelError("");
+  }
+
   async function loadProductsForDraft(
     draft,
     searchValue = "",
@@ -473,6 +519,7 @@ export default function CRMOpportunityProjectionSection({
           grade: draft.gradeId,
           product_search: searchValue || undefined,
           editorial: editorialId || undefined,
+          commercial_line: commercialLine,
         },
       );
 
@@ -559,6 +606,7 @@ export default function CRMOpportunityProjectionSection({
           unitPrice: choice.unit_price,
           priceYear: choice.price_year,
           priceCampaign: choice.price_campaign,
+          commercialLine: choice.commercial_line,
           priceIsReference: Boolean(choice.price_is_reference),
         },
       ],
@@ -605,6 +653,7 @@ export default function CRMOpportunityProjectionSection({
     }
 
     const payload = {
+      commercial_line: commercialLine,
       grades: selectedDrafts.map((draft) => ({
         service: draft.serviceId,
         grade: draft.gradeId,
@@ -733,7 +782,16 @@ export default function CRMOpportunityProjectionSection({
 
         {projection ? (
           <>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 flex items-center gap-2">
+              <span className="rounded-full bg-gray-950 px-3 py-1 text-xs font-black text-white">
+                {commercialLineLabel(projection.commercial_line)}
+              </span>
+              <span className="text-xs font-semibold text-gray-500">
+                Línea comercial de la versión vigente
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                   Valor PVP proyectado
@@ -911,6 +969,38 @@ export default function CRMOpportunityProjectionSection({
                     {panelError}
                   </div>
                 ) : null}
+
+                <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                        Línea comercial
+                      </p>
+                      <p className="mt-1 text-sm font-black text-gray-950">
+                        Define qué tipo de propuesta estás proyectando.
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                        El catálogo se filtrará para evitar mezclar Texto escolar
+                        con Plan lector. Si cambias la línea, se generará una
+                        nueva versión al guardar.
+                      </p>
+                    </div>
+
+                    <select
+                      value={commercialLine}
+                      onChange={(event) =>
+                        handleCommercialLineChange(event.target.value)
+                      }
+                      className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-black text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 sm:w-48"
+                    >
+                      {COMMERCIAL_LINES.map((line) => (
+                        <option key={line.value} value={line.value}>
+                          {line.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
                 <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -1146,6 +1236,9 @@ export default function CRMOpportunityProjectionSection({
                                 <h3 className="mt-1 font-black text-gray-950">
                                   Productos para {activeDraft.gradeName}
                                 </h3>
+                                <p className="mt-1 text-xs font-bold text-gray-500">
+                                  {commercialLineLabel(commercialLine)}
+                                </p>
                               </div>
 
                               <button
