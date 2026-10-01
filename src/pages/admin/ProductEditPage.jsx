@@ -33,6 +33,11 @@ import {
 } from "../../api/adminApi";
 import { getDisplayName, getResults } from "../../utils/formatters";
 
+const COMMERCIAL_LINE_OPTIONS = [
+  { id: "school_text", name: "Texto escolar" },
+  { id: "reading_plan", name: "Plan lector" },
+];
+
 function getRelationId(value) {
   if (!value) return "";
 
@@ -54,6 +59,10 @@ function getInitialForm(product) {
     area: getRelationId(product.area),
     series: getRelationId(product.series),
     product_type: getRelationId(product.product_type),
+    commercial_line:
+      product.commercial_line === "other"
+        ? ""
+        : product.commercial_line || "",
     description: product.description || "",
     is_active: Boolean(product.is_active),
     is_featured: Boolean(product.is_featured),
@@ -218,6 +227,7 @@ export default function ProductEditPage() {
     area: "",
     series: "",
     product_type: "",
+    commercial_line: "",
     description: "",
     is_active: true,
     is_featured: false,
@@ -404,6 +414,13 @@ export default function ProductEditPage() {
       return;
     }
 
+    if (!["school_text", "reading_plan"].includes(form.commercial_line)) {
+      setError(
+        "Selecciona si el producto corresponde a Texto escolar o Plan lector.",
+      );
+      return;
+    }
+
     setSaving(true);
     setError("");
     setSuccessMessage("");
@@ -423,6 +440,7 @@ export default function ProductEditPage() {
       "product_type",
       normalizeNullableId(form.product_type)
     );
+    appendFormValue(payload, "commercial_line", form.commercial_line);
     appendFormValue(payload, "description", form.description.trim());
 
     payload.append("is_active", form.is_active ? "true" : "false");
@@ -912,6 +930,14 @@ export default function ProductEditPage() {
               value={form.product_type}
               onChange={handleChange}
               options={productTypes}
+            />
+
+            <SelectField
+              label="Línea comercial *"
+              name="commercial_line"
+              value={form.commercial_line}
+              onChange={handleChange}
+              options={COMMERCIAL_LINE_OPTIONS}
             />
           </div>
         </section>
