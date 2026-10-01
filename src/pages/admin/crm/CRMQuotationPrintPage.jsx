@@ -362,31 +362,31 @@ export default function CRMQuotationPrintPage() {
             <table className="w-full table-fixed border-collapse text-xs">
               <thead className="bg-gray-950 text-white">
                 <tr>
-                  <th className="w-[11%] px-2 py-3 text-left font-black">
+                  <th className="w-[11%] px-2 py-3 text-center align-middle font-black">
                     Editorial
                   </th>
-                  <th className="w-[8%] px-2 py-3 text-left font-black">
+                  <th className="w-[8%] px-2 py-3 text-center align-middle font-black">
                     Nivel
                   </th>
-                  <th className="w-[9%] px-2 py-3 text-left font-black">
+                  <th className="w-[9%] px-2 py-3 text-center align-middle font-black">
                     Área
                   </th>
-                  <th className="w-[9%] px-2 py-3 text-left font-black">
+                  <th className="w-[9%] px-2 py-3 text-center align-middle font-black">
                     Grado
                   </th>
-                  <th className="w-[9%] px-2 py-3 text-left font-black">
+                  <th className="w-[9%] px-2 py-3 text-center align-middle font-black">
                     Mes lectura
                   </th>
-                  <th className="w-[10%] px-2 py-3 text-left font-black">
+                  <th className="w-[10%] px-2 py-3 text-center align-middle font-black">
                     Código
                   </th>
-                  <th className="w-[24%] px-2 py-3 text-left font-black">
+                  <th className="w-[24%] px-2 py-3 text-center align-middle font-black">
                     Producto
                   </th>
-                  <th className="w-[10%] px-2 py-3 text-right font-black">
+                  <th className="w-[10%] px-2 py-3 text-center align-middle font-black">
                     PVP
                   </th>
-                  <th className="w-[10%] px-2 py-3 text-right font-black">
+                  <th className="w-[10%] px-2 py-3 text-center align-middle font-black">
                     P.IE
                   </th>
                 </tr>
