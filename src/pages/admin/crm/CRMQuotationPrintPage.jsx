@@ -324,6 +324,10 @@ function formatScheduleTime(value) {
 }
 
 function scheduleDateLabel(mode) {
+  if (!mode) {
+    return "Fecha de atención";
+  }
+
   if (mode === "fair") {
     return "Fecha de feria";
   }
