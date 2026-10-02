@@ -1161,6 +1161,11 @@ export default function CRMOpportunityQuotationSection({
                         <p className="mt-1 text-xs font-bold text-gray-500">
                           Creada {formatDateTime(quotation.created_at)}
                         </p>
+                        {quotation.internal_code ? (
+                          <p className="mt-1 text-xs font-bold text-gray-500">
+                            Código interno: {quotation.internal_code}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 
