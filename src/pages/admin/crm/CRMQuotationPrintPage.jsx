@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FaArrowLeft, FaPrint } from "react-icons/fa";
+import { FaPrint, FaTimes } from "react-icons/fa";
 import { useNavigate, useParams } from "react-router";
 
 import {
@@ -23,6 +23,139 @@ const MONTH_LABELS = {
   11: "Noviembre",
   12: "Diciembre",
 };
+
+const PRINT_STYLES = `
+  @page {
+    size: A4 landscape;
+    margin: 7mm;
+  }
+
+  @media print {
+    html,
+    body,
+    #root {
+      width: 297mm;
+      min-height: 210mm;
+      background: white !important;
+    }
+
+    body {
+      margin: 0 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .quotation-print-shell {
+      min-height: 0 !important;
+      padding: 0 !important;
+      background: white !important;
+    }
+
+    .quotation-print-page {
+      width: 100% !important;
+      max-width: none !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      zoom: 0.88;
+    }
+
+    .quotation-print-header {
+      gap: 14px !important;
+      padding-bottom: 7px !important;
+    }
+
+    .quotation-print-logo-wrap {
+      width: 76px !important;
+      height: 48px !important;
+    }
+
+    .quotation-print-logo {
+      max-height: 44px !important;
+    }
+
+    .quotation-print-company {
+      font-size: 13px !important;
+      line-height: 1.1 !important;
+    }
+
+    .quotation-print-company-meta {
+      margin-top: 2px !important;
+      font-size: 8px !important;
+    }
+
+    .quotation-print-title-block {
+      min-width: 145px !important;
+    }
+
+    .quotation-print-title {
+      font-size: 9px !important;
+    }
+
+    .quotation-print-section-grid {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 7px !important;
+      margin-top: 7px !important;
+    }
+
+    .quotation-print-card {
+      padding: 7px !important;
+      border-radius: 9px !important;
+    }
+
+    .quotation-print-card-title {
+      font-size: 7px !important;
+    }
+
+    .quotation-print-card-name {
+      margin-top: 2px !important;
+      font-size: 10px !important;
+      line-height: 1.1 !important;
+    }
+
+    .quotation-print-school-info,
+    .quotation-print-commercial-info {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 2px 10px !important;
+      margin-top: 4px !important;
+      font-size: 8px !important;
+      line-height: 1.15 !important;
+    }
+
+    .quotation-print-table-section {
+      margin-top: 7px !important;
+    }
+
+    .quotation-print-table {
+      font-size: 7.5px !important;
+    }
+
+    .quotation-print-table th {
+      padding: 4px 3px !important;
+      line-height: 1.05 !important;
+    }
+
+    .quotation-print-table td {
+      padding: 4px 3px !important;
+      line-height: 1.15 !important;
+    }
+
+    .quotation-print-footer {
+      margin-top: 6px !important;
+      padding-top: 4px !important;
+      font-size: 7px !important;
+      line-height: 1.15 !important;
+    }
+
+    .quotation-print-table thead {
+      display: table-header-group;
+    }
+
+    .quotation-print-table tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+  }
+`;
 
 function normalizeList(data) {
   if (Array.isArray(data)) {
@@ -199,6 +332,19 @@ export default function CRMQuotationPrintPage() {
       && documentRows.some((item) => item.readingMonth !== "—")
     );
 
+  function closePreview() {
+    window.close();
+
+    window.setTimeout(() => {
+      if (!window.closed) {
+        navigate(
+          `/admin/crm/oportunidades/${opportunityId}`,
+          { replace: true },
+        );
+      }
+    }, 120);
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
@@ -221,11 +367,11 @@ export default function CRMQuotationPrintPage() {
           </p>
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={closePreview}
             className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white"
           >
-            <FaArrowLeft />
-            Volver
+            <FaTimes />
+            Cerrar vista previa
           </button>
         </div>
       </div>
@@ -236,19 +382,17 @@ export default function CRMQuotationPrintPage() {
   const isDraft = quotation.status === "draft";
 
   return (
-    <div className="min-h-screen bg-gray-100 px-4 py-5 print:bg-white print:p-0">
-      <style>
-        {"@page { size: A4 landscape; margin: 10mm; } @media print { body { background: white !important; } }"}
-      </style>
+    <div className="quotation-print-shell min-h-screen bg-gray-100 px-4 py-5 print:bg-white print:p-0">
+      <style>{PRINT_STYLES}</style>
 
       <div className="mx-auto mb-4 flex w-full max-w-7xl items-center justify-between gap-3 print:hidden">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={closePreview}
           className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50"
         >
-          <FaArrowLeft />
-          Volver a la oportunidad
+          <FaTimes />
+          Cerrar vista previa
         </button>
 
         <button
@@ -261,28 +405,28 @@ export default function CRMQuotationPrintPage() {
         </button>
       </div>
 
-      <main className="mx-auto w-full max-w-7xl bg-white p-7 shadow-sm print:max-w-none print:p-0 print:shadow-none">
-        <header className="flex items-start justify-between gap-8 border-b-2 border-gray-950 pb-5">
+      <main className="quotation-print-page mx-auto w-full max-w-7xl bg-white p-7 shadow-sm print:max-w-none print:p-0 print:shadow-none">
+        <header className="quotation-print-header flex items-start justify-between gap-8 border-b-2 border-gray-950 pb-5">
           <div className="flex items-start gap-4">
-            <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-xl bg-white">
+            <div className="quotation-print-logo-wrap flex h-20 w-28 shrink-0 items-center justify-center rounded-xl bg-white">
               <img
                 src={logoBookExpress}
                 alt="Book Express"
-                className="max-h-16 w-auto object-contain"
+                className="quotation-print-logo max-h-16 w-auto object-contain"
               />
             </div>
             <div className="pt-1">
-              <p className="text-xl font-black leading-tight text-gray-950">
+              <p className="quotation-print-company text-xl font-black leading-tight text-gray-950">
                 Distribuidora y Comercializadora Book Express SAC
               </p>
-              <p className="mt-2 text-sm font-semibold text-gray-600">
+              <p className="quotation-print-company-meta mt-2 text-sm font-semibold text-gray-600">
                 RUC 20601658811 · Huancayo, Junín, Perú
               </p>
             </div>
           </div>
 
-          <div className="min-w-52 text-right">
-            <p className="text-sm font-black uppercase tracking-widest text-red-700">
+          <div className="quotation-print-title-block min-w-52 text-right">
+            <p className="quotation-print-title text-sm font-black uppercase tracking-widest text-red-700">
               Cotización comercial
             </p>
             <p className="mt-2 text-sm font-bold text-gray-700">
@@ -301,16 +445,16 @@ export default function CRMQuotationPrintPage() {
           </div>
         </header>
 
-        <section className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-gray-200 p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-red-700">
+        <section className="quotation-print-section-grid mt-5 grid gap-4 md:grid-cols-2">
+          <div className="quotation-print-card rounded-2xl border border-gray-200 p-4">
+            <p className="quotation-print-card-title text-xs font-black uppercase tracking-wide text-red-700">
               Institución educativa
             </p>
-            <p className="mt-1 text-lg font-black text-gray-950">
+            <p className="quotation-print-card-name mt-1 text-lg font-black text-gray-950">
               {opportunity.school?.name || quotation.school_name_snapshot}
             </p>
 
-            <div className="mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
+            <div className="quotation-print-school-info mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
               <p>
                 <span className="font-black text-gray-950">RUC:</span>{" "}
                 {school?.ruc || "No registrado"}
@@ -326,12 +470,12 @@ export default function CRMQuotationPrintPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-red-700">
+          <div className="quotation-print-card rounded-2xl border border-gray-200 p-4">
+            <p className="quotation-print-card-title text-xs font-black uppercase tracking-wide text-red-700">
               Atención comercial
             </p>
 
-            <div className="mt-2 grid gap-2 text-sm text-gray-700">
+            <div className="quotation-print-commercial-info mt-2 grid gap-2 text-sm text-gray-700">
               <p>
                 <span className="font-black text-gray-950">Contacto:</span>{" "}
                 {formatContact(opportunity.primary_contact)}
@@ -364,9 +508,9 @@ export default function CRMQuotationPrintPage() {
           </div>
         </section>
 
-        <section className="mt-5">
+        <section className="quotation-print-table-section mt-5">
           <div className="overflow-hidden rounded-2xl border border-gray-300">
-            <table className="w-full table-auto border-collapse text-xs">
+            <table className="quotation-print-table w-full table-auto border-collapse text-xs">
               <thead className="bg-gray-950 text-white">
                 <tr>
                   <th className="px-2 py-3 text-center align-middle font-black">
@@ -442,7 +586,7 @@ export default function CRMQuotationPrintPage() {
           </div>
         </section>
 
-        <footer className="mt-7 border-t border-gray-200 pt-4 text-xs leading-5 text-gray-500">
+        <footer className="quotation-print-footer mt-7 border-t border-gray-200 pt-4 text-xs leading-5 text-gray-500">
           <p>
             Cotización comercial preparada por Book Express para la institución educativa indicada.
           </p>
