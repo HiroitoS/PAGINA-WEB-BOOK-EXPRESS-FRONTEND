@@ -106,29 +106,26 @@ function negotiationStatus(item) {
   const available = Number(item.additional_discount_available_points);
   const recovery = Number(item.discount_recovery_required_points);
   const surplus = Number(item.green_margin_surplus_unit);
-  const maxDiscount = Number(item.max_green_discount_percent);
 
   if (Number.isFinite(available) && available > 0) {
     return {
-      label: `Puede dar +${available.toFixed(2)} pt`,
-      detail: `≈ ${formatCurrency(Math.max(surplus, 0))}/u · máximo ${formatPercent(maxDiscount)}`,
+      label: `Margen disponible: +${available.toFixed(2)} pt`,
+      detail: `Equivale a ${formatCurrency(Math.max(surplus, 0))} por unidad antes de salir de verde`,
       className: "text-emerald-700",
     };
   }
 
   if (Number.isFinite(recovery) && recovery > 0) {
     return {
-      label: `Debe recuperar ${recovery.toFixed(2)} pt`,
-      detail: `Faltan ${formatCurrency(Math.abs(Math.min(surplus, 0)))}/u · máximo ${formatPercent(maxDiscount)}`,
+      label: `Recuperar: ${recovery.toFixed(2)} pt`,
+      detail: `Faltan ${formatCurrency(Math.abs(Math.min(surplus, 0)))} por unidad para volver a verde`,
       className: "text-amber-800",
     };
   }
 
   return {
     label: "Sin margen adicional",
-    detail: Number.isFinite(maxDiscount)
-      ? `Máximo ${formatPercent(maxDiscount)}`
-      : "Sin cálculo disponible",
+    detail: "La cotización está justo en el límite calculado.",
     className: "text-gray-600",
   };
 }
@@ -573,6 +570,8 @@ export default function CRMOpportunityQuotationSection({
       const readingMonth =
         item.reading_month === "" ? null : Number(item.reading_month);
       const commission = Number(item.commission_amount || 0);
+      const supplierCost =
+        item.supplier_cost === "" ? null : Number(item.supplier_cost);
 
       return (
         !Number.isFinite(discount)
@@ -596,12 +595,17 @@ export default function CRMOpportunityQuotationSection({
           canViewFinancials
           && (!Number.isFinite(commission) || commission < 0)
         )
+        || (
+          canViewFinancials
+          && supplierCost !== null
+          && (!Number.isFinite(supplierCost) || supplierCost < 0)
+        )
       );
     });
 
     if (invalidItem) {
       setErrorMessage(
-        "Revisa el descuento e incentivo. En Plan lector, cada producto debe tener mes de lectura.",
+        "Revisa descuento, costo editorial e incentivo. En Plan lector, cada producto debe tener mes de lectura.",
       );
       return;
     }
@@ -627,6 +631,9 @@ export default function CRMOpportunityQuotationSection({
           };
 
           if (canViewFinancials) {
+            if (item.supplier_cost !== "") {
+              quotationItem.supplier_cost = item.supplier_cost;
+            }
             quotationItem.commission_mode = item.commission_mode;
             quotationItem.commission_amount =
               item.commission_amount || "0.00";
@@ -1146,7 +1153,7 @@ export default function CRMOpportunityQuotationSection({
                             )}
                           </p>
                           <p className="mt-1 text-xs text-gray-300">
-                            Margen comercial ÷ Venta P.IE
+                            Ganancia neta estimada ÷ Venta P.IE
                           </p>
                         </div>
                       </div>
@@ -1184,7 +1191,7 @@ export default function CRMOpportunityQuotationSection({
                         </div>
                         <div className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
                           <p className="text-xs font-bold uppercase text-gray-500">
-                            Margen comercial
+                            Ganancia neta estimada
                           </p>
                           <p className="mt-1 text-lg font-black text-gray-950">
                             {formatCurrency(
@@ -1297,7 +1304,7 @@ export default function CRMOpportunityQuotationSection({
                                 <th className="px-3 py-3 text-right font-black">Incentivo</th>
                                 <th className="px-3 py-3 text-right font-black">Ganancia neta/u</th>
                                 <th className="px-3 py-3 text-right font-black">Ganancia total</th>
-                                <th className="px-3 py-3 text-right font-black">Negociación</th>
+                                <th className="px-3 py-3 text-right font-black">Margen para negociar</th>
                                 <th className="px-3 py-3 text-center font-black">Estado</th>
                               </tr>
                             </thead>
@@ -1332,18 +1339,8 @@ export default function CRMOpportunityQuotationSection({
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
                                       {formatCurrency(item.school_price)}
                                     </td>
-                                    <td className="whitespace-nowrap px-3 py-3 text-right">
-                                      <p className="font-bold text-gray-900">
-                                        {formatCurrency(item.supplier_cost)}
-                                      </p>
-                                      <p className="mt-1 text-xs text-gray-500">
-                                        Equiv. desc.{" "}
-                                        {item.supplier_discount_equivalent_percent == null
-                                          ? "—"
-                                          : formatPercent(
-                                              item.supplier_discount_equivalent_percent,
-                                            )}
-                                      </p>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-gray-900">
+                                      {formatCurrency(item.supplier_cost)}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
                                       {formatCurrency(item.school_commission)}
@@ -1386,11 +1383,10 @@ export default function CRMOpportunityQuotationSection({
                         <p className="mt-2 text-xs leading-5 text-gray-500">
                           Cálculo principal: P.IE - costo editorial - incentivo =
                           ganancia neta por unidad. El descuento I.E. muestra
-                          también su importe en soles. “Equiv. desc.” traduce el
-                          costo registrado a un porcentaje del PVP para revisar
-                          si coincide con la condición negociada con la editorial.
-                          “Negociación” convierte el colchón en soles y en puntos
-                          porcentuales de descuento.
+                          porcentaje e importe en soles. “Margen para negociar”
+                          expresa el colchón disponible antes de salir de verde;
+                          no autoriza superar el descuento estándar del 20 %.
+                          Cualquier descuento mayor sigue requiriendo aprobación.
                         </p>
                       </details>
                     </div>
@@ -1913,14 +1909,39 @@ export default function CRMOpportunityQuotationSection({
                                 Condición interna
                               </p>
                               <p className="mt-1 text-xs leading-5 text-gray-500">
-                                El incentivo y el análisis de margen no se
-                                muestran al asesor ni en la cotización del
+                                El costo editorial real, los incentivos y la
+                                rentabilidad son datos internos de supervisión.
+                                No se muestran al asesor ni en la cotización del
                                 colegio.
                               </p>
                             </div>
                           </div>
 
-                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            <label className="text-xs font-bold text-gray-600">
+                              Costo editorial acordado
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.supplier_cost}
+                                onChange={(event) =>
+                                  updateDraftItem(
+                                    index,
+                                    "supplier_cost",
+                                    event.target.value,
+                                  )
+                                }
+                                placeholder="Ej. 29.40"
+                                className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                              />
+                              <span className="mt-1 block text-xs font-medium leading-4 text-gray-500">
+                                Ingrese el costo real acordado con la editorial.
+                                Si ya existe una cotización, se conserva el costo
+                                guardado hasta que supervisión lo cambie.
+                              </span>
+                            </label>
+
                             <label className="text-xs font-bold text-gray-600">
                               Modalidad del incentivo
                               <select
