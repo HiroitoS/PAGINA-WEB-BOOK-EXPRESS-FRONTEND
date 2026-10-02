@@ -74,80 +74,80 @@ const PRINT_STYLES = `
     }
 
     .quotation-print-logo-wrap {
-      width: 96px !important;
-      height: 62px !important;
+      width: 112px !important;
+      height: 72px !important;
     }
 
     .quotation-print-logo {
-      max-height: 58px !important;
+      max-height: 68px !important;
     }
 
     .quotation-print-company {
-      font-size: 17px !important;
+      font-size: 20px !important;
       line-height: 1.15 !important;
     }
 
     .quotation-print-company-meta {
-      margin-top: 4px !important;
-      font-size: 9.5px !important;
+      margin-top: 5px !important;
+      font-size: 10.5px !important;
     }
 
     .quotation-print-title-block {
-      min-width: 190px !important;
+      min-width: 205px !important;
     }
 
     .quotation-print-title {
-      font-size: 11px !important;
+      font-size: 13px !important;
     }
 
     .quotation-print-section-grid {
       grid-template-columns: 1fr 1fr !important;
-      gap: 10px !important;
-      margin-top: 10px !important;
+      gap: 12px !important;
+      margin-top: 12px !important;
     }
 
     .quotation-print-card {
-      padding: 10px !important;
+      padding: 12px !important;
       border-radius: 10px !important;
     }
 
     .quotation-print-card-title {
-      font-size: 8.5px !important;
+      font-size: 9.5px !important;
     }
 
     .quotation-print-card-name {
-      margin-top: 3px !important;
-      font-size: 12px !important;
+      margin-top: 4px !important;
+      font-size: 14px !important;
       line-height: 1.15 !important;
     }
 
     .quotation-print-school-info,
     .quotation-print-commercial-info {
       grid-template-columns: 1fr 1fr !important;
-      gap: 3px 12px !important;
-      margin-top: 5px !important;
-      font-size: 9px !important;
-      line-height: 1.25 !important;
+      gap: 4px 14px !important;
+      margin-top: 6px !important;
+      font-size: 10.2px !important;
+      line-height: 1.3 !important;
     }
 
     .quotation-print-table-section {
-      margin-top: 10px !important;
+      margin-top: 12px !important;
     }
 
     .quotation-print-table {
       width: 100% !important;
       table-layout: fixed !important;
-      font-size: 8.8px !important;
+      font-size: 10.2px !important;
     }
 
     .quotation-print-table th {
-      padding: 6px 4px !important;
-      line-height: 1.15 !important;
+      padding: 8px 5px !important;
+      line-height: 1.2 !important;
     }
 
     .quotation-print-table td {
-      padding: 6px 4px !important;
-      line-height: 1.25 !important;
+      padding: 7px 5px !important;
+      line-height: 1.28 !important;
       overflow-wrap: anywhere;
     }
 
@@ -185,9 +185,9 @@ const PRINT_STYLES = `
 
     .quotation-print-footer {
       margin-top: auto !important;
-      padding-top: 7px !important;
-      font-size: 8px !important;
-      line-height: 1.2 !important;
+      padding-top: 9px !important;
+      font-size: 8.8px !important;
+      line-height: 1.25 !important;
     }
 
     .quotation-print-table thead {
