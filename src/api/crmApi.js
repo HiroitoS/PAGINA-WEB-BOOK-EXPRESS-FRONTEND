@@ -471,6 +471,18 @@ export async function getCRMOpportunityQuotations(opportunityId) {
   return response.data;
 }
 
+export async function previewCRMOpportunityQuotationFinancials(
+  opportunityId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/quotations/financial-preview/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function createCRMOpportunityQuotationFromProjection(
   opportunityId,
   payload,
