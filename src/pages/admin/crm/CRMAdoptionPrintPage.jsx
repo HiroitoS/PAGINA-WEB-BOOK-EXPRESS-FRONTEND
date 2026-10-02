@@ -74,12 +74,14 @@ const PRINT_STYLES = `
     }
 
     .adoption-print-logo-wrap {
-      width: 112px !important;
+      width: 120px !important;
       height: 72px !important;
     }
 
     .adoption-print-logo {
+      width: 112px !important;
       max-height: 68px !important;
+      object-fit: contain !important;
     }
 
     .adoption-print-company {
@@ -101,8 +103,8 @@ const PRINT_STYLES = `
     }
 
     .adoption-print-section-grid {
-      grid-template-columns: 1fr 1fr !important;
-      gap: 12px !important;
+      grid-template-columns: 1.15fr 1.15fr 0.7fr !important;
+      gap: 10px !important;
       margin-top: 12px !important;
     }
 
@@ -121,12 +123,33 @@ const PRINT_STYLES = `
       line-height: 1.15 !important;
     }
 
-    .adoption-print-info-grid {
-      grid-template-columns: 1fr 1fr !important;
-      gap: 4px 14px !important;
+    .adoption-print-school-info {
+      grid-template-columns: 1fr !important;
+      gap: 5px !important;
       margin-top: 6px !important;
-      font-size: 11px !important;
+      font-size: 10.5px !important;
       line-height: 1.3 !important;
+    }
+
+    .adoption-print-contact-info {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 4px 12px !important;
+      margin-top: 6px !important;
+      font-size: 10.5px !important;
+      line-height: 1.3 !important;
+    }
+
+    .adoption-print-advisor-info {
+      margin-top: 6px !important;
+      font-size: 10.5px !important;
+      line-height: 1.35 !important;
+    }
+
+    .adoption-print-signatures {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 28px !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
     }
 
     .adoption-print-table-section {
@@ -236,6 +259,55 @@ function formatLocation(school) {
   return [school?.district, school?.province, school?.department]
     .filter(Boolean)
     .join(", ");
+}
+
+function formatScheduleDate(value) {
+  if (!value) {
+    return "No registrada";
+  }
+
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  if (Number.isNaN(date.getTime())) {
+    return "No registrada";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatScheduleTime(value) {
+  if (!value) {
+    return "No registrada";
+  }
+
+  const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
+  const date = new Date(2000, 0, 1, hours, minutes);
+
+  if (Number.isNaN(date.getTime())) {
+    return "No registrada";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function scheduleDateLabel(mode) {
+  if (mode === "fair") {
+    return "Fecha de feria";
+  }
+
+  if (mode === "consignment") {
+    return "Fecha de entrega en consignación";
+  }
+
+  return "Fecha de abastecimiento";
 }
 
 export default function CRMAdoptionPrintPage() {
@@ -411,6 +483,37 @@ export default function CRMAdoptionPrintPage() {
   }
 
   const location = formatLocation(school);
+  const contactName =
+    adoption.authorized_contact_name_snapshot
+    || adoption.authorized_contact?.full_name
+    || "No registrado";
+  const contactPosition =
+    adoption.authorized_contact_position_snapshot
+    || adoption.authorized_contact?.position
+    || "No registrado";
+  const contactPhone =
+    adoption.authorized_contact_phone_snapshot
+    || adoption.authorized_contact?.whatsapp
+    || adoption.authorized_contact?.phone
+    || "No registrado";
+  const contactEmail =
+    adoption.authorized_contact_email_snapshot
+    || adoption.authorized_contact?.email
+    || "No registrado";
+  const advisorName =
+    adoption.advisor_name_snapshot
+    || adoption.advisor?.full_name
+    || "Sin asesor asignado";
+  const advisorPhone =
+    adoption.advisor_whatsapp_snapshot
+    || adoption.advisor_phone_snapshot
+    || adoption.advisor?.whatsapp
+    || adoption.advisor?.phone
+    || "No registrado";
+  const advisorWhatsapp =
+    adoption.advisor_whatsapp_snapshot
+    || adoption.advisor?.whatsapp
+    || "";
 
   return (
     <div className="adoption-print-shell min-h-screen bg-gray-100 px-4 py-5 print:bg-white print:p-0">
@@ -439,7 +542,7 @@ export default function CRMAdoptionPrintPage() {
       <main className="adoption-print-page mx-auto w-full max-w-7xl bg-white p-7 shadow-sm print:max-w-none print:p-0 print:shadow-none">
         <header className="adoption-print-header flex items-start justify-between gap-8 border-b-2 border-gray-950 pb-5">
           <div className="flex items-start gap-4">
-            <div className="adoption-print-logo-wrap flex h-20 w-28 shrink-0 items-center justify-center rounded-xl bg-white">
+            <div className="adoption-print-logo-wrap flex h-20 w-32 shrink-0 items-center justify-center bg-white">
               <img
                 src={logoBookExpress}
                 alt="Book Express"
@@ -474,7 +577,7 @@ export default function CRMAdoptionPrintPage() {
           </div>
         </header>
 
-        <section className="adoption-print-section-grid mt-5 grid gap-4 md:grid-cols-2">
+        <section className="adoption-print-section-grid mt-5 grid gap-4 md:grid-cols-3">
           <div className="adoption-print-card rounded-2xl border border-gray-200 p-4">
             <p className="adoption-print-card-title text-xs font-black uppercase tracking-wide text-red-700">
               Institución educativa
@@ -485,7 +588,7 @@ export default function CRMAdoptionPrintPage() {
                 || "Institución educativa"}
             </p>
 
-            <div className="adoption-print-info-grid mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
+            <div className="adoption-print-school-info mt-3 grid gap-2 text-sm text-gray-700">
               <p>
                 <span className="font-black text-gray-950">RUC:</span>{" "}
                 {school?.ruc || "No registrado"}
@@ -494,7 +597,7 @@ export default function CRMAdoptionPrintPage() {
                 <span className="font-black text-gray-950">Ubicación:</span>{" "}
                 {location || "No registrada"}
               </p>
-              <p className="sm:col-span-2">
+              <p>
                 <span className="font-black text-gray-950">Dirección:</span>{" "}
                 {school?.address || "No registrada"}
               </p>
@@ -503,39 +606,95 @@ export default function CRMAdoptionPrintPage() {
 
           <div className="adoption-print-card rounded-2xl border border-gray-200 p-4">
             <p className="adoption-print-card-title text-xs font-black uppercase tracking-wide text-red-700">
-              Confirmación de adopción
+              Contacto que autoriza
+            </p>
+            <p className="adoption-print-card-name mt-1 text-lg font-black text-gray-950">
+              {contactName}
             </p>
 
-            <div className="adoption-print-info-grid mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
-              <p>
-                <span className="font-black text-gray-950">Directivo:</span>{" "}
-                {adoption.authorized_contact_name_snapshot
-                  || adoption.authorized_contact?.full_name
-                  || "No registrado"}
-              </p>
+            <div className="adoption-print-contact-info mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
               <p>
                 <span className="font-black text-gray-950">Cargo:</span>{" "}
-                {adoption.authorized_contact?.position || "No registrado"}
+                {contactPosition}
               </p>
               <p>
-                <span className="font-black text-gray-950">Firma / aprobación:</span>{" "}
+                <span className="font-black text-gray-950">Teléfono:</span>{" "}
+                {contactPhone}
+              </p>
+              <p className="sm:col-span-2">
+                <span className="font-black text-gray-950">Correo:</span>{" "}
+                {contactEmail}
+              </p>
+              <p>
+                <span className="font-black text-gray-950">
+                  Firma / aprobación:
+                </span>{" "}
                 {formatDateTime(adoption.signed_at)}
               </p>
               <p>
-                <span className="font-black text-gray-950">Confirmación:</span>{" "}
+                <span className="font-black text-gray-950">
+                  Confirmación:
+                </span>{" "}
                 {formatDateTime(adoption.confirmed_at)}
               </p>
-              <p>
-                <span className="font-black text-gray-950">Asesor:</span>{" "}
-                {adoption.advisor_name_snapshot
-                  || adoption.advisor?.full_name
-                  || "Sin asesor asignado"}
-              </p>
-              <p>
-                <span className="font-black text-gray-950">Fecha:</span>{" "}
-                {formatDate(adoption.confirmed_at)}
-              </p>
             </div>
+          </div>
+
+          <div className="adoption-print-card rounded-2xl border border-gray-200 p-4">
+            <p className="adoption-print-card-title text-xs font-black uppercase tracking-wide text-red-700">
+              Asesor Book Express
+            </p>
+            <p className="adoption-print-card-name mt-1 text-base font-black text-gray-950">
+              {advisorName}
+            </p>
+
+            <div className="adoption-print-advisor-info space-y-2 text-sm text-gray-700">
+              <p>
+                <span className="font-black text-gray-950">Celular:</span>{" "}
+                {advisorPhone}
+              </p>
+              {advisorWhatsapp
+              && advisorWhatsapp !== advisorPhone ? (
+                <p>
+                  <span className="font-black text-gray-950">WhatsApp:</span>{" "}
+                  {advisorWhatsapp}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+          <p className="text-xs font-black uppercase tracking-wide text-red-700">
+            Condiciones de atención
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-700">
+            <p>
+              <span className="font-black text-gray-950">Modalidad:</span>{" "}
+              {adoption.sale_mode_display || "No registrada"}
+            </p>
+            <p>
+              <span className="font-black text-gray-950">
+                {scheduleDateLabel(adoption.sale_mode)}:
+              </span>{" "}
+              {formatScheduleDate(adoption.service_date)}
+            </p>
+            {adoption.sale_mode === "fair" ? (
+              <>
+                <p>
+                  <span className="font-black text-gray-950">
+                    Hora de inicio:
+                  </span>{" "}
+                  {formatScheduleTime(adoption.fair_start_time)}
+                </p>
+                <p>
+                  <span className="font-black text-gray-950">
+                    Hora de fin:
+                  </span>{" "}
+                  {formatScheduleTime(adoption.fair_end_time)}
+                </p>
+              </>
+            ) : null}
           </div>
         </section>
 
@@ -672,6 +831,34 @@ export default function CRMAdoptionPrintPage() {
             </p>
           </section>
         ) : null}
+
+        <section className="adoption-print-signatures mt-10 grid gap-8 sm:grid-cols-2">
+          <div className="px-6 text-center">
+            <div className="h-12 border-b border-gray-700" />
+            <p className="mt-2 text-sm font-black text-gray-950">
+              Firma y sello de la institución educativa
+            </p>
+            <p className="mt-1 text-xs font-bold text-gray-700">
+              {contactName}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              {contactPosition}
+            </p>
+          </div>
+
+          <div className="px-6 text-center">
+            <div className="h-12 border-b border-gray-700" />
+            <p className="mt-2 text-sm font-black text-gray-950">
+              Asesor Book Express
+            </p>
+            <p className="mt-1 text-xs font-bold text-gray-700">
+              {advisorName}
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              Asesor comercial
+            </p>
+          </div>
+        </section>
 
         <footer className="adoption-print-footer mt-7 border-t border-gray-200 pt-4 text-xs leading-5 text-gray-500">
           <p>
