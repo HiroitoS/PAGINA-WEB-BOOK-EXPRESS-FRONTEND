@@ -1210,7 +1210,7 @@ export default function CRMOpportunityQuotationSection({
                                 <th className="px-3 py-3 text-right font-black">Margen total</th>
                                 <th className="px-3 py-3 text-right font-black">Margen %</th>
                                 <th className="px-3 py-3 text-right font-black">Límite verde</th>
-                                <th className="px-3 py-3 text-right font-black">Espacio</th>
+                                <th className="px-3 py-3 text-right font-black">Brecha verde</th>
                                 <th className="px-3 py-3 text-center font-black">Estado</th>
                               </tr>
                             </thead>
@@ -1279,9 +1279,10 @@ export default function CRMOpportunityQuotationSection({
 
                         <p className="mt-2 text-xs leading-5 text-gray-500">
                           Margen % = margen unitario ÷ P.IE. “Límite verde”
-                          indica el descuento de referencia antes de salir del
-                          rango verde; “Espacio” muestra los puntos porcentuales
-                          disponibles frente al descuento actual.
+                          indica el mayor descuento compatible con el rango verde.
+                          “Brecha verde” es positiva cuando aún hay espacio de
+                          negociación y negativa cuando habría que recuperar
+                          puntos de descuento para volver a verde.
                         </p>
                       </details>
                     </div>
