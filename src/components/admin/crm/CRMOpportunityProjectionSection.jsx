@@ -587,7 +587,7 @@ export default function CRMOpportunityProjectionSection({
       (item) => item.key === productTargetKey,
     );
 
-    if (!draft) {
+    if (!draft || !choice.price_available) {
       return;
     }
 
@@ -1341,10 +1341,19 @@ export default function CRMOpportunityProjectionSection({
                                                 ? ` · ${choice.area.name}`
                                                 : ""}
                                               {" · "}
-                                              {formatCurrency(choice.unit_price)}
+                                              {choice.price_available
+                                                ? formatCurrency(choice.unit_price)
+                                                : "Sin precio disponible"}
                                               {choice.price_year
                                                 ? ` · ${choice.price_is_reference ? "Referencial " : ""}${choice.price_year}`
                                                 : ""}
+                                            </p>
+                                            {!choice.price_available ? (
+                                              <p className="mt-1 text-xs font-bold text-amber-700">
+                                                {choice.price_message
+                                                  || "Completa el precio del catálogo para usar este producto."}
+                                              </p>
+                                            ) : null}
                                             </p>
                                           </div>
                                         </div>
@@ -1352,15 +1361,21 @@ export default function CRMOpportunityProjectionSection({
 
                                       <button
                                         type="button"
-                                        disabled={alreadyAdded}
+                                        disabled={
+                                          alreadyAdded || !choice.price_available
+                                        }
                                         onClick={() => addProduct(choice)}
                                         className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black transition ${
-                                          alreadyAdded
+                                          alreadyAdded || !choice.price_available
                                             ? "cursor-not-allowed bg-gray-100 text-gray-400"
                                             : "bg-red-700 text-white hover:bg-red-800"
                                         }`}
                                       >
-                                        {alreadyAdded ? "Agregado" : "Agregar"}
+                                        {alreadyAdded
+                                          ? "Agregado"
+                                          : choice.price_available
+                                            ? "Agregar"
+                                            : "Falta precio"}
                                       </button>
                                     </div>
                                   );
@@ -1370,8 +1385,9 @@ export default function CRMOpportunityProjectionSection({
                                   && productChoices.length === 0
                                   && !productError ? (
                                     <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
-                                      No hay productos compatibles con este
-                                      grado, editorial y búsqueda.
+                                      No hay productos clasificados en esta línea
+                                      comercial que coincidan con el grado,
+                                      editorial y búsqueda.
                                     </div>
                                   ) : null}
                               </div>
