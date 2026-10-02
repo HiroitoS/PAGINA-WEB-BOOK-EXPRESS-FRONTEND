@@ -1354,7 +1354,6 @@ export default function CRMOpportunityProjectionSection({
                                                   || "Completa el precio del catálogo para usar este producto."}
                                               </p>
                                             ) : null}
-                                            </p>
                                           </div>
                                         </div>
                                       </div>
