@@ -91,6 +91,41 @@ function formatPercent(value) {
   return `${number.toFixed(2)} %`;
 }
 
+function formatSignedCurrency(value) {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return "—";
+  }
+
+  const prefix = number > 0 ? "+" : "";
+  return `${prefix}${formatCurrency(number)}`;
+}
+
+function negotiationStatus(item) {
+  const available = Number(item.additional_discount_available_points);
+  const recovery = Number(item.discount_recovery_required_points);
+
+  if (Number.isFinite(available) && available > 0) {
+    return {
+      label: `Puede dar +${available.toFixed(2)} pt`,
+      className: "text-emerald-700",
+    };
+  }
+
+  if (Number.isFinite(recovery) && recovery > 0) {
+    return {
+      label: `Recuperar ${recovery.toFixed(2)} pt`,
+      className: "text-amber-800",
+    };
+  }
+
+  return {
+    label: "Sin espacio adicional",
+    className: "text-gray-600",
+  };
+}
+
 function profitabilityBadgeClass(status) {
   if (status === "green") {
     return "bg-emerald-50 text-emerald-700 ring-emerald-200";
@@ -470,6 +505,21 @@ export default function CRMOpportunityQuotationSection({
         ),
         green_discount_headroom_points: String(
           quotationItem?.green_discount_headroom_points ?? "",
+        ),
+        green_margin_threshold_unit: String(
+          quotationItem?.green_margin_threshold_unit ?? "",
+        ),
+        green_margin_surplus_unit: String(
+          quotationItem?.green_margin_surplus_unit ?? "",
+        ),
+        green_margin_surplus_total: String(
+          quotationItem?.green_margin_surplus_total ?? "",
+        ),
+        additional_discount_available_points: String(
+          quotationItem?.additional_discount_available_points ?? "",
+        ),
+        discount_recovery_required_points: String(
+          quotationItem?.discount_recovery_required_points ?? "",
         ),
         price_year_snapshot:
           quotationItem?.price_year_snapshot ?? item.price_year_snapshot,
@@ -852,7 +902,17 @@ export default function CRMOpportunityQuotationSection({
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                      {quotation.status === "accepted" && onGoToAdoption ? (
+                        <button
+                          type="button"
+                          onClick={onGoToAdoption}
+                          className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
+                        >
+                          <FaCheckCircle />
+                          {hasCurrentAdoption ? "Ver adopción" : "Ir a adopción"}
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() =>
@@ -865,7 +925,7 @@ export default function CRMOpportunityQuotationSection({
                         className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-800 transition hover:bg-gray-50"
                       >
                         <FaPrint />
-                        Imprimir cotización
+                        Imprimir
                       </button>
 
                       {canViewFinancials && quotation.commercial_analysis ? (
@@ -883,7 +943,7 @@ export default function CRMOpportunityQuotationSection({
                           <FaFileInvoiceDollar />
                           {analysisQuotationId === quotation.id
                             ? "Ocultar análisis"
-                            : "Ver análisis interno"}
+                            : "Análisis interno"}
                         </button>
                       ) : null}
 
@@ -958,7 +1018,7 @@ export default function CRMOpportunityQuotationSection({
                           className="inline-flex items-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
                         >
                           <FaPaperPlane />
-                          Marcar como enviada
+                          Marcar enviada
                         </button>
                       ) : null}
 
@@ -976,7 +1036,7 @@ export default function CRMOpportunityQuotationSection({
                           className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700 disabled:opacity-50"
                         >
                           <FaCheckCircle />
-                          Registrar aceptación del colegio
+                          Registrar aceptación
                         </button>
                       ) : null}
 
@@ -996,20 +1056,10 @@ export default function CRMOpportunityQuotationSection({
                           className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
                         >
                           <FaUndoAlt />
-                          Reabrir negociación
+                          Reabrir
                         </button>
                       ) : null}
 
-                      {quotation.status === "accepted" && onGoToAdoption ? (
-                        <button
-                          type="button"
-                          onClick={onGoToAdoption}
-                          className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
-                        >
-                          <FaCheckCircle />
-                          {hasCurrentAdoption ? "Ver adopción" : "Ir a adopción"}
-                        </button>
-                      ) : null}
                     </div>
                   </div>
 
@@ -1137,6 +1187,38 @@ export default function CRMOpportunityQuotationSection({
                         </div>
                       </div>
 
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-gray-200 bg-white p-3">
+                          <p className="text-xs font-bold uppercase text-gray-500">
+                            Mínimo para estar en verde
+                          </p>
+                          <p className="mt-1 text-base font-black text-gray-950">
+                            {quotation.commercial_analysis.green_margin_threshold_unit == null
+                              ? "—"
+                              : `${formatCurrency(
+                                  quotation.commercial_analysis.green_margin_threshold_unit,
+                                )} / unidad`}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Texto escolar: más de S/ 20 · Plan lector: más de S/ 5.
+                          </p>
+                        </div>
+                        <div className="rounded-xl border border-gray-200 bg-white p-3">
+                          <p className="text-xs font-bold uppercase text-gray-500">
+                            Resultado frente al mínimo verde
+                          </p>
+                          <p className="mt-1 text-base font-black text-gray-950">
+                            {formatSignedCurrency(
+                              quotation.commercial_analysis.green_margin_surplus_total,
+                            )}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Suma proyectada de lo que queda por encima o por
+                            debajo del mínimo verde de todos los productos.
+                          </p>
+                        </div>
+                      </div>
+
                       <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
                         <p className="text-xs font-black uppercase tracking-wide text-gray-600">
                           Semáforo de rentabilidad por producto
@@ -1206,11 +1288,11 @@ export default function CRMOpportunityQuotationSection({
                                 <th className="px-3 py-3 text-right font-black">P.IE</th>
                                 <th className="px-3 py-3 text-right font-black">Costo</th>
                                 <th className="px-3 py-3 text-right font-black">Incentivo</th>
-                                <th className="px-3 py-3 text-right font-black">Margen/u</th>
-                                <th className="px-3 py-3 text-right font-black">Margen total</th>
+                                <th className="px-3 py-3 text-right font-black">Gana/u</th>
+                                <th className="px-3 py-3 text-right font-black">Gana total</th>
                                 <th className="px-3 py-3 text-right font-black">Margen %</th>
-                                <th className="px-3 py-3 text-right font-black">Límite verde</th>
-                                <th className="px-3 py-3 text-right font-black">Brecha verde</th>
+                                <th className="px-3 py-3 text-right font-black">Desc. máx. verde</th>
+                                <th className="px-3 py-3 text-right font-black">Negociación</th>
                                 <th className="px-3 py-3 text-center font-black">Estado</th>
                               </tr>
                             </thead>
@@ -1243,11 +1325,37 @@ export default function CRMOpportunityQuotationSection({
                                   <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
                                     {formatCurrency(item.school_commission)}
                                   </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
-                                    {formatCurrency(item.commercial_margin_unit)}
+                                  <td className="whitespace-nowrap px-3 py-3 text-right">
+                                    <p className="font-black text-gray-950">
+                                      {formatCurrency(item.commercial_margin_unit)}
+                                    </p>
+                                    <p
+                                      className={`mt-1 text-xs font-bold ${
+                                        Number(item.green_margin_surplus_unit) >= 0
+                                          ? "text-emerald-700"
+                                          : "text-amber-800"
+                                      }`}
+                                    >
+                                      {formatSignedCurrency(
+                                        item.green_margin_surplus_unit,
+                                      )} vs. verde
+                                    </p>
                                   </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
-                                    {formatCurrency(item.commercial_margin_total)}
+                                  <td className="whitespace-nowrap px-3 py-3 text-right">
+                                    <p className="font-black text-gray-950">
+                                      {formatCurrency(item.commercial_margin_total)}
+                                    </p>
+                                    <p
+                                      className={`mt-1 text-xs font-bold ${
+                                        Number(item.green_margin_surplus_total) >= 0
+                                          ? "text-emerald-700"
+                                          : "text-amber-800"
+                                      }`}
+                                    >
+                                      {formatSignedCurrency(
+                                        item.green_margin_surplus_total,
+                                      )} vs. verde
+                                    </p>
                                   </td>
                                   <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
                                     {formatPercent(item.commercial_margin_percent)}
@@ -1257,10 +1365,19 @@ export default function CRMOpportunityQuotationSection({
                                       ? "—"
                                       : formatPercent(item.max_green_discount_percent)}
                                   </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
-                                    {item.green_discount_headroom_points == null
-                                      ? "—"
-                                      : `${Number(item.green_discount_headroom_points).toFixed(2)} pt`}
+                                  <td className="whitespace-nowrap px-3 py-3 text-right">
+                                    {item.additional_discount_available_points == null
+                                    && item.discount_recovery_required_points == null ? (
+                                      <span className="text-gray-500">—</span>
+                                    ) : (
+                                      <span
+                                        className={`font-black ${
+                                          negotiationStatus(item).className
+                                        }`}
+                                      >
+                                        {negotiationStatus(item).label}
+                                      </span>
+                                    )}
                                   </td>
                                   <td className="px-3 py-3 text-center">
                                     <span
@@ -1278,11 +1395,12 @@ export default function CRMOpportunityQuotationSection({
                         </div>
 
                         <p className="mt-2 text-xs leading-5 text-gray-500">
-                          Margen % = margen unitario ÷ P.IE. “Límite verde”
-                          indica el mayor descuento compatible con el rango verde.
-                          “Brecha verde” es positiva cuando aún hay espacio de
-                          negociación y negativa cuando habría que recuperar
-                          puntos de descuento para volver a verde.
+                          “Gana/u” y “Gana total” muestran la utilidad comercial
+                          actual y cuánto está por encima o por debajo del mínimo
+                          verde. “Desc. máx. verde” indica el mayor descuento
+                          compatible con verde. “Negociación” muestra cuántos
+                          puntos adicionales puedes conceder o cuántos debes
+                          recuperar para volver a verde.
                         </p>
                       </details>
                     </div>
@@ -1893,7 +2011,31 @@ export default function CRMOpportunityQuotationSection({
                                 </div>
                                 <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
                                   <p className="text-xs font-bold uppercase text-gray-500">
-                                    Máximo para verde
+                                    Mínimo verde / unidad
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {item.green_margin_threshold_unit === ""
+                                      ? "—"
+                                      : formatCurrency(
+                                          item.green_margin_threshold_unit,
+                                        )}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Sobre mínimo verde / unidad
+                                  </p>
+                                  <p className="mt-1 font-black text-gray-950">
+                                    {item.green_margin_surplus_unit === ""
+                                      ? "—"
+                                      : formatSignedCurrency(
+                                          item.green_margin_surplus_unit,
+                                        )}
+                                  </p>
+                                </div>
+                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                  <p className="text-xs font-bold uppercase text-gray-500">
+                                    Descuento máximo verde
                                   </p>
                                   <p className="mt-1 font-black text-gray-950">
                                     {item.max_green_discount_percent === ""
@@ -1905,14 +2047,14 @@ export default function CRMOpportunityQuotationSection({
                                 </div>
                                 <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
                                   <p className="text-xs font-bold uppercase text-gray-500">
-                                    Espacio de negociación
+                                    Negociación disponible
                                   </p>
-                                  <p className="mt-1 font-black text-gray-950">
-                                    {item.green_discount_headroom_points === ""
-                                      ? "—"
-                                      : `${Number(
-                                          item.green_discount_headroom_points,
-                                        ).toFixed(2)} pt`}
+                                  <p
+                                    className={`mt-1 font-black ${
+                                      negotiationStatus(item).className
+                                    }`}
+                                  >
+                                    {negotiationStatus(item).label}
                                   </p>
                                 </div>
                               </div>
