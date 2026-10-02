@@ -136,20 +136,27 @@ function saleScheduleSummary(quotation) {
     return "Modalidad de venta por definir";
   }
 
-  const parts = [
-    saleModeLabel(quotation.sale_mode),
-    formatScheduleDate(quotation.service_date),
-  ];
+  const parts = [saleModeLabel(quotation.sale_mode)];
 
   if (quotation.sale_mode === "fair") {
-    const start = formatScheduleTime(quotation.fair_start_time);
-    const end = formatScheduleTime(quotation.fair_end_time);
+    const startDate = formatScheduleDate(quotation.service_date);
+    const endDate = formatScheduleDate(quotation.service_end_date);
+    const startTime = formatScheduleTime(quotation.fair_start_time);
+    const endTime = formatScheduleTime(quotation.fair_end_time);
 
-    if (start && end) {
-      parts.push(`${start} a ${end}`);
+    parts.push(
+      quotation.service_date && quotation.service_end_date
+        ? `${startDate} al ${endDate}`
+        : "Fechas por definir",
+    );
+
+    if (startTime && endTime) {
+      parts.push(`${startTime} a ${endTime}`);
     } else {
       parts.push("Horario por definir");
     }
+  } else {
+    parts.push(formatScheduleDate(quotation.service_date));
   }
 
   return parts.join(" · ");
@@ -164,8 +171,20 @@ function isSaleScheduleComplete(quotation) {
     return true;
   }
 
-  if (!quotation.fair_start_time || !quotation.fair_end_time) {
+  if (
+    !quotation.service_end_date
+    || !quotation.fair_start_time
+    || !quotation.fair_end_time
+  ) {
     return false;
+  }
+
+  if (quotation.service_end_date < quotation.service_date) {
+    return false;
+  }
+
+  if (quotation.service_end_date > quotation.service_date) {
+    return true;
   }
 
   return quotation.fair_end_time > quotation.fair_start_time;
@@ -532,6 +551,7 @@ export default function CRMOpportunityQuotationSection({
   const [draftNotes, setDraftNotes] = useState("");
   const [draftSaleMode, setDraftSaleMode] = useState("");
   const [draftServiceDate, setDraftServiceDate] = useState("");
+  const [draftServiceEndDate, setDraftServiceEndDate] = useState("");
   const [draftFairStartTime, setDraftFairStartTime] = useState("");
   const [draftFairEndTime, setDraftFairEndTime] = useState("");
   const [saving, setSaving] = useState(false);
@@ -880,6 +900,11 @@ export default function CRMOpportunityQuotationSection({
     setDraftNotes(quotation?.notes || "");
     setDraftSaleMode(quotation?.sale_mode || "");
     setDraftServiceDate(quotation?.service_date || "");
+    setDraftServiceEndDate(
+      quotation?.sale_mode === "fair"
+        ? quotation?.service_end_date || ""
+        : "",
+    );
     setDraftFairStartTime(
       quotation?.sale_mode === "fair"
         ? String(quotation?.fair_start_time || "").slice(0, 5)
@@ -907,6 +932,7 @@ export default function CRMOpportunityQuotationSection({
     setEditingQuotationId(null);
     setDraftSaleMode("");
     setDraftServiceDate("");
+    setDraftServiceEndDate("");
     setDraftFairStartTime("");
     setDraftFairEndTime("");
     setFinancialPreviewByItem({});
@@ -982,12 +1008,26 @@ export default function CRMOpportunityQuotationSection({
 
     if (
       draftSaleMode === "fair"
+      && draftServiceDate
+      && draftServiceEndDate
+      && draftServiceEndDate < draftServiceDate
+    ) {
+      setErrorMessage(
+        "La fecha de fin de la feria no puede ser anterior a la fecha de inicio.",
+      );
+      return;
+    }
+
+    if (
+      draftSaleMode === "fair"
+      && draftServiceDate
+      && draftServiceEndDate === draftServiceDate
       && draftFairStartTime
       && draftFairEndTime
       && draftFairEndTime <= draftFairStartTime
     ) {
       setErrorMessage(
-        "La hora de fin de la feria debe ser posterior a la hora de inicio.",
+        "Si la feria termina el mismo día, la hora de fin debe ser posterior a la hora de inicio.",
       );
       return;
     }
@@ -1024,6 +1064,10 @@ export default function CRMOpportunityQuotationSection({
         }),
         sale_mode: draftSaleMode,
         service_date: draftServiceDate || null,
+        service_end_date:
+          draftSaleMode === "fair" && draftServiceEndDate
+            ? draftServiceEndDate
+            : null,
         fair_start_time:
           draftSaleMode === "fair" && draftFairStartTime
             ? draftFairStartTime
@@ -2044,7 +2088,8 @@ export default function CRMOpportunityQuotationSection({
                         <p className="mt-1 leading-5">
                           Antes de marcar la cotización como enviada, registra
                           la modalidad de venta y la fecha. Si es una feria,
-                          completa también la hora de inicio y la hora de fin.
+                          completa también la fecha de fin, la hora de inicio
+                          y la hora de fin.
                         </p>
                       </div>
                     </div>
@@ -2685,6 +2730,7 @@ export default function CRMOpportunityQuotationSection({
                         }
 
                         if (nextMode !== "fair") {
+                          setDraftServiceEndDate("");
                           setDraftFairStartTime("");
                           setDraftFairEndTime("");
                         }
@@ -2701,7 +2747,9 @@ export default function CRMOpportunityQuotationSection({
                   </label>
 
                   <label className="text-xs font-bold text-gray-600">
-                    {scheduleDateLabel(draftSaleMode)}
+                    {draftSaleMode === "fair"
+                      ? "Fecha de inicio"
+                      : scheduleDateLabel(draftSaleMode)}
                     <input
                       type="date"
                       value={draftServiceDate}
@@ -2715,6 +2763,19 @@ export default function CRMOpportunityQuotationSection({
 
                   {draftSaleMode === "fair" ? (
                     <>
+                      <label className="text-xs font-bold text-gray-600">
+                        Fecha de fin
+                        <input
+                          type="date"
+                          value={draftServiceEndDate}
+                          min={draftServiceDate || undefined}
+                          onChange={(event) =>
+                            setDraftServiceEndDate(event.target.value)
+                          }
+                          className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                        />
+                      </label>
+
                       <label className="text-xs font-bold text-gray-600">
                         Hora de inicio
                         <input
@@ -2746,7 +2807,8 @@ export default function CRMOpportunityQuotationSection({
                   Puedes guardar el borrador mientras coordinas estos datos.
                   Para marcar la cotización como enviada, la modalidad y la
                   fecha deben estar completas; si es una feria, también se
-                  requiere hora de inicio y hora de fin.
+                  requieren fecha de inicio, fecha de fin, hora de inicio y
+                  hora de fin.
                 </p>
               </section>
 
