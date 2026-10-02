@@ -83,13 +83,13 @@ const PRINT_STYLES = `
     }
 
     .quotation-print-company {
-      font-size: 20px !important;
+      font-size: 21px !important;
       line-height: 1.15 !important;
     }
 
     .quotation-print-company-meta {
       margin-top: 5px !important;
-      font-size: 10.5px !important;
+      font-size: 11px !important;
     }
 
     .quotation-print-title-block {
@@ -97,7 +97,7 @@ const PRINT_STYLES = `
     }
 
     .quotation-print-title {
-      font-size: 13px !important;
+      font-size: 15px !important;
     }
 
     .quotation-print-section-grid {
@@ -112,7 +112,7 @@ const PRINT_STYLES = `
     }
 
     .quotation-print-card-title {
-      font-size: 9.5px !important;
+      font-size: 10.5px !important;
     }
 
     .quotation-print-card-name {
@@ -126,7 +126,7 @@ const PRINT_STYLES = `
       grid-template-columns: 1fr 1fr !important;
       gap: 4px 14px !important;
       margin-top: 6px !important;
-      font-size: 10.2px !important;
+      font-size: 11px !important;
       line-height: 1.3 !important;
     }
 
@@ -137,7 +137,7 @@ const PRINT_STYLES = `
     .quotation-print-table {
       width: 100% !important;
       table-layout: fixed !important;
-      font-size: 10.2px !important;
+      font-size: 11.5px !important;
     }
 
     .quotation-print-table th {
@@ -186,7 +186,7 @@ const PRINT_STYLES = `
     .quotation-print-footer {
       margin-top: auto !important;
       padding-top: 9px !important;
-      font-size: 8.8px !important;
+      font-size: 9.5px !important;
       line-height: 1.25 !important;
     }
 
