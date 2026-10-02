@@ -96,18 +96,25 @@ function scheduleSummary(record) {
     return "Modalidad de venta no registrada";
   }
 
-  const parts = [
-    record.sale_mode_display || "Modalidad registrada",
-    formatScheduleDate(record.service_date),
-  ];
+  const parts = [record.sale_mode_display || "Modalidad registrada"];
 
   if (record.sale_mode === "fair") {
-    const start = formatScheduleTime(record.fair_start_time);
-    const end = formatScheduleTime(record.fair_end_time);
+    const startDate = formatScheduleDate(record.service_date);
+    const endDate = formatScheduleDate(record.service_end_date);
+    const startTime = formatScheduleTime(record.fair_start_time);
+    const endTime = formatScheduleTime(record.fair_end_time);
 
-    if (start && end) {
-      parts.push(`${start} a ${end}`);
+    parts.push(
+      record.service_date && record.service_end_date
+        ? `${startDate} al ${endDate}`
+        : "Fechas por definir",
+    );
+
+    if (startTime && endTime) {
+      parts.push(`${startTime} a ${endTime}`);
     }
+  } else {
+    parts.push(formatScheduleDate(record.service_date));
   }
 
   return parts.join(" · ");
