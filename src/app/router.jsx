@@ -71,6 +71,10 @@ const CRMQuotationPrintPage = lazy(
   () => import("../pages/admin/crm/CRMQuotationPrintPage"),
 );
 
+const CRMAdoptionPrintPage = lazy(
+  () => import("../pages/admin/crm/CRMAdoptionPrintPage"),
+);
+
 function protectRole(element, allowedRoles) {
   return <RequireRole allowedRoles={allowedRoles}>{element}</RequireRole>;
 }
@@ -146,6 +150,13 @@ const router = createBrowserRouter([
         path: "crm/oportunidades/:opportunityId/cotizaciones/:quotationId/imprimir",
         element: protectPermission(
           renderLazyPage(CRMQuotationPrintPage),
+          ["crm.view_crm"],
+        ),
+      },
+      {
+        path: "crm/oportunidades/:opportunityId/adopciones/:adoptionId/imprimir",
+        element: protectPermission(
+          renderLazyPage(CRMAdoptionPrintPage),
           ["crm.view_crm"],
         ),
       },
