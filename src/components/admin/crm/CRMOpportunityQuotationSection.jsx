@@ -2641,6 +2641,10 @@ export default function CRMOpportunityQuotationSection({
                         const nextMode = event.target.value;
                         setDraftSaleMode(nextMode);
 
+                        if (!nextMode) {
+                          setDraftServiceDate("");
+                        }
+
                         if (nextMode !== "fair") {
                           setDraftFairStartTime("");
                           setDraftFairEndTime("");
@@ -2662,10 +2666,11 @@ export default function CRMOpportunityQuotationSection({
                     <input
                       type="date"
                       value={draftServiceDate}
+                      disabled={!draftSaleMode}
                       onChange={(event) =>
                         setDraftServiceDate(event.target.value)
                       }
-                      className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                      className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                     />
                   </label>
 
