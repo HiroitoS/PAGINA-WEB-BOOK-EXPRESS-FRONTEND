@@ -190,6 +190,10 @@ const PRINT_STYLES = `
       line-height: 1.25 !important;
     }
 
+    .quotation-print-draft-only {
+      display: none !important;
+    }
+
     .quotation-print-table thead {
       display: table-header-group;
     }
@@ -482,7 +486,7 @@ export default function CRMQuotationPrintPage() {
                 || "Campaña comercial"}
             </p>
             {isDraft ? (
-              <span className="mt-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-amber-800 ring-1 ring-amber-200">
+              <span className="quotation-print-draft-only mt-2 inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-amber-800 ring-1 ring-amber-200">
                 Borrador
               </span>
             ) : null}
@@ -635,7 +639,7 @@ export default function CRMQuotationPrintPage() {
             Cotización comercial preparada por Book Express para la institución educativa indicada.
           </p>
           {isDraft ? (
-            <p className="mt-1 font-bold text-amber-800">
+            <p className="quotation-print-draft-only mt-1 font-bold text-amber-800">
               Vista previa de borrador. Verifique la información antes de
               enviarla al colegio.
             </p>
