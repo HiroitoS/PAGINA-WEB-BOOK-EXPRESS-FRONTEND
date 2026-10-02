@@ -1145,7 +1145,7 @@ export default function CRMOpportunityQuotationSection({
 
                         <div className="rounded-xl bg-gray-950 px-4 py-3 text-white">
                           <p className="text-xs font-bold uppercase text-gray-300">
-                            Margen sobre venta
+                            Rentabilidad sobre venta (P.IE)
                           </p>
                           <p className="mt-1 text-lg font-black">
                             {formatPercent(
@@ -2012,7 +2012,7 @@ export default function CRMOpportunityQuotationSection({
                                 </div>
                                 <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
                                   <p className="text-xs font-bold uppercase text-gray-500">
-                                    Margen sobre venta (P.IE)
+                                    Rentabilidad sobre P.IE
                                   </p>
                                   <p className="mt-1 font-black text-gray-950">
                                     {formatPercent(
