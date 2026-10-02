@@ -27,7 +27,7 @@ const MONTH_LABELS = {
 const PRINT_STYLES = `
   @page {
     size: A4 landscape;
-    margin: 6mm;
+    margin: 10mm 6mm;
   }
 
   @media print {
@@ -58,7 +58,7 @@ const PRINT_STYLES = `
     .quotation-print-page {
       width: 285mm !important;
       max-width: 285mm !important;
-      min-height: 198mm !important;
+      min-height: 190mm !important;
       margin: 0 auto !important;
       padding: 0 !important;
       box-shadow: none !important;
