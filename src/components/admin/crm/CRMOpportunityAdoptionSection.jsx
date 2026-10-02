@@ -54,6 +54,65 @@ function formatMoney(value) {
   }).format(Number.isFinite(amount) ? amount : 0);
 }
 
+function formatScheduleDate(value) {
+  if (!value) {
+    return "Fecha por definir";
+  }
+
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Fecha por definir";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatScheduleTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
+  const date = new Date(2000, 0, 1, hours, minutes);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function scheduleSummary(record) {
+  if (!record?.sale_mode) {
+    return "Modalidad de venta no registrada";
+  }
+
+  const parts = [
+    record.sale_mode_display || "Modalidad registrada",
+    formatScheduleDate(record.service_date),
+  ];
+
+  if (record.sale_mode === "fair") {
+    const start = formatScheduleTime(record.fair_start_time);
+    const end = formatScheduleTime(record.fair_end_time);
+
+    if (start && end) {
+      parts.push(`${start} a ${end}`);
+    }
+  }
+
+  return parts.join(" · ");
+}
+
 function toLocalDateTimeInputValue(date = new Date()) {
   const pad = (value) => String(value).padStart(2, "0");
 
@@ -354,9 +413,14 @@ export default function CRMOpportunityAdoptionSection({
                   Cotización v{latestAcceptedQuotation.version}
                 </p>
               </div>
-              <p className="text-xs font-bold text-gray-500">
-                {latestAcceptedQuotation.items?.length || 0} producto(s)
-              </p>
+              <div className="text-right">
+                <p className="text-xs font-bold text-gray-500">
+                  {latestAcceptedQuotation.items?.length || 0} producto(s)
+                </p>
+                <p className="mt-1 text-xs font-semibold text-emerald-800">
+                  {scheduleSummary(latestAcceptedQuotation)}
+                </p>
+              </div>
             </div>
 
             <div className="divide-y divide-emerald-100">
@@ -448,6 +512,13 @@ export default function CRMOpportunityAdoptionSection({
                         ))}
                       </div>
                     ) : null}
+
+                    <div className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-xs text-gray-700 ring-1 ring-emerald-100">
+                      <span className="font-black text-gray-950">
+                        Modalidad y atención:
+                      </span>{" "}
+                      {scheduleSummary(adoption)}
+                    </div>
                   </div>
 
                   <div className="flex flex-col items-start gap-3 sm:items-end">
@@ -591,7 +662,22 @@ export default function CRMOpportunityAdoptionSection({
                 </label>
               </div>
 
-              <div className="mt-5 rounded-2xl bg-gray-50 px-4 py-3 text-xs leading-5 text-gray-600 ring-1 ring-gray-200">
+              {latestAcceptedQuotation ? (
+                <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-900">
+                  <p className="font-black">
+                    Modalidad y atención acordadas
+                  </p>
+                  <p className="mt-1">
+                    {scheduleSummary(latestAcceptedQuotation)}
+                  </p>
+                  <p className="mt-1 text-emerald-800">
+                    Esta información proviene de la cotización aceptada y se
+                    conservará en la adopción.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="mt-4 rounded-2xl bg-gray-50 px-4 py-3 text-xs leading-5 text-gray-600 ring-1 ring-gray-200">
                 Al registrar la adopción, los productos, cantidades y
                 condiciones de la cotización aceptada quedarán como evidencia
                 del acuerdo y la oportunidad pasará a cierre ganado.
