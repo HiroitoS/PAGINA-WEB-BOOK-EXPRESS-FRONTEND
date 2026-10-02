@@ -674,14 +674,20 @@ export default function CRMQuotationPrintPage() {
               </span>{" "}
               {quotation.sale_mode_display || "No registrada"}
             </p>
-            <p>
-              <span className="font-black text-gray-950">
-                {scheduleDateLabel(quotation.sale_mode)}:
-              </span>{" "}
-              {formatScheduleDate(quotation.service_date)}
-            </p>
             {quotation.sale_mode === "fair" ? (
               <>
+                <p>
+                  <span className="font-black text-gray-950">
+                    Fecha de inicio:
+                  </span>{" "}
+                  {formatScheduleDate(quotation.service_date)}
+                </p>
+                <p>
+                  <span className="font-black text-gray-950">
+                    Fecha de fin:
+                  </span>{" "}
+                  {formatScheduleDate(quotation.service_end_date)}
+                </p>
                 <p>
                   <span className="font-black text-gray-950">
                     Hora de inicio:
@@ -695,7 +701,14 @@ export default function CRMQuotationPrintPage() {
                   {formatScheduleTime(quotation.fair_end_time)}
                 </p>
               </>
-            ) : null}
+            ) : (
+              <p>
+                <span className="font-black text-gray-950">
+                  {scheduleDateLabel(quotation.sale_mode)}:
+                </span>{" "}
+                {formatScheduleDate(quotation.service_date)}
+              </p>
+            )}
           </div>
         </section>
 
