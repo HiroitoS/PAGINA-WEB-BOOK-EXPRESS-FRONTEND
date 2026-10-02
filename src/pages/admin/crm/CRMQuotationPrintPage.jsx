@@ -436,6 +436,35 @@ export default function CRMQuotationPrintPage() {
 
   const location = formatLocation(school);
   const isDraft = quotation.status === "draft";
+  const contactName =
+    quotation.primary_contact_name_snapshot
+    || formatContact(opportunity.primary_contact);
+  const contactPosition =
+    quotation.primary_contact_position_snapshot
+    || opportunity.primary_contact?.position
+    || "No registrado";
+  const contactPhone =
+    quotation.primary_contact_phone_snapshot
+    || opportunity.primary_contact?.whatsapp
+    || opportunity.primary_contact?.phone
+    || "No registrado";
+  const contactEmail =
+    quotation.primary_contact_email_snapshot
+    || opportunity.primary_contact?.email
+    || "No registrado";
+  const advisorName =
+    quotation.advisor_name_snapshot
+    || formatOwner(opportunity.owner);
+  const advisorPhone =
+    quotation.advisor_whatsapp_snapshot
+    || quotation.advisor_phone_snapshot
+    || opportunity.owner?.whatsapp
+    || opportunity.owner?.phone
+    || "No registrado";
+  const advisorWhatsapp =
+    quotation.advisor_whatsapp_snapshot
+    || opportunity.owner?.whatsapp
+    || "";
 
   return (
     <div className="quotation-print-shell min-h-screen bg-gray-100 px-4 py-5 print:bg-white print:p-0">
@@ -507,7 +536,7 @@ export default function CRMQuotationPrintPage() {
               Institución educativa
             </p>
             <p className="quotation-print-card-name mt-1 text-lg font-black text-gray-950">
-              {opportunity.school?.name || quotation.school_name_snapshot}
+              {quotation.school_name_snapshot || opportunity.school?.name}
             </p>
 
             <div className="quotation-print-school-info mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
@@ -531,23 +560,21 @@ export default function CRMQuotationPrintPage() {
               Contacto del colegio
             </p>
             <p className="quotation-print-card-name mt-1 text-lg font-black text-gray-950">
-              {formatContact(opportunity.primary_contact)}
+              {contactName}
             </p>
 
             <div className="quotation-print-contact-info mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
               <p>
                 <span className="font-black text-gray-950">Cargo:</span>{" "}
-                {opportunity.primary_contact?.position || "No registrado"}
+                {contactPosition}
               </p>
               <p>
                 <span className="font-black text-gray-950">Teléfono:</span>{" "}
-                {opportunity.primary_contact?.whatsapp
-                  || opportunity.primary_contact?.phone
-                  || "No registrado"}
+                {contactPhone}
               </p>
               <p className="sm:col-span-2">
                 <span className="font-black text-gray-950">Correo:</span>{" "}
-                {opportunity.primary_contact?.email || "No registrado"}
+                {contactEmail}
               </p>
             </div>
           </div>
@@ -557,22 +584,19 @@ export default function CRMQuotationPrintPage() {
               Asesor Book Express
             </p>
             <p className="quotation-print-card-name mt-1 text-base font-black text-gray-950">
-              {formatOwner(opportunity.owner)}
+              {advisorName}
             </p>
 
             <div className="quotation-print-advisor-info space-y-2 text-sm text-gray-700">
               <p>
                 <span className="font-black text-gray-950">Celular:</span>{" "}
-                {opportunity.owner?.whatsapp
-                  || opportunity.owner?.phone
-                  || "No registrado"}
+                {advisorPhone}
               </p>
-              {opportunity.owner?.whatsapp
-              && opportunity.owner?.phone
-              && opportunity.owner.whatsapp !== opportunity.owner.phone ? (
+              {advisorWhatsapp
+              && advisorWhatsapp !== advisorPhone ? (
                 <p>
                   <span className="font-black text-gray-950">WhatsApp:</span>{" "}
-                  {opportunity.owner.whatsapp}
+                  {advisorWhatsapp}
                 </p>
               ) : null}
             </div>
