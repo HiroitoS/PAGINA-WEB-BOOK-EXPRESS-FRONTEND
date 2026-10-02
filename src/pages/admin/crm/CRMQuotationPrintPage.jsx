@@ -123,7 +123,14 @@ const PRINT_STYLES = `
       line-height: 1.15 !important;
     }
 
-    .quotation-print-school-info,
+    .quotation-print-school-info {
+      grid-template-columns: 1fr !important;
+      gap: 5px !important;
+      margin-top: 6px !important;
+      font-size: 10.5px !important;
+      line-height: 1.3 !important;
+    }
+
     .quotation-print-contact-info {
       grid-template-columns: 1fr 1fr !important;
       gap: 4px 12px !important;
@@ -539,7 +546,7 @@ export default function CRMQuotationPrintPage() {
               {quotation.school_name_snapshot || opportunity.school?.name}
             </p>
 
-            <div className="quotation-print-school-info mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
+            <div className="quotation-print-school-info mt-3 grid gap-2 text-sm text-gray-700">
               <p>
                 <span className="font-black text-gray-950">RUC:</span>{" "}
                 {school?.ruc || "No registrado"}
@@ -548,7 +555,7 @@ export default function CRMQuotationPrintPage() {
                 <span className="font-black text-gray-950">Ubicación:</span>{" "}
                 {location || "No registrada"}
               </p>
-              <p className="sm:col-span-2">
+              <p>
                 <span className="font-black text-gray-950">Dirección:</span>{" "}
                 {school?.address || "No registrada"}
               </p>
