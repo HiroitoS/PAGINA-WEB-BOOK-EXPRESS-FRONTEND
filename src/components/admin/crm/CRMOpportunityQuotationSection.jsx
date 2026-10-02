@@ -105,23 +105,30 @@ function formatSignedCurrency(value) {
 function negotiationStatus(item) {
   const available = Number(item.additional_discount_available_points);
   const recovery = Number(item.discount_recovery_required_points);
+  const surplus = Number(item.green_margin_surplus_unit);
+  const maxDiscount = Number(item.max_green_discount_percent);
 
   if (Number.isFinite(available) && available > 0) {
     return {
       label: `Puede dar +${available.toFixed(2)} pt`,
+      detail: `≈ ${formatCurrency(Math.max(surplus, 0))}/u · máximo ${formatPercent(maxDiscount)}`,
       className: "text-emerald-700",
     };
   }
 
   if (Number.isFinite(recovery) && recovery > 0) {
     return {
-      label: `Recuperar ${recovery.toFixed(2)} pt`,
+      label: `Debe recuperar ${recovery.toFixed(2)} pt`,
+      detail: `Faltan ${formatCurrency(Math.abs(Math.min(surplus, 0)))}/u · máximo ${formatPercent(maxDiscount)}`,
       className: "text-amber-800",
     };
   }
 
   return {
-    label: "Sin espacio adicional",
+    label: "Sin margen adicional",
+    detail: Number.isFinite(maxDiscount)
+      ? `Máximo ${formatPercent(maxDiscount)}`
+      : "Sin cálculo disponible",
     className: "text-gray-600",
   };
 }
@@ -1205,7 +1212,7 @@ export default function CRMOpportunityQuotationSection({
                         </div>
                         <div className="rounded-xl border border-gray-200 bg-white p-3">
                           <p className="text-xs font-bold uppercase text-gray-500">
-                            Resultado frente al mínimo verde
+                            Colchón total frente al mínimo verde
                           </p>
                           <p className="mt-1 text-base font-black text-gray-950">
                             {formatSignedCurrency(
@@ -1213,8 +1220,8 @@ export default function CRMOpportunityQuotationSection({
                             )}
                           </p>
                           <p className="mt-1 text-xs text-gray-500">
-                            Suma proyectada de lo que queda por encima o por
-                            debajo del mínimo verde de todos los productos.
+                            Importe total que todavía sobra para mantener verde,
+                            o que falta recuperar si la cotización cae por debajo.
                           </p>
                         </div>
                       </div>
@@ -1284,123 +1291,106 @@ export default function CRMOpportunityQuotationSection({
                                 </th>
                                 <th className="px-3 py-3 text-center font-black">Cant.</th>
                                 <th className="px-3 py-3 text-right font-black">PVP</th>
-                                <th className="px-3 py-3 text-right font-black">Desc.</th>
+                                <th className="px-3 py-3 text-right font-black">Descuento I.E.</th>
                                 <th className="px-3 py-3 text-right font-black">P.IE</th>
-                                <th className="px-3 py-3 text-right font-black">Costo</th>
+                                <th className="px-3 py-3 text-right font-black">Costo editorial</th>
                                 <th className="px-3 py-3 text-right font-black">Incentivo</th>
-                                <th className="px-3 py-3 text-right font-black">Gana/u</th>
-                                <th className="px-3 py-3 text-right font-black">Gana total</th>
-                                <th className="px-3 py-3 text-right font-black">Margen %</th>
-                                <th className="px-3 py-3 text-right font-black">Desc. máx. verde</th>
+                                <th className="px-3 py-3 text-right font-black">Ganancia neta/u</th>
+                                <th className="px-3 py-3 text-right font-black">Ganancia total</th>
                                 <th className="px-3 py-3 text-right font-black">Negociación</th>
                                 <th className="px-3 py-3 text-center font-black">Estado</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 bg-white">
-                              {(quotation.items || []).map((item) => (
-                                <tr key={item.id} className="align-middle">
-                                  <td className="px-3 py-3">
-                                    <p className="wrap-break-word font-black text-gray-950">
-                                      {item.product_name_snapshot}
-                                    </p>
-                                    <p className="mt-1 text-xs font-semibold text-gray-500">
-                                      {item.provider_name_snapshot} · {item.quantity} unidad(es)
-                                    </p>
-                                  </td>
-                                  <td className="px-3 py-3 text-center font-bold text-gray-700">
-                                    {item.quantity}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-gray-900">
-                                    {formatCurrency(item.pvp)}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
-                                    {formatPercent(item.school_discount_percent)}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
-                                    {formatCurrency(item.school_price)}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
-                                    {formatCurrency(item.supplier_cost)}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
-                                    {formatCurrency(item.school_commission)}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right">
-                                    <p className="font-black text-gray-950">
-                                      {formatCurrency(item.commercial_margin_unit)}
-                                    </p>
-                                    <p
-                                      className={`mt-1 text-xs font-bold ${
-                                        Number(item.green_margin_surplus_unit) >= 0
-                                          ? "text-emerald-700"
-                                          : "text-amber-800"
-                                      }`}
-                                    >
-                                      {formatSignedCurrency(
-                                        item.green_margin_surplus_unit,
-                                      )} vs. verde
-                                    </p>
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right">
-                                    <p className="font-black text-gray-950">
+                              {(quotation.items || []).map((item) => {
+                                const negotiation = negotiationStatus(item);
+
+                                return (
+                                  <tr key={item.id} className="align-middle">
+                                    <td className="px-3 py-3">
+                                      <p className="wrap-break-word font-black text-gray-950">
+                                        {item.product_name_snapshot}
+                                      </p>
+                                      <p className="mt-1 text-xs font-semibold text-gray-500">
+                                        {item.provider_name_snapshot} · {item.quantity} unidad(es)
+                                      </p>
+                                    </td>
+                                    <td className="px-3 py-3 text-center font-bold text-gray-700">
+                                      {item.quantity}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-gray-900">
+                                      {formatCurrency(item.pvp)}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right">
+                                      <p className="font-bold text-gray-900">
+                                        {formatPercent(item.school_discount_percent)}
+                                      </p>
+                                      <p className="mt-1 text-xs text-gray-500">
+                                        {formatCurrency(item.school_discount_amount)}
+                                      </p>
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
+                                      {formatCurrency(item.school_price)}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right">
+                                      <p className="font-bold text-gray-900">
+                                        {formatCurrency(item.supplier_cost)}
+                                      </p>
+                                      <p className="mt-1 text-xs text-gray-500">
+                                        Equiv. desc.{" "}
+                                        {item.supplier_discount_equivalent_percent == null
+                                          ? "—"
+                                          : formatPercent(
+                                              item.supplier_discount_equivalent_percent,
+                                            )}
+                                      </p>
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
+                                      {formatCurrency(item.school_commission)}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right">
+                                      <p className="font-black text-gray-950">
+                                        {formatCurrency(item.commercial_margin_unit)}
+                                      </p>
+                                      <p className="mt-1 text-xs text-gray-500">
+                                        P.IE - costo - incentivo
+                                      </p>
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
                                       {formatCurrency(item.commercial_margin_total)}
-                                    </p>
-                                    <p
-                                      className={`mt-1 text-xs font-bold ${
-                                        Number(item.green_margin_surplus_total) >= 0
-                                          ? "text-emerald-700"
-                                          : "text-amber-800"
-                                      }`}
-                                    >
-                                      {formatSignedCurrency(
-                                        item.green_margin_surplus_total,
-                                      )} vs. verde
-                                    </p>
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
-                                    {formatPercent(item.commercial_margin_percent)}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
-                                    {item.max_green_discount_percent == null
-                                      ? "—"
-                                      : formatPercent(item.max_green_discount_percent)}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-3 text-right">
-                                    {item.additional_discount_available_points == null
-                                    && item.discount_recovery_required_points == null ? (
-                                      <span className="text-gray-500">—</span>
-                                    ) : (
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right">
+                                      <p className={`font-black ${negotiation.className}`}>
+                                        {negotiation.label}
+                                      </p>
+                                      <p className="mt-1 text-xs text-gray-500">
+                                        {negotiation.detail}
+                                      </p>
+                                    </td>
+                                    <td className="px-3 py-3 text-center">
                                       <span
-                                        className={`font-black ${
-                                          negotiationStatus(item).className
-                                        }`}
+                                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ${profitabilityBadgeClass(
+                                          item.profitability_band,
+                                        )}`}
                                       >
-                                        {negotiationStatus(item).label}
+                                        {item.profitability_band_display || "Sin clasificar"}
                                       </span>
-                                    )}
-                                  </td>
-                                  <td className="px-3 py-3 text-center">
-                                    <span
-                                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ${profitabilityBadgeClass(
-                                        item.profitability_band,
-                                      )}`}
-                                    >
-                                      {item.profitability_band_display || "Sin clasificar"}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
 
                         <p className="mt-2 text-xs leading-5 text-gray-500">
-                          “Gana/u” y “Gana total” muestran la utilidad comercial
-                          actual y cuánto está por encima o por debajo del mínimo
-                          verde. “Desc. máx. verde” indica el mayor descuento
-                          compatible con verde. “Negociación” muestra cuántos
-                          puntos adicionales puedes conceder o cuántos debes
-                          recuperar para volver a verde.
+                          Cálculo principal: P.IE - costo editorial - incentivo =
+                          ganancia neta por unidad. El descuento I.E. muestra
+                          también su importe en soles. “Equiv. desc.” traduce el
+                          costo registrado a un porcentaje del PVP para revisar
+                          si coincide con la condición negociada con la editorial.
+                          “Negociación” convierte el colchón en soles y en puntos
+                          porcentuales de descuento.
                         </p>
                       </details>
                     </div>
