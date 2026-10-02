@@ -147,6 +147,41 @@ function profitabilityBadgeClass(status) {
   return "bg-gray-100 text-gray-600 ring-gray-200";
 }
 
+function overallProfitabilityStatus(analysis) {
+  const bands = analysis?.products_by_band || {};
+  const rankedBands = [
+    {
+      status: "loss",
+      label: "Pérdida",
+      count: Number(bands.loss || 0),
+    },
+    {
+      status: "red",
+      label: "Rojo",
+      count: Number(bands.red || 0),
+    },
+    {
+      status: "amber",
+      label: "Ámbar",
+      count: Number(bands.amber || 0),
+    },
+    {
+      status: "green",
+      label: "Verde",
+      count: Number(bands.green || 0),
+    },
+  ];
+
+  return (
+    rankedBands.find((band) => band.count > 0)
+    || {
+      status: "unclassified",
+      label: "Sin clasificar",
+      count: Number(bands.unclassified || 0),
+    }
+  );
+}
+
 function formatDateTime(value, fallback = "Sin fecha") {
   if (!value) {
     return fallback;
@@ -977,6 +1012,9 @@ export default function CRMOpportunityQuotationSection({
               const statusLabel = quotation.reopened_at
                 ? "Aceptación reabierta"
                 : quotation.status_display || quotation.status;
+              const overallProfitability = overallProfitabilityStatus(
+                quotation.commercial_analysis,
+              );
 
               return (
                 <article
@@ -1258,7 +1296,7 @@ export default function CRMOpportunityQuotationSection({
                         </div>
                       </div>
 
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                         <div className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
                           <p className="text-xs font-bold uppercase text-gray-500">
                             Venta P.IE
@@ -1299,6 +1337,21 @@ export default function CRMOpportunityQuotationSection({
                             )}
                           </p>
                         </div>
+                        <div className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                          <p className="text-xs font-bold uppercase text-gray-500">
+                            Estado general
+                          </p>
+                          <span
+                            className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ${profitabilityBadgeClass(
+                              overallProfitability.status,
+                            )}`}
+                          >
+                            {overallProfitability.label}
+                          </span>
+                          <p className="mt-2 text-xs leading-4 text-gray-500">
+                            Según el producto con el estado más crítico.
+                          </p>
+                        </div>
                       </div>
 
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -1335,7 +1388,7 @@ export default function CRMOpportunityQuotationSection({
 
                       <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
                         <p className="text-xs font-black uppercase tracking-wide text-gray-600">
-                          Semáforo de rentabilidad por producto
+                          Distribución del semáforo por producto
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {Object.entries(
@@ -1420,17 +1473,17 @@ export default function CRMOpportunityQuotationSection({
                                         {item.provider_name_snapshot}
                                       </p>
                                     </td>
-                                    <td className="px-2 py-3 text-center font-bold text-gray-700">
+                                    <td className="px-2 py-3 text-center font-black text-gray-950">
                                       {item.quantity}
                                     </td>
-                                    <td className="whitespace-nowrap px-2 py-3 text-right font-bold text-gray-900">
+                                    <td className="whitespace-nowrap px-2 py-3 text-right font-black text-gray-950">
                                       {formatCurrency(item.pvp)}
                                     </td>
                                     <td className="px-3 py-3 text-center">
                                       <p className="font-black text-gray-950">
                                         {formatPercent(item.school_discount_percent)}
                                       </p>
-                                      <p className="mt-1 whitespace-nowrap text-xs text-gray-500">
+                                      <p className="mt-1 whitespace-nowrap text-xs font-bold text-gray-700">
                                         P.IE {formatCurrency(item.school_price)}
                                       </p>
                                     </td>
@@ -1442,11 +1495,11 @@ export default function CRMOpportunityQuotationSection({
                                               item.supplier_discount_percent,
                                             )}
                                       </p>
-                                      <p className="mt-1 whitespace-nowrap text-xs text-gray-500">
+                                      <p className="mt-1 whitespace-nowrap text-xs font-bold text-gray-700">
                                         Costo {formatCurrency(item.supplier_cost)}
                                       </p>
                                     </td>
-                                    <td className="whitespace-nowrap px-2 py-3 text-right text-gray-700">
+                                    <td className="whitespace-nowrap px-2 py-3 text-right font-black text-gray-950">
                                       {formatCurrency(item.school_commission)}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
