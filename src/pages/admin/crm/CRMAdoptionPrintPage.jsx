@@ -150,53 +150,6 @@ const PRINT_STYLES = `
       overflow-wrap: anywhere;
     }
 
-    .adoption-print-table th:nth-child(1),
-    .adoption-print-table td:nth-child(1) {
-      width: 8%;
-    }
-
-    .adoption-print-table th:nth-child(2),
-    .adoption-print-table td:nth-child(2) {
-      width: 7%;
-    }
-
-    .adoption-print-table th:nth-child(3),
-    .adoption-print-table td:nth-child(3) {
-      width: 8%;
-    }
-
-    .adoption-print-table th:nth-child(4),
-    .adoption-print-table td:nth-child(4) {
-      width: 8%;
-    }
-
-    .adoption-print-table th:nth-child(5),
-    .adoption-print-table td:nth-child(5) {
-      width: 8%;
-    }
-
-    .adoption-print-table th:nth-child(6),
-    .adoption-print-table td:nth-child(6) {
-      width: 10%;
-    }
-
-    .adoption-print-table th:nth-child(7),
-    .adoption-print-table td:nth-child(7) {
-      width: 31%;
-    }
-
-    .adoption-print-table th:nth-child(8),
-    .adoption-print-table td:nth-child(8) {
-      width: 7%;
-    }
-
-    .adoption-print-table th:nth-child(9),
-    .adoption-print-table td:nth-child(9),
-    .adoption-print-table th:nth-child(10),
-    .adoption-print-table td:nth-child(10) {
-      width: 7%;
-    }
-
     .adoption-print-table thead {
       display: table-header-group;
     }
@@ -589,6 +542,18 @@ export default function CRMAdoptionPrintPage() {
         <section className="adoption-print-table-section mt-5">
           <div className="overflow-hidden rounded-2xl border border-gray-300">
             <table className="adoption-print-table w-full table-auto border-collapse text-xs">
+              <colgroup>
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
+                {showReadingMonth ? <col style={{ width: "8%" }} /> : null}
+                <col style={{ width: "10%" }} />
+                <col style={{ width: showReadingMonth ? "30%" : "38%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "7%" }} />
+              </colgroup>
               <thead className="bg-gray-950 text-white">
                 <tr>
                   <th className="px-2 py-3 text-center align-middle font-black">
