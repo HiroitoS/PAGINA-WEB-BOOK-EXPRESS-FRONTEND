@@ -2370,7 +2370,7 @@ export default function CRMOpportunityQuotationSection({
                           ) : null}
 
                           {hasFinancialAnalysis ? (
-                            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
                               <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
                                 <p className="text-xs font-bold uppercase text-gray-500">
                                   Descuento editorial
@@ -2426,6 +2426,22 @@ export default function CRMOpportunityQuotationSection({
                                 </p>
                                 <p className="mt-1 text-xs text-gray-500">
                                   Según cantidad proyectada
+                                </p>
+                              </div>
+
+                              <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                <p className="text-xs font-bold uppercase text-gray-500">
+                                  Máx. Dscto. I.E. verde
+                                </p>
+                                <p className="mt-1 font-black text-gray-950">
+                                  {financial.max_green_discount_percent == null
+                                    ? "—"
+                                    : formatPercent(
+                                        financial.max_green_discount_percent,
+                                      )}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  Límite calculado para conservar margen verde.
                                 </p>
                               </div>
 
