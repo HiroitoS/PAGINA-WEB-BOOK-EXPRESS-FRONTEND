@@ -240,6 +240,24 @@ function hasReferencePrice(quotation) {
   return (quotation.items || []).some((item) => item.uses_reference_price);
 }
 
+function isFinancialPreviewItemValid(item) {
+  const supplierDiscount = Number(item.supplier_discount_percent);
+  const schoolDiscount = Number(item.school_discount_percent);
+  const commission = Number(item.commission_amount || 0);
+
+  return (
+    item.supplier_discount_percent !== ""
+    && Number.isFinite(supplierDiscount)
+    && supplierDiscount >= 0
+    && supplierDiscount <= 100
+    && Number.isFinite(schoolDiscount)
+    && schoolDiscount >= 0
+    && schoolDiscount <= 100
+    && Number.isFinite(commission)
+    && commission >= 0
+  );
+}
+
 export default function CRMOpportunityQuotationSection({
   opportunityId,
   onOpportunityChanged,
@@ -367,34 +385,12 @@ export default function CRMOpportunityQuotationSection({
 
   useEffect(() => {
     if (!drawerOpen || !canViewFinancials || draftItems.length === 0) {
-      setFinancialPreviewByItem({});
-      setFinancialPreviewError("");
-      setFinancialPreviewLoading(false);
       return undefined;
     }
 
-    const previewableItems = draftItems.filter((item) => {
-      const supplierDiscount = Number(item.supplier_discount_percent);
-      const schoolDiscount = Number(item.school_discount_percent);
-      const commission = Number(item.commission_amount || 0);
-
-      return (
-        item.supplier_discount_percent !== ""
-        && Number.isFinite(supplierDiscount)
-        && supplierDiscount >= 0
-        && supplierDiscount <= 100
-        && Number.isFinite(schoolDiscount)
-        && schoolDiscount >= 0
-        && schoolDiscount <= 100
-        && Number.isFinite(commission)
-        && commission >= 0
-      );
-    });
+    const previewableItems = draftItems.filter(isFinancialPreviewItemValid);
 
     if (previewableItems.length === 0) {
-      setFinancialPreviewByItem({});
-      setFinancialPreviewError("");
-      setFinancialPreviewLoading(false);
       return undefined;
     }
 
@@ -630,6 +626,7 @@ export default function CRMOpportunityQuotationSection({
     setDraftNotes(quotation?.notes || "");
     setFinancialPreviewByItem({});
     setFinancialPreviewError("");
+    setFinancialPreviewLoading(false);
     setErrorMessage("");
     setSuccessMessage("");
     setDrawerOpen(true);
@@ -644,6 +641,7 @@ export default function CRMOpportunityQuotationSection({
     setEditingQuotationId(null);
     setFinancialPreviewByItem({});
     setFinancialPreviewError("");
+    setFinancialPreviewLoading(false);
   }
 
   function updateDraftItem(index, field, value) {
@@ -758,6 +756,7 @@ export default function CRMOpportunityQuotationSection({
 
       setDrawerOpen(false);
       setEditingQuotationId(null);
+      setFinancialPreviewLoading(false);
       setSuccessMessage(
         editingQuotationId
           ? `Cotización v${quotation.version} actualizada correctamente.`
@@ -1887,7 +1886,9 @@ export default function CRMOpportunityQuotationSection({
                       ? item
                       : null;
                   const liveFinancial =
-                    financialPreviewByItem[item.projection_item] || null;
+                    canViewFinancials && isFinancialPreviewItemValid(item)
+                      ? financialPreviewByItem[item.projection_item] || null
+                      : null;
                   const financial = liveFinancial || savedFinancial;
                   const hasFinancialAnalysis = Boolean(financial);
                   const negotiation = financial
@@ -2016,7 +2017,8 @@ export default function CRMOpportunityQuotationSection({
                                 el costo editorial, la ganancia y el semáforo.
                               </p>
                             </div>
-                            {financialPreviewLoading ? (
+                            {financialPreviewLoading
+                            && draftItems.some(isFinancialPreviewItemValid) ? (
                               <span className="text-xs font-bold text-gray-500">
                                 Recalculando...
                               </span>
@@ -2097,7 +2099,8 @@ export default function CRMOpportunityQuotationSection({
                             </label>
                           </div>
 
-                          {financialPreviewError ? (
+                          {financialPreviewError
+                          && draftItems.some(isFinancialPreviewItemValid) ? (
                             <p className="mt-3 text-xs font-bold text-red-700">
                               {financialPreviewError}
                             </p>
