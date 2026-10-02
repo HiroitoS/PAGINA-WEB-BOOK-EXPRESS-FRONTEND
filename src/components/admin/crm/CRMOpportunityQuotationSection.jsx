@@ -79,6 +79,10 @@ function saleModeLabel(value) {
 }
 
 function scheduleDateLabel(value) {
+  if (!value) {
+    return "Fecha de atención";
+  }
+
   if (value === "fair") {
     return "Fecha de feria";
   }
