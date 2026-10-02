@@ -27,7 +27,7 @@ const MONTH_LABELS = {
 const PRINT_STYLES = `
   @page {
     size: A4 landscape;
-    margin: 10mm 6mm;
+    margin: 7mm 6mm;
   }
 
   @media print {
@@ -58,7 +58,7 @@ const PRINT_STYLES = `
     .adoption-print-page {
       width: 285mm !important;
       max-width: 285mm !important;
-      min-height: 190mm !important;
+      min-height: 0 !important;
       margin: 0 auto !important;
       padding: 0 !important;
       box-shadow: none !important;
@@ -70,7 +70,7 @@ const PRINT_STYLES = `
 
     .adoption-print-header {
       gap: 20px !important;
-      padding-bottom: 10px !important;
+      padding-bottom: 7px !important;
     }
 
     .adoption-print-logo-wrap {
@@ -105,11 +105,11 @@ const PRINT_STYLES = `
     .adoption-print-section-grid {
       grid-template-columns: 1.15fr 1.15fr 0.7fr !important;
       gap: 10px !important;
-      margin-top: 12px !important;
+      margin-top: 9px !important;
     }
 
     .adoption-print-card {
-      padding: 12px !important;
+      padding: 10px !important;
       border-radius: 10px !important;
     }
 
@@ -153,7 +153,7 @@ const PRINT_STYLES = `
     }
 
     .adoption-print-table-section {
-      margin-top: 12px !important;
+      margin-top: 9px !important;
     }
 
     .adoption-print-table {
@@ -163,12 +163,12 @@ const PRINT_STYLES = `
     }
 
     .adoption-print-table th {
-      padding: 8px 5px !important;
+      padding: 6px 5px !important;
       line-height: 1.2 !important;
     }
 
     .adoption-print-table td {
-      padding: 7px 5px !important;
+      padding: 6px 5px !important;
       line-height: 1.28 !important;
       overflow-wrap: anywhere;
     }
@@ -182,11 +182,28 @@ const PRINT_STYLES = `
       page-break-inside: avoid;
     }
 
+    .adoption-print-totals {
+      margin-top: 9px !important;
+      gap: 8px !important;
+    }
+
+    .adoption-print-totals > div {
+      padding: 8px 10px !important;
+    }
+
+    .adoption-print-signatures {
+      margin-top: 18px !important;
+    }
+
+    .adoption-print-signature-line {
+      height: 30px !important;
+    }
+
     .adoption-print-footer {
-      margin-top: auto !important;
-      padding-top: 9px !important;
-      font-size: 9.5px !important;
-      line-height: 1.25 !important;
+      margin-top: 12px !important;
+      padding-top: 7px !important;
+      font-size: 9px !important;
+      line-height: 1.2 !important;
     }
   }
 `;
@@ -549,9 +566,6 @@ export default function CRMAdoptionPrintPage() {
             <p className="adoption-print-title text-sm font-black uppercase tracking-widest text-red-700">
               Adopción comercial
             </p>
-            <p className="mt-2 text-sm font-black text-gray-950">
-              Adopción v{adoption.version}
-            </p>
             <p className="mt-1 text-xs font-semibold text-gray-500">
               {adoption.campaign_name_snapshot
                 || opportunity.campaign?.name
@@ -611,17 +625,11 @@ export default function CRMAdoptionPrintPage() {
                 <span className="font-black text-gray-950">Correo:</span>{" "}
                 {contactEmail}
               </p>
-              <p>
+              <p className="sm:col-span-2">
                 <span className="font-black text-gray-950">
-                  Firma / aprobación:
+                  Fecha de aprobación:
                 </span>{" "}
                 {formatDateTime(adoption.signed_at)}
-              </p>
-              <p>
-                <span className="font-black text-gray-950">
-                  Confirmación:
-                </span>{" "}
-                {formatDateTime(adoption.confirmed_at)}
               </p>
             </div>
           </div>
@@ -659,14 +667,20 @@ export default function CRMAdoptionPrintPage() {
               <span className="font-black text-gray-950">Modalidad:</span>{" "}
               {adoption.sale_mode_display || "No registrada"}
             </p>
-            <p>
-              <span className="font-black text-gray-950">
-                {scheduleDateLabel(adoption.sale_mode)}:
-              </span>{" "}
-              {formatScheduleDate(adoption.service_date)}
-            </p>
             {adoption.sale_mode === "fair" ? (
               <>
+                <p>
+                  <span className="font-black text-gray-950">
+                    Fecha de inicio:
+                  </span>{" "}
+                  {formatScheduleDate(adoption.service_date)}
+                </p>
+                <p>
+                  <span className="font-black text-gray-950">
+                    Fecha de fin:
+                  </span>{" "}
+                  {formatScheduleDate(adoption.service_end_date)}
+                </p>
                 <p>
                   <span className="font-black text-gray-950">
                     Hora de inicio:
@@ -680,7 +694,14 @@ export default function CRMAdoptionPrintPage() {
                   {formatScheduleTime(adoption.fair_end_time)}
                 </p>
               </>
-            ) : null}
+            ) : (
+              <p>
+                <span className="font-black text-gray-950">
+                  {scheduleDateLabel(adoption.sale_mode)}:
+                </span>{" "}
+                {formatScheduleDate(adoption.service_date)}
+              </p>
+            )}
           </div>
         </section>
 
@@ -780,7 +801,7 @@ export default function CRMAdoptionPrintPage() {
           </div>
         </section>
 
-        <section className="mt-4 grid gap-3 sm:grid-cols-3">
+        <section className="adoption-print-totals mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
               Productos
@@ -820,7 +841,7 @@ export default function CRMAdoptionPrintPage() {
 
         <section className="adoption-print-signatures mt-10 grid gap-8 sm:grid-cols-2">
           <div className="px-6 text-center">
-            <div className="h-12 border-b border-gray-700" />
+            <div className="adoption-print-signature-line h-12 border-b border-gray-700" />
             <p className="mt-2 text-sm font-black text-gray-950">
               Firma y sello de la institución educativa
             </p>
@@ -833,7 +854,7 @@ export default function CRMAdoptionPrintPage() {
           </div>
 
           <div className="px-6 text-center">
-            <div className="h-12 border-b border-gray-700" />
+            <div className="adoption-print-signature-line h-12 border-b border-gray-700" />
             <p className="mt-2 text-sm font-black text-gray-950">
               Asesor Book Express
             </p>
