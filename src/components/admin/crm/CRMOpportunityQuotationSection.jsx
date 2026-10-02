@@ -1640,7 +1640,9 @@ export default function CRMOpportunityQuotationSection({
                                   <tr
                                     key={item.id}
                                     className={`align-middle ${profitabilityRowClass(
-                                      item.profitability_band,
+                                      supplierConditionPending
+                                        ? "unclassified"
+                                        : item.profitability_band,
                                     )}`}
                                   >
                                     <td className="px-3 py-3">
@@ -1707,7 +1709,9 @@ export default function CRMOpportunityQuotationSection({
                                     <td className="px-3 py-3 text-center">
                                       <span
                                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ${profitabilityBadgeClass(
-                                          item.profitability_band,
+                                          supplierConditionPending
+                                            ? "unclassified"
+                                            : item.profitability_band,
                                         )}`}
                                       >
                                         {supplierConditionPending
