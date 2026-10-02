@@ -147,6 +147,90 @@ function profitabilityBadgeClass(status) {
   return "bg-gray-100 text-gray-600 ring-gray-200";
 }
 
+function profitabilitySurfaceClass(status) {
+  if (status === "green") {
+    return "border-emerald-300 bg-emerald-50";
+  }
+
+  if (status === "amber") {
+    return "border-amber-300 bg-amber-50";
+  }
+
+  if (status === "red" || status === "loss") {
+    return "border-red-300 bg-red-50";
+  }
+
+  return "border-gray-200 bg-gray-50";
+}
+
+function profitabilityHeaderClass(status) {
+  if (status === "green") {
+    return "bg-emerald-50";
+  }
+
+  if (status === "amber") {
+    return "bg-amber-50";
+  }
+
+  if (status === "red" || status === "loss") {
+    return "bg-red-50";
+  }
+
+  return "bg-white";
+}
+
+function profitabilityRowClass(status) {
+  if (status === "green") {
+    return "bg-emerald-50";
+  }
+
+  if (status === "amber") {
+    return "bg-amber-50";
+  }
+
+  if (status === "red" || status === "loss") {
+    return "bg-red-50";
+  }
+
+  return "bg-white";
+}
+
+function greenDiscountGuidance(item) {
+  const limit = Number(item.max_green_discount_percent);
+  const available = Number(item.additional_discount_available_points);
+  const recovery = Number(item.discount_recovery_required_points);
+
+  if (!Number.isFinite(limit)) {
+    return {
+      limit: "Sin cálculo",
+      detail: "No hay límite verde disponible.",
+      className: "text-gray-500",
+    };
+  }
+
+  if (Number.isFinite(available) && available > 0) {
+    return {
+      limit: `< ${limit.toFixed(2)} %`,
+      detail: `+${available.toFixed(2)} pt disponibles`,
+      className: "text-emerald-700",
+    };
+  }
+
+  if (Number.isFinite(recovery) && recovery > 0) {
+    return {
+      limit: `< ${limit.toFixed(2)} %`,
+      detail: `Recuperar ${recovery.toFixed(2)} pt`,
+      className: "text-amber-800",
+    };
+  }
+
+  return {
+    limit: `< ${limit.toFixed(2)} %`,
+    detail: "En el límite calculado.",
+    className: "text-gray-600",
+  };
+}
+
 function overallProfitabilityStatus(analysis) {
   const bands = analysis?.products_by_band || {};
   const rankedBands = [
@@ -1019,9 +1103,19 @@ export default function CRMOpportunityQuotationSection({
               return (
                 <article
                   key={quotation.id}
-                  className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50"
+                  className={`overflow-hidden rounded-2xl border ${profitabilitySurfaceClass(
+                    canViewFinancials && quotation.commercial_analysis
+                      ? overallProfitability.status
+                      : "unclassified",
+                  )}`}
                 >
-                  <div className="flex flex-col justify-between gap-3 border-b border-gray-200 bg-white p-4 lg:flex-row lg:items-center">
+                  <div
+                    className={`flex flex-col justify-between gap-3 border-b border-gray-200 p-4 lg:flex-row lg:items-center ${profitabilityHeaderClass(
+                      canViewFinancials && quotation.commercial_analysis
+                        ? overallProfitability.status
+                        : "unclassified",
+                    )}`}
+                  >
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
                         <FaFileInvoiceDollar />
@@ -1261,7 +1355,11 @@ export default function CRMOpportunityQuotationSection({
                   {canViewFinancials
                   && analysisQuotationId === quotation.id
                   && quotation.commercial_analysis ? (
-                    <div className="mx-4 mb-4 rounded-2xl border border-gray-200 bg-white p-4">
+                    <div
+                      className={`mx-4 mb-4 rounded-2xl border p-4 ${profitabilitySurfaceClass(
+                        overallProfitability.status,
+                      )}`}
+                    >
                       <div className="flex flex-col justify-between gap-3 border-b border-gray-200 pb-4 lg:flex-row lg:items-start">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -1438,33 +1536,64 @@ export default function CRMOpportunityQuotationSection({
                       ) : null}
 
                       <details className="mt-4 border-t border-gray-200 pt-3">
-                        <summary className="cursor-pointer list-none rounded-xl bg-gray-50 px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-700 transition hover:bg-gray-100">
-                          Ver rentabilidad por producto ({quotation.items?.length || 0})
+                        <summary className="cursor-pointer list-none rounded-xl bg-white px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-700 ring-1 ring-gray-200 transition hover:bg-gray-50">
+                          Detalle de rentabilidad por producto ({quotation.items?.length || 0})
                         </summary>
 
                         <div className="mt-3 overflow-x-auto rounded-xl border border-gray-200">
-                          <table className="min-w-full border-collapse text-xs">
+                          <table className="min-w-max border-collapse text-xs">
                             <thead className="bg-gray-950 text-white">
                               <tr>
                                 <th className="min-w-64 px-3 py-3 text-left font-black">
                                   Producto
                                 </th>
-                                <th className="px-2 py-3 text-center font-black">Cant.</th>
-                                <th className="px-2 py-3 text-right font-black">PVP</th>
-                                <th className="px-3 py-3 text-center font-black">Colegio</th>
-                                <th className="px-3 py-3 text-center font-black">Editorial</th>
-                                <th className="px-2 py-3 text-right font-black">Incentivo</th>
-                                <th className="px-3 py-3 text-right font-black">Ganancia/u</th>
-                                <th className="px-3 py-3 text-right font-black">Ganancia total</th>
-                                <th className="min-w-40 px-3 py-3 text-center font-black">Estado</th>
+                                <th className="min-w-20 px-2 py-3 text-center font-black">
+                                  Cant.
+                                </th>
+                                <th className="min-w-24 px-2 py-3 text-right font-black">
+                                  PVP
+                                </th>
+                                <th className="min-w-28 px-3 py-3 text-center font-black">
+                                  Dscto. I.E.
+                                </th>
+                                <th className="min-w-28 px-3 py-3 text-right font-black">
+                                  P.IE
+                                </th>
+                                <th className="min-w-32 px-3 py-3 text-center font-black">
+                                  Dscto. editorial
+                                </th>
+                                <th className="min-w-32 px-3 py-3 text-right font-black">
+                                  Costo editorial
+                                </th>
+                                <th className="min-w-28 px-3 py-3 text-right font-black">
+                                  Incentivo
+                                </th>
+                                <th className="min-w-28 px-3 py-3 text-right font-black">
+                                  Ganancia/u
+                                </th>
+                                <th className="min-w-32 px-3 py-3 text-right font-black">
+                                  Ganancia total
+                                </th>
+                                <th className="min-w-40 px-3 py-3 text-center font-black">
+                                  Máx. Dscto. I.E. verde
+                                </th>
+                                <th className="min-w-40 px-3 py-3 text-center font-black">
+                                  Estado
+                                </th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 bg-white">
                               {(quotation.items || []).map((item) => {
                                 const itemNegotiation = negotiationStatus(item);
+                                const greenGuidance = greenDiscountGuidance(item);
 
                                 return (
-                                  <tr key={item.id} className="align-middle">
+                                  <tr
+                                    key={item.id}
+                                    className={`align-middle ${profitabilityRowClass(
+                                      item.profitability_band,
+                                    )}`}
+                                  >
                                     <td className="px-3 py-3">
                                       <p className="wrap-break-word font-black text-gray-950">
                                         {item.product_name_snapshot}
@@ -1479,27 +1608,23 @@ export default function CRMOpportunityQuotationSection({
                                     <td className="whitespace-nowrap px-2 py-3 text-right font-black text-gray-950">
                                       {formatCurrency(item.pvp)}
                                     </td>
-                                    <td className="px-3 py-3 text-center">
-                                      <p className="font-black text-gray-950">
-                                        {formatPercent(item.school_discount_percent)}
-                                      </p>
-                                      <p className="mt-1 whitespace-nowrap text-xs font-bold text-gray-700">
-                                        P.IE {formatCurrency(item.school_price)}
-                                      </p>
+                                    <td className="whitespace-nowrap px-3 py-3 text-center font-black text-gray-950">
+                                      {formatPercent(item.school_discount_percent)}
                                     </td>
-                                    <td className="px-3 py-3 text-center">
-                                      <p className="font-black text-gray-950">
-                                        {item.supplier_discount_percent == null
-                                          ? "Pendiente"
-                                          : formatPercent(
-                                              item.supplier_discount_percent,
-                                            )}
-                                      </p>
-                                      <p className="mt-1 whitespace-nowrap text-xs font-bold text-gray-700">
-                                        Costo {formatCurrency(item.supplier_cost)}
-                                      </p>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
+                                      {formatCurrency(item.school_price)}
                                     </td>
-                                    <td className="whitespace-nowrap px-2 py-3 text-right font-black text-gray-950">
+                                    <td className="whitespace-nowrap px-3 py-3 text-center font-black text-gray-950">
+                                      {item.supplier_discount_percent == null
+                                        ? "Pendiente"
+                                        : formatPercent(
+                                            item.supplier_discount_percent,
+                                          )}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
+                                      {formatCurrency(item.supplier_cost)}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
                                       {formatCurrency(item.school_commission)}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
@@ -1507,6 +1632,14 @@ export default function CRMOpportunityQuotationSection({
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
                                       {formatCurrency(item.commercial_margin_total)}
+                                    </td>
+                                    <td className="px-3 py-3 text-center">
+                                      <p className="font-black text-gray-950">
+                                        {greenGuidance.limit}
+                                      </p>
+                                      <p className={`mt-1 text-xs font-bold ${greenGuidance.className}`}>
+                                        {greenGuidance.detail}
+                                      </p>
                                     </td>
                                     <td className="px-3 py-3 text-center">
                                       <span
@@ -1528,10 +1661,10 @@ export default function CRMOpportunityQuotationSection({
                         </div>
 
                         <p className="mt-2 text-xs leading-5 text-gray-500">
-                          Colegio: descuento I.E. y precio final P.IE. Editorial:
-                          descuento negociado y costo calculado. Ganancia/u =
-                          P.IE - costo editorial - incentivo. El estado usa el
-                          semáforo definido para Texto escolar o Plan lector.
+                          Ganancia/u = P.IE - costo editorial - incentivo.
+                          “Máx. Dscto. I.E. verde” muestra el límite comercial
+                          calculado para conservar el producto en verde; el
+                          porcentaje debe mantenerse por debajo de ese valor.
                         </p>
                       </details>
                     </div>
