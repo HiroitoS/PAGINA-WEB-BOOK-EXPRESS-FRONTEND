@@ -27,123 +27,165 @@ const MONTH_LABELS = {
 const PRINT_STYLES = `
   @page {
     size: A4 landscape;
-    margin: 7mm;
+    margin: 8mm;
   }
 
   @media print {
     html,
     body,
     #root {
-      width: 297mm;
-      min-height: 210mm;
+      width: auto !important;
+      height: auto !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
       background: white !important;
     }
 
     body {
-      margin: 0 !important;
+      overflow: visible !important;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
 
     .quotation-print-shell {
+      width: auto !important;
       min-height: 0 !important;
       padding: 0 !important;
       background: white !important;
     }
 
     .quotation-print-page {
-      width: 100% !important;
+      width: auto !important;
       max-width: none !important;
+      min-height: 0 !important;
+      margin: 0 !important;
       padding: 0 !important;
       box-shadow: none !important;
-      zoom: 0.88;
+      break-after: avoid !important;
+      page-break-after: avoid !important;
     }
 
     .quotation-print-header {
-      gap: 14px !important;
-      padding-bottom: 7px !important;
+      gap: 18px !important;
+      padding-bottom: 8px !important;
     }
 
     .quotation-print-logo-wrap {
-      width: 76px !important;
-      height: 48px !important;
+      width: 86px !important;
+      height: 54px !important;
     }
 
     .quotation-print-logo {
-      max-height: 44px !important;
+      max-height: 50px !important;
     }
 
     .quotation-print-company {
-      font-size: 13px !important;
-      line-height: 1.1 !important;
+      font-size: 15px !important;
+      line-height: 1.15 !important;
     }
 
     .quotation-print-company-meta {
-      margin-top: 2px !important;
-      font-size: 8px !important;
+      margin-top: 3px !important;
+      font-size: 9px !important;
     }
 
     .quotation-print-title-block {
-      min-width: 145px !important;
+      min-width: 170px !important;
     }
 
     .quotation-print-title {
-      font-size: 9px !important;
+      font-size: 10px !important;
     }
 
     .quotation-print-section-grid {
       grid-template-columns: 1fr 1fr !important;
-      gap: 7px !important;
-      margin-top: 7px !important;
+      gap: 8px !important;
+      margin-top: 8px !important;
     }
 
     .quotation-print-card {
-      padding: 7px !important;
-      border-radius: 9px !important;
+      padding: 8px !important;
+      border-radius: 10px !important;
     }
 
     .quotation-print-card-title {
-      font-size: 7px !important;
+      font-size: 8px !important;
     }
 
     .quotation-print-card-name {
       margin-top: 2px !important;
-      font-size: 10px !important;
-      line-height: 1.1 !important;
+      font-size: 11px !important;
+      line-height: 1.15 !important;
     }
 
     .quotation-print-school-info,
     .quotation-print-commercial-info {
       grid-template-columns: 1fr 1fr !important;
-      gap: 2px 10px !important;
-      margin-top: 4px !important;
-      font-size: 8px !important;
-      line-height: 1.15 !important;
+      gap: 3px 12px !important;
+      margin-top: 5px !important;
+      font-size: 8.5px !important;
+      line-height: 1.2 !important;
     }
 
     .quotation-print-table-section {
-      margin-top: 7px !important;
+      margin-top: 8px !important;
     }
 
     .quotation-print-table {
-      font-size: 7.5px !important;
+      width: 100% !important;
+      table-layout: fixed !important;
+      font-size: 8px !important;
     }
 
     .quotation-print-table th {
-      padding: 4px 3px !important;
-      line-height: 1.05 !important;
+      padding: 5px 4px !important;
+      line-height: 1.1 !important;
     }
 
     .quotation-print-table td {
-      padding: 4px 3px !important;
-      line-height: 1.15 !important;
+      padding: 5px 4px !important;
+      line-height: 1.2 !important;
+      overflow-wrap: anywhere;
+    }
+
+    .quotation-print-table th:nth-child(1),
+    .quotation-print-table td:nth-child(1) {
+      width: 8%;
+    }
+
+    .quotation-print-table th:nth-child(2),
+    .quotation-print-table td:nth-child(2) {
+      width: 7%;
+    }
+
+    .quotation-print-table th:nth-child(3),
+    .quotation-print-table td:nth-child(3) {
+      width: 8%;
+    }
+
+    .quotation-print-table th:nth-child(4),
+    .quotation-print-table td:nth-child(4) {
+      width: 8%;
+    }
+
+    .quotation-print-table th:nth-last-child(3),
+    .quotation-print-table td:nth-last-child(3) {
+      width: 42%;
+    }
+
+    .quotation-print-table th:nth-last-child(2),
+    .quotation-print-table td:nth-last-child(2),
+    .quotation-print-table th:last-child,
+    .quotation-print-table td:last-child {
+      width: 8%;
     }
 
     .quotation-print-footer {
-      margin-top: 6px !important;
-      padding-top: 4px !important;
-      font-size: 7px !important;
-      line-height: 1.15 !important;
+      margin-top: 7px !important;
+      padding-top: 5px !important;
+      font-size: 7.5px !important;
+      line-height: 1.2 !important;
     }
 
     .quotation-print-table thead {
