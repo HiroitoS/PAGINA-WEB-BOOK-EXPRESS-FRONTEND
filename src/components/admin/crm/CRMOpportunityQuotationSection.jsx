@@ -21,6 +21,7 @@ import {
   createCRMOpportunityQuotationFromProjection,
   getCRMOpportunityProjection,
   getCRMOpportunityQuotations,
+  previewCRMOpportunityQuotationFinancials,
   reopenCRMOpportunityQuotationNegotiation,
   sendCRMOpportunityQuotation,
   updateCRMOpportunityQuotationDraft,
@@ -269,6 +270,9 @@ export default function CRMOpportunityQuotationSection({
   const [reopenQuotationId, setReopenQuotationId] = useState(null);
   const [reopenReason, setReopenReason] = useState("");
   const [analysisQuotationId, setAnalysisQuotationId] = useState(null);
+  const [financialPreviewByItem, setFinancialPreviewByItem] = useState({});
+  const [financialPreviewLoading, setFinancialPreviewLoading] = useState(false);
+  const [financialPreviewError, setFinancialPreviewError] = useState("");
   const approvalPanelRef = useRef(null);
   const approvalNoteRef = useRef(null);
 
@@ -360,6 +364,91 @@ export default function CRMOpportunityQuotationSection({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [drawerOpen, saving]);
+
+  useEffect(() => {
+    if (!drawerOpen || !canViewFinancials || draftItems.length === 0) {
+      setFinancialPreviewByItem({});
+      setFinancialPreviewError("");
+      setFinancialPreviewLoading(false);
+      return undefined;
+    }
+
+    const previewableItems = draftItems.filter((item) => {
+      const supplierDiscount = Number(item.supplier_discount_percent);
+      const schoolDiscount = Number(item.school_discount_percent);
+      const commission = Number(item.commission_amount || 0);
+
+      return (
+        item.supplier_discount_percent !== ""
+        && Number.isFinite(supplierDiscount)
+        && supplierDiscount >= 0
+        && supplierDiscount <= 100
+        && Number.isFinite(schoolDiscount)
+        && schoolDiscount >= 0
+        && schoolDiscount <= 100
+        && Number.isFinite(commission)
+        && commission >= 0
+      );
+    });
+
+    if (previewableItems.length === 0) {
+      setFinancialPreviewByItem({});
+      setFinancialPreviewError("");
+      setFinancialPreviewLoading(false);
+      return undefined;
+    }
+
+    let ignore = false;
+
+    const timeoutId = window.setTimeout(async () => {
+      setFinancialPreviewLoading(true);
+      setFinancialPreviewError("");
+
+      try {
+        const response = await previewCRMOpportunityQuotationFinancials(
+          opportunityId,
+          {
+            items: previewableItems.map((item) => ({
+              projection_item: item.projection_item,
+              school_discount_percent: item.school_discount_percent,
+              supplier_discount_percent: item.supplier_discount_percent,
+              commission_mode: item.commission_mode,
+              commission_amount: item.commission_amount || "0.00",
+            })),
+          },
+        );
+
+        if (ignore) {
+          return;
+        }
+
+        const nextPreview = {};
+        (response?.items || []).forEach((item) => {
+          nextPreview[item.projection_item] = item;
+        });
+
+        setFinancialPreviewByItem(nextPreview);
+      } catch (error) {
+        if (!ignore) {
+          setFinancialPreviewError(
+            getErrorMessage(
+              error,
+              "No se pudo actualizar el análisis comercial.",
+            ),
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setFinancialPreviewLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      ignore = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [canViewFinancials, draftItems, drawerOpen, opportunityId]);
 
   const editableDraft = useMemo(
     () =>
@@ -486,6 +575,9 @@ export default function CRMOpportunityQuotationSection({
           quotationItem?.parent_price ?? item.unit_price ?? "0.00",
         ),
         supplier_cost: String(quotationItem?.supplier_cost ?? ""),
+        supplier_discount_percent: String(
+          quotationItem?.supplier_discount_percent ?? "",
+        ),
         commission_mode:
           quotationItem?.commission_mode ?? "per_unit",
         commission_amount: String(
@@ -536,6 +628,8 @@ export default function CRMOpportunityQuotationSection({
     setEditingQuotationId(quotation?.id || null);
     setDraftItems(nextItems);
     setDraftNotes(quotation?.notes || "");
+    setFinancialPreviewByItem({});
+    setFinancialPreviewError("");
     setErrorMessage("");
     setSuccessMessage("");
     setDrawerOpen(true);
@@ -548,6 +642,8 @@ export default function CRMOpportunityQuotationSection({
 
     setDrawerOpen(false);
     setEditingQuotationId(null);
+    setFinancialPreviewByItem({});
+    setFinancialPreviewError("");
   }
 
   function updateDraftItem(index, field, value) {
@@ -570,8 +666,10 @@ export default function CRMOpportunityQuotationSection({
       const readingMonth =
         item.reading_month === "" ? null : Number(item.reading_month);
       const commission = Number(item.commission_amount || 0);
-      const supplierCost =
-        item.supplier_cost === "" ? null : Number(item.supplier_cost);
+      const supplierDiscount =
+        item.supplier_discount_percent === ""
+          ? null
+          : Number(item.supplier_discount_percent);
 
       return (
         !Number.isFinite(discount)
@@ -597,15 +695,19 @@ export default function CRMOpportunityQuotationSection({
         )
         || (
           canViewFinancials
-          && supplierCost !== null
-          && (!Number.isFinite(supplierCost) || supplierCost < 0)
+          && (
+            supplierDiscount === null
+            || !Number.isFinite(supplierDiscount)
+            || supplierDiscount < 0
+            || supplierDiscount > 100
+          )
         )
       );
     });
 
     if (invalidItem) {
       setErrorMessage(
-        "Revisa descuento, costo editorial e incentivo. En Plan lector, cada producto debe tener mes de lectura.",
+        "Revisa descuento I.E., descuento editorial e incentivo. En Plan lector, cada producto debe tener mes de lectura.",
       );
       return;
     }
@@ -631,9 +733,8 @@ export default function CRMOpportunityQuotationSection({
           };
 
           if (canViewFinancials) {
-            if (item.supplier_cost !== "") {
-              quotationItem.supplier_cost = item.supplier_cost;
-            }
+            quotationItem.supplier_discount_percent =
+              item.supplier_discount_percent;
             quotationItem.commission_mode = item.commission_mode;
             quotationItem.commission_amount =
               item.commission_amount || "0.00";
@@ -1293,24 +1394,22 @@ export default function CRMOpportunityQuotationSection({
                           <table className="min-w-full border-collapse text-xs">
                             <thead className="bg-gray-950 text-white">
                               <tr>
-                                <th className="min-w-72 px-3 py-3 text-left font-black">
+                                <th className="min-w-64 px-3 py-3 text-left font-black">
                                   Producto
                                 </th>
-                                <th className="px-3 py-3 text-center font-black">Cant.</th>
-                                <th className="px-3 py-3 text-right font-black">PVP</th>
-                                <th className="px-3 py-3 text-right font-black">Descuento I.E.</th>
-                                <th className="px-3 py-3 text-right font-black">P.IE</th>
-                                <th className="px-3 py-3 text-right font-black">Costo editorial</th>
-                                <th className="px-3 py-3 text-right font-black">Incentivo</th>
-                                <th className="px-3 py-3 text-right font-black">Ganancia neta/u</th>
+                                <th className="px-2 py-3 text-center font-black">Cant.</th>
+                                <th className="px-2 py-3 text-right font-black">PVP</th>
+                                <th className="px-3 py-3 text-center font-black">Colegio</th>
+                                <th className="px-3 py-3 text-center font-black">Editorial</th>
+                                <th className="px-2 py-3 text-right font-black">Incentivo</th>
+                                <th className="px-3 py-3 text-right font-black">Ganancia/u</th>
                                 <th className="px-3 py-3 text-right font-black">Ganancia total</th>
-                                <th className="px-3 py-3 text-right font-black">Margen para negociar</th>
-                                <th className="px-3 py-3 text-center font-black">Estado</th>
+                                <th className="min-w-40 px-3 py-3 text-center font-black">Estado</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 bg-white">
                               {(quotation.items || []).map((item) => {
-                                const negotiation = negotiationStatus(item);
+                                const itemNegotiation = negotiationStatus(item);
 
                                 return (
                                   <tr key={item.id} className="align-middle">
@@ -1319,50 +1418,43 @@ export default function CRMOpportunityQuotationSection({
                                         {item.product_name_snapshot}
                                       </p>
                                       <p className="mt-1 text-xs font-semibold text-gray-500">
-                                        {item.provider_name_snapshot} · {item.quantity} unidad(es)
+                                        {item.provider_name_snapshot}
                                       </p>
                                     </td>
-                                    <td className="px-3 py-3 text-center font-bold text-gray-700">
+                                    <td className="px-2 py-3 text-center font-bold text-gray-700">
                                       {item.quantity}
                                     </td>
-                                    <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-gray-900">
+                                    <td className="whitespace-nowrap px-2 py-3 text-right font-bold text-gray-900">
                                       {formatCurrency(item.pvp)}
                                     </td>
-                                    <td className="whitespace-nowrap px-3 py-3 text-right">
-                                      <p className="font-bold text-gray-900">
+                                    <td className="px-3 py-3 text-center">
+                                      <p className="font-black text-gray-950">
                                         {formatPercent(item.school_discount_percent)}
                                       </p>
-                                      <p className="mt-1 text-xs text-gray-500">
-                                        {formatCurrency(item.school_discount_amount)}
+                                      <p className="mt-1 whitespace-nowrap text-xs text-gray-500">
+                                        P.IE {formatCurrency(item.school_price)}
                                       </p>
                                     </td>
-                                    <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
-                                      {formatCurrency(item.school_price)}
+                                    <td className="px-3 py-3 text-center">
+                                      <p className="font-black text-gray-950">
+                                        {item.supplier_discount_percent == null
+                                          ? "Pendiente"
+                                          : formatPercent(
+                                              item.supplier_discount_percent,
+                                            )}
+                                      </p>
+                                      <p className="mt-1 whitespace-nowrap text-xs text-gray-500">
+                                        Costo {formatCurrency(item.supplier_cost)}
+                                      </p>
                                     </td>
-                                    <td className="whitespace-nowrap px-3 py-3 text-right font-bold text-gray-900">
-                                      {formatCurrency(item.supplier_cost)}
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-3 text-right text-gray-700">
+                                    <td className="whitespace-nowrap px-2 py-3 text-right text-gray-700">
                                       {formatCurrency(item.school_commission)}
                                     </td>
-                                    <td className="whitespace-nowrap px-3 py-3 text-right">
-                                      <p className="font-black text-gray-950">
-                                        {formatCurrency(item.commercial_margin_unit)}
-                                      </p>
-                                      <p className="mt-1 text-xs text-gray-500">
-                                        P.IE - costo - incentivo
-                                      </p>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
+                                      {formatCurrency(item.commercial_margin_unit)}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
                                       {formatCurrency(item.commercial_margin_total)}
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-3 text-right">
-                                      <p className={`font-black ${negotiation.className}`}>
-                                        {negotiation.label}
-                                      </p>
-                                      <p className="mt-1 text-xs text-gray-500">
-                                        {negotiation.detail}
-                                      </p>
                                     </td>
                                     <td className="px-3 py-3 text-center">
                                       <span
@@ -1372,6 +1464,9 @@ export default function CRMOpportunityQuotationSection({
                                       >
                                         {item.profitability_band_display || "Sin clasificar"}
                                       </span>
+                                      <p className={`mt-2 text-xs font-bold ${itemNegotiation.className}`}>
+                                        {itemNegotiation.detail}
+                                      </p>
                                     </td>
                                   </tr>
                                 );
@@ -1381,12 +1476,10 @@ export default function CRMOpportunityQuotationSection({
                         </div>
 
                         <p className="mt-2 text-xs leading-5 text-gray-500">
-                          Cálculo principal: P.IE - costo editorial - incentivo =
-                          ganancia neta por unidad. El descuento I.E. muestra
-                          porcentaje e importe en soles. “Margen para negociar”
-                          expresa el colchón disponible antes de salir de verde;
-                          no autoriza superar el descuento estándar del 20 %.
-                          Cualquier descuento mayor sigue requiriendo aprobación.
+                          Colegio: descuento I.E. y precio final P.IE. Editorial:
+                          descuento negociado y costo calculado. Ganancia/u =
+                          P.IE - costo editorial - incentivo. El estado usa el
+                          semáforo definido para Texto escolar o Plan lector.
                         </p>
                       </details>
                     </div>
@@ -1787,10 +1880,19 @@ export default function CRMOpportunityQuotationSection({
                     Number.isFinite(pvp) && Number.isFinite(discount)
                       ? pvp * (1 - discount / 100)
                       : 0;
-                  const hasSavedFinancialAnalysis =
+                  const savedFinancial =
                     canViewFinancials
-                    && item.supplier_cost !== ""
-                    && item.commercial_margin_unit !== "";
+                    && item.supplier_discount_percent !== ""
+                    && item.commercial_margin_unit !== ""
+                      ? item
+                      : null;
+                  const liveFinancial =
+                    financialPreviewByItem[item.projection_item] || null;
+                  const financial = liveFinancial || savedFinancial;
+                  const hasFinancialAnalysis = Boolean(financial);
+                  const negotiation = financial
+                    ? negotiationStatus(financial)
+                    : null;
 
                   return (
                     <article
@@ -1816,13 +1918,13 @@ export default function CRMOpportunityQuotationSection({
                           ) : null}
                         </div>
 
-                        {hasSavedFinancialAnalysis ? (
+                        {hasFinancialAnalysis ? (
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${profitabilityBadgeClass(
-                              item.profitability_band,
+                              financial.profitability_band,
                             )}`}
                           >
-                            {item.profitability_band_display}
+                            {financial.profitability_band_display}
                           </span>
                         ) : null}
                       </div>
@@ -1906,41 +2008,57 @@ export default function CRMOpportunityQuotationSection({
                           <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
                             <div>
                               <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                                Condición interna
+                                Condición comercial interna
                               </p>
                               <p className="mt-1 text-xs leading-5 text-gray-500">
-                                El costo editorial real, los incentivos y la
-                                rentabilidad son datos internos de supervisión.
-                                No se muestran al asesor ni en la cotización del
-                                colegio.
+                                Registra el descuento que la editorial concede a
+                                Book Express. El backend calcula automáticamente
+                                el costo editorial, la ganancia y el semáforo.
                               </p>
                             </div>
+                            {financialPreviewLoading ? (
+                              <span className="text-xs font-bold text-gray-500">
+                                Recalculando...
+                              </span>
+                            ) : null}
                           </div>
 
-                          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                             <label className="text-xs font-bold text-gray-600">
-                              Costo editorial acordado
+                              Descuento editorial %
                               <input
                                 type="number"
                                 min="0"
+                                max="100"
                                 step="0.01"
-                                value={item.supplier_cost}
+                                value={item.supplier_discount_percent}
                                 onChange={(event) =>
                                   updateDraftItem(
                                     index,
-                                    "supplier_cost",
+                                    "supplier_discount_percent",
                                     event.target.value,
                                   )
                                 }
-                                placeholder="Ej. 29.40"
+                                placeholder="Ej. 40"
                                 className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
                               />
                               <span className="mt-1 block text-xs font-medium leading-4 text-gray-500">
-                                Ingrese el costo real acordado con la editorial.
-                                Si ya existe una cotización, se conserva el costo
-                                guardado hasta que supervisión lo cambie.
+                                Ejemplo: 40 % sobre PVP S/ 49.00 = costo
+                                editorial S/ 29.40.
                               </span>
                             </label>
+
+                            <div className="text-xs font-bold text-gray-600">
+                              Costo editorial calculado
+                              <div className="mt-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-black text-gray-950">
+                                {financial
+                                  ? formatCurrency(financial.supplier_cost)
+                                  : "Por calcular"}
+                              </div>
+                              <span className="mt-1 block text-xs font-medium leading-4 text-gray-500">
+                                PVP menos descuento editorial.
+                              </span>
+                            </div>
 
                             <label className="text-xs font-bold text-gray-600">
                               Modalidad del incentivo
@@ -1979,106 +2097,92 @@ export default function CRMOpportunityQuotationSection({
                             </label>
                           </div>
 
-                          {hasSavedFinancialAnalysis ? (
-                            <>
-                              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                                  <p className="text-xs font-bold uppercase text-gray-500">
-                                    Costo editorial
-                                  </p>
-                                  <p className="mt-1 font-black text-gray-950">
-                                    {formatCurrency(item.supplier_cost)}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                                  <p className="text-xs font-bold uppercase text-gray-500">
-                                    Margen unitario
-                                  </p>
-                                  <p className="mt-1 font-black text-gray-950">
-                                    {formatCurrency(
-                                      item.commercial_margin_unit,
-                                    )}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                                  <p className="text-xs font-bold uppercase text-gray-500">
-                                    Margen proyectado
-                                  </p>
-                                  <p className="mt-1 font-black text-gray-950">
-                                    {formatCurrency(
-                                      item.commercial_margin_total,
-                                    )}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                                  <p className="text-xs font-bold uppercase text-gray-500">
-                                    Rentabilidad sobre P.IE
-                                  </p>
-                                  <p className="mt-1 font-black text-gray-950">
-                                    {formatPercent(
-                                      item.commercial_margin_percent,
-                                    )}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                                  <p className="text-xs font-bold uppercase text-gray-500">
-                                    Mínimo verde / unidad
-                                  </p>
-                                  <p className="mt-1 font-black text-gray-950">
-                                    {item.green_margin_threshold_unit === ""
-                                      ? "—"
-                                      : formatCurrency(
-                                          item.green_margin_threshold_unit,
-                                        )}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                                  <p className="text-xs font-bold uppercase text-gray-500">
-                                    Sobre mínimo verde / unidad
-                                  </p>
-                                  <p className="mt-1 font-black text-gray-950">
-                                    {item.green_margin_surplus_unit === ""
-                                      ? "—"
-                                      : formatSignedCurrency(
-                                          item.green_margin_surplus_unit,
-                                        )}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                                  <p className="text-xs font-bold uppercase text-gray-500">
-                                    Descuento máximo verde
-                                  </p>
-                                  <p className="mt-1 font-black text-gray-950">
-                                    {item.max_green_discount_percent === ""
-                                      ? "—"
-                                      : formatPercent(
-                                          item.max_green_discount_percent,
-                                        )}
-                                  </p>
-                                </div>
-                                <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
-                                  <p className="text-xs font-bold uppercase text-gray-500">
-                                    Negociación disponible
-                                  </p>
-                                  <p
-                                    className={`mt-1 font-black ${
-                                      negotiationStatus(item).className
-                                    }`}
-                                  >
-                                    {negotiationStatus(item).label}
-                                  </p>
-                                </div>
+                          {financialPreviewError ? (
+                            <p className="mt-3 text-xs font-bold text-red-700">
+                              {financialPreviewError}
+                            </p>
+                          ) : null}
+
+                          {hasFinancialAnalysis ? (
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                              <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                <p className="text-xs font-bold uppercase text-gray-500">
+                                  Descuento editorial
+                                </p>
+                                <p className="mt-1 font-black text-gray-950">
+                                  {formatPercent(
+                                    financial.supplier_discount_percent,
+                                  )}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  {formatCurrency(
+                                    financial.supplier_discount_amount,
+                                  )} del PVP
+                                </p>
                               </div>
-                              <p className="mt-3 text-xs font-bold text-amber-700">
-                                Estos indicadores corresponden al último
-                                borrador guardado. Al guardar los cambios, el
-                                backend recalculará el semáforo y los márgenes.
-                              </p>
-                            </>
+
+                              <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                <p className="text-xs font-bold uppercase text-gray-500">
+                                  Margen antes de incentivo
+                                </p>
+                                <p className="mt-1 font-black text-gray-950">
+                                  {formatCurrency(
+                                    financial.margin_before_commission_unit,
+                                  )}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  P.IE - costo editorial
+                                </p>
+                              </div>
+
+                              <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                <p className="text-xs font-bold uppercase text-gray-500">
+                                  Ganancia neta / unidad
+                                </p>
+                                <p className="mt-1 font-black text-gray-950">
+                                  {formatCurrency(
+                                    financial.commercial_margin_unit,
+                                  )}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  P.IE - costo - incentivo
+                                </p>
+                              </div>
+
+                              <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                <p className="text-xs font-bold uppercase text-gray-500">
+                                  Ganancia total
+                                </p>
+                                <p className="mt-1 font-black text-gray-950">
+                                  {formatCurrency(
+                                    financial.commercial_margin_total,
+                                  )}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  Según cantidad proyectada
+                                </p>
+                              </div>
+
+                              <div className="rounded-xl bg-white p-3 ring-1 ring-gray-200">
+                                <p className="text-xs font-bold uppercase text-gray-500">
+                                  Estado comercial
+                                </p>
+                                <span
+                                  className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ${profitabilityBadgeClass(
+                                    financial.profitability_band,
+                                  )}`}
+                                >
+                                  {financial.profitability_band_display}
+                                </span>
+                                <p className={`mt-2 text-xs font-bold ${negotiation?.className || "text-gray-500"}`}>
+                                  {negotiation?.detail || "Sin cálculo disponible"}
+                                </p>
+                              </div>
+                            </div>
                           ) : (
-                            <p className="mt-3 text-xs font-bold text-gray-500">
-                              El análisis de margen y semáforo se calculará al
-                              guardar el borrador.
+                            <p className="mt-3 text-xs font-bold text-amber-700">
+                              Ingresa el descuento editorial para calcular el
+                              costo, la ganancia y el semáforo.
                             </p>
                           )}
                         </div>
