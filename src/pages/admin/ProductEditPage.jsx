@@ -1252,7 +1252,6 @@ export default function ProductEditPage() {
                   <tr>
                     <TableHead>Año</TableHead>
                     <TableHead>Campaña</TableHead>
-                    <TableHead>Costo legado</TableHead>
                     <TableHead>Precio</TableHead>
                     <TableHead>Visibilidad</TableHead>
                     <TableHead>Disponibilidad</TableHead>
@@ -1272,15 +1271,6 @@ export default function ProductEditPage() {
 
                       <td className="px-5 py-4 text-gray-700">
                         {price.campaign || "-"}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <p className="font-bold text-gray-500">
-                          {formatPrice(price.cost_price)}
-                        </p>
-                        <p className="mt-1 text-xs font-bold text-gray-400">
-                          No usado para nuevas cotizaciones
-                        </p>
                       </td>
 
                       <td className="px-5 py-4 font-black text-gray-950">
