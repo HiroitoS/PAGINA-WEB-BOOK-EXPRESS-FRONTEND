@@ -74,12 +74,14 @@ const PRINT_STYLES = `
     }
 
     .quotation-print-logo-wrap {
-      width: 112px !important;
+      width: 120px !important;
       height: 72px !important;
     }
 
     .quotation-print-logo {
+      width: 112px !important;
       max-height: 68px !important;
+      object-fit: contain !important;
     }
 
     .quotation-print-company {
@@ -101,8 +103,8 @@ const PRINT_STYLES = `
     }
 
     .quotation-print-section-grid {
-      grid-template-columns: 1fr 1fr !important;
-      gap: 12px !important;
+      grid-template-columns: 1.15fr 1.15fr 0.7fr !important;
+      gap: 10px !important;
       margin-top: 12px !important;
     }
 
@@ -122,12 +124,18 @@ const PRINT_STYLES = `
     }
 
     .quotation-print-school-info,
-    .quotation-print-commercial-info {
+    .quotation-print-contact-info {
       grid-template-columns: 1fr 1fr !important;
-      gap: 4px 14px !important;
+      gap: 4px 12px !important;
       margin-top: 6px !important;
-      font-size: 11px !important;
+      font-size: 10.5px !important;
       line-height: 1.3 !important;
+    }
+
+    .quotation-print-advisor-info {
+      margin-top: 6px !important;
+      font-size: 10.5px !important;
+      line-height: 1.35 !important;
     }
 
     .quotation-print-table-section {
@@ -449,14 +457,14 @@ export default function CRMQuotationPrintPage() {
           className="inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-red-800"
         >
           <FaPrint />
-          Imprimir / Guardar PDF
+          Imprimir
         </button>
       </div>
 
       <main className="quotation-print-page mx-auto w-full max-w-7xl bg-white p-7 shadow-sm print:max-w-none print:p-0 print:shadow-none">
         <header className="quotation-print-header flex items-start justify-between gap-8 border-b-2 border-gray-950 pb-5">
           <div className="flex items-start gap-4">
-            <div className="quotation-print-logo-wrap flex h-20 w-28 shrink-0 items-center justify-center rounded-xl bg-white">
+            <div className="quotation-print-logo-wrap flex h-20 w-32 shrink-0 items-center justify-center bg-white">
               <img
                 src={logoBookExpress}
                 alt="Book Express"
@@ -493,7 +501,7 @@ export default function CRMQuotationPrintPage() {
           </div>
         </header>
 
-        <section className="quotation-print-section-grid mt-5 grid gap-4 md:grid-cols-2">
+        <section className="quotation-print-section-grid mt-5 grid gap-4 md:grid-cols-[1.15fr_1.15fr_0.7fr]">
           <div className="quotation-print-card rounded-2xl border border-gray-200 p-4">
             <p className="quotation-print-card-title text-xs font-black uppercase tracking-wide text-red-700">
               Institución educativa
@@ -520,14 +528,13 @@ export default function CRMQuotationPrintPage() {
 
           <div className="quotation-print-card rounded-2xl border border-gray-200 p-4">
             <p className="quotation-print-card-title text-xs font-black uppercase tracking-wide text-red-700">
-              Atención comercial
+              Contacto del colegio
+            </p>
+            <p className="quotation-print-card-name mt-1 text-lg font-black text-gray-950">
+              {formatContact(opportunity.primary_contact)}
             </p>
 
-            <div className="quotation-print-commercial-info mt-2 grid gap-2 text-sm text-gray-700">
-              <p>
-                <span className="font-black text-gray-950">Contacto:</span>{" "}
-                {formatContact(opportunity.primary_contact)}
-              </p>
+            <div className="quotation-print-contact-info mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
               <p>
                 <span className="font-black text-gray-950">Cargo:</span>{" "}
                 {opportunity.primary_contact?.position || "No registrado"}
@@ -538,20 +545,36 @@ export default function CRMQuotationPrintPage() {
                   || opportunity.primary_contact?.phone
                   || "No registrado"}
               </p>
-              <p>
+              <p className="sm:col-span-2">
                 <span className="font-black text-gray-950">Correo:</span>{" "}
                 {opportunity.primary_contact?.email || "No registrado"}
               </p>
+            </div>
+          </div>
+
+          <div className="quotation-print-card rounded-2xl border border-gray-200 p-4">
+            <p className="quotation-print-card-title text-xs font-black uppercase tracking-wide text-red-700">
+              Asesor Book Express
+            </p>
+            <p className="quotation-print-card-name mt-1 text-base font-black text-gray-950">
+              {formatOwner(opportunity.owner)}
+            </p>
+
+            <div className="quotation-print-advisor-info space-y-2 text-sm text-gray-700">
               <p>
-                <span className="font-black text-gray-950">Asesor:</span>{" "}
-                {formatOwner(opportunity.owner)}
+                <span className="font-black text-gray-950">Celular:</span>{" "}
+                {opportunity.owner?.whatsapp
+                  || opportunity.owner?.phone
+                  || "No registrado"}
               </p>
-              <p>
-                <span className="font-black text-gray-950">Campaña:</span>{" "}
-                {opportunity.campaign?.name
-                  || quotation.campaign_name_snapshot
-                  || "Sin campaña"}
-              </p>
+              {opportunity.owner?.whatsapp
+              && opportunity.owner?.phone
+              && opportunity.owner.whatsapp !== opportunity.owner.phone ? (
+                <p>
+                  <span className="font-black text-gray-950">WhatsApp:</span>{" "}
+                  {opportunity.owner.whatsapp}
+                </p>
+              ) : null}
             </div>
           </div>
         </section>
