@@ -286,6 +286,55 @@ function formatLocation(school) {
     .join(", ");
 }
 
+function formatScheduleDate(value) {
+  if (!value) {
+    return "No registrada";
+  }
+
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  if (Number.isNaN(date.getTime())) {
+    return "No registrada";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatScheduleTime(value) {
+  if (!value) {
+    return "No registrada";
+  }
+
+  const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
+  const date = new Date(2000, 0, 1, hours, minutes);
+
+  if (Number.isNaN(date.getTime())) {
+    return "No registrada";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function scheduleDateLabel(mode) {
+  if (mode === "fair") {
+    return "Fecha de feria";
+  }
+
+  if (mode === "consignment") {
+    return "Fecha de entrega en consignación";
+  }
+
+  return "Fecha de abastecimiento";
+}
+
 export default function CRMQuotationPrintPage() {
   const { opportunityId, quotationId } = useParams();
   const navigate = useNavigate();
@@ -607,6 +656,42 @@ export default function CRMQuotationPrintPage() {
                 </p>
               ) : null}
             </div>
+          </div>
+        </section>
+
+        <section className="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+          <p className="text-xs font-black uppercase tracking-wide text-red-700">
+            Condiciones de atención
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-700">
+            <p>
+              <span className="font-black text-gray-950">
+                Modalidad:
+              </span>{" "}
+              {quotation.sale_mode_display || "No registrada"}
+            </p>
+            <p>
+              <span className="font-black text-gray-950">
+                {scheduleDateLabel(quotation.sale_mode)}:
+              </span>{" "}
+              {formatScheduleDate(quotation.service_date)}
+            </p>
+            {quotation.sale_mode === "fair" ? (
+              <>
+                <p>
+                  <span className="font-black text-gray-950">
+                    Hora de inicio:
+                  </span>{" "}
+                  {formatScheduleTime(quotation.fair_start_time)}
+                </p>
+                <p>
+                  <span className="font-black text-gray-950">
+                    Hora de fin:
+                  </span>{" "}
+                  {formatScheduleTime(quotation.fair_end_time)}
+                </p>
+              </>
+            ) : null}
           </div>
         </section>
 
