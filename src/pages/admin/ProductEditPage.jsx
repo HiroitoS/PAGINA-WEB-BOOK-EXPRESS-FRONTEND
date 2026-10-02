@@ -189,9 +189,6 @@ function getFriendlyPriceError(error) {
     return "El precio referencial ingresado no es válido.";
   }
 
-  if (backendData?.cost_price) {
-    return "El precio costo ingresado no es válido.";
-  }
 
   if (backendData?.detail) {
     return String(backendData.detail);
@@ -204,7 +201,6 @@ function getEmptyEditPriceForm() {
   return {
     year: "",
     campaign: "Campaña escolar",
-    cost_price: "",
     price: "",
     show_price: false,
     consult_price: true,
@@ -236,7 +232,6 @@ export default function ProductEditPage() {
   const [priceForm, setPriceForm] = useState({
     year: "2026",
     campaign: "Campaña escolar",
-    cost_price: "",
     price: "",
     show_price: false,
     consult_price: true,
@@ -364,10 +359,6 @@ export default function ProductEditPage() {
     setEditPriceForm({
       year: String(price.year || ""),
       campaign: price.campaign || "Campaña escolar",
-      cost_price:
-        price.cost_price === null || price.cost_price === undefined
-          ? ""
-          : String(price.cost_price),
       price: getPriceValue(price) ? String(getPriceValue(price)) : "",
       show_price: getShowPriceValue(price),
       consult_price:
@@ -485,9 +476,6 @@ export default function ProductEditPage() {
       product: Number(id),
       year: Number(priceForm.year),
       campaign: priceForm.campaign.trim() || "Campaña escolar",
-      cost_price: priceForm.cost_price
-        ? Number(priceForm.cost_price)
-        : null,
       price: priceForm.price ? Number(priceForm.price) : null,
       show_price: priceForm.show_price,
       consult_price: priceForm.consult_price,
@@ -503,7 +491,6 @@ export default function ProductEditPage() {
       setPriceForm((prev) => ({
         ...prev,
         campaign: "Campaña escolar",
-        cost_price: "",
         price: "",
         show_price: false,
         consult_price: true,
@@ -539,9 +526,6 @@ export default function ProductEditPage() {
     const payload = {
       year: Number(editPriceForm.year),
       campaign: editPriceForm.campaign.trim() || "Campaña escolar",
-      cost_price: editPriceForm.cost_price
-        ? Number(editPriceForm.cost_price)
-        : null,
       price: editPriceForm.price ? Number(editPriceForm.price) : null,
       show_price: editPriceForm.show_price,
       consult_price: editPriceForm.consult_price,
@@ -1039,12 +1023,13 @@ export default function ProductEditPage() {
             <div>
               <h3 className="font-black text-gray-950">Agregar precio</h3>
               <p className="mt-1 text-xs text-gray-500">
-                Úsalo para registrar precio 2026, 2027 o campañas futuras.
+                Registra el PVP por campaña. El costo editorial real se define
+                en la cotización según el descuento negociado con la editorial.
               </p>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+          <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             <TextField
               label="Año *"
               type="number"
@@ -1061,17 +1046,6 @@ export default function ProductEditPage() {
               onChange={handlePriceChange}
               placeholder="Campaña escolar"
               helper="Para la campaña escolar del CRM usa exactamente “Campaña escolar”."
-            />
-
-            <TextField
-              label="Precio costo"
-              type="number"
-              step="0.01"
-              name="cost_price"
-              value={priceForm.cost_price}
-              onChange={handlePriceChange}
-              placeholder="Ejemplo: 60.00"
-              helper="Costo editorial interno usado para margen y cotización."
             />
 
             <TextField
@@ -1159,7 +1133,7 @@ export default function ProductEditPage() {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+            <div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               <TextField
                 label="Año *"
                 type="number"
@@ -1172,15 +1146,6 @@ export default function ProductEditPage() {
                 label="Campaña"
                 name="campaign"
                 value={editPriceForm.campaign}
-                onChange={handleEditPriceChange}
-              />
-
-              <TextField
-                label="Precio costo"
-                type="number"
-                step="0.01"
-                name="cost_price"
-                value={editPriceForm.cost_price}
                 onChange={handleEditPriceChange}
               />
 
@@ -1287,7 +1252,7 @@ export default function ProductEditPage() {
                   <tr>
                     <TableHead>Año</TableHead>
                     <TableHead>Campaña</TableHead>
-                    <TableHead>Costo</TableHead>
+                    <TableHead>Costo legado</TableHead>
                     <TableHead>Precio</TableHead>
                     <TableHead>Visibilidad</TableHead>
                     <TableHead>Disponibilidad</TableHead>
@@ -1309,8 +1274,13 @@ export default function ProductEditPage() {
                         {price.campaign || "-"}
                       </td>
 
-                      <td className="px-5 py-4 font-bold text-gray-700">
-                        {formatPrice(price.cost_price)}
+                      <td className="px-5 py-4">
+                        <p className="font-bold text-gray-500">
+                          {formatPrice(price.cost_price)}
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-gray-400">
+                          No usado para nuevas cotizaciones
+                        </p>
                       </td>
 
                       <td className="px-5 py-4 font-black text-gray-950">
