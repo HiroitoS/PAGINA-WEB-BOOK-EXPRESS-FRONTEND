@@ -27,7 +27,7 @@ const MONTH_LABELS = {
 const PRINT_STYLES = `
   @page {
     size: A4 landscape;
-    margin: 8mm;
+    margin: 6mm;
   }
 
   @media print {
@@ -56,66 +56,68 @@ const PRINT_STYLES = `
     }
 
     .quotation-print-page {
-      width: auto !important;
-      max-width: none !important;
-      min-height: 0 !important;
-      margin: 0 !important;
+      width: 285mm !important;
+      max-width: 285mm !important;
+      min-height: 198mm !important;
+      margin: 0 auto !important;
       padding: 0 !important;
       box-shadow: none !important;
+      display: flex !important;
+      flex-direction: column !important;
       break-after: avoid !important;
       page-break-after: avoid !important;
     }
 
     .quotation-print-header {
-      gap: 18px !important;
-      padding-bottom: 8px !important;
+      gap: 20px !important;
+      padding-bottom: 10px !important;
     }
 
     .quotation-print-logo-wrap {
-      width: 86px !important;
-      height: 54px !important;
+      width: 96px !important;
+      height: 62px !important;
     }
 
     .quotation-print-logo {
-      max-height: 50px !important;
+      max-height: 58px !important;
     }
 
     .quotation-print-company {
-      font-size: 15px !important;
+      font-size: 17px !important;
       line-height: 1.15 !important;
     }
 
     .quotation-print-company-meta {
-      margin-top: 3px !important;
-      font-size: 9px !important;
+      margin-top: 4px !important;
+      font-size: 9.5px !important;
     }
 
     .quotation-print-title-block {
-      min-width: 170px !important;
+      min-width: 190px !important;
     }
 
     .quotation-print-title {
-      font-size: 10px !important;
+      font-size: 11px !important;
     }
 
     .quotation-print-section-grid {
       grid-template-columns: 1fr 1fr !important;
-      gap: 8px !important;
-      margin-top: 8px !important;
+      gap: 10px !important;
+      margin-top: 10px !important;
     }
 
     .quotation-print-card {
-      padding: 8px !important;
+      padding: 10px !important;
       border-radius: 10px !important;
     }
 
     .quotation-print-card-title {
-      font-size: 8px !important;
+      font-size: 8.5px !important;
     }
 
     .quotation-print-card-name {
-      margin-top: 2px !important;
-      font-size: 11px !important;
+      margin-top: 3px !important;
+      font-size: 12px !important;
       line-height: 1.15 !important;
     }
 
@@ -124,28 +126,28 @@ const PRINT_STYLES = `
       grid-template-columns: 1fr 1fr !important;
       gap: 3px 12px !important;
       margin-top: 5px !important;
-      font-size: 8.5px !important;
-      line-height: 1.2 !important;
+      font-size: 9px !important;
+      line-height: 1.25 !important;
     }
 
     .quotation-print-table-section {
-      margin-top: 8px !important;
+      margin-top: 10px !important;
     }
 
     .quotation-print-table {
       width: 100% !important;
       table-layout: fixed !important;
-      font-size: 8px !important;
+      font-size: 8.8px !important;
     }
 
     .quotation-print-table th {
-      padding: 5px 4px !important;
-      line-height: 1.1 !important;
+      padding: 6px 4px !important;
+      line-height: 1.15 !important;
     }
 
     .quotation-print-table td {
-      padding: 5px 4px !important;
-      line-height: 1.2 !important;
+      padding: 6px 4px !important;
+      line-height: 1.25 !important;
       overflow-wrap: anywhere;
     }
 
@@ -182,9 +184,9 @@ const PRINT_STYLES = `
     }
 
     .quotation-print-footer {
-      margin-top: 7px !important;
-      padding-top: 5px !important;
-      font-size: 7.5px !important;
+      margin-top: auto !important;
+      padding-top: 7px !important;
+      font-size: 8px !important;
       line-height: 1.2 !important;
     }
 
