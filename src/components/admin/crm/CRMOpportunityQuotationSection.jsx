@@ -233,6 +233,16 @@ function greenDiscountGuidance(item) {
 
 function overallProfitabilityStatus(analysis) {
   const bands = analysis?.products_by_band || {};
+  const unclassified = Number(bands.unclassified || 0);
+
+  if (unclassified > 0) {
+    return {
+      status: "unclassified",
+      label: "Pendiente",
+      count: unclassified,
+    };
+  }
+
   const rankedBands = [
     {
       status: "loss",
@@ -261,7 +271,7 @@ function overallProfitabilityStatus(analysis) {
     || {
       status: "unclassified",
       label: "Sin clasificar",
-      count: Number(bands.unclassified || 0),
+      count: 0,
     }
   );
 }
@@ -340,8 +350,13 @@ function quotationTotals(quotation) {
       totals.pvp += Number(item.pvp || 0) * quantity;
       totals.school += Number(item.school_price || 0) * quantity;
       totals.parents += Number(item.parent_price || 0) * quantity;
-      totals.cost += Number(item.supplier_cost || 0) * quantity;
       totals.units += quantity;
+
+      if (item.supplier_discount_percent == null) {
+        totals.costPending = true;
+      } else {
+        totals.cost += Number(item.supplier_cost || 0) * quantity;
+      }
 
       return totals;
     },
@@ -351,6 +366,7 @@ function quotationTotals(quotation) {
       parents: 0,
       cost: 0,
       units: 0,
+      costPending: false,
     },
   );
 }
@@ -1346,7 +1362,9 @@ export default function CRMOpportunityQuotationSection({
                           Costo editorial
                         </p>
                         <p className="mt-1 text-lg font-black text-gray-950">
-                          {formatCurrency(totals.cost)}
+                          {totals.costPending
+                            ? "Pendiente"
+                            : formatCurrency(totals.cost)}
                         </p>
                       </div>
                     ) : null}
@@ -1384,9 +1402,12 @@ export default function CRMOpportunityQuotationSection({
                             Rentabilidad sobre venta (P.IE)
                           </p>
                           <p className="mt-1 text-lg font-black">
-                            {formatPercent(
-                              quotation.commercial_analysis.margin_percent,
-                            )}
+                            {quotation.commercial_analysis
+                              .has_pending_supplier_conditions
+                              ? "Pendiente"
+                              : formatPercent(
+                                  quotation.commercial_analysis.margin_percent,
+                                )}
                           </p>
                           <p className="mt-1 text-xs text-gray-300">
                             Ganancia neta estimada ÷ Venta P.IE
@@ -1410,9 +1431,12 @@ export default function CRMOpportunityQuotationSection({
                             Costo editorial
                           </p>
                           <p className="mt-1 text-lg font-black text-gray-950">
-                            {formatCurrency(
-                              quotation.commercial_analysis.cost_total,
-                            )}
+                            {quotation.commercial_analysis
+                              .has_pending_supplier_conditions
+                              ? "Pendiente"
+                              : formatCurrency(
+                                  quotation.commercial_analysis.cost_total,
+                                )}
                           </p>
                         </div>
                         <div className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
@@ -1430,9 +1454,12 @@ export default function CRMOpportunityQuotationSection({
                             Ganancia neta estimada
                           </p>
                           <p className="mt-1 text-lg font-black text-gray-950">
-                            {formatCurrency(
-                              quotation.commercial_analysis.margin_total,
-                            )}
+                            {quotation.commercial_analysis
+                              .has_pending_supplier_conditions
+                              ? "Pendiente"
+                              : formatCurrency(
+                                  quotation.commercial_analysis.margin_total,
+                                )}
                           </p>
                         </div>
                         <div className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
@@ -1473,9 +1500,13 @@ export default function CRMOpportunityQuotationSection({
                             Colchón total frente al mínimo verde
                           </p>
                           <p className="mt-1 text-base font-black text-gray-950">
-                            {formatSignedCurrency(
-                              quotation.commercial_analysis.green_margin_surplus_total,
-                            )}
+                            {quotation.commercial_analysis
+                              .has_pending_supplier_conditions
+                              ? "Pendiente"
+                              : formatSignedCurrency(
+                                  quotation.commercial_analysis
+                                    .green_margin_surplus_total,
+                                )}
                           </p>
                           <p className="mt-1 text-xs text-gray-500">
                             Importe total que todavía sobra para mantener verde,
@@ -1483,6 +1514,20 @@ export default function CRMOpportunityQuotationSection({
                           </p>
                         </div>
                       </div>
+
+                      {quotation.commercial_analysis
+                        .has_pending_supplier_conditions ? (
+                        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                          <p className="text-xs font-black uppercase tracking-wide text-amber-900">
+                            Condición editorial pendiente
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-amber-800">
+                            Registra el descuento editorial de todos los
+                            productos para calcular costo, ganancia, margen y
+                            semáforo de forma oficial.
+                          </p>
+                        </div>
+                      ) : null}
 
                       <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
                         <p className="text-xs font-black uppercase tracking-wide text-gray-600">
@@ -1512,7 +1557,9 @@ export default function CRMOpportunityQuotationSection({
                         </div>
                       </div>
 
-                      {quotation.commercial_analysis.margin_by_editorial?.length ? (
+                      {!quotation.commercial_analysis
+                        .has_pending_supplier_conditions
+                      && quotation.commercial_analysis.margin_by_editorial?.length ? (
                         <div className="mt-4">
                           <p className="text-xs font-black uppercase tracking-wide text-gray-500">
                             Margen proyectado por editorial
@@ -1584,6 +1631,8 @@ export default function CRMOpportunityQuotationSection({
                             </thead>
                             <tbody className="divide-y divide-gray-200 bg-white">
                               {(quotation.items || []).map((item) => {
+                                const supplierConditionPending =
+                                  item.supplier_discount_percent == null;
                                 const itemNegotiation = negotiationStatus(item);
                                 const greenGuidance = greenDiscountGuidance(item);
 
@@ -1622,23 +1671,37 @@ export default function CRMOpportunityQuotationSection({
                                           )}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
-                                      {formatCurrency(item.supplier_cost)}
+                                      {supplierConditionPending
+                                        ? "Pendiente"
+                                        : formatCurrency(item.supplier_cost)}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
                                       {formatCurrency(item.school_commission)}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
-                                      {formatCurrency(item.commercial_margin_unit)}
+                                      {supplierConditionPending
+                                        ? "Pendiente"
+                                        : formatCurrency(
+                                            item.commercial_margin_unit,
+                                          )}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-black text-gray-950">
-                                      {formatCurrency(item.commercial_margin_total)}
+                                      {supplierConditionPending
+                                        ? "Pendiente"
+                                        : formatCurrency(
+                                            item.commercial_margin_total,
+                                          )}
                                     </td>
                                     <td className="px-3 py-3 text-center">
                                       <p className="font-black text-gray-950">
-                                        {greenGuidance.limit}
+                                        {supplierConditionPending
+                                          ? "Pendiente"
+                                          : greenGuidance.limit}
                                       </p>
                                       <p className={`mt-1 text-xs font-bold ${greenGuidance.className}`}>
-                                        {greenGuidance.detail}
+                                        {supplierConditionPending
+                                          ? "Registra el descuento editorial"
+                                          : greenGuidance.detail}
                                       </p>
                                     </td>
                                     <td className="px-3 py-3 text-center">
@@ -1647,10 +1710,15 @@ export default function CRMOpportunityQuotationSection({
                                           item.profitability_band,
                                         )}`}
                                       >
-                                        {item.profitability_band_display || "Sin clasificar"}
+                                        {supplierConditionPending
+                                          ? "Pendiente"
+                                          : item.profitability_band_display
+                                            || "Sin clasificar"}
                                       </span>
                                       <p className={`mt-2 text-xs font-bold ${itemNegotiation.className}`}>
-                                        {itemNegotiation.detail}
+                                        {supplierConditionPending
+                                          ? "Sin cálculo de rentabilidad"
+                                          : itemNegotiation.detail}
                                       </p>
                                     </td>
                                   </tr>
