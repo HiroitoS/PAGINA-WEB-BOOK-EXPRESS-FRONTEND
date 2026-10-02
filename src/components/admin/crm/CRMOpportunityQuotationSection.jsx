@@ -56,6 +56,101 @@ const READING_MONTHS = [
   { value: "12", label: "Diciembre" },
 ];
 
+const SALE_MODES = [
+  {
+    value: "point_of_sale",
+    label: "Punto de venta / librería",
+  },
+  {
+    value: "fair",
+    label: "Feria",
+  },
+  {
+    value: "consignment",
+    label: "Consignación",
+  },
+];
+
+function saleModeLabel(value) {
+  return (
+    SALE_MODES.find((mode) => mode.value === value)?.label
+    || "No registrada"
+  );
+}
+
+function scheduleDateLabel(value) {
+  if (value === "fair") {
+    return "Fecha de feria";
+  }
+
+  if (value === "consignment") {
+    return "Fecha de entrega en consignación";
+  }
+
+  return "Fecha de abastecimiento";
+}
+
+function formatScheduleDate(value) {
+  if (!value) {
+    return "Fecha por definir";
+  }
+
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Fecha por definir";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatScheduleTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  const [hours, minutes] = String(value).slice(0, 5).split(":").map(Number);
+  const date = new Date(2000, 0, 1, hours, minutes);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("es-PE", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function saleScheduleSummary(quotation) {
+  if (!quotation?.sale_mode) {
+    return "Modalidad de venta por definir";
+  }
+
+  const parts = [
+    saleModeLabel(quotation.sale_mode),
+    formatScheduleDate(quotation.service_date),
+  ];
+
+  if (quotation.sale_mode === "fair") {
+    const start = formatScheduleTime(quotation.fair_start_time);
+    const end = formatScheduleTime(quotation.fair_end_time);
+
+    if (start && end) {
+      parts.push(`${start} a ${end}`);
+    } else {
+      parts.push("Horario por definir");
+    }
+  }
+
+  return parts.join(" · ");
+}
+
 function normalizeList(data) {
   if (Array.isArray(data)) {
     return data;
@@ -415,6 +510,10 @@ export default function CRMOpportunityQuotationSection({
   const [editingQuotationId, setEditingQuotationId] = useState(null);
   const [draftItems, setDraftItems] = useState([]);
   const [draftNotes, setDraftNotes] = useState("");
+  const [draftSaleMode, setDraftSaleMode] = useState("");
+  const [draftServiceDate, setDraftServiceDate] = useState("");
+  const [draftFairStartTime, setDraftFairStartTime] = useState("");
+  const [draftFairEndTime, setDraftFairEndTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState(null);
   const [approvalQuotationId, setApprovalQuotationId] = useState(null);
@@ -759,6 +858,18 @@ export default function CRMOpportunityQuotationSection({
     setEditingQuotationId(quotation?.id || null);
     setDraftItems(nextItems);
     setDraftNotes(quotation?.notes || "");
+    setDraftSaleMode(quotation?.sale_mode || "");
+    setDraftServiceDate(quotation?.service_date || "");
+    setDraftFairStartTime(
+      quotation?.sale_mode === "fair"
+        ? String(quotation?.fair_start_time || "").slice(0, 5)
+        : "",
+    );
+    setDraftFairEndTime(
+      quotation?.sale_mode === "fair"
+        ? String(quotation?.fair_end_time || "").slice(0, 5)
+        : "",
+    );
     setFinancialPreviewByItem({});
     setFinancialPreviewError("");
     setFinancialPreviewLoading(false);
@@ -774,6 +885,10 @@ export default function CRMOpportunityQuotationSection({
 
     setDrawerOpen(false);
     setEditingQuotationId(null);
+    setDraftSaleMode("");
+    setDraftServiceDate("");
+    setDraftFairStartTime("");
+    setDraftFairEndTime("");
     setFinancialPreviewByItem({});
     setFinancialPreviewError("");
     setFinancialPreviewLoading(false);
@@ -845,6 +960,18 @@ export default function CRMOpportunityQuotationSection({
       return;
     }
 
+    if (
+      draftSaleMode === "fair"
+      && draftFairStartTime
+      && draftFairEndTime
+      && draftFairEndTime <= draftFairStartTime
+    ) {
+      setErrorMessage(
+        "La hora de fin de la feria debe ser posterior a la hora de inicio.",
+      );
+      return;
+    }
+
     setSaving(true);
     setErrorMessage("");
 
@@ -875,6 +1002,16 @@ export default function CRMOpportunityQuotationSection({
 
           return quotationItem;
         }),
+        sale_mode: draftSaleMode,
+        service_date: draftServiceDate || null,
+        fair_start_time:
+          draftSaleMode === "fair" && draftFairStartTime
+            ? draftFairStartTime
+            : null,
+        fair_end_time:
+          draftSaleMode === "fair" && draftFairEndTime
+            ? draftFairEndTime
+            : null,
         notes: draftNotes.trim(),
       };
 
@@ -1879,7 +2016,7 @@ export default function CRMOpportunityQuotationSection({
                         </p>
                         <p className="mt-1 leading-5">
                           Puedes conservar el borrador para planificación, pero
-                          el backend no permitirá enviarlo hasta cargar los
+                          no podrá marcarse como enviado hasta cargar los
                           precios vigentes de la campaña.
                         </p>
                       </div>
@@ -1981,6 +2118,13 @@ export default function CRMOpportunityQuotationSection({
                         {quotation.discount_approval_status_display
                           || "No requerida"}
                       </p>
+                    </div>
+
+                    <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs text-gray-600">
+                      <span className="font-black text-gray-900">
+                        Modalidad y atención:
+                      </span>{" "}
+                      {saleScheduleSummary(quotation)}
                     </div>
 
                     {quotation.notes ? (
@@ -2121,8 +2265,8 @@ export default function CRMOpportunityQuotationSection({
                   </p>
                   <p className="mt-1 leading-5">
                     Costos, incentivos, margen y semáforo son información
-                    reservada para supervisión comercial. El cálculo oficial
-                    se realiza en el backend al guardar el borrador.
+                    reservada para supervisión comercial. Los cálculos se
+                    actualizan automáticamente al guardar los cambios.
                   </p>
                 </div>
               ) : null}
@@ -2276,7 +2420,7 @@ export default function CRMOpportunityQuotationSection({
                               </p>
                               <p className="mt-1 text-xs leading-5 text-gray-500">
                                 Registra el descuento que la editorial concede a
-                                Book Express. El backend calcula automáticamente
+                                Book Express. El sistema calcula automáticamente
                                 el costo editorial, la ganancia y el semáforo.
                               </p>
                             </div>
@@ -2473,6 +2617,91 @@ export default function CRMOpportunityQuotationSection({
                   );
                 })}
               </div>
+              <section className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                    Modalidad de venta y atención
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-gray-500">
+                    Registra cómo se atenderá al colegio y cuándo deben estar
+                    disponibles los libros.
+                  </p>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <label className="text-xs font-bold text-gray-600">
+                    Modalidad de venta
+                    <select
+                      value={draftSaleMode}
+                      onChange={(event) => {
+                        const nextMode = event.target.value;
+                        setDraftSaleMode(nextMode);
+
+                        if (nextMode !== "fair") {
+                          setDraftFairStartTime("");
+                          setDraftFairEndTime("");
+                        }
+                      }}
+                      className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                    >
+                      <option value="">Por definir</option>
+                      {SALE_MODES.map((mode) => (
+                        <option key={mode.value} value={mode.value}>
+                          {mode.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="text-xs font-bold text-gray-600">
+                    {scheduleDateLabel(draftSaleMode)}
+                    <input
+                      type="date"
+                      value={draftServiceDate}
+                      onChange={(event) =>
+                        setDraftServiceDate(event.target.value)
+                      }
+                      className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                    />
+                  </label>
+
+                  {draftSaleMode === "fair" ? (
+                    <>
+                      <label className="text-xs font-bold text-gray-600">
+                        Hora de inicio
+                        <input
+                          type="time"
+                          value={draftFairStartTime}
+                          onChange={(event) =>
+                            setDraftFairStartTime(event.target.value)
+                          }
+                          className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                        />
+                      </label>
+
+                      <label className="text-xs font-bold text-gray-600">
+                        Hora de fin
+                        <input
+                          type="time"
+                          value={draftFairEndTime}
+                          onChange={(event) =>
+                            setDraftFairEndTime(event.target.value)
+                          }
+                          className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                        />
+                      </label>
+                    </>
+                  ) : null}
+                </div>
+
+                <p className="mt-3 text-xs leading-5 text-gray-500">
+                  Puedes guardar el borrador mientras coordinas estos datos.
+                  Para marcar la cotización como enviada, la modalidad y la
+                  fecha deben estar completas; si es una feria, también se
+                  requiere hora de inicio y hora de fin.
+                </p>
+              </section>
+
               <label
                 htmlFor="quotation-notes"
                 className="mt-5 block text-xs font-black uppercase tracking-wide text-gray-600"
