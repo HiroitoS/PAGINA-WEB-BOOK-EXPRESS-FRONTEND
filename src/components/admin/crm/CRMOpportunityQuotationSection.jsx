@@ -155,6 +155,22 @@ function saleScheduleSummary(quotation) {
   return parts.join(" · ");
 }
 
+function isSaleScheduleComplete(quotation) {
+  if (!quotation?.sale_mode || !quotation?.service_date) {
+    return false;
+  }
+
+  if (quotation.sale_mode !== "fair") {
+    return true;
+  }
+
+  if (!quotation.fair_start_time || !quotation.fair_end_time) {
+    return false;
+  }
+
+  return quotation.fair_end_time > quotation.fair_start_time;
+}
+
 function normalizeList(data) {
   if (Array.isArray(data)) {
     return data;
@@ -1249,6 +1265,7 @@ export default function CRMOpportunityQuotationSection({
               const approvalPending =
                 quotation.requires_discount_approval
                 && quotation.discount_approval_status !== "approved";
+              const scheduleComplete = isSaleScheduleComplete(quotation);
               const busy = actionId === quotation.id;
               const statusLabel = quotation.reopened_at
                 ? "Aceptación reabierta"
@@ -1422,7 +1439,12 @@ export default function CRMOpportunityQuotationSection({
                         <button
                           type="button"
                           onClick={() => handleSendQuotation(quotation)}
-                          disabled={busy || referencePrice || approvalPending}
+                          disabled={
+                            busy
+                            || referencePrice
+                            || approvalPending
+                            || !scheduleComplete
+                          }
                           className="inline-flex items-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
                         >
                           <FaPaperPlane />
@@ -2007,6 +2029,23 @@ export default function CRMOpportunityQuotationSection({
                         >
                           {busy ? "Registrando..." : "Confirmar aceptación"}
                         </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {quotation.status === "draft"
+                  && !scheduleComplete ? (
+                    <div className="mx-4 mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                      <FaExclamationTriangle className="mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-black">
+                          Falta completar modalidad y atención
+                        </p>
+                        <p className="mt-1 leading-5">
+                          Antes de marcar la cotización como enviada, registra
+                          la modalidad de venta y la fecha. Si es una feria,
+                          completa también la hora de inicio y la hora de fin.
+                        </p>
                       </div>
                     </div>
                   ) : null}
