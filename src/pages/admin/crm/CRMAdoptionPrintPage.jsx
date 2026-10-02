@@ -217,24 +217,6 @@ function formatCurrency(value) {
   }).format(number);
 }
 
-function formatDate(value) {
-  if (!value) {
-    return "Sin fecha";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Sin fecha";
-  }
-
-  return new Intl.DateTimeFormat("es-PE", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
-
 function formatDateTime(value) {
   if (!value) {
     return "Sin fecha";
