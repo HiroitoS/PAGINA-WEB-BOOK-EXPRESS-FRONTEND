@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FaCheckCircle,
   FaFileSignature,
+  FaPrint,
   FaTimes,
 } from "react-icons/fa";
 
@@ -449,13 +450,30 @@ export default function CRMOpportunityAdoptionSection({
                     ) : null}
                   </div>
 
-                  <div className="text-left text-xs text-gray-600 sm:text-right">
-                    <p>
-                      Firma: {formatDateTime(adoption.signed_at)}
-                    </p>
-                    <p className="mt-1">
-                      Confirmación: {formatDateTime(adoption.confirmed_at)}
-                    </p>
+                  <div className="flex flex-col items-start gap-3 sm:items-end">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.open(
+                          `/admin/crm/oportunidades/${opportunity.id}/adopciones/${adoption.id}/imprimir`,
+                          "_blank",
+                          "noopener,noreferrer",
+                        )
+                      }
+                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-white px-3 py-2 text-xs font-black text-emerald-800 transition hover:bg-emerald-50"
+                    >
+                      <FaPrint />
+                      Imprimir adopción
+                    </button>
+
+                    <div className="text-left text-xs text-gray-600 sm:text-right">
+                      <p>
+                        Firma: {formatDateTime(adoption.signed_at)}
+                      </p>
+                      <p className="mt-1">
+                        Confirmación: {formatDateTime(adoption.confirmed_at)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </article>
