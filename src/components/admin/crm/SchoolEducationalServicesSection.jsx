@@ -103,6 +103,10 @@ function createServiceRow(service) {
   return {
     clientId: `service-${service.id}`,
     id: service.id,
+    campusId: String(service.campus?.id || ""),
+    campusName: service.campus?.name || "Sede no registrada",
+    campusCode: service.campus?.book_express_code || "",
+    campusAddress: service.campus?.address || "",
     levelId: String(service.level?.id || ""),
     levelName: service.level?.name || "Nivel no registrado",
     isActive: Boolean(service.is_active),
@@ -112,6 +116,7 @@ function createServiceRow(service) {
         ? String(population.student_count)
         : "",
     details,
+    originalCampusId: String(service.campus?.id || ""),
     originalIsActive: Boolean(service.is_active),
     originalPopulationYear: population?.year ?? null,
     originalStudentCount: population?.student_count ?? null,
@@ -119,12 +124,16 @@ function createServiceRow(service) {
   };
 }
 
-function createEmptyRow() {
+function createEmptyRow(defaultCampusId = "") {
   temporaryRowCounter += 1;
 
   return {
     clientId: `new-${temporaryRowCounter}`,
     id: null,
+    campusId: String(defaultCampusId || ""),
+    campusName: "",
+    campusCode: "",
+    campusAddress: "",
     levelId: "",
     levelName: "",
     isActive: true,
@@ -256,12 +265,36 @@ export default function SchoolEducationalServicesSection({
     });
   }, [grades]);
 
-  const selectedLevelIds = useMemo(
+  const campuses = useMemo(
+    () =>
+      (Array.isArray(school?.campuses) ? school.campuses : [])
+        .filter((campus) => campus.is_active)
+        .sort((a, b) => {
+          const sequenceDifference =
+            Number(a.sequence || 0) - Number(b.sequence || 0);
+
+          if (sequenceDifference !== 0) {
+            return sequenceDifference;
+          }
+
+          return Number(a.id || 0) - Number(b.id || 0);
+        }),
+    [school],
+  );
+
+  const selectedCampusLevelKeys = useMemo(
     () =>
       new Set(
         rows
-          .map((row) => Number(row.levelId))
-          .filter((value) => Number.isInteger(value) && value > 0),
+          .filter(
+            (row) =>
+              Number(row.campusId) > 0 &&
+              Number(row.levelId) > 0,
+          )
+          .map(
+            (row) =>
+              `${Number(row.campusId)}:${Number(row.levelId)}`,
+          ),
       ),
     [rows],
   );
@@ -294,17 +327,56 @@ export default function SchoolEducationalServicesSection({
         ? "Vigencia por nivel"
         : `Campaña ${CURRENT_YEAR}`;
 
-  const canAddLevel = availableLevels.some(
-    (level) => !selectedLevelIds.has(level.id),
-  );
+  const campusTotals = useMemo(() => {
+    const totals = new Map();
+
+    for (const row of activePopulationRows) {
+      const key = row.campusId || "sin-sede";
+      const campus = campuses.find(
+        (item) => String(item.id) === String(row.campusId),
+      );
+
+      if (!totals.has(key)) {
+        totals.set(key, {
+          id: key,
+          name:
+            campus?.name ||
+            row.campusName ||
+            "Sede no registrada",
+          code: campus?.book_express_code || row.campusCode || "",
+          address:
+            campus?.address ||
+            row.campusAddress ||
+            "Dirección pendiente",
+          total: 0,
+        });
+      }
+
+      totals.get(key).total += calculateRowTotal(row);
+    }
+
+    return [...totals.values()];
+  }, [activePopulationRows, campuses]);
+
+  const canAddLevel =
+    campuses.length > 0 &&
+    campuses.some((campus) =>
+      availableLevels.some(
+        (level) =>
+          !selectedCampusLevelKeys.has(
+            `${campus.id}:${level.id}`,
+          ),
+      ),
+    );
 
   function startEditing() {
     const currentRows = buildRows(school);
+    const defaultCampusId = campuses[0]?.id || "";
 
     setRows(
       currentRows.length > 0
         ? currentRows
-        : [createEmptyRow()],
+        : [createEmptyRow(defaultCampusId)],
     );
     setErrorMessage("");
     setSuccessMessage("");
@@ -336,9 +408,18 @@ export default function SchoolEducationalServicesSection({
       return;
     }
 
+    const defaultCampus = campuses.find((campus) =>
+      availableLevels.some(
+        (level) =>
+          !selectedCampusLevelKeys.has(
+            `${campus.id}:${level.id}`,
+          ),
+      ),
+    );
+
     setRows((currentRows) => [
       ...currentRows,
-      createEmptyRow(),
+      createEmptyRow(defaultCampus?.id || campuses[0]?.id || ""),
     ]);
   }
 
@@ -402,16 +483,21 @@ export default function SchoolEducationalServicesSection({
   }
 
   function validateRows() {
-    const levelIds = [];
+    const campusLevelKeys = [];
 
     for (const row of rows) {
+      const campusId = Number(row.campusId);
       const levelId = Number(row.levelId);
+
+      if (!Number.isInteger(campusId) || campusId <= 0) {
+        return "Selecciona una sede en todos los registros.";
+      }
 
       if (!Number.isInteger(levelId) || levelId <= 0) {
         return "Selecciona un nivel educativo en todos los registros.";
       }
 
-      levelIds.push(levelId);
+      campusLevelKeys.push(`${campusId}:${levelId}`);
 
       const hasPopulation =
         row.details.length > 0 ||
@@ -476,8 +562,10 @@ export default function SchoolEducationalServicesSection({
       }
     }
 
-    if (new Set(levelIds).size !== levelIds.length) {
-      return "No puedes registrar dos veces el mismo nivel educativo.";
+    if (
+      new Set(campusLevelKeys).size !== campusLevelKeys.length
+    ) {
+      return "No puedes registrar dos veces el mismo nivel en una misma sede.";
     }
 
     return "";
@@ -500,19 +588,28 @@ export default function SchoolEducationalServicesSection({
         let serviceId = row.id;
 
         if (row.id) {
+          const serviceChanges = {};
+
           if (row.isActive !== row.originalIsActive) {
+            serviceChanges.is_active = row.isActive;
+          }
+
+          if (row.campusId !== row.originalCampusId) {
+            serviceChanges.campus = Number(row.campusId);
+          }
+
+          if (Object.keys(serviceChanges).length > 0) {
             await updateCRMSchoolEducationalService(
               school.id,
               row.id,
-              {
-                is_active: row.isActive,
-              },
+              serviceChanges,
             );
           }
         } else {
           const service = await createCRMSchoolEducationalService(
             school.id,
             {
+              campus: Number(row.campusId),
               level: Number(row.levelId),
               is_active: row.isActive,
             },
@@ -615,9 +712,9 @@ export default function SchoolEducationalServicesSection({
           </h2>
 
           <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-500">
-            Registra la población por nivel, grado y secciones. Los
-            totales se calculan automáticamente cuando existe
-            desglose.
+            Registra la población por sede, nivel, grado y secciones.
+            El sistema conserva los subtotales de cada sede y calcula
+            la población total del colegio.
           </p>
         </div>
 
