@@ -576,6 +576,7 @@ export default function CRMSchoolImportsPage() {
                   <th className="px-4 py-3">Colegios</th>
                   <th className="px-4 py-3">Nuevos</th>
                   <th className="px-4 py-3">Actualizados</th>
+                  <th className="px-4 py-3">Advertencias</th>
                   <th className="px-4 py-3">Estado</th>
                   <th className="px-4 py-3">Fecha</th>
                 </tr>
@@ -597,6 +598,9 @@ export default function CRMSchoolImportsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {item.total_updated}
+                    </td>
+                    <td className="px-4 py-3">
+                      {item.total_warnings ?? 0}
                     </td>
                     <td className="px-4 py-3">
                       <span
