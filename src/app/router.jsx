@@ -63,6 +63,10 @@ const CRMCommercialTeamsPage = lazy(
   () => import("../pages/admin/crm/CRMCommercialTeamsPage"),
 );
 
+const CRMSchoolImportsPage = lazy(
+  () => import("../pages/admin/crm/CRMSchoolImportsPage"),
+);
+
 const CRMOpportunitiesPage = lazy(
   () => import("../pages/admin/crm/CRMOpportunitiesPage"),
 );
@@ -214,6 +218,13 @@ const router = createBrowserRouter([
             path: "crm/equipos",
             element: protectPermission(
               renderLazyPage(CRMCommercialTeamsPage),
+              ["crm.assign_schools"],
+            ),
+          },
+          {
+            path: "crm/colegios/importar",
+            element: protectPermission(
+              renderLazyPage(CRMSchoolImportsPage),
               ["crm.assign_schools"],
             ),
           },
