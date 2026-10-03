@@ -6,6 +6,7 @@ import {
   FaCloudUploadAlt,
   FaExclamationTriangle,
   FaFileExcel,
+  FaInfoCircle,
   FaSchool,
   FaSyncAlt,
 } from "react-icons/fa";
@@ -420,8 +421,8 @@ export default function CRMSchoolImportsPage() {
               ["Colegios detectados", preview.total_schools],
               ["Nuevos", preview.total_new],
               ["Por actualizar", preview.total_updated],
-              ["Advertencias", preview.total_warnings],
-              ["Requieren revisión", preview.total_errors],
+              ["Datos por completar", preview.total_warnings],
+              ["Conflictos por revisar", preview.total_errors],
             ].map(([label, value]) => (
               <div
                 key={label}
@@ -438,27 +439,27 @@ export default function CRMSchoolImportsPage() {
           </div>
 
           {warningRows.length > 0 ? (
-            <div className="border-t border-gray-100 bg-amber-50/40 p-5">
+            <div className="border-t border-gray-100 bg-gray-50/70 p-5">
               <div className="flex items-center gap-2 text-gray-800">
-                <FaExclamationTriangle />
+                <FaInfoCircle />
                 <h3 className="font-black">
                   Datos por completar
                 </h3>
               </div>
 
-              <p className="mt-1 text-sm text-amber-800">
-                Puedes confirmar la carga, pero conviene completar estos
-                datos cuando estén disponibles.
+              <p className="mt-1 text-sm text-gray-600">
+                Estos datos no impiden incorporar el colegio. Podrás
+                completarlos cuando cuentes con la información oficial.
               </p>
 
-              <div className="mt-3 overflow-x-auto rounded-2xl border border-amber-200 bg-white">
+              <div className="mt-3 overflow-x-auto rounded-2xl border border-gray-200 bg-white">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr className="text-left text-xs font-black uppercase tracking-wide text-gray-600">
                       <th className="px-3 py-3">Fila</th>
                       <th className="px-3 py-3">Institución</th>
                       <th className="px-3 py-3">Nivel</th>
-                      <th className="px-3 py-3">Advertencia</th>
+                      <th className="px-3 py-3">Dato pendiente</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
