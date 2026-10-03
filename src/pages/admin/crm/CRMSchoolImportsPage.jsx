@@ -45,6 +45,10 @@ function statusClass(status) {
     return "bg-blue-50 text-blue-700 ring-blue-200";
   }
 
+  if (status === "partial") {
+    return "bg-amber-50 text-amber-800 ring-amber-200";
+  }
+
   if (status === "error") {
     return "bg-red-50 text-red-700 ring-red-200";
   }
@@ -80,7 +84,12 @@ export default function CRMSchoolImportsPage() {
   const [previewing, setPreviewing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [noticeMessage, setNoticeMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  const importableSchools =
+    Number(preview?.total_new || 0)
+    + Number(preview?.total_updated || 0);
 
   const warningRows = useMemo(
     () =>
@@ -147,6 +156,7 @@ export default function CRMSchoolImportsPage() {
 
     setPreview(null);
     setSuccessMessage("");
+    setNoticeMessage("");
     setErrorMessage("");
 
     if (!selected) {
@@ -178,6 +188,7 @@ export default function CRMSchoolImportsPage() {
       setPreviewing(true);
       setPreview(null);
       setErrorMessage("");
+      setNoticeMessage("");
       setSuccessMessage("");
 
       const data = await previewCRMSchoolImport(
@@ -187,9 +198,20 @@ export default function CRMSchoolImportsPage() {
 
       setPreview(data);
 
-      if (Number(data?.total_errors || 0) > 0) {
+      const readySchools =
+        Number(data?.total_new || 0)
+        + Number(data?.total_updated || 0);
+
+      if (
+        Number(data?.total_errors || 0) > 0
+        && readySchools > 0
+      ) {
+        setNoticeMessage(
+          `${readySchools} colegio(s) están listos para importar. Los registros que requieren revisión quedarán pendientes y no se incorporarán todavía.`,
+        );
+      } else if (Number(data?.total_errors || 0) > 0) {
         setErrorMessage(
-          "Hay registros que requieren revisión antes de confirmar la importación.",
+          "No hay colegios listos para importar. Revisa primero los registros pendientes.",
         );
       } else {
         setSuccessMessage(
@@ -211,20 +233,28 @@ export default function CRMSchoolImportsPage() {
   }
 
   async function handleConfirm() {
-    if (!preview?.id || Number(preview.total_errors || 0) > 0) {
+    if (!preview?.id || importableSchools <= 0) {
       return;
     }
 
     try {
       setConfirming(true);
       setErrorMessage("");
+      setNoticeMessage("");
       setSuccessMessage("");
 
       const data = await confirmCRMSchoolImport(preview.id);
       setPreview(data);
-      setSuccessMessage(
-        "Los colegios fueron importados correctamente. Ya puedes distribuir la cartera entre los asesores.",
-      );
+
+      if (data?.status === "partial") {
+        setSuccessMessage(
+          `Se importaron ${Number(data?.total_new || 0) + Number(data?.total_updated || 0)} colegio(s) listos. Los registros pendientes no fueron incorporados y pueden corregirse para una carga posterior.`,
+        );
+      } else {
+        setSuccessMessage(
+          "Los colegios fueron importados correctamente. Ya puedes distribuir la cartera entre los asesores.",
+        );
+      }
       await reloadHistory();
     } catch (error) {
       setErrorMessage(
@@ -294,6 +324,12 @@ export default function CRMSchoolImportsPage() {
       {errorMessage ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
           {errorMessage}
+        </div>
+      ) : null}
+
+      {noticeMessage ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+          {noticeMessage}
         </div>
       ) : null}
 
@@ -502,10 +538,18 @@ export default function CRMSchoolImportsPage() {
             <p className="text-sm text-gray-600">
               {preview.status === "imported"
                 ? "La importación ya fue confirmada."
-                : "La importación solo modificará la cartera cuando confirmes."}
+                : preview.status === "partial"
+                  ? "Los colegios listos ya fueron incorporados. Los registros observados quedaron pendientes."
+                  : "La cartera solo cambiará cuando confirmes la importación de los colegios listos."}
             </p>
 
-            {preview.status === "validated" ? (
+            {(
+              preview.status === "validated"
+              || (
+                preview.status === "error"
+                && importableSchools > 0
+              )
+            ) ? (
               <button
                 type="button"
                 onClick={handleConfirm}
@@ -515,11 +559,13 @@ export default function CRMSchoolImportsPage() {
                 <FaCheckCircle />
                 {confirming
                   ? "Importando colegios..."
-                  : Number(preview.total_warnings || 0) > 0
-                    ? "Confirmar con advertencias"
-                    : "Confirmar importación"}
+                  : Number(preview.total_errors || 0) > 0
+                    ? `Importar ${importableSchools} colegio(s) listos`
+                    : Number(preview.total_warnings || 0) > 0
+                      ? "Confirmar con advertencias"
+                      : "Confirmar importación"}
               </button>
-            ) : preview.status === "imported" ? (
+            ) : ["imported", "partial"].includes(preview.status) ? (
               <Link
                 to="/admin/crm/colegios"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-black"
