@@ -82,6 +82,14 @@ export default function CRMSchoolImportsPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  const warningRows = useMemo(
+    () =>
+      (preview?.rows || []).filter(
+        (row) => Array.isArray(row.warnings) && row.warnings.length > 0,
+      ),
+    [preview],
+  );
+
   const errorRows = useMemo(
     () =>
       (preview?.rows || []).filter(
@@ -181,7 +189,11 @@ export default function CRMSchoolImportsPage() {
 
       if (Number(data?.total_errors || 0) > 0) {
         setErrorMessage(
-          "La vista previa encontró observaciones. Corrige el archivo antes de confirmar.",
+          "Hay registros que requieren revisión antes de confirmar la importación.",
+        );
+      } else if (Number(data?.total_warnings || 0) > 0) {
+        setSuccessMessage(
+          "Vista previa lista. Hay advertencias que no bloquean la importación; revísalas antes de confirmar.",
         );
       } else {
         setSuccessMessage(
@@ -267,17 +279,17 @@ export default function CRMSchoolImportsPage() {
               Estructura esperada
             </h2>
             <p className="mt-1 text-sm leading-6 text-gray-600">
-              El archivo debe conservar las columnas: Código modular,
-              Código de institución, Nombre de IE, Nivel/Modalidad,
-              Dependencia, Dirección, Departamento, Provincia, Distrito
-              y Alumnos.
+              Puedes usar el padrón trabajado por Book Express con las
+              columnas Código modular, Código de institución, Nombre de
+              IE, Nivel/Modalidad, Dependencia, Dirección de IE,
+              Departamento / Provincia / Distrito y Alumnos.
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">
-              Las filas con el mismo Código de institución se consolidan
-              en un solo colegio. Cada nivel conserva su Código modular y
-              su población. Si el colegio ya existe, se actualizan sus
-              datos institucionales sin cambiar el equipo ni el asesor
-              que ya tenga asignado.
+              Un mismo colegio puede tener varios niveles y varias sedes.
+              Los códigos oficiales pueden completarse después; cuando
+              falten, el colegio conservará un código interno Book Express.
+              Si una misma información aparece de forma contradictoria,
+              la vista previa pedirá revisarla antes de confirmar.
             </p>
           </div>
         </div>
@@ -368,13 +380,14 @@ export default function CRMSchoolImportsPage() {
             </p>
           </div>
 
-          <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">
             {[
               ["Filas del Excel", preview.total_rows],
               ["Colegios detectados", preview.total_schools],
               ["Nuevos", preview.total_new],
               ["Por actualizar", preview.total_updated],
-              ["Con observaciones", preview.total_errors],
+              ["Advertencias", preview.total_warnings],
+              ["Requieren revisión", preview.total_errors],
             ].map(([label, value]) => (
               <div
                 key={label}
@@ -390,12 +403,64 @@ export default function CRMSchoolImportsPage() {
             ))}
           </div>
 
+          {warningRows.length > 0 ? (
+            <div className="border-t border-gray-100 bg-amber-50/40 p-5">
+              <div className="flex items-center gap-2 text-amber-800">
+                <FaExclamationTriangle />
+                <h3 className="font-black">
+                  Advertencias que no bloquean la importación
+                </h3>
+              </div>
+
+              <p className="mt-1 text-sm text-amber-800">
+                Puedes confirmar la carga, pero conviene completar estos
+                datos cuando estén disponibles.
+              </p>
+
+              <div className="mt-3 overflow-x-auto rounded-2xl border border-amber-200 bg-white">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-amber-50">
+                    <tr className="text-left text-xs font-black uppercase tracking-wide text-amber-900">
+                      <th className="px-3 py-3">Fila</th>
+                      <th className="px-3 py-3">Institución</th>
+                      <th className="px-3 py-3">Nivel</th>
+                      <th className="px-3 py-3">Advertencia</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {warningRows.map((row) => (
+                      <tr key={`warning-${row.id}`}>
+                        <td className="px-3 py-3 font-black">
+                          {row.row_number}
+                        </td>
+                        <td className="px-3 py-3">
+                          <p className="font-bold text-gray-900">
+                            {row.school_name || "Sin nombre"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {row.institution_code || "Código oficial pendiente"}
+                          </p>
+                        </td>
+                        <td className="px-3 py-3">
+                          {row.level_name || "—"}
+                        </td>
+                        <td className="px-3 py-3 text-amber-800">
+                          {(row.warnings || []).join(" ")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
           {errorRows.length > 0 ? (
             <div className="border-t border-gray-100 p-5">
               <div className="flex items-center gap-2 text-red-700">
                 <FaExclamationTriangle />
                 <h3 className="font-black">
-                  Filas que requieren corrección
+                  Registros que requieren revisión
                 </h3>
               </div>
 
@@ -454,7 +519,9 @@ export default function CRMSchoolImportsPage() {
                 <FaCheckCircle />
                 {confirming
                   ? "Importando colegios..."
-                  : "Confirmar importación"}
+                  : Number(preview.total_warnings || 0) > 0
+                    ? "Confirmar con advertencias"
+                    : "Confirmar importación"}
               </button>
             ) : preview.status === "imported" ? (
               <Link
