@@ -409,6 +409,7 @@ export default function CRMSchoolDetailPage() {
     school &&
     (hasValue(school.ruc) ||
       hasValue(school.institution_code) ||
+      hasValue(school.dependency) ||
       hasValue(school.reference));
 
   const returnContext = resolveReturnContext(
@@ -768,6 +769,15 @@ export default function CRMSchoolDetailPage() {
                           Código de institución:
                         </span>{" "}
                         {school.institution_code}
+                      </p>
+                    ) : null}
+
+                    {hasValue(school.dependency) ? (
+                      <p>
+                        <span className="font-black text-gray-900">
+                          Dependencia:
+                        </span>{" "}
+                        {school.dependency}
                       </p>
                     ) : null}
 
