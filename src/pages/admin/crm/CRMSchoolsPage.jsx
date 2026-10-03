@@ -5,6 +5,7 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaExclamationTriangle,
+  FaFileExcel,
   FaSchool,
   FaSearch,
 } from "react-icons/fa";
@@ -264,6 +265,16 @@ export default function CRMSchoolsPage() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {canAssignSchools ? (
+              <Link
+                to="/admin/crm/colegios/importar"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/15"
+              >
+                <FaFileExcel />
+                Importar Excel
+              </Link>
+            ) : null}
+
             <CRMSchoolCreatePanel />
 
             <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
