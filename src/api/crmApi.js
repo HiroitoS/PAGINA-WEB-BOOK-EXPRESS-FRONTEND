@@ -57,6 +57,23 @@ export async function updateCRMSchool(schoolId, payload) {
   return response.data;
 }
 
+export async function assignCRMSchoolPortfolio(payload) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/schools/assign-portfolio/`,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function getCRMCommercialTeams() {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/commercial-teams/`,
+  );
+
+  return normalizeList(response.data);
+}
+
 export async function getCRMSchoolEducationalServices(schoolId) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/schools/${schoolId}/educational-services/`,
