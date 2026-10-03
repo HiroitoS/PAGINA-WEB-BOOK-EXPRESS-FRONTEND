@@ -191,10 +191,6 @@ export default function CRMSchoolImportsPage() {
         setErrorMessage(
           "Hay registros que requieren revisión antes de confirmar la importación.",
         );
-      } else if (Number(data?.total_warnings || 0) > 0) {
-        setSuccessMessage(
-          "Vista previa lista. Hay advertencias que no bloquean la importación; revísalas antes de confirmar.",
-        );
       } else {
         setSuccessMessage(
           "Vista previa lista. Revisa el resumen antes de confirmar.",
