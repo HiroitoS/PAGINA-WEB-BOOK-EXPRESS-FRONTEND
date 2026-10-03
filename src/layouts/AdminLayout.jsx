@@ -153,6 +153,12 @@ const NAV_SECTIONS = [
         permissions: ["crm.view_crm"],
       },
       {
+        label: "Equipos comerciales",
+        to: "/admin/crm/equipos",
+        icon: <FaUsers />,
+        permissions: ["crm.assign_schools"],
+      },
+      {
         label: "Oportunidades",
         to: "/admin/crm/oportunidades",
         icon: <FaBullseye />,
