@@ -46,7 +46,7 @@ function statusClass(status) {
   }
 
   if (status === "partial") {
-    return "bg-amber-50 text-amber-800 ring-amber-200";
+    return "bg-emerald-50 text-emerald-800 ring-emerald-200";
   }
 
   if (status === "error") {
@@ -215,7 +215,9 @@ export default function CRMSchoolImportsPage() {
         );
       } else {
         setSuccessMessage(
-          "Vista previa lista. Revisa el resumen antes de confirmar.",
+          Number(data?.total_warnings || 0) > 0
+            ? `${readySchools} colegio(s) están listos para importar. Hay datos que podrán completarse después sin bloquear la carga.`
+            : "Vista previa lista. Revisa el resumen antes de confirmar.",
         );
       }
 
@@ -437,10 +439,10 @@ export default function CRMSchoolImportsPage() {
 
           {warningRows.length > 0 ? (
             <div className="border-t border-gray-100 bg-amber-50/40 p-5">
-              <div className="flex items-center gap-2 text-amber-800">
+              <div className="flex items-center gap-2 text-gray-800">
                 <FaExclamationTriangle />
                 <h3 className="font-black">
-                  Advertencias que no bloquean la importación
+                  Datos por completar
                 </h3>
               </div>
 
@@ -451,8 +453,8 @@ export default function CRMSchoolImportsPage() {
 
               <div className="mt-3 overflow-x-auto rounded-2xl border border-amber-200 bg-white">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-amber-50">
-                    <tr className="text-left text-xs font-black uppercase tracking-wide text-amber-900">
+                  <thead className="bg-gray-50">
+                    <tr className="text-left text-xs font-black uppercase tracking-wide text-gray-600">
                       <th className="px-3 py-3">Fila</th>
                       <th className="px-3 py-3">Institución</th>
                       <th className="px-3 py-3">Nivel</th>
@@ -476,7 +478,7 @@ export default function CRMSchoolImportsPage() {
                         <td className="px-3 py-3">
                           {row.level_name || "—"}
                         </td>
-                        <td className="px-3 py-3 text-amber-800">
+                        <td className="px-3 py-3 text-gray-700">
                           {(row.warnings || []).join(" ")}
                         </td>
                       </tr>
@@ -561,9 +563,7 @@ export default function CRMSchoolImportsPage() {
                   ? "Importando colegios..."
                   : Number(preview.total_errors || 0) > 0
                     ? `Importar ${importableSchools} colegio(s) listos`
-                    : Number(preview.total_warnings || 0) > 0
-                      ? "Confirmar con advertencias"
-                      : "Confirmar importación"}
+                    : `Importar ${importableSchools} colegio(s)`}
               </button>
             ) : ["imported", "partial"].includes(preview.status) ? (
               <Link
