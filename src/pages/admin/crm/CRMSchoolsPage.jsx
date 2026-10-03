@@ -21,6 +21,7 @@ const INITIAL_FILTERS = {
   department: "",
   province: "",
   district: "",
+  assignment: "",
 };
 
 const PAGE_SIZE = 25;
@@ -309,7 +310,7 @@ export default function CRMSchoolsPage() {
           </button>
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-3 grid gap-3 lg:grid-cols-2 xl:grid-cols-6">
           <label className="relative xl:col-span-2">
             <span className="sr-only">Buscar</span>
             <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
@@ -324,6 +325,17 @@ export default function CRMSchoolsPage() {
 
           <select
             className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+            name="assignment"
+            value={filters.assignment}
+            onChange={handleFilterChange}
+          >
+            <option value="">Todos los responsables</option>
+            <option value="unassigned">Sin asesor asignado</option>
+            <option value="assigned">Con asesor asignado</option>
+          </select>
+
+          <select
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
             name="is_active"
             value={filters.is_active}
             onChange={handleFilterChange}
@@ -332,6 +344,14 @@ export default function CRMSchoolsPage() {
             <option value="true">Activos</option>
             <option value="false">Inactivos</option>
           </select>
+
+          <input
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+            name="department"
+            placeholder="Departamento"
+            value={filters.department}
+            onChange={handleFilterChange}
+          />
 
           <input
             className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
