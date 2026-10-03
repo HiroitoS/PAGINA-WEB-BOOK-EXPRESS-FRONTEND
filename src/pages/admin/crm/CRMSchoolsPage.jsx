@@ -10,7 +10,9 @@ import {
 } from "react-icons/fa";
 
 import { getCRMSchools } from "../../../api/crmApi";
+import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
 import CRMSchoolCreatePanel from "../../../components/admin/crm/CRMSchoolCreatePanel";
+import { useAuth } from "../../../hooks/useAuth";
 
 const INITIAL_FILTERS = {
   search: "",
@@ -117,6 +119,9 @@ function EmptyState() {
 }
 
 export default function CRMSchoolsPage() {
+  const { hasPermission } = useAuth();
+  const canAssignSchools = hasPermission(["crm.assign_schools"]);
+
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [schools, setSchools] = useState([]);
   const [pagination, setPagination] = useState({
@@ -127,6 +132,22 @@ export default function CRMSchoolsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedSchoolIds, setSelectedSchoolIds] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const selectedSchools = useMemo(
+    () =>
+      schools.filter((school) =>
+        selectedSchoolIds.includes(school.id),
+      ),
+    [schools, selectedSchoolIds],
+  );
+
+  const allVisibleSelected =
+    schools.length > 0
+    && schools.every((school) =>
+      selectedSchoolIds.includes(school.id),
+    );
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((pagination.count || 0) / PAGE_SIZE)),
@@ -144,7 +165,16 @@ export default function CRMSchoolsPage() {
         const data = await getCRMSchools(buildParams(filters, page));
 
         if (!ignore) {
-          setSchools(Array.isArray(data?.results) ? data.results : []);
+          const nextSchools = Array.isArray(data?.results)
+            ? data.results
+            : [];
+
+          setSchools(nextSchools);
+          setSelectedSchoolIds((currentIds) =>
+            currentIds.filter((schoolId) =>
+              nextSchools.some((school) => school.id === schoolId),
+            ),
+          );
           setPagination({
             count: Number(data?.count || 0),
             next: data?.next || null,
@@ -171,7 +201,7 @@ export default function CRMSchoolsPage() {
       ignore = true;
       clearTimeout(timeoutId);
     };
-  }, [filters, page]);
+  }, [filters, page, refreshKey]);
 
   function handleFilterChange(event) {
     const { name, value } = event.target;
@@ -185,7 +215,30 @@ export default function CRMSchoolsPage() {
 
   function clearFilters() {
     setPage(1);
+    setSelectedSchoolIds([]);
     setFilters(INITIAL_FILTERS);
+  }
+
+  function toggleSchoolSelection(schoolId) {
+    setSelectedSchoolIds((currentIds) =>
+      currentIds.includes(schoolId)
+        ? currentIds.filter((id) => id !== schoolId)
+        : [...currentIds, schoolId],
+    );
+  }
+
+  function toggleVisibleSelection() {
+    if (allVisibleSelected) {
+      setSelectedSchoolIds([]);
+      return;
+    }
+
+    setSelectedSchoolIds(schools.map((school) => school.id));
+  }
+
+  function handleAssignmentCompleted() {
+    setSelectedSchoolIds([]);
+    setRefreshKey((current) => current + 1);
   }
 
   return (
@@ -299,14 +352,24 @@ export default function CRMSchoolsPage() {
       ) : null}
 
       <section className="mt-4 rounded-3xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-100 px-4 py-4 sm:px-5">
-          <h2 className="text-lg font-black text-gray-950">
-            Cartera de colegios
-          </h2>
+        <div className="flex flex-col justify-between gap-3 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+          <div>
+            <h2 className="text-lg font-black text-gray-950">
+              Cartera de colegios
+            </h2>
 
-          <p className="mt-1 text-xs text-gray-500">
-            Selecciona una institución para abrir su ficha comercial.
-          </p>
+            <p className="mt-1 text-xs text-gray-500">
+              Selecciona una institución para abrir su ficha comercial.
+            </p>
+          </div>
+
+          {canAssignSchools && selectedSchools.length > 0 ? (
+            <CRMSchoolAssignmentPanel
+              schools={selectedSchools}
+              onAssigned={handleAssignmentCompleted}
+              buttonLabel={`Asignar cartera (${selectedSchools.length})`}
+            />
+          ) : null}
         </div>
 
         <div className="p-4 sm:p-5">
@@ -320,6 +383,17 @@ export default function CRMSchoolsPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead>
                     <tr className="text-left text-xs font-black uppercase tracking-wide text-gray-500">
+                      {canAssignSchools ? (
+                        <th className="w-10 px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={allVisibleSelected}
+                            onChange={toggleVisibleSelection}
+                            aria-label="Seleccionar colegios visibles"
+                            className="h-4 w-4 rounded border-gray-300 text-red-700 accent-red-700"
+                          />
+                        </th>
+                      ) : null}
                       <th className="px-3 py-3">Colegio</th>
                       <th className="px-3 py-3">Ubicación</th>
                       <th className="px-3 py-3">Responsable</th>
@@ -335,6 +409,18 @@ export default function CRMSchoolsPage() {
                         key={school.id}
                         className="align-middle transition hover:bg-gray-50"
                       >
+                        {canAssignSchools ? (
+                          <td className="px-3 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedSchoolIds.includes(school.id)}
+                              onChange={() => toggleSchoolSelection(school.id)}
+                              aria-label={`Seleccionar ${school.name}`}
+                              className="h-4 w-4 rounded border-gray-300 text-red-700 accent-red-700"
+                            />
+                          </td>
+                        ) : null}
+
                         <td className="px-3 py-4">
                           <p className="font-black text-gray-950">
                             {school.name}
@@ -396,7 +482,18 @@ export default function CRMSchoolsPage() {
                     className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+                      <div className="flex min-w-0 items-start gap-3">
+                        {canAssignSchools ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedSchoolIds.includes(school.id)}
+                            onChange={() => toggleSchoolSelection(school.id)}
+                            aria-label={`Seleccionar ${school.name}`}
+                            className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-red-700 accent-red-700"
+                          />
+                        ) : null}
+
+                        <div className="min-w-0">
                         <p className="wrap-break-word text-base font-black text-gray-950">
                           {school.name}
                         </p>
@@ -404,6 +501,7 @@ export default function CRMSchoolsPage() {
                         <p className="mt-1 text-xs text-gray-500">
                           {formatLocation(school) || "Sin ubicación"}
                         </p>
+                        </div>
                       </div>
 
                       <SchoolStatusBadge isActive={school.is_active} />
