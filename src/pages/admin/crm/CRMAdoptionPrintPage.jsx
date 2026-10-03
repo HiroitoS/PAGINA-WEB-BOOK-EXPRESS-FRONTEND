@@ -182,15 +182,6 @@ const PRINT_STYLES = `
       page-break-inside: avoid;
     }
 
-    .adoption-print-totals {
-      margin-top: 9px !important;
-      gap: 8px !important;
-    }
-
-    .adoption-print-totals > div {
-      padding: 8px 10px !important;
-    }
-
     .adoption-print-signatures {
       margin-top: 18px !important;
     }
@@ -420,21 +411,14 @@ export default function CRMAdoptionPrintPage() {
     (item) => item.readingMonth !== "—",
   );
 
-  const totals = useMemo(() => {
-    const levels = new Set(
-      documentRows
-        .map((item) => item.level)
-        .filter((level) => level && level !== "—"),
-    );
-
-    return {
-      levels: levels.size,
-      units: documentRows.reduce(
+  const totalUnits = useMemo(
+    () =>
+      documentRows.reduce(
         (total, item) => total + Number(item.quantity || 0),
         0,
       ),
-    };
-  }, [documentRows]);
+    [documentRows],
+  );
 
   function closePreview() {
     window.close();
@@ -794,27 +778,22 @@ export default function CRMAdoptionPrintPage() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-300 bg-gray-50">
+                  <td
+                    colSpan={showReadingMonth ? 7 : 6}
+                    className="px-3 py-2 text-right text-xs font-black uppercase tracking-wide text-gray-600"
+                  >
+                    Total de unidades adoptadas
+                  </td>
+                  <td className="px-2 py-2 text-center text-sm font-black text-gray-950">
+                    {totalUnits}
+                  </td>
+                  <td className="px-2 py-2" />
+                  <td className="px-2 py-2" />
+                </tr>
+              </tfoot>
             </table>
-          </div>
-        </section>
-
-        <section className="adoption-print-totals mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-              Niveles adoptados
-            </p>
-            <p className="mt-1 text-lg font-black text-gray-950">
-              {totals.levels}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-              Unidades adoptadas
-            </p>
-            <p className="mt-1 text-lg font-black text-gray-950">
-              {totals.units}
-            </p>
           </div>
         </section>
 
