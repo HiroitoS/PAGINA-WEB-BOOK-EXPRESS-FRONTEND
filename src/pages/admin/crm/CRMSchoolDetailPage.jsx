@@ -408,6 +408,7 @@ export default function CRMSchoolDetailPage() {
   const hasAdditionalData =
     school &&
     (hasValue(school.ruc) ||
+      hasValue(school.book_express_code) ||
       hasValue(school.institution_code) ||
       hasValue(school.dependency) ||
       hasValue(school.reference));
@@ -700,7 +701,7 @@ export default function CRMSchoolDetailPage() {
 
             <SummaryItem
               icon={FaMapMarkerAlt}
-              label="Ubicación"
+              label="Sede principal"
               value={formatLocation(school) || "Sin ubicación registrada"}
             />
 
@@ -756,6 +757,15 @@ export default function CRMSchoolDetailPage() {
 
                 {hasAdditionalData ? (
                   <div className="mt-4 space-y-2 border-t border-gray-200 pt-4 text-sm text-gray-600">
+                    {hasValue(school.book_express_code) ? (
+                      <p>
+                        <span className="font-black text-gray-900">
+                          Código Book Express:
+                        </span>{" "}
+                        {school.book_express_code}
+                      </p>
+                    ) : null}
+
                     {hasValue(school.ruc) ? (
                       <p>
                         <span className="font-black text-gray-900">RUC:</span>{" "}
@@ -789,6 +799,57 @@ export default function CRMSchoolDetailPage() {
                         {school.reference}
                       </p>
                     ) : null}
+                  </div>
+                ) : null}
+
+                {Array.isArray(school.campuses) &&
+                school.campuses.length > 0 ? (
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Sedes registradas
+                      </p>
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-black text-gray-600">
+                        {school.campuses.length}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {[...school.campuses]
+                        .sort(
+                          (a, b) =>
+                            Number(a.sequence || 0) -
+                            Number(b.sequence || 0),
+                        )
+                        .map((campus) => (
+                          <div
+                            key={campus.id}
+                            className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200"
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-black text-gray-950">
+                                {campus.name}
+                              </p>
+                              {campus.is_main ? (
+                                <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-black text-red-700">
+                                  Principal
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 text-xs font-semibold text-gray-500">
+                              {campus.book_express_code}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-gray-700">
+                              {campus.address || "Dirección pendiente"}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              {[campus.district, campus.province, campus.department]
+                                .filter(Boolean)
+                                .join(", ") || "Ubicación pendiente"}
+                            </p>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 ) : null}
               </section>
