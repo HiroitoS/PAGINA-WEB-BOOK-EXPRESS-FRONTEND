@@ -313,64 +313,80 @@ export default function CRMSchoolsPage() {
           </button>
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-2 xl:grid-cols-6">
-          <label className="relative xl:col-span-2">
-            <span className="sr-only">Buscar</span>
-            <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
-            <input
-              className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-              name="search"
-              placeholder="Nombre, código modular, RUC, teléfono..."
-              value={filters.search}
-              onChange={handleFilterChange}
-            />
-          </label>
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="mb-2 text-xs font-black uppercase tracking-wide text-gray-500">
+              Búsqueda y responsable
+            </p>
 
-          <select
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="assignment"
-            value={filters.assignment}
-            onChange={handleFilterChange}
-          >
-            <option value="">Todos los responsables</option>
-            <option value="unassigned">Sin asesor asignado</option>
-            <option value="assigned">Con asesor asignado</option>
-          </select>
+            <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+              <label className="relative xl:col-span-2">
+                <span className="sr-only">Buscar</span>
+                <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
+                <input
+                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  name="search"
+                  placeholder="Nombre, código Book Express, código modular, RUC, teléfono..."
+                  value={filters.search}
+                  onChange={handleFilterChange}
+                />
+              </label>
 
-          <select
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="is_active"
-            value={filters.is_active}
-            onChange={handleFilterChange}
-          >
-            <option value="">Todos los estados</option>
-            <option value="true">Activos</option>
-            <option value="false">Inactivos</option>
-          </select>
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="assignment"
+                value={filters.assignment}
+                onChange={handleFilterChange}
+              >
+                <option value="">Todos los responsables</option>
+                <option value="unassigned">Sin asesor asignado</option>
+                <option value="assigned">Con asesor asignado</option>
+              </select>
 
-          <input
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="department"
-            placeholder="Departamento"
-            value={filters.department}
-            onChange={handleFilterChange}
-          />
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="is_active"
+                value={filters.is_active}
+                onChange={handleFilterChange}
+              >
+                <option value="">Todos los estados</option>
+                <option value="true">Activos</option>
+                <option value="false">Inactivos</option>
+              </select>
+            </div>
+          </div>
 
-          <input
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="province"
-            placeholder="Provincia"
-            value={filters.province}
-            onChange={handleFilterChange}
-          />
+          <div className="border-t border-gray-100 pt-4">
+            <p className="mb-2 text-xs font-black uppercase tracking-wide text-gray-500">
+              Ubicación
+            </p>
 
-          <input
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="district"
-            placeholder="Distrito"
-            value={filters.district}
-            onChange={handleFilterChange}
-          />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <input
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="department"
+                placeholder="Departamento"
+                value={filters.department}
+                onChange={handleFilterChange}
+              />
+
+              <input
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="province"
+                placeholder="Provincia"
+                value={filters.province}
+                onChange={handleFilterChange}
+              />
+
+              <input
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="district"
+                placeholder="Distrito"
+                value={filters.district}
+                onChange={handleFilterChange}
+              />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -480,13 +496,15 @@ export default function CRMSchoolsPage() {
                           </p>
 
                           <p className="mt-1 text-xs text-gray-500">
-                            {school.institution_code
-                              ? `Cód. institución ${school.institution_code}`
-                              : school.modular_code
-                                ? `Cód. modular ${school.modular_code}`
-                                : school.ruc
-                                  ? `RUC ${school.ruc}`
-                                  : "Sin código registrado"}
+                            {school.book_express_code
+                              ? `${school.book_express_code}${school.institution_code ? ` · Cód. institución ${school.institution_code}` : ""}`
+                              : school.institution_code
+                                ? `Cód. institución ${school.institution_code}`
+                                : school.modular_code
+                                  ? `Cód. modular ${school.modular_code}`
+                                  : school.ruc
+                                    ? `RUC ${school.ruc}`
+                                    : "Sin código registrado"}
                           </p>
                         </td>
 
