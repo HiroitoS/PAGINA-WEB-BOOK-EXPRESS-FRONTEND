@@ -24,7 +24,7 @@ const INITIAL_FILTERS = {
   assignment: "",
 };
 
-const PAGE_SIZE = 25;
+const DEFAULT_PAGE_SIZE = 25;
 
 function getErrorMessage(error, fallback) {
   const detail = error?.response?.data?.detail;
@@ -40,10 +40,10 @@ function getErrorMessage(error, fallback) {
   return fallback;
 }
 
-function buildParams(filters, page) {
+function buildParams(filters, page, pageSize) {
   const params = {
     page,
-    page_size: PAGE_SIZE,
+    page_size: pageSize,
   };
 
   Object.entries(filters).forEach(([key, value]) => {
@@ -132,6 +132,7 @@ export default function CRMSchoolsPage() {
     previous: null,
   });
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedSchoolIds, setSelectedSchoolIds] = useState([]);
@@ -152,8 +153,8 @@ export default function CRMSchoolsPage() {
     );
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil((pagination.count || 0) / PAGE_SIZE)),
-    [pagination.count],
+    () => Math.max(1, Math.ceil((pagination.count || 0) / pageSize)),
+    [pageSize, pagination.count],
   );
 
   useEffect(() => {
@@ -164,7 +165,9 @@ export default function CRMSchoolsPage() {
         setLoading(true);
         setErrorMessage("");
 
-        const data = await getCRMSchools(buildParams(filters, page));
+        const data = await getCRMSchools(
+          buildParams(filters, page, pageSize),
+        );
 
         if (!ignore) {
           const nextSchools = Array.isArray(data?.results)
@@ -203,7 +206,7 @@ export default function CRMSchoolsPage() {
       ignore = true;
       clearTimeout(timeoutId);
     };
-  }, [filters, page, refreshKey]);
+  }, [filters, page, pageSize, refreshKey]);
 
   function handleFilterChange(event) {
     const { name, value } = event.target;
@@ -394,13 +397,32 @@ export default function CRMSchoolsPage() {
             </p>
           </div>
 
-          {canAssignSchools && selectedSchools.length > 0 ? (
-            <CRMSchoolAssignmentPanel
-              schools={selectedSchools}
-              onAssigned={handleAssignmentCompleted}
-              buttonLabel={`Asignar cartera (${selectedSchools.length})`}
-            />
-          ) : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="flex items-center gap-2 text-xs font-bold text-gray-500">
+              Mostrar
+              <select
+                value={pageSize}
+                onChange={(event) => {
+                  setPage(1);
+                  setSelectedSchoolIds([]);
+                  setPageSize(Number(event.target.value));
+                }}
+                className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs font-black text-gray-800 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </label>
+
+            {canAssignSchools && selectedSchools.length > 0 ? (
+              <CRMSchoolAssignmentPanel
+                schools={selectedSchools}
+                onAssigned={handleAssignmentCompleted}
+                buttonLabel={`Asignar cartera (${selectedSchools.length})`}
+              />
+            ) : null}
+          </div>
         </div>
 
         <div className="p-4 sm:p-5">
