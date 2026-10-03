@@ -155,6 +155,8 @@ function buildDrafts(base, projection) {
       drafts.push({
         key,
         serviceId: service.id,
+        campusName: service.campus?.name || "",
+        campusAddress: service.campus?.address || "",
         levelId: service.level?.id,
         levelName: service.level?.name || "Nivel",
         gradeId: detail.grade.id,
@@ -187,6 +189,8 @@ function buildDrafts(base, projection) {
     drafts.push({
       key,
       serviceId: current.service?.id,
+      campusName: current.service?.campus?.name || "",
+      campusAddress: current.service?.campus?.address || "",
       levelId: current.service?.level?.id,
       levelName: current.service?.level?.name || current.level_name_snapshot,
       gradeId: current.grade?.id,
@@ -213,9 +217,13 @@ function getProjectionGroups(projection) {
       gradeLine.service?.level?.name
       || gradeLine.level_name_snapshot
       || "Nivel";
+    const campusName = gradeLine.service?.campus?.name || "";
+    const groupLabel = campusName
+      ? `${campusName} · ${levelName}`
+      : levelName;
 
-    if (!groups.has(levelName)) {
-      groups.set(levelName, []);
+    if (!groups.has(groupLabel)) {
+      groups.set(groupLabel, []);
     }
 
     const items = (projection?.items || []).filter(
@@ -227,7 +235,7 @@ function getProjectionGroups(projection) {
       0,
     );
 
-    groups.get(levelName).push({
+    groups.get(groupLabel).push({
       ...gradeLine,
       items,
       subtotal,
@@ -338,7 +346,9 @@ export default function CRMOpportunityProjectionSection({
       seen.add(key);
       options.push({
         serviceId: key,
-        levelName: draft.levelName,
+        label: draft.campusName
+          ? `${draft.campusName} · ${draft.levelName}`
+          : draft.levelName,
       });
     }
 
@@ -1031,7 +1041,7 @@ export default function CRMOpportunityProjectionSection({
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                     >
-                      {option.levelName}
+                      {option.label}
                     </button>
                   ))}
                 </div>
@@ -1040,7 +1050,12 @@ export default function CRMOpportunityProjectionSection({
                   <div className="flex flex-col justify-between gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center">
                     <div>
                       <p className="font-black text-gray-950">
-                        Grados de {activeDraft?.levelName || "este nivel"}
+                        Grados de{" "}
+                        {activeDraft
+                          ? activeDraft.campusName
+                            ? `${activeDraft.campusName} · ${activeDraft.levelName}`
+                            : activeDraft.levelName
+                          : "este nivel"}
                       </p>
                       <p className="mt-0.5 text-xs text-gray-500">
                         Cambia de grado sin salir del panel.
@@ -1111,7 +1126,9 @@ export default function CRMOpportunityProjectionSection({
                             Incluir {activeDraft.gradeName}
                           </span>
                           <span className="mt-0.5 block text-xs text-gray-500">
-                            {activeDraft.levelName}
+                            {activeDraft.campusName
+                              ? `${activeDraft.campusName} · ${activeDraft.levelName}`
+                              : activeDraft.levelName}
                           </span>
                         </span>
                       </label>
