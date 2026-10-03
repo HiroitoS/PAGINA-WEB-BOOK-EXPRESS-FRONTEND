@@ -750,6 +750,9 @@ export default function SchoolEducationalServicesSection({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500">
+                      Sede
+                    </th>
+                    <th className="px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500">
                       Nivel
                     </th>
                     <th className="px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500">
@@ -772,6 +775,18 @@ export default function SchoolEducationalServicesSection({
                     if (row.details.length > 0) {
                       return row.details.map((detail, index) => (
                         <tr key={detail.clientId}>
+                          <td className="px-4 py-3">
+                            {index === 0 ? (
+                              <>
+                                <p className="font-black text-gray-950">
+                                  {row.campusName}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                  {row.campusAddress || row.campusCode || "Sin dirección registrada"}
+                                </p>
+                              </>
+                            ) : null}
+                          </td>
                           <td className="px-4 py-3 font-black text-gray-950">
                             {index === 0 ? row.levelName : ""}
                             {index === 0 && !row.isActive ? (
@@ -798,6 +813,14 @@ export default function SchoolEducationalServicesSection({
 
                     return [
                       <tr key={row.clientId}>
+                        <td className="px-4 py-3">
+                          <p className="font-black text-gray-950">
+                            {row.campusName}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {row.campusAddress || row.campusCode || "Sin dirección registrada"}
+                          </p>
+                        </td>
                         <td className="px-4 py-3 font-black text-gray-950">
                           {row.levelName}
                           {!row.isActive ? (
@@ -827,25 +850,28 @@ export default function SchoolEducationalServicesSection({
               </table>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-              {activePopulationRows.map((row) => (
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {campusTotals.map((campus) => (
                 <div
-                  key={row.clientId}
-                  className="flex min-h-20 flex-col items-center justify-center rounded-xl bg-gray-50 px-3 py-3 text-center ring-1 ring-gray-200"
+                  key={campus.id}
+                  className="rounded-xl bg-gray-50 px-4 py-3 ring-1 ring-gray-200"
                 >
-                  <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                    {row.levelName}
-                  </span>
-                  <span className="mt-1 text-lg font-black leading-none text-gray-950">
-                    {calculateRowTotal(row)}
-                  </span>
-                  <span className="mt-1 text-xs font-bold text-gray-500">
-                    alumnos
-                  </span>
+                  <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                    {campus.name}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-gray-500">
+                    {campus.address}
+                  </p>
+                  <p className="mt-2 text-lg font-black leading-none text-gray-950">
+                    {campus.total}
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-gray-500">
+                    alumnos registrados en la sede
+                  </p>
                 </div>
               ))}
 
-              <div className="flex min-h-20 flex-col items-center justify-center rounded-xl bg-gray-950 px-3 py-3 text-center text-white">
+              <div className="flex min-h-24 flex-col items-center justify-center rounded-xl bg-gray-950 px-3 py-3 text-center text-white">
                 <span className="text-xs font-black uppercase tracking-wide text-gray-300">
                   Población total
                 </span>
@@ -896,7 +922,7 @@ export default function SchoolEducationalServicesSection({
                 </h3>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  Registra niveles, grados, secciones y alumnos por sección.
+                  Registra la sede, los niveles, grados, secciones y alumnos.
                 </p>
               </div>
 
@@ -927,7 +953,43 @@ export default function SchoolEducationalServicesSection({
                 key={row.clientId}
                 className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
               >
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div>
+                    <label className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Sede
+                    </label>
+
+                    {row.id ? (
+                      <div className="mt-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5">
+                        <p className="text-sm font-black text-gray-900">
+                          {row.campusName}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {row.campusAddress || row.campusCode || "Sin dirección registrada"}
+                        </p>
+                      </div>
+                    ) : (
+                      <select
+                        value={row.campusId}
+                        onChange={(event) =>
+                          updateRow(
+                            row.clientId,
+                            "campusId",
+                            event.target.value,
+                          )
+                        }
+                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500"
+                      >
+                        <option value="">Seleccionar sede</option>
+                        {campuses.map((campus) => (
+                          <option key={campus.id} value={campus.id}>
+                            {campus.name} · {campus.address || campus.book_express_code}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
                   <div>
                     <label className="text-xs font-black uppercase tracking-wide text-gray-500">
                       Nivel educativo
@@ -955,9 +1017,13 @@ export default function SchoolEducationalServicesSection({
                         </option>
 
                         {availableLevels.map((level) => {
+                          const candidateKey =
+                            `${Number(row.campusId)}:${level.id}`;
+                          const currentKey =
+                            `${Number(row.campusId)}:${Number(row.levelId)}`;
                           const usedByAnotherRow =
-                            selectedLevelIds.has(level.id) &&
-                            Number(row.levelId) !== level.id;
+                            selectedCampusLevelKeys.has(candidateKey) &&
+                            candidateKey !== currentKey;
 
                           return (
                             <option
