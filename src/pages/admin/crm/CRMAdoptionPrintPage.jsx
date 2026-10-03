@@ -420,24 +420,21 @@ export default function CRMAdoptionPrintPage() {
     (item) => item.readingMonth !== "—",
   );
 
-  const totals = useMemo(
-    () =>
-      documentRows.reduce(
-        (result, item) => {
-          const quantity = Number(item.quantity || 0);
+  const totals = useMemo(() => {
+    const levels = new Set(
+      documentRows
+        .map((item) => item.level)
+        .filter((level) => level && level !== "—"),
+    );
 
-          result.units += quantity;
-          result.school += Number(item.schoolPrice || 0) * quantity;
-
-          return result;
-        },
-        {
-          units: 0,
-          school: 0,
-        },
+    return {
+      levels: levels.size,
+      units: documentRows.reduce(
+        (total, item) => total + Number(item.quantity || 0),
+        0,
       ),
-    [documentRows],
-  );
+    };
+  }, [documentRows]);
 
   function closePreview() {
     window.close();
@@ -801,29 +798,22 @@ export default function CRMAdoptionPrintPage() {
           </div>
         </section>
 
-        <section className="adoption-print-totals mt-4 grid gap-3 sm:grid-cols-3">
+        <section className="adoption-print-totals mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-              Productos
+              Niveles adoptados
             </p>
             <p className="mt-1 text-lg font-black text-gray-950">
-              {documentRows.length}
+              {totals.levels}
             </p>
           </div>
+
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
               Unidades adoptadas
             </p>
             <p className="mt-1 text-lg font-black text-gray-950">
               {totals.units}
-            </p>
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-              P.IE total
-            </p>
-            <p className="mt-1 text-lg font-black text-gray-950">
-              {formatCurrency(totals.school)}
             </p>
           </div>
         </section>
