@@ -2,21 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { motion } from "motion/react";
 import {
-  FaBuilding,
   FaChevronLeft,
   FaChevronRight,
-  FaEnvelope,
   FaExclamationTriangle,
-  FaMapMarkerAlt,
-  FaPhoneAlt,
+  FaFileExcel,
   FaSchool,
   FaSearch,
-  FaTimes,
-  FaUserTie,
-  FaUsers,
-  FaWhatsapp,
 } from "react-icons/fa";
-import { getCRMSchool, getCRMSchools } from "../../../api/crmApi";
+
+import { getCRMSchools } from "../../../api/crmApi";
+import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
+import CRMSchoolCreatePanel from "../../../components/admin/crm/CRMSchoolCreatePanel";
+import { useAuth } from "../../../hooks/useAuth";
 
 const INITIAL_FILTERS = {
   search: "",
@@ -24,9 +21,10 @@ const INITIAL_FILTERS = {
   department: "",
   province: "",
   district: "",
+  assignment: "",
 };
 
-const PAGE_SIZE = 25;
+const DEFAULT_PAGE_SIZE = 25;
 
 function getErrorMessage(error, fallback) {
   const detail = error?.response?.data?.detail;
@@ -42,10 +40,10 @@ function getErrorMessage(error, fallback) {
   return fallback;
 }
 
-function buildParams(filters, page) {
+function buildParams(filters, page, pageSize) {
   const params = {
     page,
-    page_size: PAGE_SIZE,
+    page_size: pageSize,
   };
 
   Object.entries(filters).forEach(([key, value]) => {
@@ -66,7 +64,9 @@ function formatLocation(school) {
 }
 
 function formatOwner(owner) {
-  if (!owner) return "Sin asesor asignado";
+  if (!owner) {
+    return "Sin asesor asignado";
+  }
 
   return owner.full_name || owner.username || "Asesor asignado";
 }
@@ -95,7 +95,7 @@ function LoadingRows() {
       {Array.from({ length: 6 }, (_, index) => (
         <div
           key={index}
-          className="h-24 animate-pulse rounded-2xl bg-gray-100"
+          className="h-20 animate-pulse rounded-2xl bg-gray-100"
         />
       ))}
     </div>
@@ -108,349 +108,22 @@ function EmptyState() {
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-gray-700 ring-1 ring-gray-200">
         <FaSchool />
       </div>
+
       <p className="mt-4 text-base font-black text-gray-950">
         No encontramos colegios.
       </p>
+
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-500">
-        Ajusta los filtros o registra colegios cuando habilitemos la gestión
-        completa de esta sección.
+        Ajusta los filtros para encontrar instituciones de la cartera comercial.
       </p>
-    </div>
-  );
-}
-
-function SchoolDetailDrawer({ schoolId, onClose }) {
-  const [school, setSchool] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function loadSchool() {
-      try {
-        setLoading(true);
-        setErrorMessage("");
-
-        const data = await getCRMSchool(schoolId);
-
-        if (!ignore) {
-          setSchool(data);
-        }
-      } catch (error) {
-        if (!ignore) {
-          setErrorMessage(
-            getErrorMessage(
-              error,
-              "No se pudo cargar el detalle del colegio.",
-            ),
-          );
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadSchool();
-
-    return () => {
-      ignore = true;
-    };
-  }, [schoolId]);
-
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50">
-      <button
-        aria-label="Cerrar detalle"
-        className="absolute inset-0 bg-black/50"
-        type="button"
-        onClick={onClose}
-      />
-
-      <aside className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-5 py-4 sm:px-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                Ficha comercial
-              </p>
-              <h2 className="mt-1 truncate text-xl font-black text-gray-950 sm:text-2xl">
-                {school?.name || "Colegio"}
-              </h2>
-            </div>
-
-            <button
-              aria-label="Cerrar"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-700 transition hover:bg-gray-100"
-              type="button"
-              onClick={onClose}
-            >
-              <FaTimes />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-5 sm:p-6">
-          {loading ? (
-            <LoadingRows />
-          ) : errorMessage ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
-              <div className="flex gap-3">
-                <FaExclamationTriangle className="mt-1 shrink-0 text-red-700" />
-                <p className="text-sm leading-6 text-red-800">
-                  {errorMessage}
-                </p>
-              </div>
-            </div>
-          ) : school ? (
-            <div className="space-y-5">
-              <section className="rounded-3xl border border-gray-200 bg-gray-50 p-5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <SchoolStatusBadge isActive={school.is_active} />
-                  {school.institution_code ? (
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-gray-600 ring-1 ring-gray-200">
-                      Cód. institución: {school.institution_code}
-                    </span>
-                  ) : null}
-                  {school.ruc ? (
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-gray-600 ring-1 ring-gray-200">
-                      RUC: {school.ruc}
-                    </span>
-                  ) : null}
-                </div>
-
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                  <InfoItem
-                    icon={FaUserTie}
-                    label="Asesor responsable"
-                    value={formatOwner(school.owner)}
-                  />
-                  <InfoItem
-                    icon={FaUsers}
-                    label="Equipo comercial"
-                    value={formatTeam(school.team)}
-                  />
-                  <InfoItem
-                    icon={FaMapMarkerAlt}
-                    label="Ubicación"
-                    value={formatLocation(school) || "Sin ubicación registrada"}
-                  />
-                  <InfoItem
-                    icon={FaBuilding}
-                    label="Población vigente"
-                    value={
-                      school.current_population_total != null
-                        ? String(school.current_population_total)
-                        : school.estimated_students != null
-                          ? String(school.estimated_students)
-                          : "Sin información"
-                    }
-                  />
-                </div>
-              </section>
-
-              <section className="rounded-3xl border border-gray-200 bg-white p-5">
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Contacto institucional
-                </p>
-
-                <div className="mt-4 grid gap-3">
-                  <ContactLine
-                    icon={FaPhoneAlt}
-                    label="Teléfono"
-                    value={school.phone}
-                  />
-                  <ContactLine
-                    icon={FaWhatsapp}
-                    label="WhatsApp"
-                    value={school.whatsapp}
-                  />
-                  <ContactLine
-                    icon={FaEnvelope}
-                    label="Correo"
-                    value={school.email}
-                  />
-                  <ContactLine
-                    icon={FaMapMarkerAlt}
-                    label="Dirección"
-                    value={school.address}
-                  />
-                </div>
-
-                {school.reference ? (
-                  <p className="mt-4 rounded-2xl bg-gray-50 p-4 text-sm leading-6 text-gray-600">
-                    <span className="font-black text-gray-900">
-                      Referencia:
-                    </span>{" "}
-                    {school.reference}
-                  </p>
-                ) : null}
-              </section>
-
-              <section className="rounded-3xl border border-gray-200 bg-white p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                      Personas de contacto
-                    </p>
-                    <h3 className="mt-1 text-lg font-black text-gray-950">
-                      Contactos del colegio
-                    </h3>
-                  </div>
-
-                  <span className="rounded-full bg-gray-950 px-3 py-1 text-xs font-black text-white">
-                    {school.contacts?.length || 0}
-                  </span>
-                </div>
-
-                {Array.isArray(school.contacts) && school.contacts.length > 0 ? (
-                  <div className="mt-4 space-y-3">
-                    {school.contacts.map((contact) => (
-                      <article
-                        key={contact.id}
-                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-black text-gray-950">
-                              {contact.full_name}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-500">
-                              {contact.position || "Cargo no registrado"}
-                            </p>
-                          </div>
-
-                          {contact.is_primary ? (
-                            <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-red-100">
-                              Principal
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-3 grid gap-2 text-xs text-gray-600 sm:grid-cols-2">
-                          <span>{contact.phone || contact.whatsapp || "Sin teléfono"}</span>
-                          <span>{contact.email || "Sin correo"}</span>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-4 rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">
-                    Todavía no hay contactos registrados para este colegio.
-                  </p>
-                )}
-              </section>
-
-              <section className="rounded-3xl border border-gray-200 bg-white p-5">
-                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                  Información comercial
-                </p>
-
-                <div className="mt-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                    Niveles educativos
-                  </p>
-
-                  {Array.isArray(school.educational_services) &&
-                  school.educational_services.length > 0 ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {school.educational_services.map((service) => (
-                        <span
-                          key={service.id}
-                          className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-700"
-                        >
-                          {service.level?.name || "Nivel no registrado"}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-sm text-gray-500">
-                      Sin niveles registrados.
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-5">
-                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                    Observaciones
-                  </p>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-600">
-                    {school.notes || "Sin observaciones registradas."}
-                  </p>
-                </div>
-              </section>
-              <Link
-                className="flex w-full items-center justify-center rounded-2xl bg-red-700 px-4 py-3 text-sm font-black text-white transition hover:bg-red-800"
-                to={`/admin/crm/colegios/${school.id}`}
-                onClick={onClose}
-              >
-                Abrir ficha comercial completa
-              </Link>
-            </div>
-          ) : null}
-        </div>
-      </aside>
-    </div>
-  );
-}
-
-function InfoItem({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-2xl bg-white p-4 ring-1 ring-gray-200">
-      <div className="flex gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-xs text-white">
-          <Icon />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-            {label}
-          </p>
-          <p className="mt-1 break-words text-sm font-black text-gray-950">
-            {value}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ContactLine({ icon: Icon, label, value }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl bg-gray-50 p-3">
-      <div className="mt-0.5 text-gray-500">
-        <Icon />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-          {label}
-        </p>
-        <p className="mt-1 break-words text-sm font-semibold text-gray-900">
-          {value || "No registrado"}
-        </p>
-      </div>
     </div>
   );
 }
 
 export default function CRMSchoolsPage() {
+  const { hasPermission } = useAuth();
+  const canAssignSchools = hasPermission(["crm.assign_schools"]);
+
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [schools, setSchools] = useState([]);
   const [pagination, setPagination] = useState({
@@ -459,13 +132,29 @@ export default function CRMSchoolsPage() {
     previous: null,
   });
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [selectedSchoolId, setSelectedSchoolId] = useState(null);
+  const [selectedSchoolIds, setSelectedSchoolIds] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const selectedSchools = useMemo(
+    () =>
+      schools.filter((school) =>
+        selectedSchoolIds.includes(school.id),
+      ),
+    [schools, selectedSchoolIds],
+  );
+
+  const allVisibleSelected =
+    schools.length > 0
+    && schools.every((school) =>
+      selectedSchoolIds.includes(school.id),
+    );
 
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil((pagination.count || 0) / PAGE_SIZE)),
-    [pagination.count],
+    () => Math.max(1, Math.ceil((pagination.count || 0) / pageSize)),
+    [pageSize, pagination.count],
   );
 
   useEffect(() => {
@@ -476,10 +165,21 @@ export default function CRMSchoolsPage() {
         setLoading(true);
         setErrorMessage("");
 
-        const data = await getCRMSchools(buildParams(filters, page));
+        const data = await getCRMSchools(
+          buildParams(filters, page, pageSize),
+        );
 
         if (!ignore) {
-          setSchools(Array.isArray(data?.results) ? data.results : []);
+          const nextSchools = Array.isArray(data?.results)
+            ? data.results
+            : [];
+
+          setSchools(nextSchools);
+          setSelectedSchoolIds((currentIds) =>
+            currentIds.filter((schoolId) =>
+              nextSchools.some((school) => school.id === schoolId),
+            ),
+          );
           setPagination({
             count: Number(data?.count || 0),
             next: data?.next || null,
@@ -506,7 +206,7 @@ export default function CRMSchoolsPage() {
       ignore = true;
       clearTimeout(timeoutId);
     };
-  }, [filters, page]);
+  }, [filters, page, pageSize, refreshKey]);
 
   function handleFilterChange(event) {
     const { name, value } = event.target;
@@ -520,7 +220,30 @@ export default function CRMSchoolsPage() {
 
   function clearFilters() {
     setPage(1);
+    setSelectedSchoolIds([]);
     setFilters(INITIAL_FILTERS);
+  }
+
+  function toggleSchoolSelection(schoolId) {
+    setSelectedSchoolIds((currentIds) =>
+      currentIds.includes(schoolId)
+        ? currentIds.filter((id) => id !== schoolId)
+        : [...currentIds, schoolId],
+    );
+  }
+
+  function toggleVisibleSelection() {
+    if (allVisibleSelected) {
+      setSelectedSchoolIds([]);
+      return;
+    }
+
+    setSelectedSchoolIds(schools.map((school) => school.id));
+  }
+
+  function handleAssignmentCompleted() {
+    setSelectedSchoolIds([]);
+    setRefreshKey((current) => current + 1);
   }
 
   return (
@@ -528,34 +251,49 @@ export default function CRMSchoolsPage() {
       <motion.section
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-3xl bg-gray-950 px-5 py-6 text-white shadow-sm sm:px-7 lg:px-8"
+        className="rounded-3xl bg-gray-950 px-5 py-5 text-white shadow-sm sm:px-7"
       >
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
             <p className="text-xs font-black uppercase tracking-wide text-red-300">
               CRM Comercial
             </p>
-            <h1 className="mt-2 text-2xl font-black sm:text-3xl">
+
+            <h1 className="mt-1 text-2xl font-black sm:text-3xl">
               Colegios
             </h1>
+
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-300">
-              Consulta la cartera institucional visible para tu responsabilidad
-              comercial y revisa sus principales datos de seguimiento.
+              Consulta y gestiona la cartera institucional de Book Express.
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
-            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
-              Total visible
-            </p>
-            <p className="mt-1 text-2xl font-black">
-              {pagination.count}
-            </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {canAssignSchools ? (
+              <Link
+                to="/admin/crm/colegios/importar"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/15"
+              >
+                <FaFileExcel />
+                Importar Excel
+              </Link>
+            ) : null}
+
+            <CRMSchoolCreatePanel />
+
+            <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Total visible
+              </p>
+              <p className="mt-1 text-2xl font-black">
+                {pagination.count}
+              </p>
+            </div>
           </div>
         </div>
       </motion.section>
 
-      <section className="mt-5 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+      <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <div>
             <p className="text-xs font-black uppercase tracking-wide text-red-700">
@@ -575,50 +313,85 @@ export default function CRMSchoolsPage() {
           </button>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
-          <label className="relative xl:col-span-2">
-            <span className="sr-only">Buscar</span>
-            <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
-            <input
-              className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-              name="search"
-              placeholder="Nombre, código modular, RUC, teléfono..."
-              value={filters.search}
-              onChange={handleFilterChange}
-            />
-          </label>
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="mb-2 text-xs font-black uppercase tracking-wide text-gray-500">
+              Búsqueda y responsable
+            </p>
 
-          <select
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="is_active"
-            value={filters.is_active}
-            onChange={handleFilterChange}
-          >
-            <option value="">Todos los estados</option>
-            <option value="true">Activos</option>
-            <option value="false">Inactivos</option>
-          </select>
+            <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+              <label className="relative xl:col-span-2">
+                <span className="sr-only">Buscar</span>
+                <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
+                <input
+                  className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                  name="search"
+                  placeholder="Nombre, código Book Express, código modular, RUC, teléfono..."
+                  value={filters.search}
+                  onChange={handleFilterChange}
+                />
+              </label>
 
-          <input
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="province"
-            placeholder="Provincia"
-            value={filters.province}
-            onChange={handleFilterChange}
-          />
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="assignment"
+                value={filters.assignment}
+                onChange={handleFilterChange}
+              >
+                <option value="">Todos los responsables</option>
+                <option value="unassigned">Sin asesor asignado</option>
+                <option value="assigned">Con asesor asignado</option>
+              </select>
 
-          <input
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            name="district"
-            placeholder="Distrito"
-            value={filters.district}
-            onChange={handleFilterChange}
-          />
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="is_active"
+                value={filters.is_active}
+                onChange={handleFilterChange}
+              >
+                <option value="">Todos los estados</option>
+                <option value="true">Activos</option>
+                <option value="false">Inactivos</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            <p className="mb-2 text-xs font-black uppercase tracking-wide text-gray-500">
+              Ubicación
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <input
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="department"
+                placeholder="Departamento"
+                value={filters.department}
+                onChange={handleFilterChange}
+              />
+
+              <input
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="province"
+                placeholder="Provincia"
+                value={filters.province}
+                onChange={handleFilterChange}
+              />
+
+              <input
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                name="district"
+                placeholder="Distrito"
+                value={filters.district}
+                onChange={handleFilterChange}
+              />
+            </div>
+          </div>
         </div>
       </section>
 
       {errorMessage ? (
-        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4">
+        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
           <div className="flex items-start gap-3">
             <FaExclamationTriangle className="mt-0.5 shrink-0 text-red-700" />
             <p className="text-sm leading-6 text-red-800">
@@ -628,14 +401,44 @@ export default function CRMSchoolsPage() {
         </div>
       ) : null}
 
-      <section className="mt-5 rounded-3xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-100 px-4 py-4 sm:px-5">
-          <h2 className="text-lg font-black text-gray-950">
-            Cartera de colegios
-          </h2>
-          <p className="mt-1 text-xs text-gray-500">
-            Los resultados respetan el alcance comercial del usuario conectado.
-          </p>
+      <section className="mt-4 rounded-3xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex flex-col justify-between gap-3 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+          <div>
+            <h2 className="text-lg font-black text-gray-950">
+              Cartera de colegios
+            </h2>
+
+            <p className="mt-1 text-xs text-gray-500">
+              Selecciona una institución para abrir su ficha comercial.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="flex items-center gap-2 text-xs font-bold text-gray-500">
+              Mostrar
+              <select
+                value={pageSize}
+                onChange={(event) => {
+                  setPage(1);
+                  setSelectedSchoolIds([]);
+                  setPageSize(Number(event.target.value));
+                }}
+                className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs font-black text-gray-800 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </label>
+
+            {canAssignSchools && selectedSchools.length > 0 ? (
+              <CRMSchoolAssignmentPanel
+                schools={selectedSchools}
+                onAssigned={handleAssignmentCompleted}
+                buttonLabel={`Asignar cartera (${selectedSchools.length})`}
+              />
+            ) : null}
+          </div>
         </div>
 
         <div className="p-4 sm:p-5">
@@ -649,6 +452,17 @@ export default function CRMSchoolsPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead>
                     <tr className="text-left text-xs font-black uppercase tracking-wide text-gray-500">
+                      {canAssignSchools ? (
+                        <th className="w-10 px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={allVisibleSelected}
+                            onChange={toggleVisibleSelection}
+                            aria-label="Seleccionar colegios visibles"
+                            className="h-4 w-4 rounded border-gray-300 text-red-700 accent-red-700"
+                          />
+                        </th>
+                      ) : null}
                       <th className="px-3 py-3">Colegio</th>
                       <th className="px-3 py-3">Ubicación</th>
                       <th className="px-3 py-3">Responsable</th>
@@ -657,50 +471,74 @@ export default function CRMSchoolsPage() {
                       <th className="px-3 py-3 text-right">Acción</th>
                     </tr>
                   </thead>
+
                   <tbody className="divide-y divide-gray-100">
                     {schools.map((school) => (
-                      <tr key={school.id} className="align-top">
+                      <tr
+                        key={school.id}
+                        className="align-middle transition hover:bg-gray-50"
+                      >
+                        {canAssignSchools ? (
+                          <td className="px-3 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedSchoolIds.includes(school.id)}
+                              onChange={() => toggleSchoolSelection(school.id)}
+                              aria-label={`Seleccionar ${school.name}`}
+                              className="h-4 w-4 rounded border-gray-300 text-red-700 accent-red-700"
+                            />
+                          </td>
+                        ) : null}
+
                         <td className="px-3 py-4">
                           <p className="font-black text-gray-950">
                             {school.name}
                           </p>
+
                           <p className="mt-1 text-xs text-gray-500">
-                            {school.institution_code
-                              ? `Cód. institución ${school.institution_code}`
-                              : school.modular_code
-                                ? `Cód. modular ${school.modular_code}`
-                                : school.ruc
-                                  ? `RUC ${school.ruc}`
-                                  : "Sin código registrado"}
+                            {school.book_express_code
+                              ? `${school.book_express_code}${school.institution_code ? ` · Cód. institución ${school.institution_code}` : ""}`
+                              : school.institution_code
+                                ? `Cód. institución ${school.institution_code}`
+                                : school.modular_code
+                                  ? `Cód. modular ${school.modular_code}`
+                                  : school.ruc
+                                    ? `RUC ${school.ruc}`
+                                    : "Sin código registrado"}
                           </p>
                         </td>
+
                         <td className="px-3 py-4 text-sm text-gray-600">
                           {formatLocation(school) || "Sin ubicación"}
                         </td>
+
                         <td className="px-3 py-4">
                           <p className="text-sm font-bold text-gray-900">
                             {formatOwner(school.owner)}
                           </p>
+
                           <p className="mt-1 text-xs text-gray-500">
                             {formatTeam(school.team)}
                           </p>
                         </td>
+
                         <td className="px-3 py-4 text-sm font-bold text-gray-700">
                           {school.current_population_total ??
                             school.estimated_students ??
                             "—"}
                         </td>
+
                         <td className="px-3 py-4">
                           <SchoolStatusBadge isActive={school.is_active} />
                         </td>
+
                         <td className="px-3 py-4 text-right">
-                          <button
-                            className="rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
-                            type="button"
-                            onClick={() => setSelectedSchoolId(school.id)}
+                          <Link
+                            className="inline-flex rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-red-700"
+                            to={`/admin/crm/colegios/${school.id}`}
                           >
-                            Ver detalle
-                          </button>
+                            Ver ficha
+                          </Link>
                         </td>
                       </tr>
                     ))}
@@ -715,35 +553,55 @@ export default function CRMSchoolsPage() {
                     className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="break-words text-base font-black text-gray-950">
+                      <div className="flex min-w-0 items-start gap-3">
+                        {canAssignSchools ? (
+                          <input
+                            type="checkbox"
+                            checked={selectedSchoolIds.includes(school.id)}
+                            onChange={() => toggleSchoolSelection(school.id)}
+                            aria-label={`Seleccionar ${school.name}`}
+                            className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-red-700 accent-red-700"
+                          />
+                        ) : null}
+
+                        <div className="min-w-0">
+                        <p className="wrap-break-word text-base font-black text-gray-950">
                           {school.name}
                         </p>
+
                         <p className="mt-1 text-xs text-gray-500">
                           {formatLocation(school) || "Sin ubicación"}
                         </p>
+                        </div>
                       </div>
+
                       <SchoolStatusBadge isActive={school.is_active} />
                     </div>
 
-                    <div className="mt-4 grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
+                    <div className="mt-3 grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
                       <p>
-                        <span className="font-black text-gray-900">Asesor:</span>{" "}
+                        <span className="font-black text-gray-900">
+                          Asesor:
+                        </span>{" "}
                         {formatOwner(school.owner)}
                       </p>
+
                       <p>
-                        <span className="font-black text-gray-900">Equipo:</span>{" "}
-                        {formatTeam(school.team)}
+                        <span className="font-black text-gray-900">
+                          Alumnos:
+                        </span>{" "}
+                        {school.current_population_total ??
+                          school.estimated_students ??
+                          "—"}
                       </p>
                     </div>
 
-                    <button
-                      className="mt-4 w-full rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700"
-                      type="button"
-                      onClick={() => setSelectedSchoolId(school.id)}
+                    <Link
+                      className="mt-4 flex w-full items-center justify-center rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-700"
+                      to={`/admin/crm/colegios/${school.id}`}
                     >
-                      Ver detalle
-                    </button>
+                      Ver ficha
+                    </Link>
                   </article>
                 ))}
               </div>
@@ -758,7 +616,11 @@ export default function CRMSchoolsPage() {
                     className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                     disabled={!pagination.previous}
                     type="button"
-                    onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+                    onClick={() =>
+                      setPage((currentPage) =>
+                        Math.max(1, currentPage - 1),
+                      )
+                    }
                   >
                     <FaChevronLeft className="text-xs" />
                     Anterior
@@ -768,7 +630,9 @@ export default function CRMSchoolsPage() {
                     className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                     disabled={!pagination.next}
                     type="button"
-                    onClick={() => setPage((currentPage) => currentPage + 1)}
+                    onClick={() =>
+                      setPage((currentPage) => currentPage + 1)
+                    }
                   >
                     Siguiente
                     <FaChevronRight className="text-xs" />
@@ -779,13 +643,6 @@ export default function CRMSchoolsPage() {
           )}
         </div>
       </section>
-
-      {selectedSchoolId ? (
-        <SchoolDetailDrawer
-          schoolId={selectedSchoolId}
-          onClose={() => setSelectedSchoolId(null)}
-        />
-      ) : null}
     </div>
   );
 }

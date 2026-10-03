@@ -43,12 +43,44 @@ const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
 );
 
+const CRMContactsPage = lazy(
+  () => import("../pages/admin/crm/CRMContactsPage"),
+);
+
+const CRMContactDetailPage = lazy(
+  () => import("../pages/admin/crm/CRMContactDetailPage"),
+);
+
 const CRMSchoolsPage = lazy(
   () => import("../pages/admin/crm/CRMSchoolsPage"),
 );
 
 const CRMSchoolDetailPage = lazy(
   () => import("../pages/admin/crm/CRMSchoolDetailPage"),
+);
+
+const CRMCommercialTeamsPage = lazy(
+  () => import("../pages/admin/crm/CRMCommercialTeamsPage"),
+);
+
+const CRMSchoolImportsPage = lazy(
+  () => import("../pages/admin/crm/CRMSchoolImportsPage"),
+);
+
+const CRMOpportunitiesPage = lazy(
+  () => import("../pages/admin/crm/CRMOpportunitiesPage"),
+);
+
+const CRMOpportunityDetailPage = lazy(
+  () => import("../pages/admin/crm/CRMOpportunityDetailPage"),
+);
+
+const CRMQuotationPrintPage = lazy(
+  () => import("../pages/admin/crm/CRMQuotationPrintPage"),
+);
+
+const CRMAdoptionPrintPage = lazy(
+  () => import("../pages/admin/crm/CRMAdoptionPrintPage"),
 );
 
 function protectRole(element, allowedRoles) {
@@ -123,6 +155,20 @@ const router = createBrowserRouter([
     element: <RequireAuth />,
     children: [
       {
+        path: "crm/oportunidades/:opportunityId/cotizaciones/:quotationId/imprimir",
+        element: protectPermission(
+          renderLazyPage(CRMQuotationPrintPage),
+          ["crm.view_crm"],
+        ),
+      },
+      {
+        path: "crm/oportunidades/:opportunityId/adopciones/:adoptionId/imprimir",
+        element: protectPermission(
+          renderLazyPage(CRMAdoptionPrintPage),
+          ["crm.view_crm"],
+        ),
+      },
+      {
         element: <AdminLayout />,
         children: [
           {
@@ -141,6 +187,20 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: "crm/contactos",
+            element: protectPermission(
+              renderLazyPage(CRMContactsPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
+            path: "crm/contactos/:id",
+            element: protectPermission(
+              renderLazyPage(CRMContactDetailPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
             path: "crm/colegios",
             element: protectPermission(
               renderLazyPage(CRMSchoolsPage),
@@ -151,6 +211,34 @@ const router = createBrowserRouter([
             path: "crm/colegios/:id",
             element: protectPermission(
               renderLazyPage(CRMSchoolDetailPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
+            path: "crm/equipos",
+            element: protectPermission(
+              renderLazyPage(CRMCommercialTeamsPage),
+              ["crm.assign_schools"],
+            ),
+          },
+          {
+            path: "crm/colegios/importar",
+            element: protectPermission(
+              renderLazyPage(CRMSchoolImportsPage),
+              ["crm.assign_schools"],
+            ),
+          },
+          {
+            path: "crm/oportunidades",
+            element: protectPermission(
+              renderLazyPage(CRMOpportunitiesPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
+            path: "crm/oportunidades/:id",
+            element: protectPermission(
+              renderLazyPage(CRMOpportunityDetailPage),
               ["crm.view_crm"],
             ),
           },
