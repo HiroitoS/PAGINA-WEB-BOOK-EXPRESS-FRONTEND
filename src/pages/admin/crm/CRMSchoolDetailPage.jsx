@@ -29,6 +29,7 @@ import {
   getCRMSchoolWorkItems,
 } from "../../../api/crmApi";
 import CRMSchoolActivityDrawer from "../../../components/admin/crm/CRMSchoolActivityDrawer";
+import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
 import SchoolEducationalServicesSection from "../../../components/admin/crm/SchoolEducationalServicesSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
 import { getCRMActivityTypeLabel } from "../../../utils/crmActivityTypes";
@@ -571,6 +572,17 @@ export default function CRMSchoolDetailPage() {
       })
     : undefined;
 
+  async function handleSchoolAssignmentCompleted() {
+    try {
+      const updatedSchool = await getCRMSchool(id);
+      setSchool(updatedSchool);
+    } catch {
+      setSupportingWarning(
+        "La asignación se guardó, pero la ficha no pudo actualizarse automáticamente.",
+      );
+    }
+  }
+
   async function handleCreateOpportunity() {
     if (!school || creatingOpportunity) {
       return;
@@ -637,25 +649,38 @@ export default function CRMSchoolDetailPage() {
       {!loading && !errorMessage && school ? (
         <div className="space-y-4">
           <section className="rounded-3xl bg-gray-950 px-5 py-5 text-white shadow-sm sm:px-7">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs font-black uppercase tracking-wide text-red-300">
-                  CRM Comercial · Colegio
-                </p>
+            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-black uppercase tracking-wide text-red-300">
+                    CRM Comercial · Colegio
+                  </p>
 
-                <StatusBadge isActive={school.is_active} />
+                  <StatusBadge isActive={school.is_active} />
+                </div>
+
+                <div className="mt-3">
+                  <h1 className="wrap-break-word text-2xl font-black sm:text-3xl">
+                    {school.name}
+                  </h1>
+
+                  <p className="mt-1 text-sm text-gray-300">
+                    Información institucional, relaciones y seguimiento comercial
+                    en un mismo lugar.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h1 className="wrap-break-word text-2xl font-black sm:text-3xl">
-                  {school.name}
-                </h1>
-
-                <p className="mt-1 text-sm text-gray-300">
-                  Información institucional, relaciones y seguimiento comercial
-                  en un mismo lugar.
-                </p>
-              </div>
+              <CRMSchoolAssignmentPanel
+                schools={[school]}
+                onAssigned={handleSchoolAssignmentCompleted}
+                buttonLabel={
+                  school.owner || school.team
+                    ? "Cambiar asignación"
+                    : "Asignar responsable"
+                }
+                buttonClassName="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800"
+              />
             </div>
           </section>
 
