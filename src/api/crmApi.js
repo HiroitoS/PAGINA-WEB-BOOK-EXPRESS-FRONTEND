@@ -66,6 +66,36 @@ export async function assignCRMSchoolPortfolio(payload) {
   return response.data;
 }
 
+export async function getCRMSchoolImports() {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/school-imports/`,
+  );
+
+  return normalizeList(response.data);
+}
+
+export async function previewCRMSchoolImport(file, populationYear) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("population_year", populationYear);
+
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/school-imports/preview/`,
+    formData,
+  );
+
+  return response.data;
+}
+
+export async function confirmCRMSchoolImport(importId) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/school-imports/${importId}/confirm/`,
+  );
+
+  return response.data;
+}
+
+
 export async function getCRMCommercialTeams(params = {}) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/commercial-teams/`,
