@@ -361,6 +361,7 @@ export default function CRMSchoolDetailPage() {
   const [commercialSignalForm, setCommercialSignalForm] = useState({
     monthlyTuition: "",
     textbookUsage: "unknown",
+    commercialAffinity: "unknown",
   });
   const [savingCommercialSignals, setSavingCommercialSignals] =
     useState(false);
@@ -601,6 +602,8 @@ export default function CRMSchoolDetailPage() {
         school?.commercial_profile?.monthly_tuition ?? "",
       textbookUsage:
         school?.commercial_profile?.textbook_usage ?? "unknown",
+      commercialAffinity:
+        school?.commercial_profile?.commercial_affinity ?? "unknown",
     });
     setCommercialSignalError("");
     setCommercialSignalSuccess("");
@@ -639,6 +642,8 @@ export default function CRMSchoolDetailPage() {
           campaign: activeSchoolCampaign.id,
           monthly_tuition: monthlyTuition === "" ? null : monthlyTuition,
           textbook_usage: commercialSignalForm.textbookUsage,
+          commercial_affinity:
+            commercialSignalForm.commercialAffinity,
         },
       );
 
@@ -1087,7 +1092,7 @@ export default function CRMSchoolDetailPage() {
                       disabled={!activeSchoolCampaign}
                       className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-black text-gray-700 transition hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Gestionar
+                      Editar señales
                     </button>
                   ) : null}
                 </div>
@@ -1152,6 +1157,32 @@ export default function CRMSchoolDetailPage() {
                         </option>
                         <option value="none">No utiliza textos escolares</option>
                       </select>
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Afinidad pedagógica / comercial
+                      </span>
+                      <select
+                        value={commercialSignalForm.commercialAffinity}
+                        onChange={(event) =>
+                          setCommercialSignalForm((current) => ({
+                            ...current,
+                            commercialAffinity: event.target.value,
+                          }))
+                        }
+                        disabled={savingCommercialSignals}
+                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500 disabled:bg-gray-100"
+                      >
+                        <option value="unknown">Sin evaluar</option>
+                        <option value="pedagogical">Pedagógica</option>
+                        <option value="mixed">Mixta</option>
+                        <option value="commercial">Comercial</option>
+                      </select>
+                      <span className="mt-1 block text-xs leading-5 text-gray-500">
+                        Se evalúa a nivel del colegio según lo observado por el
+                        asesor durante la gestión.
+                      </span>
                     </label>
 
                     <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
@@ -1225,6 +1256,16 @@ export default function CRMSchoolDetailPage() {
                       <p className="mt-1 font-black text-gray-950">
                         {school.commercial_profile?.textbook_usage_display ||
                           "Sin información"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Afinidad pedagógica / comercial
+                      </p>
+                      <p className="mt-1 font-black text-gray-950">
+                        {school.commercial_profile
+                          ?.commercial_affinity_display || "Sin evaluar"}
                       </p>
                     </div>
 
@@ -1333,40 +1374,10 @@ export default function CRMSchoolDetailPage() {
                 {activeInfoTab === "activity" ? (
                   <>
                     <div className="border-b border-gray-200 px-4 py-3 sm:px-5 sm:py-4">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex flex-wrap gap-2">
-                          {ACTIVITY_FILTERS.map((filter) => {
-                            const isActive =
-                              activityFilter === filter.value;
-
-                            return (
-                              <button
-                                key={filter.value}
-                                type="button"
-                                onClick={() => {
-                                  setActivityFilter(filter.value);
-                                  setShowAllActivities(false);
-                                }}
-                                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black transition ${
-                                  isActive
-                                    ? "border-gray-950 bg-gray-950 text-white"
-                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950"
-                                }`}
-                              >
-                                <span>{filter.label}</span>
-                                <span
-                                  className={`min-w-6 rounded-md px-1.5 py-0.5 text-center text-xs ${
-                                    isActive
-                                      ? "bg-white/15 text-white"
-                                      : "bg-gray-100 text-gray-500"
-                                  }`}
-                                >
-                                  {activityCounts[filter.value] ?? 0}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                          Historial de actividad
+                        </p>
 
                         <div className="shrink-0">
                           <CRMSchoolActivityDrawer
@@ -1376,6 +1387,39 @@ export default function CRMSchoolDetailPage() {
                             onChanged={refreshCommercialActivityData}
                           />
                         </div>
+                      </div>
+
+                      <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1">
+                        {ACTIVITY_FILTERS.map((filter) => {
+                          const isActive = activityFilter === filter.value;
+
+                          return (
+                            <button
+                              key={filter.value}
+                              type="button"
+                              onClick={() => {
+                                setActivityFilter(filter.value);
+                                setShowAllActivities(false);
+                              }}
+                              className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-black transition ${
+                                isActive
+                                  ? "border-gray-950 bg-gray-950 text-white"
+                                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950"
+                              }`}
+                            >
+                              <span>{filter.label}</span>
+                              <span
+                                className={`min-w-6 rounded-md px-1.5 py-0.5 text-center text-xs ${
+                                  isActive
+                                    ? "bg-white/15 text-white"
+                                    : "bg-gray-100 text-gray-500"
+                                }`}
+                              >
+                                {activityCounts[filter.value] ?? 0}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
