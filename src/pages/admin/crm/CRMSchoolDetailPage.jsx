@@ -114,6 +114,28 @@ function formatSegment(segment) {
   return `Segmento ${segment}`;
 }
 
+function formatCommercialScore(profile) {
+  if (!profile?.scored_at) {
+    return "Sin evaluar";
+  }
+
+  const score = Number(profile.priority_score);
+
+  if (!Number.isFinite(score)) {
+    return "Sin evaluar";
+  }
+
+  return `${score} / 100`;
+}
+
+function formatCommercialPriority(profile) {
+  if (!profile?.scored_at) {
+    return "Sin evaluar";
+  }
+
+  return profile.priority_display || "Sin evaluar";
+}
+
 function formatPopulation(school) {
   return (
     school?.current_population_total ??
@@ -437,6 +459,27 @@ export default function CRMSchoolDetailPage() {
       });
   }, [school]);
 
+  const activityCounts = useMemo(() => {
+    const counts = Object.fromEntries(
+      ACTIVITY_FILTERS.map((filter) => [filter.value, 0]),
+    );
+
+    counts.all = activities.length;
+
+    activities.forEach((activity) => {
+      if (
+        Object.prototype.hasOwnProperty.call(
+          counts,
+          activity.activity_type,
+        )
+      ) {
+        counts[activity.activity_type] += 1;
+      }
+    });
+
+    return counts;
+  }, [activities]);
+
   const filteredActivities = useMemo(() => {
     if (activityFilter === "all") {
       return activities;
@@ -659,6 +702,19 @@ export default function CRMSchoolDetailPage() {
                   </p>
 
                   <StatusBadge isActive={school.is_active} />
+
+                  <span className="inline-flex rounded-lg bg-white/10 px-2.5 py-1 text-xs font-black text-white ring-1 ring-white/15">
+                    {formatSegment(school.segment)}
+                  </span>
+
+                  <span className="inline-flex rounded-lg bg-white/10 px-2.5 py-1 text-xs font-black text-white ring-1 ring-white/15">
+                    Score {formatCommercialScore(school.commercial_profile)}
+                  </span>
+
+                  <span className="inline-flex rounded-lg bg-white/10 px-2.5 py-1 text-xs font-black text-white ring-1 ring-white/15">
+                    Prioridad{" "}
+                    {formatCommercialPriority(school.commercial_profile)}
+                  </span>
                 </div>
 
                 <div className="mt-3">
@@ -866,7 +922,7 @@ export default function CRMSchoolDetailPage() {
                     </p>
 
                     <h2 className="mt-1 text-lg font-black text-gray-950">
-                      {formatSegment(school.segment)}
+                      Resumen comercial
                     </h2>
                   </div>
                 </div>
@@ -874,22 +930,25 @@ export default function CRMSchoolDetailPage() {
                 <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-1 xl:gap-3">
                   <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Score comercial
+                    </p>
+
+                    <p className="mt-1 font-black text-gray-950">
+                      {formatCommercialScore(school.commercial_profile)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Prioridad comercial
                     </p>
 
                     <p className="mt-1 font-black text-gray-950">
-                      {school.commercial_profile?.priority_display ||
-                        "Sin evaluar"}
+                      {formatCommercialPriority(school.commercial_profile)}
                     </p>
-
-                    {school.commercial_profile?.priority_score != null ? (
-                      <p className="mt-1 text-sm font-semibold text-gray-500">
-                        Score {school.commercial_profile.priority_score} / 100
-                      </p>
-                    ) : null}
                   </div>
 
-                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                  <div className="col-span-2 rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200 xl:col-span-1">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Uso de textos
                     </p>
@@ -981,36 +1040,53 @@ export default function CRMSchoolDetailPage() {
                 {activeInfoTab === "activity" ? (
                   <>
                     <div className="border-b border-gray-200 px-4 py-3 sm:px-5 sm:py-4">
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                        {ACTIVITY_FILTERS.map((filter) => (
-                          <button
-                            key={filter.value}
-                            type="button"
-                            onClick={() => {
-                              setActivityFilter(filter.value);
-                              setShowAllActivities(false);
-                            }}
-                            className={`rounded-full px-3 py-1.5 text-xs font-black transition ${
-                              activityFilter === filter.value
-                                ? "bg-gray-950 text-white"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            }`}
-                          >
-                            {filter.label}
-                          </button>
-                        ))}
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex flex-wrap gap-2">
+                          {ACTIVITY_FILTERS.map((filter) => {
+                            const isActive =
+                              activityFilter === filter.value;
+
+                            return (
+                              <button
+                                key={filter.value}
+                                type="button"
+                                onClick={() => {
+                                  setActivityFilter(filter.value);
+                                  setShowAllActivities(false);
+                                }}
+                                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black transition ${
+                                  isActive
+                                    ? "border-gray-950 bg-gray-950 text-white"
+                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950"
+                                }`}
+                              >
+                                <span>{filter.label}</span>
+                                <span
+                                  className={`min-w-6 rounded-md px-1.5 py-0.5 text-center text-xs ${
+                                    isActive
+                                      ? "bg-white/15 text-white"
+                                      : "bg-gray-100 text-gray-500"
+                                  }`}
+                                >
+                                  {activityCounts[filter.value] ?? 0}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="shrink-0">
+                          <CRMSchoolActivityDrawer
+                            school={school}
+                            contacts={visibleContacts}
+                            opportunities={schoolOpportunities}
+                            onChanged={refreshCommercialActivityData}
+                          />
+                        </div>
                       </div>
                     </div>
 
                     <div className="p-4 sm:p-5">
-                      <div className="mb-4 flex justify-end">
-                        <CRMSchoolActivityDrawer
-                          school={school}
-                          contacts={visibleContacts}
-                          opportunities={schoolOpportunities}
-                          onChanged={refreshCommercialActivityData}
-                        />
-                      </div>
                       {filteredActivities.length > 0 ? (
                         <div className="space-y-3">
                           {displayedActivities.map((activity) => (
