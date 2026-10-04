@@ -194,7 +194,7 @@ export async function updateCRMSchoolInstitutionalPopulation(
   schoolId,
   payload,
 ) {
-  const response = await axiosClient.put(
+  const response = await axiosClient.patch(
     `${CRM_ADMIN_BASE}/schools/${schoolId}/institutional-population/`,
     payload,
   );
