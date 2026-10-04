@@ -694,51 +694,84 @@ export default function CRMSchoolDetailPage() {
       {!loading && !errorMessage && school ? (
         <div className="space-y-4">
           <section className="rounded-3xl bg-gray-950 px-5 py-5 text-white shadow-sm sm:px-7">
-            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs font-black uppercase tracking-wide text-red-300">
-                    CRM Comercial · Colegio
-                  </p>
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs font-black uppercase tracking-wide text-red-300">
+                      CRM Comercial · Colegio
+                    </p>
 
-                  <StatusBadge isActive={school.is_active} />
+                    <StatusBadge isActive={school.is_active} />
+                  </div>
 
-                  <span className="inline-flex rounded-lg bg-white/10 px-2.5 py-1 text-xs font-black text-white ring-1 ring-white/15">
-                    {formatSegment(school.segment)}
-                  </span>
+                  <div className="mt-3">
+                    <h1 className="wrap-break-word text-2xl font-black sm:text-3xl">
+                      {school.name}
+                    </h1>
 
-                  <span className="inline-flex rounded-lg bg-white/10 px-2.5 py-1 text-xs font-black text-white ring-1 ring-white/15">
-                    Score {formatCommercialScore(school.commercial_profile)}
-                  </span>
-
-                  <span className="inline-flex rounded-lg bg-white/10 px-2.5 py-1 text-xs font-black text-white ring-1 ring-white/15">
-                    Prioridad{" "}
-                    {formatCommercialPriority(school.commercial_profile)}
-                  </span>
+                    <p className="mt-1 text-sm text-gray-300">
+                      Información institucional, relaciones y seguimiento comercial
+                      en un mismo lugar.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="mt-3">
-                  <h1 className="wrap-break-word text-2xl font-black sm:text-3xl">
-                    {school.name}
-                  </h1>
-
-                  <p className="mt-1 text-sm text-gray-300">
-                    Información institucional, relaciones y seguimiento comercial
-                    en un mismo lugar.
-                  </p>
-                </div>
+                <CRMSchoolAssignmentPanel
+                  schools={[school]}
+                  onAssigned={handleSchoolAssignmentCompleted}
+                  buttonLabel={
+                    school.owner || school.team
+                      ? "Cambiar asignación"
+                      : "Asignar responsable"
+                  }
+                  buttonClassName="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800"
+                />
               </div>
 
-              <CRMSchoolAssignmentPanel
-                schools={[school]}
-                onAssigned={handleSchoolAssignmentCompleted}
-                buttonLabel={
-                  school.owner || school.team
-                    ? "Cambiar asignación"
-                    : "Asignar responsable"
-                }
-                buttonClassName="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800"
-              />
+              <div className="border-t border-white/10 pt-4">
+                <p className="text-xs font-black uppercase tracking-wide text-red-300">
+                  Valor comercial del colegio
+                </p>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-2xl bg-white/5 px-4 py-4 ring-1 ring-white/10">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-400">
+                      Segmento
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-white sm:text-3xl">
+                      {formatSegment(school.segment)}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-gray-400">
+                      Potencial estructural por población
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl bg-white/5 px-4 py-4 ring-1 ring-white/10">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-400">
+                      Score comercial
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-white sm:text-3xl">
+                      {formatCommercialScore(school.commercial_profile)}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-gray-400">
+                      Valoración comercial de 0 a 100
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl bg-white/5 px-4 py-4 ring-1 ring-white/10">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-400">
+                      Prioridad
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-white sm:text-3xl">
+                      {formatCommercialPriority(school.commercial_profile)}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-gray-400">
+                      Nivel de atención comercial sugerido
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -922,33 +955,13 @@ export default function CRMSchoolDetailPage() {
                     </p>
 
                     <h2 className="mt-1 text-lg font-black text-gray-950">
-                      Resumen comercial
+                      Señales comerciales
                     </h2>
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-1 xl:gap-3">
+                <div className="mt-4">
                   <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
-                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Score comercial
-                    </p>
-
-                    <p className="mt-1 font-black text-gray-950">
-                      {formatCommercialScore(school.commercial_profile)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
-                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Prioridad comercial
-                    </p>
-
-                    <p className="mt-1 font-black text-gray-950">
-                      {formatCommercialPriority(school.commercial_profile)}
-                    </p>
-                  </div>
-
-                  <div className="col-span-2 rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200 xl:col-span-1">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Uso de textos
                     </p>
