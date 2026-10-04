@@ -48,6 +48,24 @@ const ACTIVITY_FILTERS = [
   { value: "follow_up", label: "Seguimientos" },
 ];
 
+const RELATIONSHIP_LEVEL_LABELS = {
+  1: "Contacto inicial",
+  2: "Relación en desarrollo",
+  3: "Buena relación",
+  4: "Relación sólida",
+  5: "Relación estratégica",
+};
+
+function formatRelationshipLevel(value) {
+  const level = Number(value);
+
+  if (!Number.isInteger(level)) {
+    return "Sin evaluar";
+  }
+
+  return RELATIONSHIP_LEVEL_LABELS[level] || "Sin evaluar";
+}
+
 function normalizeResults(data) {
   if (Array.isArray(data)) {
     return data;
@@ -458,6 +476,11 @@ export default function CRMSchoolDetailPage() {
         return contactA.full_name.localeCompare(contactB.full_name, "es");
       });
   }, [school]);
+
+  const primaryContact = useMemo(
+    () => visibleContacts.find((contact) => contact.is_primary) || null,
+    [visibleContacts],
+  );
 
   const activityCounts = useMemo(() => {
     const counts = Object.fromEntries(
@@ -960,7 +983,7 @@ export default function CRMSchoolDetailPage() {
                   </div>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-4 space-y-3">
                   <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                       Uso de textos
@@ -969,6 +992,29 @@ export default function CRMSchoolDetailPage() {
                     <p className="mt-1 font-black text-gray-950">
                       {school.commercial_profile?.textbook_usage_display ||
                         "Sin información"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                      Relacionamiento principal
+                    </p>
+
+                    <p className="mt-1 font-black text-gray-950">
+                      {primaryContact
+                        ? formatRelationshipLevel(
+                            primaryContact.relationship_level,
+                          )
+                        : "Sin contacto principal"}
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-gray-500">
+                      {primaryContact
+                        ? `${primaryContact.full_name} · ${
+                            primaryContact.decision_role_display ||
+                            "Rol sin clasificar"
+                          }`
+                        : "Define un contacto principal para evaluar esta señal."}
                     </p>
                   </div>
                 </div>
@@ -1400,6 +1446,13 @@ export default function CRMSchoolDetailPage() {
 
                             <p className="mt-1 text-xs font-semibold text-gray-600">
                               {contact.decision_role_display || "Sin clasificar"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                              Relación:{" "}
+                              {formatRelationshipLevel(
+                                contact.relationship_level,
+                              )}
                             </p>
                           </div>
                         </div>
