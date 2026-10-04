@@ -202,6 +202,18 @@ export async function updateCRMSchoolInstitutionalPopulation(
   return response.data;
 }
 
+export async function updateCRMSchoolCommercialProfile(
+  schoolId,
+  payload,
+) {
+  const response = await axiosClient.patch(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/commercial-profile/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function getCRMSchoolContacts(schoolId) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/schools/${schoolId}/contacts/`,
