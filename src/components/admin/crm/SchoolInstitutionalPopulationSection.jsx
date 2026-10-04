@@ -90,6 +90,7 @@ function createPopulationRow(item) {
   return {
     clientId: `level-${item.level?.id || item.service_id || "unknown"}`,
     serviceId: item.service_id ?? null,
+    isExisting: true,
     levelId: String(item.level?.id || ""),
     levelName: item.level?.name || "Nivel no registrado",
     populationYear: String(item.year || CURRENT_YEAR),
@@ -127,6 +128,7 @@ function createEmptyRow(defaultYear = CURRENT_YEAR) {
   return {
     clientId: `new-level-${temporaryRowCounter}`,
     serviceId: null,
+    isExisting: false,
     levelId: "",
     levelName: "",
     populationYear: String(defaultYear),
@@ -744,7 +746,7 @@ export default function SchoolInstitutionalPopulationSection({
                           Nivel educativo
                         </label>
 
-                        {row.serviceId ? (
+                        {row.isExisting ? (
                           <div className="mt-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-black text-gray-900">
                             {row.levelName || "Nivel por definir"}
                           </div>
@@ -1026,7 +1028,7 @@ export default function SchoolInstitutionalPopulationSection({
                       </div>
                     )}
 
-                    {!row.serviceId ? (
+                    {!row.isExisting ? (
                       <div className="mt-3 border-t border-gray-200 pt-3 text-right">
                         <button
                           type="button"
