@@ -105,7 +105,23 @@ function createPopulationRow(item) {
   };
 }
 
-function createEmptyRow() {
+function getDefaultPopulationYear(school) {
+  const years = (Array.isArray(school?.institutional_population)
+    ? school.institutional_population
+    : []
+  )
+    .map((item) => Number(item.year))
+    .filter(
+      (year) =>
+        Number.isInteger(year) &&
+        year >= 2000 &&
+        year <= 2100,
+    );
+
+  return years.length > 0 ? Math.max(...years) : CURRENT_YEAR;
+}
+
+function createEmptyRow(defaultYear = CURRENT_YEAR) {
   temporaryRowCounter += 1;
 
   return {
@@ -113,7 +129,7 @@ function createEmptyRow() {
     serviceId: null,
     levelId: "",
     levelName: "",
-    populationYear: String(CURRENT_YEAR),
+    populationYear: String(defaultYear),
     studentCount: "",
     status: "pending",
     hasPendingData: false,
@@ -371,7 +387,10 @@ export default function SchoolInstitutionalPopulationSection({
   }
 
   function addLevelRow() {
-    setRows((currentRows) => [...currentRows, createEmptyRow()]);
+    setRows((currentRows) => [
+      ...currentRows,
+      createEmptyRow(getDefaultPopulationYear(school)),
+    ]);
   }
 
   function removeNewRow(clientId) {
@@ -725,7 +744,7 @@ export default function SchoolInstitutionalPopulationSection({
                           Nivel educativo
                         </label>
 
-                        {row.serviceId || row.levelId ? (
+                        {row.serviceId ? (
                           <div className="mt-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-black text-gray-900">
                             {row.levelName || "Nivel por definir"}
                           </div>
@@ -747,7 +766,10 @@ export default function SchoolInstitutionalPopulationSection({
                               <option
                                 key={level.id}
                                 value={level.id}
-                                disabled={usedLevelIds.has(level.id)}
+                                disabled={
+                                  usedLevelIds.has(level.id) &&
+                                  Number(row.levelId) !== level.id
+                                }
                               >
                                 {level.name}
                               </option>
