@@ -27,6 +27,7 @@ import {
   getCRMSchool,
   getCRMSchoolActivities,
   getCRMSchoolWorkItems,
+  updateCRMSchoolCommercialProfile,
 } from "../../../api/crmApi";
 import CRMSchoolActivityDrawer from "../../../components/admin/crm/CRMSchoolActivityDrawer";
 import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
@@ -160,6 +161,24 @@ function formatPopulation(school) {
     school?.estimated_students ??
     "Sin información"
   );
+}
+
+function formatMonthlyTuition(value) {
+  if (value === null || value === undefined || value === "") {
+    return "Sin información";
+  }
+
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return "Sin información";
+  }
+
+  return new Intl.NumberFormat("es-PE", {
+    style: "currency",
+    currency: "PEN",
+    minimumFractionDigits: 2,
+  }).format(amount);
 }
 
 function formatDateTime(value) {
@@ -337,6 +356,16 @@ export default function CRMSchoolDetailPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [supportingWarning, setSupportingWarning] = useState("");
+  const [editingCommercialSignals, setEditingCommercialSignals] =
+    useState(false);
+  const [commercialSignalForm, setCommercialSignalForm] = useState({
+    monthlyTuition: "",
+    textbookUsage: "unknown",
+  });
+  const [savingCommercialSignals, setSavingCommercialSignals] =
+    useState(false);
+  const [commercialSignalError, setCommercialSignalError] = useState("");
+  const [commercialSignalSuccess, setCommercialSignalSuccess] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -565,6 +594,73 @@ export default function CRMSchoolDetailPage() {
   }, [activeSchoolCampaign, schoolOpportunities]);
 
   const currentOpportunityId = currentOpportunity?.id || null;
+
+  function startEditingCommercialSignals() {
+    setCommercialSignalForm({
+      monthlyTuition:
+        school?.commercial_profile?.monthly_tuition ?? "",
+      textbookUsage:
+        school?.commercial_profile?.textbook_usage ?? "unknown",
+    });
+    setCommercialSignalError("");
+    setCommercialSignalSuccess("");
+    setEditingCommercialSignals(true);
+  }
+
+  function cancelEditingCommercialSignals() {
+    setCommercialSignalError("");
+    setEditingCommercialSignals(false);
+  }
+
+  async function saveCommercialSignals() {
+    if (!school || savingCommercialSignals) {
+      return;
+    }
+
+    if (!activeSchoolCampaign) {
+      setCommercialSignalError(
+        "Debe existir una única campaña escolar activa para guardar estas señales.",
+      );
+      return;
+    }
+
+    const monthlyTuition = String(
+      commercialSignalForm.monthlyTuition ?? "",
+    ).trim();
+
+    try {
+      setSavingCommercialSignals(true);
+      setCommercialSignalError("");
+      setCommercialSignalSuccess("");
+
+      const updatedProfile = await updateCRMSchoolCommercialProfile(
+        school.id,
+        {
+          campaign: activeSchoolCampaign.id,
+          monthly_tuition: monthlyTuition === "" ? null : monthlyTuition,
+          textbook_usage: commercialSignalForm.textbookUsage,
+        },
+      );
+
+      setSchool((currentSchool) => ({
+        ...currentSchool,
+        commercial_profile: updatedProfile,
+      }));
+      setEditingCommercialSignals(false);
+      setCommercialSignalSuccess(
+        "Las señales comerciales se actualizaron correctamente.",
+      );
+    } catch (error) {
+      setCommercialSignalError(
+        getErrorMessage(
+          error,
+          "No se pudieron actualizar las señales comerciales.",
+        ),
+      );
+    } finally {
+      setSavingCommercialSignals(false);
+    }
+  }
 
   async function refreshCommercialActivityData() {
     const [activitiesResult, workItemsResult] = await Promise.allSettled([
@@ -967,57 +1063,195 @@ export default function CRMSchoolDetailPage() {
               </section>
 
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-700">
-                    <FaChartLine />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-700">
+                      <FaChartLine />
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                        Perfil comercial
+                      </p>
+
+                      <h2 className="mt-1 text-lg font-black text-gray-950">
+                        Señales comerciales
+                      </h2>
+                    </div>
                   </div>
 
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                      Perfil comercial
-                    </p>
-
-                    <h2 className="mt-1 text-lg font-black text-gray-950">
-                      Señales comerciales
-                    </h2>
-                  </div>
+                  {!editingCommercialSignals ? (
+                    <button
+                      type="button"
+                      onClick={startEditingCommercialSignals}
+                      disabled={!activeSchoolCampaign}
+                      className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-black text-gray-700 transition hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Gestionar
+                    </button>
+                  ) : null}
                 </div>
 
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
-                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Uso de textos
-                    </p>
-
-                    <p className="mt-1 font-black text-gray-950">
-                      {school.commercial_profile?.textbook_usage_display ||
-                        "Sin información"}
-                    </p>
+                {commercialSignalSuccess ? (
+                  <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                    {commercialSignalSuccess}
                   </div>
+                ) : null}
 
-                  <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
-                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                      Relacionamiento principal
-                    </p>
-
-                    <p className="mt-1 font-black text-gray-950">
-                      {primaryContact
-                        ? formatRelationshipLevel(
-                            primaryContact.relationship_level,
-                          )
-                        : "Sin contacto principal"}
-                    </p>
-
-                    <p className="mt-1 text-xs leading-5 text-gray-500">
-                      {primaryContact
-                        ? `${primaryContact.full_name} · ${
-                            primaryContact.decision_role_display ||
-                            "Rol sin clasificar"
-                          }`
-                        : "Define un contacto principal para evaluar esta señal."}
-                    </p>
+                {commercialSignalError ? (
+                  <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
+                    {commercialSignalError}
                   </div>
-                </div>
+                ) : null}
+
+                {editingCommercialSignals ? (
+                  <div className="mt-4 space-y-4">
+                    <label className="block">
+                      <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Pensión mensual referencial
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={commercialSignalForm.monthlyTuition}
+                        onChange={(event) =>
+                          setCommercialSignalForm((current) => ({
+                            ...current,
+                            monthlyTuition: event.target.value,
+                          }))
+                        }
+                        placeholder="Sin información"
+                        disabled={savingCommercialSignals}
+                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500 disabled:bg-gray-100"
+                      />
+                      <span className="mt-1 block text-xs leading-5 text-gray-500">
+                        Déjalo vacío si el dato todavía no fue confirmado.
+                      </span>
+                    </label>
+
+                    <label className="block">
+                      <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        Uso de textos
+                      </span>
+                      <select
+                        value={commercialSignalForm.textbookUsage}
+                        onChange={(event) =>
+                          setCommercialSignalForm((current) => ({
+                            ...current,
+                            textbookUsage: event.target.value,
+                          }))
+                        }
+                        disabled={savingCommercialSignals}
+                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition focus:border-red-500 disabled:bg-gray-100"
+                      >
+                        <option value="unknown">Sin información</option>
+                        <option value="core">Utiliza textos principales</option>
+                        <option value="complementary">
+                          Solo áreas complementarias
+                        </option>
+                        <option value="none">No utiliza textos escolares</option>
+                      </select>
+                    </label>
+
+                    <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Relacionamiento principal
+                      </p>
+                      <p className="mt-1 font-black text-gray-950">
+                        {primaryContact
+                          ? formatRelationshipLevel(
+                              primaryContact.relationship_level,
+                            )
+                          : "Sin contacto principal"}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                        El relacionamiento se edita en la ficha del contacto,
+                        porque pertenece a la relación con esa persona.
+                      </p>
+                      {primaryContact ? (
+                        <Link
+                          to={`/admin/crm/contactos/${primaryContact.id}`}
+                          state={buildNavigationState({
+                            from: `/admin/crm/colegios/${school.id}`,
+                            fromLabel: school.name,
+                            fromType: "school",
+                            currentState: location.state,
+                          })}
+                          className="mt-2 inline-flex text-xs font-black text-red-700 hover:text-red-900"
+                        >
+                          Editar contacto principal
+                        </Link>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={cancelEditingCommercialSignals}
+                        disabled={savingCommercialSignals}
+                        className="flex-1 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm font-black text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveCommercialSignals}
+                        disabled={savingCommercialSignals}
+                        className="flex-1 rounded-xl bg-red-700 px-3 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:opacity-50"
+                      >
+                        {savingCommercialSignals ? "Guardando..." : "Guardar"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Pensión mensual referencial
+                      </p>
+                      <p className="mt-1 font-black text-gray-950">
+                        {formatMonthlyTuition(
+                          school.commercial_profile?.monthly_tuition,
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Uso de textos
+                      </p>
+
+                      <p className="mt-1 font-black text-gray-950">
+                        {school.commercial_profile?.textbook_usage_display ||
+                          "Sin información"}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+                      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                        Relacionamiento principal
+                      </p>
+
+                      <p className="mt-1 font-black text-gray-950">
+                        {primaryContact
+                          ? formatRelationshipLevel(
+                              primaryContact.relationship_level,
+                            )
+                          : "Sin contacto principal"}
+                      </p>
+
+                      <p className="mt-1 text-xs leading-5 text-gray-500">
+                        {primaryContact
+                          ? `${primaryContact.full_name} · ${
+                              primaryContact.decision_role_display ||
+                              "Rol sin clasificar"
+                            }`
+                          : "Define un contacto principal para evaluar esta señal."}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </section>
             </aside>
 
