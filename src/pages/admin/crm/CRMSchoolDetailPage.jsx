@@ -30,7 +30,7 @@ import {
 } from "../../../api/crmApi";
 import CRMSchoolActivityDrawer from "../../../components/admin/crm/CRMSchoolActivityDrawer";
 import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
-import SchoolEducationalServicesSection from "../../../components/admin/crm/SchoolEducationalServicesSection";
+import SchoolInstitutionalPopulationSection from "../../../components/admin/crm/SchoolInstitutionalPopulationSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
 import { getCRMActivityTypeLabel } from "../../../utils/crmActivityTypes";
 import {
@@ -1111,7 +1111,7 @@ export default function CRMSchoolDetailPage() {
                 ) : null}
 
                 {activeInfoTab === "population" ? (
-                  <SchoolEducationalServicesSection
+                  <SchoolInstitutionalPopulationSection
                     school={school}
                     onSchoolUpdated={setSchool}
                     embedded
