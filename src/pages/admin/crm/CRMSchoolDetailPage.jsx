@@ -1293,6 +1293,48 @@ export default function CRMSchoolDetailPage() {
                     </div>
                   </div>
                 )}
+
+                {school.commercial_profile?.score_reasons?.status ===
+                "pending" ? (
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-wide text-amber-800">
+                      Score pendiente
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-amber-800">
+                      Falta completar:{" "}
+                      {school.commercial_profile.score_reasons.missing.join(
+                        ", ",
+                      )}
+                      .
+                    </p>
+                  </div>
+                ) : null}
+
+                {school.commercial_profile?.score_reasons?.status ===
+                "scored" ? (
+                  <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Composición del score
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {school.commercial_profile.score_reasons.components.map(
+                        (component) => (
+                          <div
+                            key={component.key}
+                            className="flex items-center justify-between gap-3 text-xs"
+                          >
+                            <span className="font-semibold text-gray-600">
+                              {component.label}
+                            </span>
+                            <span className="font-black text-gray-950">
+                              {component.points} / {component.max_points}
+                            </span>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                ) : null}
               </section>
             </aside>
 
