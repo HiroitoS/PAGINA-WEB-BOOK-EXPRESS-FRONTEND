@@ -190,6 +190,18 @@ export async function createCRMSchoolPopulation(
   return response.data;
 }
 
+export async function updateCRMSchoolInstitutionalPopulation(
+  schoolId,
+  payload,
+) {
+  const response = await axiosClient.put(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/institutional-population/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function getCRMSchoolContacts(schoolId) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/schools/${schoolId}/contacts/`,
