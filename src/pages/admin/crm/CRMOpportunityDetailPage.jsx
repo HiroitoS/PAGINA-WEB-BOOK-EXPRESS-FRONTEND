@@ -231,7 +231,7 @@ export default function CRMOpportunityDetailPage() {
             </p>
           </div>
 
-          <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:min-w-[420px]">
+          <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:min-w-105">
             <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
               <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
                 Campaña
