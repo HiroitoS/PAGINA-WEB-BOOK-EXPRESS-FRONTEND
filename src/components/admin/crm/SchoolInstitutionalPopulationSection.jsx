@@ -212,12 +212,6 @@ export default function SchoolInstitutionalPopulationSection({
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
-    if (!editing) {
-      setRows(buildRows(school));
-    }
-  }, [editing, school]);
-
-  useEffect(() => {
     let ignore = false;
 
     async function loadReferences() {
@@ -293,7 +287,9 @@ export default function SchoolInstitutionalPopulationSection({
   );
 
   const visibleRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
+    const sourceRows = editing ? rows : buildRows(school);
+
+    return [...sourceRows].sort((a, b) => {
       const orderA = LEVEL_ORDER[normalizeText(a.levelName)] ?? 99;
       const orderB = LEVEL_ORDER[normalizeText(b.levelName)] ?? 99;
 
@@ -303,7 +299,7 @@ export default function SchoolInstitutionalPopulationSection({
 
       return a.levelName.localeCompare(b.levelName, "es");
     });
-  }, [rows]);
+  }, [editing, rows, school]);
 
   const knownRows = visibleRows.filter(
     (row) =>
