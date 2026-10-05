@@ -39,6 +39,17 @@ export async function getCRMSchool(schoolId) {
   return response.data;
 }
 
+export async function getCRMSchoolLocationOptions(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/schools/location-options/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
 export async function createCRMSchool(payload) {
   const response = await axiosClient.post(
     `${CRM_ADMIN_BASE}/schools/`,
