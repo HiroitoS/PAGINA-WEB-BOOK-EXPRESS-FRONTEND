@@ -37,6 +37,7 @@ const ACTIVITY_FILTERS = [
   { value: "all", label: "Todas" },
   { value: "call", label: "Llamadas" },
   { value: "visit", label: "Visitas" },
+  { value: "cold_visit", label: "Visitas en frío" },
   { value: "meeting", label: "Reuniones" },
   { value: "follow_up", label: "Seguimientos" },
 ];
@@ -46,12 +47,24 @@ const ACTIVITY_TYPES = [
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "Correo" },
   { value: "meeting", label: "Reunión" },
-  { value: "visit", label: "Visita" },
+  { value: "visit", label: "Visita coordinada" },
+  { value: "cold_visit", label: "Visita en frío" },
   { value: "presentation", label: "Presentación" },
   { value: "sample_delivery", label: "Entrega de muestra" },
   { value: "sample_return", label: "Devolución de muestra" },
   { value: "follow_up", label: "Seguimiento" },
   { value: "other", label: "Otro" },
+];
+
+const POSITION_OPTIONS = [
+  "Director(a)",
+  "Subdirector(a)",
+  "Promotor(a)",
+  "Coordinador(a)",
+  "Administrador(a)",
+  "Docente",
+  "Secretaría",
+  "Otro",
 ];
 
 const RELATIONSHIP_LEVELS = [
@@ -234,10 +247,22 @@ function WorkItemDate({ workItem }) {
 function contactToEditForm(contact) {
   const whatsapp = String(contact?.whatsapp || "").trim();
   const phone = String(contact?.phone || "").trim();
+  const legacyName = String(contact?.full_name || "").trim();
+  const legacyParts = legacyName.split(/\s+/).filter(Boolean);
+  const fallbackFirstName =
+    legacyParts.length > 1
+      ? legacyParts.slice(0, -1).join(" ")
+      : legacyParts[0] || "";
+  const fallbackLastName =
+    legacyParts.length > 1 ? legacyParts.at(-1) : "";
+  const position = String(contact?.position || "").trim();
+  const knownPosition = POSITION_OPTIONS.includes(position);
 
   return {
-    full_name: contact?.full_name || "",
-    position: contact?.position || "",
+    first_name: contact?.first_name || fallbackFirstName,
+    last_name: contact?.last_name || fallbackLastName,
+    position: knownPosition ? position : position ? "Otro" : "",
+    custom_position: knownPosition ? "" : position,
     contact_number: whatsapp || phone,
     alternate_phone:
       whatsapp && phone && whatsapp !== phone ? phone : "",
@@ -590,8 +615,13 @@ export default function CRMContactDetailPage() {
   }
 
   async function saveContactChanges() {
-    if (!editForm?.full_name?.trim()) {
-      setEditErrorMessage("Ingresa el nombre completo del contacto.");
+    if (!editForm?.first_name?.trim()) {
+      setEditErrorMessage("Ingresa el nombre del contacto.");
+      return;
+    }
+
+    if (!editForm?.last_name?.trim()) {
+      setEditErrorMessage("Ingresa el apellido del contacto.");
       return;
     }
 
@@ -602,19 +632,49 @@ export default function CRMContactDetailPage() {
       return;
     }
 
+    const position = (
+      editForm.position === "Otro"
+        ? editForm.custom_position
+        : editForm.position
+    ).trim();
     const contactNumber = editForm.contact_number.trim();
     const alternatePhone = editForm.alternate_phone.trim();
+    const email = editForm.email.trim();
+
+    if (!position) {
+      setEditErrorMessage("Selecciona o especifica el cargo del contacto.");
+      return;
+    }
+
+    if (!contactNumber) {
+      setEditErrorMessage("Ingresa el celular o WhatsApp del contacto.");
+      return;
+    }
+
+    if (!email) {
+      setEditErrorMessage("Ingresa el correo del contacto.");
+      return;
+    }
+
+    if (!editForm.decision_role) {
+      setEditErrorMessage("Selecciona el rol en la decisión.");
+      return;
+    }
+
+    if (!editForm.relationship_level) {
+      setEditErrorMessage("Selecciona el relacionamiento.");
+      return;
+    }
 
     const payload = {
-      full_name: editForm.full_name.trim(),
-      position: editForm.position.trim(),
+      first_name: editForm.first_name.trim(),
+      last_name: editForm.last_name.trim(),
+      position,
       whatsapp: contactNumber,
-      phone: alternatePhone || contactNumber,
-      email: editForm.email.trim(),
+      phone: alternatePhone,
+      email,
       decision_role: editForm.decision_role,
-      relationship_level: editForm.relationship_level
-        ? Number(editForm.relationship_level)
-        : null,
+      relationship_level: Number(editForm.relationship_level),
       notes: editForm.notes.trim(),
       is_primary: editForm.is_primary,
       is_active: editForm.is_active,
@@ -769,13 +829,13 @@ export default function CRMContactDetailPage() {
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Nombre completo
+                Nombre *
               </span>
               <input
                 type="text"
-                value={editForm.full_name}
+                value={editForm.first_name}
                 onChange={(event) =>
-                  updateEditField("full_name", event.target.value)
+                  updateEditField("first_name", event.target.value)
                 }
                 disabled={savingContact}
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
@@ -784,22 +844,55 @@ export default function CRMContactDetailPage() {
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Cargo / función
+                Apellido *
               </span>
               <input
                 type="text"
+                value={editForm.last_name}
+                onChange={(event) =>
+                  updateEditField("last_name", event.target.value)
+                }
+                disabled={savingContact}
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              />
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Cargo / función *
+              </span>
+              <select
                 value={editForm.position}
                 onChange={(event) =>
                   updateEditField("position", event.target.value)
                 }
                 disabled={savingContact}
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
-              />
+              >
+                <option value="">Seleccionar cargo</option>
+                {POSITION_OPTIONS.map((position) => (
+                  <option key={position} value={position}>
+                    {position}
+                  </option>
+                ))}
+              </select>
+              {editForm.position === "Otro" ? (
+                <input
+                  type="text"
+                  value={editForm.custom_position}
+                  onChange={(event) =>
+                    updateEditField("custom_position", event.target.value)
+                  }
+                  disabled={savingContact}
+                  placeholder="Especificar cargo"
+                  className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                />
+              ) : null}
             </label>
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Celular / WhatsApp
+                Celular / WhatsApp *
               </span>
               <input
                 type="text"
@@ -829,7 +922,7 @@ export default function CRMContactDetailPage() {
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Correo
+                Correo *
               </span>
               <input
                 type="email"
@@ -844,7 +937,7 @@ export default function CRMContactDetailPage() {
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Rol en la decisión
+                Rol en la decisión *
               </span>
               <select
                 value={editForm.decision_role}
@@ -854,7 +947,7 @@ export default function CRMContactDetailPage() {
                 disabled={savingContact}
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
               >
-                <option value="">Sin clasificar</option>
+                <option value="">Seleccionar rol</option>
                 <option value="decision_maker">Decisor</option>
                 <option value="influencer">Influenciador</option>
                 <option value="other">Otro</option>
@@ -863,7 +956,7 @@ export default function CRMContactDetailPage() {
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Relacionamiento
+                Relacionamiento *
               </span>
               <select
                 value={editForm.relationship_level}
@@ -873,7 +966,7 @@ export default function CRMContactDetailPage() {
                 disabled={savingContact}
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
               >
-                <option value="">Sin evaluar</option>
+                <option value="">Seleccionar relacionamiento</option>
                 {RELATIONSHIP_LEVELS.map((relationship) => (
                   <option key={relationship.value} value={relationship.value}>
                     {relationship.label}
