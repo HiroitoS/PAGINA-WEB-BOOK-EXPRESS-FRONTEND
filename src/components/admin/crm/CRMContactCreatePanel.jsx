@@ -11,10 +11,23 @@ import {
   getCRMSchools,
 } from "../../../api/crmApi";
 
+const POSITION_OPTIONS = [
+  "Director(a)",
+  "Subdirector(a)",
+  "Promotor(a)",
+  "Coordinador(a)",
+  "Administrador(a)",
+  "Docente",
+  "Secretaría",
+  "Otro",
+];
+
 const EMPTY_FORM = {
   schoolId: "",
-  fullName: "",
+  firstName: "",
+  lastName: "",
   position: "",
+  customPosition: "",
   contactNumber: "",
   alternatePhone: "",
   email: "",
@@ -139,24 +152,59 @@ export default function CRMContactCreatePanel({ onCreated }) {
       return;
     }
 
-    if (!form.fullName.trim()) {
-      setErrorMessage("Ingresa el nombre completo del contacto.");
+    if (!form.firstName.trim()) {
+      setErrorMessage("Ingresa el nombre del contacto.");
       return;
     }
 
+    if (!form.lastName.trim()) {
+      setErrorMessage("Ingresa el apellido del contacto.");
+      return;
+    }
+
+    const position = (
+      form.position === "Otro"
+        ? form.customPosition
+        : form.position
+    ).trim();
     const contactNumber = form.contactNumber.trim();
     const alternatePhone = form.alternatePhone.trim();
+    const email = form.email.trim();
+
+    if (!position) {
+      setErrorMessage("Selecciona o especifica el cargo del contacto.");
+      return;
+    }
+
+    if (!contactNumber) {
+      setErrorMessage("Ingresa el celular o WhatsApp del contacto.");
+      return;
+    }
+
+    if (!email) {
+      setErrorMessage("Ingresa el correo del contacto.");
+      return;
+    }
+
+    if (!form.decisionRole) {
+      setErrorMessage("Selecciona el rol del contacto en la decisión.");
+      return;
+    }
+
+    if (!form.relationshipLevel) {
+      setErrorMessage("Selecciona el nivel de relacionamiento.");
+      return;
+    }
 
     const payload = {
-      full_name: form.fullName.trim(),
-      position: form.position.trim(),
+      first_name: form.firstName.trim(),
+      last_name: form.lastName.trim(),
+      position,
       whatsapp: contactNumber,
-      phone: alternatePhone || contactNumber,
-      email: form.email.trim(),
+      phone: alternatePhone,
+      email,
       decision_role: form.decisionRole,
-      relationship_level: form.relationshipLevel
-        ? Number(form.relationshipLevel)
-        : null,
+      relationship_level: Number(form.relationshipLevel),
       is_primary: form.isPrimary,
       is_active: true,
     };
@@ -243,7 +291,7 @@ export default function CRMContactCreatePanel({ onCreated }) {
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <label className="md:col-span-2 xl:col-span-1">
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Colegio asociado
+                Colegio asociado *
               </span>
               <div className="relative mt-2">
                 <FaSchool className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
@@ -271,39 +319,72 @@ export default function CRMContactCreatePanel({ onCreated }) {
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Nombre completo
+                Nombre *
               </span>
               <input
                 type="text"
-                value={form.fullName}
+                value={form.firstName}
                 onChange={(event) =>
-                  updateField("fullName", event.target.value)
+                  updateField("firstName", event.target.value)
                 }
                 disabled={saving}
-                placeholder="Nombre y apellidos"
+                placeholder="Nombres"
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
               />
             </label>
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Cargo / función
+                Apellido *
               </span>
               <input
                 type="text"
+                value={form.lastName}
+                onChange={(event) =>
+                  updateField("lastName", event.target.value)
+                }
+                disabled={saving}
+                placeholder="Apellidos"
+                className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+              />
+            </label>
+
+            <label>
+              <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                Cargo / función *
+              </span>
+              <select
                 value={form.position}
                 onChange={(event) =>
                   updateField("position", event.target.value)
                 }
                 disabled={saving}
-                placeholder="Director, coordinador..."
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
-              />
+              >
+                <option value="">Seleccionar cargo</option>
+                {POSITION_OPTIONS.map((position) => (
+                  <option key={position} value={position}>
+                    {position}
+                  </option>
+                ))}
+              </select>
+              {form.position === "Otro" ? (
+                <input
+                  type="text"
+                  value={form.customPosition}
+                  onChange={(event) =>
+                    updateField("customPosition", event.target.value)
+                  }
+                  disabled={saving}
+                  placeholder="Especificar cargo"
+                  className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                />
+              ) : null}
             </label>
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Celular / WhatsApp
+                Celular / WhatsApp *
               </span>
               <input
                 type="text"
@@ -335,7 +416,7 @@ export default function CRMContactCreatePanel({ onCreated }) {
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Correo
+                Correo *
               </span>
               <input
                 type="email"
@@ -351,7 +432,7 @@ export default function CRMContactCreatePanel({ onCreated }) {
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Rol en la decisión
+                Rol en la decisión *
               </span>
               <select
                 value={form.decisionRole}
@@ -361,7 +442,7 @@ export default function CRMContactCreatePanel({ onCreated }) {
                 disabled={saving}
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
               >
-                <option value="">Sin clasificar</option>
+                <option value="">Seleccionar rol</option>
                 <option value="decision_maker">Decisor</option>
                 <option value="influencer">Influenciador</option>
                 <option value="other">Otro</option>
@@ -370,7 +451,7 @@ export default function CRMContactCreatePanel({ onCreated }) {
 
             <label>
               <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Relacionamiento
+                Relacionamiento *
               </span>
               <select
                 value={form.relationshipLevel}
@@ -380,7 +461,7 @@ export default function CRMContactCreatePanel({ onCreated }) {
                 disabled={saving}
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
               >
-                <option value="">Sin evaluar</option>
+                <option value="">Seleccionar relacionamiento</option>
                 <option value="1">Contacto inicial</option>
                 <option value="2">Relación en desarrollo</option>
                 <option value="3">Buena relación</option>
