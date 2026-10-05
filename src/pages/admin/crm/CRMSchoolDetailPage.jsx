@@ -560,6 +560,30 @@ export default function CRMSchoolDetailPage() {
     ? pendingWorkItems
     : pendingWorkItems.slice(0, 5);
 
+  const latestSchoolActivity = useMemo(
+    () =>
+      [...activities]
+        .filter((activity) => activity?.occurred_at)
+        .sort(
+          (activityA, activityB) =>
+            new Date(activityB.occurred_at).getTime()
+            - new Date(activityA.occurred_at).getTime(),
+        )[0] || null,
+    [activities],
+  );
+
+  const nextSchoolWorkItem = useMemo(
+    () =>
+      [...pendingWorkItems]
+        .filter((workItem) => getWorkItemDate(workItem))
+        .sort(
+          (itemA, itemB) =>
+            new Date(getWorkItemDate(itemA)).getTime()
+            - new Date(getWorkItemDate(itemB)).getTime(),
+        )[0] || null,
+    [pendingWorkItems],
+  );
+
   const activeSchoolCampaigns = useMemo(
     () =>
       campaigns.filter(
@@ -1647,31 +1671,48 @@ export default function CRMSchoolDetailPage() {
 
                     <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
                       <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                        Última actividad
+                        Última actividad del colegio
                       </p>
-                      <p className="mt-1 text-sm font-black text-gray-950">
-                        {displayedOpportunity.last_activity_at
-                          ? formatDateTime(displayedOpportunity.last_activity_at)
-                          : "Sin actividad"}
-                      </p>
+                      {latestSchoolActivity ? (
+                        <>
+                          <p className="mt-1 text-sm font-black text-gray-950">
+                            {formatDateTime(latestSchoolActivity.occurred_at)}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-gray-600">
+                            {latestSchoolActivity.activity_type_display
+                              || "Actividad comercial"}
+                            {latestSchoolActivity.contact?.full_name ? (
+                              <>
+                                {" · "}
+                                {latestSchoolActivity.contact.full_name}
+                              </>
+                            ) : null}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-sm font-black text-gray-400">
+                          Sin actividad
+                        </p>
+                      )}
                     </div>
 
                     <div className="rounded-2xl bg-gray-50 p-3 ring-1 ring-gray-200">
                       <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                        Próxima actividad
+                        Próxima actividad del colegio
                       </p>
 
-                      {displayedOpportunity.next_activity ? (
+                      {nextSchoolWorkItem ? (
                         <>
                           <p className="mt-1 text-sm font-black text-gray-950">
                             {formatDateTime(
-                              displayedOpportunity.next_activity.scheduled_at,
+                              getWorkItemDate(nextSchoolWorkItem),
                             )}
                           </p>
                           <p className="mt-1 text-xs leading-5 text-gray-600">
-                            {displayedOpportunity.next_activity.type_display}
+                            {getWorkItemTypeLabel(nextSchoolWorkItem)}
                             {" · "}
-                            {displayedOpportunity.next_activity.title}
+                            {nextSchoolWorkItem.item?.title
+                              || "Acción programada"}
                           </p>
                         </>
                       ) : (
