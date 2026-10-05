@@ -10,7 +10,10 @@ import {
   FaSearch,
 } from "react-icons/fa";
 
-import { getCRMSchools } from "../../../api/crmApi";
+import {
+  getCRMSchoolLocationOptions,
+  getCRMSchools,
+} from "../../../api/crmApi";
 import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
 import CRMSchoolCreatePanel from "../../../components/admin/crm/CRMSchoolCreatePanel";
 import { useAuth } from "../../../hooks/useAuth";
@@ -137,6 +140,13 @@ export default function CRMSchoolsPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedSchoolIds, setSelectedSchoolIds] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [locationOptions, setLocationOptions] = useState({
+    departments: [],
+    provinces: [],
+    districts: [],
+  });
+  const [loadingLocationOptions, setLoadingLocationOptions] =
+    useState(false);
 
   const selectedSchools = useMemo(
     () =>
@@ -156,6 +166,58 @@ export default function CRMSchoolsPage() {
     () => Math.max(1, Math.ceil((pagination.count || 0) / pageSize)),
     [pageSize, pagination.count],
   );
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadLocationOptions() {
+      try {
+        setLoadingLocationOptions(true);
+
+        const data = await getCRMSchoolLocationOptions({
+          is_active: filters.is_active,
+          ...(filters.department
+            ? { department: filters.department }
+            : {}),
+          ...(filters.province
+            ? { province: filters.province }
+            : {}),
+        });
+
+        if (!ignore) {
+          setLocationOptions({
+            departments: Array.isArray(data?.departments)
+              ? data.departments
+              : [],
+            provinces: Array.isArray(data?.provinces)
+              ? data.provinces
+              : [],
+            districts: Array.isArray(data?.districts)
+              ? data.districts
+              : [],
+          });
+        }
+      } catch {
+        if (!ignore) {
+          setLocationOptions({
+            departments: [],
+            provinces: [],
+            districts: [],
+          });
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingLocationOptions(false);
+        }
+      }
+    }
+
+    loadLocationOptions();
+
+    return () => {
+      ignore = true;
+    };
+  }, [filters.department, filters.province, filters.is_active]);
 
   useEffect(() => {
     let ignore = false;
@@ -212,10 +274,30 @@ export default function CRMSchoolsPage() {
     const { name, value } = event.target;
 
     setPage(1);
-    setFilters((currentFilters) => ({
-      ...currentFilters,
-      [name]: value,
-    }));
+    setSelectedSchoolIds([]);
+    setFilters((currentFilters) => {
+      if (name === "department") {
+        return {
+          ...currentFilters,
+          department: value,
+          province: "",
+          district: "",
+        };
+      }
+
+      if (name === "province") {
+        return {
+          ...currentFilters,
+          province: value,
+          district: "",
+        };
+      }
+
+      return {
+        ...currentFilters,
+        [name]: value,
+      };
+    });
   }
 
   function clearFilters() {
@@ -362,29 +444,56 @@ export default function CRMSchoolsPage() {
             </p>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <input
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                 name="department"
-                placeholder="Departamento"
                 value={filters.department}
                 onChange={handleFilterChange}
-              />
+                disabled={loadingLocationOptions}
+              >
+                <option value="">Todos los departamentos</option>
+                {locationOptions.departments.map((department) => (
+                  <option key={department} value={department}>
+                    {department}
+                  </option>
+                ))}
+              </select>
 
-              <input
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                 name="province"
-                placeholder="Provincia"
                 value={filters.province}
                 onChange={handleFilterChange}
-              />
+                disabled={
+                  loadingLocationOptions || !filters.department
+                }
+              >
+                <option value="">Todas las provincias</option>
+                {locationOptions.provinces.map((province) => (
+                  <option key={province} value={province}>
+                    {province}
+                  </option>
+                ))}
+              </select>
 
-              <input
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                 name="district"
-                placeholder="Distrito"
                 value={filters.district}
                 onChange={handleFilterChange}
-              />
+                disabled={
+                  loadingLocationOptions
+                  || !filters.department
+                  || !filters.province
+                }
+              >
+                <option value="">Todos los distritos</option>
+                {locationOptions.districts.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
