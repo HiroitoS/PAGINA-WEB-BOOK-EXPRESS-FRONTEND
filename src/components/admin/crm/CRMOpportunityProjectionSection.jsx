@@ -1077,43 +1077,66 @@ export default function CRMOpportunityProjectionSection({
                   </div>
                 </div>
 
-                <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-                  {levelOptions.map((option) => (
-                    <button
-                      key={option.serviceId}
-                      type="button"
-                      onClick={() => selectService(option.serviceId)}
-                      className={`shrink-0 rounded-xl px-4 py-2 text-sm font-black transition ${
-                        activeServiceId === option.serviceId
-                          ? "bg-gray-950 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {levelOptions.map((option) => (
+                      <button
+                        key={option.serviceId}
+                        type="button"
+                        onClick={() => selectService(option.serviceId)}
+                        className={`shrink-0 rounded-xl px-4 py-2 text-sm font-black transition ${
+                          activeServiceId === option.serviceId
+                            ? "bg-gray-950 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <label className="text-sm font-bold text-gray-700">
+                    Editorial preferida
+                    <select
+                      value={preferredEditorial}
+                      onChange={(event) =>
+                        handlePreferredEditorialChange(event.target.value)
+                      }
+                      className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
                     >
-                      {option.label}
-                    </button>
-                  ))}
+                      <option value="">Todas las editoriales</option>
+                      {providerOptions.map((provider) => (
+                        <option key={provider.id} value={provider.id}>
+                          {provider.name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="mt-1 block text-xs font-normal leading-5 text-gray-500">
+                      Se aplicará automáticamente al buscar productos de cada grado.
+                    </span>
+                  </label>
                 </div>
 
                 <div className="mt-4 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-                  <div className="flex flex-col justify-between gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center">
+                  <div className="flex flex-col justify-between gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center">
                     <div>
                       <p className="font-black text-gray-950">
                         Grados de{" "}
-                        {activeDraft
-                          ? activeDraft.campusName
-                            ? `${activeDraft.campusName} · ${activeDraft.levelName}`
-                            : activeDraft.levelName
+                        {activeDrafts[0]
+                          ? activeDrafts[0].campusName
+                            ? `${activeDrafts[0].campusName} · ${activeDrafts[0].levelName}`
+                            : activeDrafts[0].levelName
                           : "este nivel"}
                       </p>
-                      <p className="mt-0.5 text-xs text-gray-500">
-                        Cambia de grado sin salir del panel.
+                      <p className="mt-0.5 text-xs leading-5 text-gray-500">
+                        Selecciona varios grados y trabaja producto por producto sin cambiar de pantalla.
                       </p>
                     </div>
 
                     <button
                       type="button"
                       onClick={toggleAllVisibleGrades}
-                      className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50"
+                      className="shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-100"
                     >
                       {activeDrafts.length > 0
                         && activeDrafts.every((draft) => draft.selected)
@@ -1122,350 +1145,321 @@ export default function CRMOpportunityProjectionSection({
                     </button>
                   </div>
 
-                  <div className="flex gap-2 overflow-x-auto p-3">
+                  <div className="divide-y divide-gray-200">
                     {activeDrafts.map((draft) => (
-                      <button
+                      <article
                         key={draft.key}
-                        type="button"
-                        onClick={() => selectGrade(draft.key)}
-                        className={`shrink-0 rounded-xl border px-3 py-2 text-left transition ${
-                          activeDraft?.key === draft.key
-                            ? "border-red-700 bg-red-700 text-white"
-                            : draft.selected
-                              ? "border-gray-900 bg-gray-950 text-white"
-                              : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                        className={`p-4 transition ${
+                          draft.selected ? "bg-white" : "bg-gray-50/70"
                         }`}
                       >
-                        <span className="block text-sm font-black">
-                          {draft.gradeName}
-                        </span>
-                        <span
-                          className={`mt-0.5 block text-xs ${
-                            activeDraft?.key === draft.key || draft.selected
-                              ? "text-white/75"
-                              : "text-gray-400"
-                          }`}
-                        >
-                          {draft.selected
-                            ? `${calculateProjectedStudents(draft)} alumnos · ${draft.products.length} prod.`
-                            : "No incluido"}
-                        </span>
-                      </button>
+                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                          <label className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={draft.selected}
+                              onChange={(event) =>
+                                updateDraft(draft.key, {
+                                  selected: event.target.checked,
+                                })
+                              }
+                              className="h-4 w-4 accent-red-700"
+                            />
+                            <span>
+                              <span className="block text-base font-black text-gray-950">
+                                {draft.gradeName}
+                              </span>
+                              <span className="mt-0.5 block text-xs text-gray-500">
+                                Base registrada: {calculateProjectedStudents(draft)} alumnos
+                              </span>
+                            </span>
+                          </label>
+
+                          {draft.selected ? (
+                            <button
+                              type="button"
+                              onClick={() => openProductPicker(draft)}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800"
+                            >
+                              <FaPlus />
+                              Buscar producto
+                            </button>
+                          ) : null}
+                        </div>
+
+                        {draft.selected ? (
+                          <>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                              <label className="text-sm font-bold text-gray-700">
+                                Secciones
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={draft.sectionCount}
+                                  onChange={(event) =>
+                                    updateDraft(draft.key, {
+                                      sectionCount: event.target.value,
+                                    })
+                                  }
+                                  className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                                />
+                              </label>
+
+                              <label className="text-sm font-bold text-gray-700">
+                                Alumnos proyectados
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={draft.studentCount}
+                                  onChange={(event) =>
+                                    updateDraft(draft.key, {
+                                      studentCount: event.target.value,
+                                    })
+                                  }
+                                  className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                                />
+                              </label>
+
+                              <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+                                <p className="text-sm font-bold text-gray-700">
+                                  Productos
+                                </p>
+                                <p className="mt-1.5 text-lg font-black text-gray-950">
+                                  {draft.products.length}
+                                </p>
+                              </div>
+                            </div>
+
+                            <p className="mt-2 text-xs leading-5 text-gray-500">
+                              Puedes ajustar los alumnos solo para esta proyección. La población institucional del colegio no se modifica y la cantidad de cada producto seguirá este total.
+                            </p>
+
+                            {draft.products.length > 0 ? (
+                              <div className="mt-4 space-y-2">
+                                {draft.products.map((product) => (
+                                  <div
+                                    key={product.id}
+                                    className="grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-12 sm:items-center"
+                                  >
+                                    <div className="min-w-0 sm:col-span-8">
+                                      <p className="truncate text-sm font-black text-gray-950">
+                                        {product.name}
+                                      </p>
+                                      <p className="mt-1 text-xs text-gray-500">
+                                        {product.editorial}
+                                        {" · "}
+                                        {formatCurrency(product.unitPrice)}
+                                        {product.priceYear
+                                          ? ` · ${product.priceIsReference ? "Referencial " : ""}${product.priceYear}`
+                                          : ""}
+                                      </p>
+                                    </div>
+
+                                    <div className="text-xs font-bold text-gray-500 sm:col-span-3">
+                                      Cantidad
+                                      <div className="mt-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 font-black text-gray-950">
+                                        {calculateProjectedStudents(draft)}
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removeProduct(
+                                          draft.key,
+                                          product.id,
+                                        )
+                                      }
+                                      className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-700 sm:col-span-1"
+                                      aria-label="Quitar producto"
+                                    >
+                                      <FaTrashAlt />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+                                Selecciona el producto que se trabajará en este grado.
+                              </div>
+                            )}
+
+                            {productTargetKey === draft.key ? (
+                              <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                                      Catálogo disponible
+                                    </p>
+                                    <h3 className="mt-1 font-black text-gray-950">
+                                      Productos para {draft.gradeName}
+                                    </h3>
+                                    <p className="mt-1 text-xs font-bold text-gray-500">
+                                      {commercialLineLabel(commercialLine)}
+                                      {preferredEditorial
+                                        ? " · editorial preferida aplicada"
+                                        : ""}
+                                    </p>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={resetProductPicker}
+                                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600"
+                                  >
+                                    Cerrar
+                                  </button>
+                                </div>
+
+                                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                                  <select
+                                    value={productEditorial}
+                                    onChange={(event) =>
+                                      handleEditorialChange(event.target.value)
+                                    }
+                                    className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                                  >
+                                    <option value="">Todas las editoriales</option>
+                                    {productEditorialChoices.map((editorial) => (
+                                      <option
+                                        key={editorial.id}
+                                        value={editorial.id}
+                                      >
+                                        {editorial.name}
+                                      </option>
+                                    ))}
+                                  </select>
+
+                                  <input
+                                    type="search"
+                                    value={productSearch}
+                                    onChange={(event) =>
+                                      setProductSearch(event.target.value)
+                                    }
+                                    onKeyDown={(event) => {
+                                      if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        handleProductSearch();
+                                      }
+                                    }}
+                                    placeholder="Buscar libro, área o serie..."
+                                    className="min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                                  />
+
+                                  <button
+                                    type="button"
+                                    onClick={handleProductSearch}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white"
+                                  >
+                                    <FaSearch />
+                                    Buscar
+                                  </button>
+                                </div>
+
+                                {productChoices.some(
+                                  (choice) => choice.price_is_reference,
+                                ) ? (
+                                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                                    Estos productos usan el último precio anterior disponible como referencia para planificar la campaña {projectionBase?.campaign?.year}.
+                                  </div>
+                                ) : null}
+
+                                {productError ? (
+                                  <p className="mt-3 text-sm font-bold text-red-700">
+                                    {productError}
+                                  </p>
+                                ) : null}
+
+                                {productLoading ? (
+                                  <p className="mt-4 text-sm font-bold text-gray-500">
+                                    Cargando productos...
+                                  </p>
+                                ) : (
+                                  <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
+                                    {productChoices.map((choice) => {
+                                      const alreadyAdded =
+                                        draft.products.some(
+                                          (product) => product.id === choice.id,
+                                        );
+
+                                      return (
+                                        <div
+                                          key={choice.id}
+                                          className="flex flex-col justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center"
+                                        >
+                                          <div className="min-w-0">
+                                            <div className="flex items-start gap-2">
+                                              <FaBook className="mt-1 shrink-0 text-red-700" />
+                                              <div className="min-w-0">
+                                                <p className="font-black text-gray-950">
+                                                  {choice.name}
+                                                </p>
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                  {choice.editorial?.name || "Editorial"}
+                                                  {choice.area?.name
+                                                    ? ` · ${choice.area.name}`
+                                                    : ""}
+                                                  {" · "}
+                                                  {choice.price_available
+                                                    ? formatCurrency(choice.unit_price)
+                                                    : "Sin precio disponible"}
+                                                  {choice.price_year
+                                                    ? ` · ${choice.price_is_reference ? "Referencial " : ""}${choice.price_year}`
+                                                    : ""}
+                                                </p>
+                                                {!choice.price_available ? (
+                                                  <p className="mt-1 text-xs font-bold text-amber-700">
+                                                    {choice.price_message
+                                                      || "Completa el precio del catálogo para usar este producto."}
+                                                  </p>
+                                                ) : null}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          <button
+                                            type="button"
+                                            disabled={
+                                              alreadyAdded || !choice.price_available
+                                            }
+                                            onClick={() => addProduct(choice)}
+                                            className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black transition ${
+                                              alreadyAdded || !choice.price_available
+                                                ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                                                : "bg-red-700 text-white hover:bg-red-800"
+                                            }`}
+                                          >
+                                            {alreadyAdded
+                                              ? "Agregado"
+                                              : choice.price_available
+                                                ? "Agregar"
+                                                : "Falta precio"}
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+
+                                    {!productLoading
+                                      && productChoices.length === 0
+                                      && !productError ? (
+                                        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                                          No hay productos clasificados en esta línea comercial que coincidan con el grado, editorial y búsqueda.
+                                        </div>
+                                      ) : null}
+                                  </div>
+                                )}
+                              </div>
+                            ) : null}
+                          </>
+                        ) : (
+                          <p className="mt-3 text-sm text-gray-500">
+                            Este grado no forma parte de la proyección.
+                          </p>
+                        )}
+                      </article>
                     ))}
                   </div>
                 </div>
-
-                {activeDraft ? (
-                  <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
-                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                      <label className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={activeDraft.selected}
-                          onChange={(event) =>
-                            updateDraft(activeDraft.key, {
-                              selected: event.target.checked,
-                            })
-                          }
-                          className="h-4 w-4 accent-red-700"
-                        />
-                        <span>
-                          <span className="block font-black text-gray-950">
-                            Incluir {activeDraft.gradeName}
-                          </span>
-                          <span className="mt-0.5 block text-xs text-gray-500">
-                            {activeDraft.campusName
-                              ? `${activeDraft.campusName} · ${activeDraft.levelName}`
-                              : activeDraft.levelName}
-                          </span>
-                        </span>
-                      </label>
-
-                      {activeDraft.selected ? (
-                        <button
-                          type="button"
-                          onClick={() => openProductPicker(activeDraft)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800"
-                        >
-                          <FaPlus />
-                          Agregar producto
-                        </button>
-                      ) : null}
-                    </div>
-
-                    {activeDraft.selected ? (
-                      <>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                          <label className="text-sm font-bold text-gray-700">
-                            Secciones
-                            <input
-                              type="number"
-                              min="1"
-                              value={activeDraft.sectionCount}
-                              onChange={(event) =>
-                                updateDraft(activeDraft.key, {
-                                  sectionCount: event.target.value,
-                                })
-                              }
-                              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                            />
-                          </label>
-
-                          <label className="text-sm font-bold text-gray-700">
-                            Alumnos por sección
-                            <input
-                              type="number"
-                              min="1"
-                              value={activeDraft.studentsPerSection}
-                              onChange={(event) =>
-                                updateDraft(activeDraft.key, {
-                                  studentsPerSection: event.target.value,
-                                })
-                              }
-                              className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-semibold text-gray-950 outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                            />
-                          </label>
-
-                          <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
-                            <p className="text-sm font-bold text-gray-700">
-                              Total proyectado
-                            </p>
-                            <p className="mt-1.5 text-lg font-black text-gray-950">
-                              {calculateProjectedStudents(activeDraft)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <p className="mt-2 text-xs leading-5 text-gray-500">
-                          La cantidad de cada producto se actualiza automáticamente
-                          con el total proyectado del grado.
-                        </p>
-
-                        {activeDraft.products.length > 0 ? (
-                          <div className="mt-4 space-y-2">
-                            {activeDraft.products.map((product) => (
-                              <div
-                                key={product.id}
-                                className="grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-12 sm:items-center"
-                              >
-                                <div className="min-w-0 sm:col-span-8">
-                                  <p className="truncate text-sm font-black text-gray-950">
-                                    {product.name}
-                                  </p>
-                                  <p className="mt-1 text-xs text-gray-500">
-                                    {product.editorial}
-                                    {" · "}
-                                    {formatCurrency(product.unitPrice)}
-                                    {product.priceYear
-                                      ? ` · ${product.priceIsReference ? "Referencial " : ""}${product.priceYear}`
-                                      : ""}
-                                  </p>
-                                </div>
-
-                                <div className="text-xs font-bold text-gray-500 sm:col-span-3">
-                                  Cantidad automática
-                                  <div className="mt-1 rounded-lg border border-gray-200 bg-white px-2.5 py-2 font-black text-gray-950">
-                                    {calculateProjectedStudents(activeDraft)}
-                                  </div>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeProduct(
-                                      activeDraft.key,
-                                      product.id,
-                                    )
-                                  }
-                                  className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-700 sm:col-span-1"
-                                  aria-label="Quitar producto"
-                                >
-                                  <FaTrashAlt />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-500">
-                            Aún no agregaste productos a este grado.
-                          </div>
-                        )}
-
-                        {productTargetKey === activeDraft.key ? (
-                          <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                                  Catálogo disponible
-                                </p>
-                                <h3 className="mt-1 font-black text-gray-950">
-                                  Productos para {activeDraft.gradeName}
-                                </h3>
-                                <p className="mt-1 text-xs font-bold text-gray-500">
-                                  {commercialLineLabel(commercialLine)}
-                                </p>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={resetProductPicker}
-                                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-600"
-                              >
-                                Cerrar
-                              </button>
-                            </div>
-
-                            <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                              <select
-                                value={productEditorial}
-                                onChange={(event) =>
-                                  handleEditorialChange(event.target.value)
-                                }
-                                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                              >
-                                <option value="">Todas las editoriales</option>
-                                {productEditorialChoices.map((editorial) => (
-                                  <option
-                                    key={editorial.id}
-                                    value={editorial.id}
-                                  >
-                                    {editorial.name}
-                                  </option>
-                                ))}
-                              </select>
-
-                              <input
-                                type="search"
-                                value={productSearch}
-                                onChange={(event) =>
-                                  setProductSearch(event.target.value)
-                                }
-                                onKeyDown={(event) => {
-                                  if (event.key === "Enter") {
-                                    event.preventDefault();
-                                    handleProductSearch();
-                                  }
-                                }}
-                                placeholder="Buscar libro, área o serie..."
-                                className="min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-semibold text-gray-950 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 sm:col-span-1"
-                              />
-
-                              <button
-                                type="button"
-                                onClick={handleProductSearch}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white"
-                              >
-                                <FaSearch />
-                                Buscar
-                              </button>
-                            </div>
-
-                            {productChoices.some(
-                              (choice) => choice.price_is_reference,
-                            ) ? (
-                              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                                Estos productos usan el último precio anterior
-                                disponible como referencia para planificar la
-                                campaña {projectionBase?.campaign?.year}.
-                              </div>
-                            ) : null}
-
-                            {productError ? (
-                              <p className="mt-3 text-sm font-bold text-red-700">
-                                {productError}
-                              </p>
-                            ) : null}
-
-                            {productLoading ? (
-                              <p className="mt-4 text-sm font-bold text-gray-500">
-                                Cargando productos...
-                              </p>
-                            ) : (
-                              <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
-                                {productChoices.map((choice) => {
-                                  const alreadyAdded =
-                                    activeDraft.products.some(
-                                      (product) => product.id === choice.id,
-                                    );
-
-                                  return (
-                                    <div
-                                      key={choice.id}
-                                      className="flex flex-col justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center"
-                                    >
-                                      <div className="min-w-0">
-                                        <div className="flex items-start gap-2">
-                                          <FaBook className="mt-1 shrink-0 text-red-700" />
-                                          <div className="min-w-0">
-                                            <p className="font-black text-gray-950">
-                                              {choice.name}
-                                            </p>
-                                            <p className="mt-1 text-xs text-gray-500">
-                                              {choice.editorial?.name || "Editorial"}
-                                              {choice.area?.name
-                                                ? ` · ${choice.area.name}`
-                                                : ""}
-                                              {" · "}
-                                              {choice.price_available
-                                                ? formatCurrency(choice.unit_price)
-                                                : "Sin precio disponible"}
-                                              {choice.price_year
-                                                ? ` · ${choice.price_is_reference ? "Referencial " : ""}${choice.price_year}`
-                                                : ""}
-                                            </p>
-                                            {!choice.price_available ? (
-                                              <p className="mt-1 text-xs font-bold text-amber-700">
-                                                {choice.price_message
-                                                  || "Completa el precio del catálogo para usar este producto."}
-                                              </p>
-                                            ) : null}
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      <button
-                                        type="button"
-                                        disabled={
-                                          alreadyAdded || !choice.price_available
-                                        }
-                                        onClick={() => addProduct(choice)}
-                                        className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black transition ${
-                                          alreadyAdded || !choice.price_available
-                                            ? "cursor-not-allowed bg-gray-100 text-gray-400"
-                                            : "bg-red-700 text-white hover:bg-red-800"
-                                        }`}
-                                      >
-                                        {alreadyAdded
-                                          ? "Agregado"
-                                          : choice.price_available
-                                            ? "Agregar"
-                                            : "Falta precio"}
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-
-                                {!productLoading
-                                  && productChoices.length === 0
-                                  && !productError ? (
-                                    <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
-                                      No hay productos clasificados en esta línea
-                                      comercial que coincidan con el grado,
-                                      editorial y búsqueda.
-                                    </div>
-                                  ) : null}
-                              </div>
-                            )}
-                          </div>
-                        ) : null}
-                      </>
-                    ) : (
-                      <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-4 text-sm text-gray-500">
-                        Este grado no forma parte de la proyección.
-                      </div>
-                    )}
-                  </div>
-                ) : null}
 
                 <label className="mt-5 block text-sm font-bold text-gray-700">
                   Observaciones
