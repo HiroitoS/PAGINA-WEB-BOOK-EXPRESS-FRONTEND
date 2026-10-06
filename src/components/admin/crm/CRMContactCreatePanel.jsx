@@ -240,14 +240,16 @@ export default function CRMContactCreatePanel({ onCreated }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openForm}
-        className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800"
-      >
-        <FaPlus />
-        Agregar contacto
-      </button>
+      {!open ? (
+        <button
+          type="button"
+          onClick={openForm}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-red-700 px-6 py-3.5 text-base font-black text-white shadow-sm transition hover:bg-red-800 sm:w-auto"
+        >
+          <FaPlus />
+          Agregar contacto
+        </button>
+      ) : null}
 
       {successMessage ? (
         <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
@@ -511,7 +513,7 @@ export default function CRMContactCreatePanel({ onCreated }) {
               className="inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FaSave />
-              {saving ? "Guardando..." : "Guardar contacto"}
+              {saving ? "Agregando..." : "Agregar contacto"}
             </button>
           </div>
         </section>
