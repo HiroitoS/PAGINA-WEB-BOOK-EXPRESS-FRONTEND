@@ -7,11 +7,14 @@ export function buildCRMActivityEvidenceFormData(file, location = null) {
     && Number.isFinite(location.latitude)
     && Number.isFinite(location.longitude)
   ) {
-    payload.append("latitude", String(location.latitude));
-    payload.append("longitude", String(location.longitude));
+    payload.append("latitude", Number(location.latitude).toFixed(6));
+    payload.append("longitude", Number(location.longitude).toFixed(6));
 
     if (Number.isFinite(location.accuracy)) {
-      payload.append("accuracy_m", String(location.accuracy));
+      payload.append(
+        "accuracy_m",
+        Number(location.accuracy).toFixed(2),
+      );
     }
 
     if (location.capturedAt) {
