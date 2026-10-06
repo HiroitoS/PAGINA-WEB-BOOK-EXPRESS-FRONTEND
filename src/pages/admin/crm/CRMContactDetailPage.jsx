@@ -31,8 +31,12 @@ import {
 } from "../../../api/crmApi";
 import CRMActivityEvidenceFields from "../../../components/admin/crm/CRMActivityEvidenceFields";
 import CRMActivityEvidenceList from "../../../components/admin/crm/CRMActivityEvidenceList";
+import CRMActivityLocationSummary from "../../../components/admin/crm/CRMActivityLocationSummary";
 import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
-import { uploadCRMActivityEvidenceFiles } from "../../../utils/crmActivityEvidence";
+import {
+  buildCRMActivityLocationPayload,
+  uploadCRMActivityEvidenceFiles,
+} from "../../../utils/crmActivityEvidence";
 import {
   buildNavigationState,
   resolveReturnContext,
@@ -508,6 +512,7 @@ export default function CRMContactDetailPage() {
       result: activityForm.result.trim(),
       contact: Number(id),
       occurred_at: occurredAt.toISOString(),
+      ...buildCRMActivityLocationPayload(activityForm.evidence_location),
       is_important: activityForm.is_important,
       ...(selectedOpportunityId
         ? { opportunity: selectedOpportunityId }
@@ -527,7 +532,7 @@ export default function CRMContactDetailPage() {
 
       const evidenceUpload = await uploadCRMActivityEvidenceFiles({
         files: activityForm.evidence_files,
-        location: activityForm.evidence_location,
+        location: null,
         uploadFile: (evidencePayload) =>
           uploadCRMSchoolActivityEvidence(
             school.id,
@@ -1579,6 +1584,8 @@ export default function CRMContactDetailPage() {
                           {activity.result}
                         </p>
                       ) : null}
+
+                      <CRMActivityLocationSummary activity={activity} />
 
                       <CRMActivityEvidenceList
                         evidences={activity.evidences}
