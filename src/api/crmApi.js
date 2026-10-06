@@ -359,6 +359,14 @@ export async function getCRMSchoolActivities(
   return response.data;
 }
 
+export async function getCRMSchoolCommercialHistory(schoolId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/commercial-history/`,
+  );
+
+  return response.data;
+}
+
 export async function createCRMSchoolActivity(
   schoolId,
   payload,
