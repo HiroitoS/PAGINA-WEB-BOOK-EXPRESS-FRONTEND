@@ -385,6 +385,8 @@ export default function CRMSchoolDetailPage() {
         setLoading(true);
         setErrorMessage("");
         setSupportingWarning("");
+        setSchoolHistory([]);
+        setHistoryLoaded(false);
 
         const schoolData = await getCRMSchool(id);
 
@@ -485,7 +487,7 @@ export default function CRMSchoolDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    if (activeInfoTab !== "history" || historyLoaded || historyLoading) {
+    if (activeInfoTab !== "history" || historyLoaded) {
       return undefined;
     }
 
@@ -521,7 +523,7 @@ export default function CRMSchoolDetailPage() {
     return () => {
       ignore = true;
     };
-  }, [activeInfoTab, historyLoaded, historyLoading, id]);
+  }, [activeInfoTab, historyLoaded, id]);
 
   const hasAdditionalData =
     school &&
