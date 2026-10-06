@@ -35,11 +35,17 @@ export function educationLevelKey(value) {
 export function gradeLevelKey(value) {
   const label = normalizeEducationLabel(value);
 
-  if (label.includes("primaria")) {
+  if (
+    label.includes("primaria")
+    && /\b[1-6](?:ro|do|to|er|o)?\b/.test(label)
+  ) {
     return EDUCATION_LEVELS.PRIMARY;
   }
 
-  if (label.includes("secundaria")) {
+  if (
+    label.includes("secundaria")
+    && /\b[1-5](?:ro|do|to|er|o)?\b/.test(label)
+  ) {
     return EDUCATION_LEVELS.SECONDARY;
   }
 
