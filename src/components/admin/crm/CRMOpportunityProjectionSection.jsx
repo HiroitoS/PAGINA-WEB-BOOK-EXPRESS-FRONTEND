@@ -15,8 +15,10 @@ import {
   getCRMOpportunityProjection,
   getCRMOpportunityProjectionBase,
   getCRMOpportunityProjectionProducts,
+  getCRMReferenceProviders,
   saveCRMOpportunityProjection,
 } from "../../../api/crmApi";
+import { gradeMatchesLevel } from "../../../utils/educationLevels";
 
 const COMMERCIAL_LINES = [
   { value: "school_text", label: "Texto escolar" },
@@ -69,6 +71,12 @@ function resolveErrorMessage(error, fallback) {
 }
 
 function calculateProjectedStudents(draft) {
+  const directTotal = Number(draft.studentCount);
+
+  if (Number.isFinite(directTotal) && directTotal > 0) {
+    return directTotal;
+  }
+
   const sections = Number(draft.sectionCount);
   const studentsPerSection = Number(draft.studentsPerSection);
 
@@ -134,6 +142,7 @@ function buildDrafts(base, projection) {
         item.provider_name_snapshot
         || item.product?.provider?.name
         || "Editorial",
+      editorialId: item.product?.provider?.id || null,
       unitPrice: item.unit_price,
       priceYear: item.price_year_snapshot,
       priceCampaign: item.price_campaign_snapshot,
@@ -149,6 +158,15 @@ function buildDrafts(base, projection) {
     const details = service.latest_population?.details || [];
 
     for (const detail of details) {
+      if (
+        !gradeMatchesLevel(
+          detail.grade?.name,
+          service.level?.name,
+        )
+      ) {
+        continue;
+      }
+
       const key = `${service.id}:${detail.grade.id}`;
       const current = currentGrades.get(key);
 
@@ -164,6 +182,8 @@ function buildDrafts(base, projection) {
         selected: Boolean(current),
         sectionCount:
           current?.section_count ?? detail.section_count ?? "",
+        studentCount:
+          current?.student_count ?? detail.student_count ?? "",
         studentsPerSection: resolveStudentsPerSection({
           sectionCount:
             current?.section_count ?? detail.section_count ?? "",
@@ -197,6 +217,7 @@ function buildDrafts(base, projection) {
       gradeName: current.grade?.name || current.grade_name_snapshot,
       selected: true,
       sectionCount: current.section_count ?? "",
+      studentCount: current.student_count ?? "",
       studentsPerSection: resolveStudentsPerSection({
         sectionCount: current.section_count ?? "",
         totalStudents: current.student_count ?? "",
@@ -257,8 +278,9 @@ export default function CRMOpportunityProjectionSection({
   const [panelOpen, setPanelOpen] = useState(false);
   const [drafts, setDrafts] = useState([]);
   const [activeServiceId, setActiveServiceId] = useState("");
-  const [activeGradeKey, setActiveGradeKey] = useState("");
   const [commercialLine, setCommercialLine] = useState("school_text");
+  const [providerOptions, setProviderOptions] = useState([]);
+  const [preferredEditorial, setPreferredEditorial] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [panelError, setPanelError] = useState("");
@@ -276,9 +298,10 @@ export default function CRMOpportunityProjectionSection({
 
     async function loadProjectionWorkspace() {
       try {
-        const [baseData, projectionData] = await Promise.all([
+        const [baseData, projectionData, providersData] = await Promise.all([
           getCRMOpportunityProjectionBase(opportunityId),
           getCRMOpportunityProjection(opportunityId),
+          getCRMReferenceProviders(),
         ]);
 
         if (ignore) {
@@ -287,6 +310,7 @@ export default function CRMOpportunityProjectionSection({
 
         setProjectionBase(baseData);
         setProjection(projectionData);
+        setProviderOptions(providersData);
         setLoadError("");
       } catch (error) {
         if (!ignore) {
@@ -363,14 +387,6 @@ export default function CRMOpportunityProjectionSection({
     [activeServiceId, drafts],
   );
 
-  const activeDraft = useMemo(
-    () =>
-      activeDrafts.find((draft) => draft.key === activeGradeKey)
-      || activeDrafts[0]
-      || null,
-    [activeDrafts, activeGradeKey],
-  );
-
   const projectionGroups = useMemo(
     () => getProjectionGroups(projection),
     [projection],
@@ -387,12 +403,7 @@ export default function CRMOpportunityProjectionSection({
   );
 
   const availablePopulationCount = useMemo(
-    () =>
-      (projectionBase?.services || []).reduce(
-        (total, service) =>
-          total + (service.latest_population?.details?.length || 0),
-        0,
-      ),
+    () => buildDrafts(projectionBase, null).length,
     [projectionBase],
   );
 
@@ -400,9 +411,20 @@ export default function CRMOpportunityProjectionSection({
     const nextDrafts = buildDrafts(projectionBase, projection);
     const firstServiceId = nextDrafts[0]?.serviceId;
 
+    const existingEditorialIds = new Set(
+      nextDrafts
+        .flatMap((draft) => draft.products)
+        .map((product) => product.editorialId)
+        .filter(Boolean),
+    );
+
     setDrafts(nextDrafts);
     setActiveServiceId(firstServiceId ? String(firstServiceId) : "");
-    setActiveGradeKey(nextDrafts[0]?.key || "");
+    setPreferredEditorial(
+      existingEditorialIds.size === 1
+        ? String([...existingEditorialIds][0])
+        : "",
+    );
     setCommercialLine(
       ["school_text", "reading_plan"].includes(projection?.commercial_line)
         ? projection.commercial_line
@@ -438,18 +460,7 @@ export default function CRMOpportunityProjectionSection({
   }
 
   function selectService(serviceId) {
-    const serviceKey = String(serviceId);
-    const firstDraft = drafts.find(
-      (draft) => String(draft.serviceId) === serviceKey,
-    );
-
-    setActiveServiceId(serviceKey);
-    setActiveGradeKey(firstDraft?.key || "");
-    resetProductPicker();
-  }
-
-  function selectGrade(gradeKey) {
-    setActiveGradeKey(gradeKey);
+    setActiveServiceId(String(serviceId));
     resetProductPicker();
   }
 
@@ -551,11 +562,38 @@ export default function CRMOpportunityProjectionSection({
   async function openProductPicker(draft) {
     setProductTargetKey(draft.key);
     setProductSearch("");
-    setProductEditorial("");
+    setProductEditorial(preferredEditorial);
     setProductChoices([]);
     setProductEditorialChoices([]);
     setProductError("");
-    await loadProductsForDraft(draft);
+    await loadProductsForDraft(
+      draft,
+      "",
+      preferredEditorial,
+    );
+  }
+
+  async function handlePreferredEditorialChange(value) {
+    setPreferredEditorial(value);
+
+    if (!productTargetKey) {
+      return;
+    }
+
+    const draft = drafts.find(
+      (item) => item.key === productTargetKey,
+    );
+
+    if (!draft) {
+      return;
+    }
+
+    setProductEditorial(value);
+    await loadProductsForDraft(
+      draft,
+      productSearch.trim(),
+      value,
+    );
   }
 
   async function handleProductSearch() {
@@ -613,6 +651,7 @@ export default function CRMOpportunityProjectionSection({
           id: choice.id,
           name: choice.name,
           editorial: choice.editorial?.name || "Editorial",
+          editorialId: choice.editorial?.id || null,
           unitPrice: choice.unit_price,
           priceYear: choice.price_year,
           priceCampaign: choice.price_campaign,
@@ -650,14 +689,23 @@ export default function CRMOpportunityProjectionSection({
     }
 
     const invalidPopulation = selectedDrafts.find(
-      (draft) =>
-        Number(draft.sectionCount) < 1
-        || Number(draft.studentsPerSection) < 1,
+      (draft) => {
+        const studentCount = calculateProjectedStudents(draft);
+        const sectionCount = Number(draft.sectionCount);
+
+        return (
+          studentCount < 1
+          || (
+            draft.sectionCount !== ""
+            && (!Number.isInteger(sectionCount) || sectionCount < 1)
+          )
+        );
+      },
     );
 
     if (invalidPopulation) {
       setPanelError(
-        `Revisa las secciones y alumnos por sección de ${invalidPopulation.gradeName}.`,
+        `Revisa la cantidad de alumnos proyectados de ${invalidPopulation.gradeName}.`,
       );
       return;
     }
