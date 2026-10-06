@@ -29,6 +29,7 @@ import {
   updateCRMContact,
   uploadCRMSchoolActivityEvidence,
 } from "../../../api/crmApi";
+import CRMActivityDetailDrawer from "../../../components/admin/crm/CRMActivityDetailDrawer";
 import CRMActivityEvidenceFields from "../../../components/admin/crm/CRMActivityEvidenceFields";
 import CRMActivityEvidenceList from "../../../components/admin/crm/CRMActivityEvidenceList";
 import CRMActivityLocationSummary from "../../../components/admin/crm/CRMActivityLocationSummary";
@@ -284,6 +285,7 @@ export default function CRMContactDetailPage() {
   const [workItems, setWorkItems] = useState([]);
   const [schoolOpportunities, setSchoolOpportunities] = useState([]);
   const [activityFilter, setActivityFilter] = useState("all");
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [registeringActivity, setRegisteringActivity] = useState(false);
   const [activityForm, setActivityForm] = useState(createInitialActivityForm);
   const [savingActivity, setSavingActivity] = useState(false);
@@ -762,8 +764,22 @@ export default function CRMContactDetailPage() {
   const contactNumber = contact.whatsapp || contact.phone;
   const relationshipLevel = Number(contact.relationship_level);
 
+  const selectedOpportunity = selectedActivity?.opportunity_id
+    ? opportunityById.get(selectedActivity.opportunity_id)
+    : null;
+
   return (
     <div className="mx-auto w-full max-w-7xl">
+      <CRMActivityDetailDrawer
+        activity={selectedActivity}
+        schoolName={school?.name || contact.school?.name || ""}
+        opportunityLabel={
+          selectedOpportunity?.campaign?.name
+          || selectedOpportunity?.title
+          || ""
+        }
+        onClose={() => setSelectedActivity(null)}
+      />
       <Link
         className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50"
         to={returnContext.path}
@@ -1592,13 +1608,23 @@ export default function CRMContactDetailPage() {
                         compact
                       />
 
-                      <div className="mt-3 border-t border-gray-200 pt-3 text-xs text-gray-500">
-                        Registrado por{" "}
-                        <span className="font-black text-gray-700">
-                          {activity.performed_by?.full_name ||
-                            activity.performed_by?.username ||
-                            "Usuario CRM"}
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500">
+                        <span>
+                          Registrado por{" "}
+                          <span className="font-black text-gray-700">
+                            {activity.performed_by?.full_name ||
+                              activity.performed_by?.username ||
+                              "Usuario CRM"}
+                          </span>
                         </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedActivity(activity)}
+                          className="font-black text-gray-950 transition hover:text-red-700"
+                        >
+                          Ver detalle
+                        </button>
                       </div>
                     </article>
                   ))}
