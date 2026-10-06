@@ -33,6 +33,7 @@ import {
 } from "../../../api/crmApi";
 import CRMSchoolActivityDrawer from "../../../components/admin/crm/CRMSchoolActivityDrawer";
 import CRMActivityEvidenceList from "../../../components/admin/crm/CRMActivityEvidenceList";
+import CRMActivityLocationSummary from "../../../components/admin/crm/CRMActivityLocationSummary";
 import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
 import SchoolInstitutionalPopulationSection from "../../../components/admin/crm/SchoolInstitutionalPopulationSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
@@ -1610,6 +1611,8 @@ export default function CRMSchoolDetailPage() {
                                   {activity.result}
                                 </p>
                               ) : null}
+
+                              <CRMActivityLocationSummary activity={activity} />
 
                               <CRMActivityEvidenceList
                                 evidences={activity.evidences}
