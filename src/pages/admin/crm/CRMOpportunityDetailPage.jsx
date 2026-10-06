@@ -465,48 +465,54 @@ export default function CRMOpportunityDetailPage() {
               {history.length > 0 ? (
                 <>
                   <div className="mt-5 hidden overflow-hidden rounded-2xl border border-gray-200 lg:block">
-                    <div className="grid grid-cols-[160px_120px_180px_minmax(0,1fr)] bg-gray-100 px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500">
-                      <span>Fecha y hora</span>
-                      <span>Plataforma</span>
-                      <span>Usuario</span>
-                      <span>Descripción</span>
-                    </div>
-
-                    <div className="divide-y divide-gray-200">
-                      {history.map((item) => (
-                        <article
-                          key={item.id}
-                          className="grid grid-cols-[160px_120px_180px_minmax(0,1fr)] items-start gap-0 px-4 py-4 text-sm"
-                        >
-                          <p className="pr-4 font-semibold text-gray-600">
-                            {formatDateTime(item.occurred_at)}
-                          </p>
-                          <p className="pr-4 text-gray-600">
-                            {item.platform || "Página Web"}
-                          </p>
-                          <p className="pr-4 font-black text-gray-950">
-                            {item.actor?.full_name
-                              || item.actor?.username
-                              || "Sistema"}
-                          </p>
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
-                                {item.event_type_display || "Evento CRM"}
-                              </span>
-                              <p className="font-black text-gray-950">
-                                {item.title}
-                              </p>
-                            </div>
-                            {item.description ? (
-                              <p className="mt-2 leading-6 text-gray-600">
-                                {item.description}
-                              </p>
-                            ) : null}
-                          </div>
-                        </article>
-                      ))}
-                    </div>
+                    <table className="w-full table-fixed border-collapse text-left text-sm">
+                      <colgroup>
+                        <col style={{ width: "18%" }} />
+                        <col style={{ width: "13%" }} />
+                        <col style={{ width: "20%" }} />
+                        <col style={{ width: "49%" }} />
+                      </colgroup>
+                      <thead className="bg-gray-100 text-xs font-black uppercase tracking-wide text-gray-500">
+                        <tr>
+                          <th className="px-4 py-3">Fecha y hora</th>
+                          <th className="px-4 py-3">Plataforma</th>
+                          <th className="px-4 py-3">Usuario</th>
+                          <th className="px-4 py-3">Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {history.map((item) => (
+                          <tr key={item.id} className="align-top">
+                            <td className="px-4 py-4 font-semibold text-gray-600">
+                              {formatDateTime(item.occurred_at)}
+                            </td>
+                            <td className="px-4 py-4 text-gray-600">
+                              {item.platform || "Página Web"}
+                            </td>
+                            <td className="px-4 py-4 font-black text-gray-950">
+                              {item.actor?.full_name
+                                || item.actor?.username
+                                || "Sistema"}
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
+                                  {item.event_type_display || "Evento CRM"}
+                                </span>
+                                <p className="font-black text-gray-950">
+                                  {item.title}
+                                </p>
+                              </div>
+                              {item.description ? (
+                                <p className="mt-2 leading-6 text-gray-600">
+                                  {item.description}
+                                </p>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
 
                   <div className="mt-5 space-y-3 lg:hidden">
