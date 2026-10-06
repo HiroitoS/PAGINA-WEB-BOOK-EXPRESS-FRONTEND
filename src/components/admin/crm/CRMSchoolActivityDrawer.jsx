@@ -507,7 +507,7 @@ export default function CRMSchoolActivityDrawer({
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <label>
                       <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                        Tipo de próxima actividad
+                        Tipo de actividad
                       </span>
                       <select
                         value={form.next_action_type}
