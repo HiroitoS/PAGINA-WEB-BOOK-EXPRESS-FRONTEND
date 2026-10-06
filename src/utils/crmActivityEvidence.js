@@ -1,3 +1,22 @@
+export function buildCRMActivityLocationPayload(location) {
+  if (
+    !location
+    || !Number.isFinite(location.latitude)
+    || !Number.isFinite(location.longitude)
+  ) {
+    return {};
+  }
+
+  return {
+    latitude: Number(location.latitude).toFixed(6),
+    longitude: Number(location.longitude).toFixed(6),
+    location_accuracy_m: Number.isFinite(location.accuracy)
+      ? Number(location.accuracy).toFixed(2)
+      : null,
+    location_captured_at: location.capturedAt || null,
+  };
+}
+
 export function buildCRMActivityEvidenceFormData(file, location = null) {
   const payload = new FormData();
   payload.append("file", file);
