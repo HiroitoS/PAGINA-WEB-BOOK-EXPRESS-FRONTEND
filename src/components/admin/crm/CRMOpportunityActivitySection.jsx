@@ -11,6 +11,7 @@ import {
   getCRMSchoolContacts,
   uploadCRMOpportunityActivityEvidence,
 } from "../../../api/crmApi";
+import CRMActivityDetailDrawer from "./CRMActivityDetailDrawer";
 import CRMActivityEvidenceFields from "./CRMActivityEvidenceFields";
 import CRMActivityEvidenceList from "./CRMActivityEvidenceList";
 import CRMActivityLocationSummary from "./CRMActivityLocationSummary";
@@ -106,6 +107,7 @@ export default function CRMOpportunityActivitySection({
 }) {
   const [contacts, setContacts] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [form, setForm] = useState(() =>
     createInitialForm(opportunity?.primary_contact?.id),
   );
@@ -416,11 +418,21 @@ export default function CRMOpportunityActivitySection({
                     </span>
                   </span>
 
-                  {activity.contact?.full_name ? (
-                    <span className="font-black text-red-700">
-                      {activity.contact.full_name}
-                    </span>
-                  ) : null}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {activity.contact?.full_name ? (
+                      <span className="font-black text-red-700">
+                        {activity.contact.full_name}
+                      </span>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedActivity(activity)}
+                      className="font-black text-gray-950 transition hover:text-red-700"
+                    >
+                      Ver detalle
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}
@@ -436,6 +448,13 @@ export default function CRMOpportunityActivitySection({
           </div>
         )}
       </section>
+
+      <CRMActivityDetailDrawer
+        activity={selectedActivity}
+        schoolName={opportunity.school?.name || ""}
+        opportunityLabel={opportunity.campaign?.name || opportunity.title || ""}
+        onClose={() => setSelectedActivity(null)}
+      />
 
       {drawerOpen ? (
         <div className="fixed inset-0 z-50 flex justify-end bg-gray-950/60 backdrop-blur-sm">
