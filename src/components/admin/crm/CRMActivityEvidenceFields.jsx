@@ -17,6 +17,23 @@ const ACCEPTED_TYPES = new Set([
   "application/pdf",
 ]);
 
+const ACCEPTED_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".heic",
+  ".heif",
+  ".pdf",
+]);
+
+function getFileExtension(fileName) {
+  const normalizedName = String(fileName || "").toLowerCase();
+  const dotIndex = normalizedName.lastIndexOf(".");
+
+  return dotIndex >= 0 ? normalizedName.slice(dotIndex) : "";
+}
+
 function formatFileSize(bytes) {
   if (!Number.isFinite(bytes) || bytes <= 0) {
     return "";
@@ -49,7 +66,9 @@ export default function CRMActivityEvidenceFields({
     }
 
     const invalidType = selectedFiles.find(
-      (file) => !ACCEPTED_TYPES.has(file.type),
+      (file) =>
+        !ACCEPTED_TYPES.has(file.type)
+        && !ACCEPTED_EXTENSIONS.has(getFileExtension(file.name)),
     );
 
     if (invalidType) {
