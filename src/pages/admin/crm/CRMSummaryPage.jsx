@@ -19,8 +19,21 @@ const EMPTY_SUMMARY = {
   lost_opportunities: 0,
   opportunities_without_activity: 0,
   activities_today: 0,
+  activities_week: 0,
+  activity_week_start: null,
+  activity_week_end: null,
+  activity_counts: {},
   stages: [],
 };
+
+const ACTIVITY_METRICS = [
+  { key: "call", label: "Llamadas" },
+  { key: "visit", label: "Visitas coordinadas" },
+  { key: "cold_visit", label: "Visitas en frío" },
+  { key: "presentation", label: "Presentaciones" },
+  { key: "meeting", label: "Reuniones" },
+  { key: "follow_up", label: "Seguimientos" },
+];
 
 const STAGE_CATEGORY_LABELS = {
   open: "En curso",
@@ -340,6 +353,47 @@ export default function CRMSummaryPage() {
           tone="muted"
         />
       </motion.div>
+
+      <section className="mt-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col justify-between gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide text-red-700">
+              Productividad comercial
+            </p>
+            <h2 className="mt-1 text-xl font-black text-gray-950">
+              Actividad de la semana
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-gray-500">
+              Gestiones registradas dentro de tu alcance comercial durante la semana actual.
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-gray-950 px-4 py-3 text-white">
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+              Total semanal
+            </p>
+            <p className="mt-1 text-2xl font-black">
+              {summary.activities_week}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {ACTIVITY_METRICS.map((metric) => (
+            <div
+              key={metric.key}
+              className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+            >
+              <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                {metric.label}
+              </p>
+              <p className="mt-2 text-2xl font-black text-gray-950">
+                {Number(summary.activity_counts?.[metric.key] || 0)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
         <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
