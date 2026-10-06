@@ -121,6 +121,7 @@ function createInitialActivityForm(opportunityId = "") {
     occurred_at: getCurrentLocalDateTimeValue(),
     is_important: false,
     schedule_next_action: false,
+    next_action_activity_type: "call",
     next_action_type: "task",
     next_action_title: "",
     next_action_at: "",
@@ -529,6 +530,8 @@ export default function CRMContactDetailPage() {
           title: activityForm.next_action_title.trim(),
           contact: Number(id),
           origin_activity: createdActivity.id,
+          commercial_action_type:
+            activityForm.next_action_activity_type,
           ...(linkedOpportunityId
             ? { opportunity: linkedOpportunityId }
             : {}),
@@ -539,7 +542,7 @@ export default function CRMContactDetailPage() {
             await createCRMSchoolEvent(school.id, {
               ...commonWorkItem,
               start_at: nextActionAt.toISOString(),
-              event_type: "meeting",
+              event_type: activityForm.next_action_activity_type,
             });
           } else if (activityForm.next_action_type === "reminder") {
             await createCRMSchoolReminder(school.id, {
@@ -1343,10 +1346,36 @@ export default function CRMContactDetailPage() {
                       </label>
 
                       {activityForm.schedule_next_action ? (
-                        <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
                           <label>
                             <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                              Tipo
+                              Acción comercial
+                            </span>
+                            <select
+                              value={activityForm.next_action_activity_type}
+                              onChange={(event) =>
+                                updateActivityField(
+                                  "next_action_activity_type",
+                                  event.target.value,
+                                )
+                              }
+                              disabled={savingActivity}
+                              className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                            >
+                              {CRM_ACTIVITY_TYPES.map((activityType) => (
+                                <option
+                                  key={activityType.value}
+                                  value={activityType.value}
+                                >
+                                  {activityType.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          <label>
+                            <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                              Registrar en
                             </span>
                             <select
                               value={activityForm.next_action_type}
@@ -1359,15 +1388,15 @@ export default function CRMContactDetailPage() {
                               disabled={savingActivity}
                               className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                             >
-                              <option value="task">Tarea</option>
-                              <option value="event">Reunión / cita</option>
+                              <option value="task">ToDo / tarea</option>
+                              <option value="event">Agenda / cita</option>
                               <option value="reminder">Recordatorio</option>
                             </select>
                           </label>
 
                           <label className="md:col-span-2">
                             <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                              Próxima acción
+                              Detalle de la próxima acción
                             </span>
                             <input
                               type="text"
@@ -1379,12 +1408,12 @@ export default function CRMContactDetailPage() {
                                 )
                               }
                               disabled={savingActivity}
-                              placeholder="Ej. Enviar propuesta y llamar al director"
+                              placeholder="Ej. Llamar al director para confirmar la reunión"
                               className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                             />
                           </label>
 
-                          <label className="md:col-span-3">
+                          <label className="md:col-span-2">
                             <span className="text-xs font-black uppercase tracking-wide text-gray-500">
                               Fecha y hora programada
                             </span>
@@ -1653,6 +1682,9 @@ export default function CRMContactDetailPage() {
                             {workItem.item?.title || "Acción programada"}
                           </p>
                           <p className="mt-1 text-xs text-gray-500">
+                            {workItem.commercial_action_type_display
+                              ? `${workItem.commercial_action_type_display} · `
+                              : ""}
                             {WorkItemDate({ workItem })}
                           </p>
 
