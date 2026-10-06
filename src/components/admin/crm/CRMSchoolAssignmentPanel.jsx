@@ -44,6 +44,9 @@ export default function CRMSchoolAssignmentPanel({
   onAssigned,
   buttonLabel = "Asignar cartera",
   buttonClassName = "",
+  selectionMode = "ids",
+  selectionFilters = {},
+  selectionCount = 0,
 }) {
   const { hasPermission } = useAuth();
   const canAssign = hasPermission(["crm.assign_schools"]);
@@ -52,6 +55,10 @@ export default function CRMSchoolAssignmentPanel({
     () => (Array.isArray(schools) ? schools.filter(Boolean) : []),
     [schools],
   );
+  const isFilteredSelection = selectionMode === "filters";
+  const effectiveSelectionCount = isFilteredSelection
+    ? Number(selectionCount || 0)
+    : selectedSchools.length;
 
   const [open, setOpen] = useState(false);
   const [teams, setTeams] = useState([]);
@@ -123,12 +130,14 @@ export default function CRMSchoolAssignmentPanel({
   }, [open]);
 
   function openPanel() {
-    if (selectedSchools.length === 0) {
+    if (effectiveSelectionCount === 0) {
       return;
     }
 
     const singleSchool =
-      selectedSchools.length === 1 ? selectedSchools[0] : null;
+      !isFilteredSelection && selectedSchools.length === 1
+        ? selectedSchools[0]
+        : null;
 
     setTeamId(singleSchool?.team?.id ? String(singleSchool.team.id) : "");
     setOwnerId(singleSchool?.owner?.id ? String(singleSchool.owner.id) : "");
@@ -152,7 +161,7 @@ export default function CRMSchoolAssignmentPanel({
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (selectedSchools.length === 0 || saving) {
+    if (effectiveSelectionCount === 0 || saving) {
       return;
     }
 
@@ -160,11 +169,19 @@ export default function CRMSchoolAssignmentPanel({
       setSaving(true);
       setErrorMessage("");
 
-      const result = await assignCRMSchoolPortfolio({
-        school_ids: selectedSchools.map((school) => school.id),
+      const payload = {
+        selection_mode: isFilteredSelection ? "filters" : "ids",
         team: teamId ? Number(teamId) : null,
         owner: ownerId ? Number(ownerId) : null,
-      });
+      };
+
+      if (isFilteredSelection) {
+        payload.filters = selectionFilters;
+      } else {
+        payload.school_ids = selectedSchools.map((school) => school.id);
+      }
+
+      const result = await assignCRMSchoolPortfolio(payload);
 
       if (typeof onAssigned === "function") {
         onAssigned(result);
@@ -191,7 +208,7 @@ export default function CRMSchoolAssignmentPanel({
     <>
       <button
         type="button"
-        disabled={selectedSchools.length === 0}
+        disabled={effectiveSelectionCount === 0}
         onClick={openPanel}
         className={
           buttonClassName
@@ -226,9 +243,9 @@ export default function CRMSchoolAssignmentPanel({
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-gray-500">
                   Define el equipo y el asesor responsable de{" "}
-                  {selectedSchools.length === 1
+                  {effectiveSelectionCount === 1
                     ? "este colegio"
-                    : `${selectedSchools.length} colegios`}.
+                    : `${effectiveSelectionCount} colegios`}.
                 </p>
               </div>
 
@@ -257,27 +274,38 @@ export default function CRMSchoolAssignmentPanel({
                         Colegios seleccionados
                       </p>
                       <p className="mt-1 text-lg font-black text-gray-950">
-                        {selectedSchools.length}
+                        {effectiveSelectionCount}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-3 max-h-40 space-y-1.5 overflow-y-auto">
-                    {selectedSchools.slice(0, 12).map((school) => (
-                      <p
-                        key={school.id}
-                        className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-gray-800 ring-1 ring-gray-200"
-                      >
-                        {school.name}
+                  {isFilteredSelection ? (
+                    <div className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-3">
+                      <p className="text-sm font-black text-red-900">
+                        Todos los resultados filtrados
                       </p>
-                    ))}
+                      <p className="mt-1 text-xs leading-5 text-red-800">
+                        La asignación se aplicará a los {effectiveSelectionCount} colegios que cumplen los filtros actuales, aunque no estén visibles en esta página.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 max-h-40 space-y-1.5 overflow-y-auto">
+                      {selectedSchools.slice(0, 12).map((school) => (
+                        <p
+                          key={school.id}
+                          className="rounded-lg bg-white px-3 py-2 text-sm font-bold text-gray-800 ring-1 ring-gray-200"
+                        >
+                          {school.name}
+                        </p>
+                      ))}
 
-                    {selectedSchools.length > 12 ? (
-                      <p className="px-1 text-xs font-semibold text-gray-500">
-                        Y {selectedSchools.length - 12} colegio(s) más.
-                      </p>
-                    ) : null}
-                  </div>
+                      {selectedSchools.length > 12 ? (
+                        <p className="px-1 text-xs font-semibold text-gray-500">
+                          Y {selectedSchools.length - 12} colegio(s) más.
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
 
                 {errorMessage ? (
