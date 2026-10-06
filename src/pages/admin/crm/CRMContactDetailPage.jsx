@@ -27,8 +27,12 @@ import {
   getCRMContactWorkItems,
   getCRMOpportunities,
   updateCRMContact,
+  uploadCRMSchoolActivityEvidence,
 } from "../../../api/crmApi";
+import CRMActivityEvidenceFields from "../../../components/admin/crm/CRMActivityEvidenceFields";
+import CRMActivityEvidenceList from "../../../components/admin/crm/CRMActivityEvidenceList";
 import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
+import { uploadCRMActivityEvidenceFiles } from "../../../utils/crmActivityEvidence";
 import {
   buildNavigationState,
   resolveReturnContext,
@@ -120,6 +124,8 @@ function createInitialActivityForm(opportunityId = "") {
     result: "",
     occurred_at: getCurrentLocalDateTimeValue(),
     is_important: false,
+    evidence_files: [],
+    evidence_location: null,
     schedule_next_action: false,
     next_action_activity_type: "call",
     next_action_type: "task",
@@ -518,6 +524,23 @@ export default function CRMContactDetailPage() {
         school.id,
         payload,
       );
+
+      const evidenceUpload = await uploadCRMActivityEvidenceFiles({
+        files: activityForm.evidence_files,
+        location: activityForm.evidence_location,
+        uploadFile: (evidencePayload) =>
+          uploadCRMSchoolActivityEvidence(
+            school.id,
+            createdActivity.id,
+            evidencePayload,
+          ),
+      });
+
+      if (evidenceUpload.failed.length > 0) {
+        setActivityWarningMessage(
+          `La actividad se guardó, pero ${evidenceUpload.failed.length} evidencia(s) no pudieron adjuntarse.`,
+        );
+      }
 
       let nextActionCreated = false;
 
@@ -1319,6 +1342,21 @@ export default function CRMContactDetailPage() {
                       />
                     </label>
 
+                    <CRMActivityEvidenceFields
+                      files={activityForm.evidence_files}
+                      onFilesChange={(files) =>
+                        updateActivityField("evidence_files", files)
+                      }
+                      location={activityForm.evidence_location}
+                      onLocationChange={(locationValue) =>
+                        updateActivityField(
+                          "evidence_location",
+                          locationValue,
+                        )
+                      }
+                      disabled={savingActivity}
+                    />
+
                     <div className="md:col-span-2 rounded-2xl border border-gray-200 bg-white p-4">
                       <label className="flex items-start gap-3">
                         <input
@@ -1541,6 +1579,11 @@ export default function CRMContactDetailPage() {
                           {activity.result}
                         </p>
                       ) : null}
+
+                      <CRMActivityEvidenceList
+                        evidences={activity.evidences}
+                        compact
+                      />
 
                       <div className="mt-3 border-t border-gray-200 pt-3 text-xs text-gray-500">
                         Registrado por{" "}
