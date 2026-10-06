@@ -11,6 +11,7 @@ import {
 } from "react-icons/fa";
 
 import {
+  getCRMCommercialTeams,
   getCRMSchoolLocationOptions,
   getCRMSchools,
 } from "../../../api/crmApi";
@@ -24,6 +25,8 @@ const INITIAL_FILTERS = {
   department: "",
   province: "",
   district: "",
+  team: "",
+  owner: "",
   assignment: "",
 };
 
@@ -141,6 +144,9 @@ export default function CRMSchoolsPage() {
   const [selectedSchoolIds, setSelectedSchoolIds] = useState([]);
   const [selectAllFiltered, setSelectAllFiltered] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [commercialTeams, setCommercialTeams] = useState([]);
+  const [loadingCommercialTeams, setLoadingCommercialTeams] =
+    useState(false);
   const [locationOptions, setLocationOptions] = useState({
     departments: [],
     provinces: [],
@@ -156,6 +162,37 @@ export default function CRMSchoolsPage() {
       ),
     [schools, selectedSchoolIds],
   );
+
+  const advisorOptions = useMemo(() => {
+    const scopedTeams = filters.team
+      ? commercialTeams.filter(
+          (team) => String(team.id) === String(filters.team),
+        )
+      : commercialTeams;
+    const advisorsById = new Map();
+
+    scopedTeams.forEach((team) => {
+      (team?.memberships || []).forEach((membership) => {
+        const advisor = membership?.user;
+
+        if (
+          membership?.role === "advisor"
+          && membership?.is_active !== false
+          && advisor?.id
+        ) {
+          advisorsById.set(advisor.id, advisor);
+        }
+      });
+    });
+
+    return Array.from(advisorsById.values()).sort((first, second) =>
+      formatOwner(first).localeCompare(
+        formatOwner(second),
+        "es",
+        { sensitivity: "base" },
+      ),
+    );
+  }, [commercialTeams, filters.team]);
 
   const allVisibleSelected =
     selectAllFiltered
@@ -174,6 +211,35 @@ export default function CRMSchoolsPage() {
     () => Math.max(1, Math.ceil((pagination.count || 0) / pageSize)),
     [pageSize, pagination.count],
   );
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCommercialTeams() {
+      try {
+        setLoadingCommercialTeams(true);
+        const data = await getCRMCommercialTeams();
+
+        if (!ignore) {
+          setCommercialTeams(Array.isArray(data) ? data : []);
+        }
+      } catch {
+        if (!ignore) {
+          setCommercialTeams([]);
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingCommercialTeams(false);
+        }
+      }
+    }
+
+    loadCommercialTeams();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -299,6 +365,14 @@ export default function CRMSchoolsPage() {
           ...currentFilters,
           province: value,
           district: "",
+        };
+      }
+
+      if (name === "team") {
+        return {
+          ...currentFilters,
+          team: value,
+          owner: "",
         };
       }
 
@@ -432,7 +506,7 @@ export default function CRMSchoolsPage() {
               Búsqueda y responsable
             </p>
 
-            <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-6">
               <label className="relative xl:col-span-2">
                 <span className="sr-only">Buscar</span>
                 <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
@@ -444,6 +518,36 @@ export default function CRMSchoolsPage() {
                   onChange={handleFilterChange}
                 />
               </label>
+
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100 disabled:text-gray-400"
+                name="team"
+                value={filters.team}
+                onChange={handleFilterChange}
+                disabled={loadingCommercialTeams}
+              >
+                <option value="">Todos los equipos</option>
+                {commercialTeams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100 disabled:text-gray-400"
+                name="owner"
+                value={filters.owner}
+                onChange={handleFilterChange}
+                disabled={loadingCommercialTeams}
+              >
+                <option value="">Todos los asesores</option>
+                {advisorOptions.map((advisor) => (
+                  <option key={advisor.id} value={advisor.id}>
+                    {formatOwner(advisor)}
+                  </option>
+                ))}
+              </select>
 
               <select
                 className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
