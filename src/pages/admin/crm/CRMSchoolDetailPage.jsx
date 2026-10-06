@@ -32,6 +32,7 @@ import {
   updateCRMSchoolCommercialProfile,
 } from "../../../api/crmApi";
 import CRMSchoolActivityDrawer from "../../../components/admin/crm/CRMSchoolActivityDrawer";
+import CRMActivityEvidenceList from "../../../components/admin/crm/CRMActivityEvidenceList";
 import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
 import SchoolInstitutionalPopulationSection from "../../../components/admin/crm/SchoolInstitutionalPopulationSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
@@ -1609,6 +1610,11 @@ export default function CRMSchoolDetailPage() {
                                   {activity.result}
                                 </p>
                               ) : null}
+
+                              <CRMActivityEvidenceList
+                                evidences={activity.evidences}
+                                compact
+                              />
 
                               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500">
                                 <p>
