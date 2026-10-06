@@ -8,8 +8,11 @@ import {
 import {
   createCRMSchoolActivity,
   createCRMSchoolEvent,
+  uploadCRMSchoolActivityEvidence,
 } from "../../../api/crmApi";
+import CRMActivityEvidenceFields from "./CRMActivityEvidenceFields";
 import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
+import { uploadCRMActivityEvidenceFiles } from "../../../utils/crmActivityEvidence";
 
 function getCurrentLocalDateTimeValue() {
   const now = new Date();
@@ -29,6 +32,8 @@ function createInitialForm() {
     result: "",
     occurred_at: getCurrentLocalDateTimeValue(),
     is_important: false,
+    evidence_files: [],
+    evidence_location: null,
     schedule_next_action: false,
     next_action_type: "visit",
     next_action_title: "",
@@ -192,6 +197,23 @@ export default function CRMSchoolActivityDrawer({
           is_important: form.is_important,
         },
       );
+
+      const evidenceUpload = await uploadCRMActivityEvidenceFiles({
+        files: form.evidence_files,
+        location: form.evidence_location,
+        uploadFile: (payload) =>
+          uploadCRMSchoolActivityEvidence(
+            school.id,
+            createdActivity.id,
+            payload,
+          ),
+      });
+
+      if (evidenceUpload.failed.length > 0) {
+        setWarningMessage(
+          `La actividad se guardó, pero ${evidenceUpload.failed.length} evidencia(s) no pudieron adjuntarse.`,
+        );
+      }
 
       let nextActionCreated = false;
 
@@ -433,6 +455,18 @@ export default function CRMSchoolActivityDrawer({
                     className="mt-2 w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                   />
                 </label>
+
+                <CRMActivityEvidenceFields
+                  files={form.evidence_files}
+                  onFilesChange={(files) =>
+                    updateField("evidence_files", files)
+                  }
+                  location={form.evidence_location}
+                  onLocationChange={(location) =>
+                    updateField("evidence_location", location)
+                  }
+                  disabled={saving}
+                />
               </div>
 
               <label className="mt-4 flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
