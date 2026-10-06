@@ -4,6 +4,7 @@ import {
   FaBriefcase,
   FaCalendarAlt,
   FaHistory,
+  FaPrint,
   FaSchool,
   FaUserTie,
 } from "react-icons/fa";
@@ -445,8 +446,19 @@ export default function CRMOpportunityDetailPage() {
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white">
-                  {history.length} evento{history.length === 1 ? "" : "s"}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white">
+                    {history.length} evento{history.length === 1 ? "" : "s"}
+                  </div>
+                  <Link
+                    to={`/admin/crm/oportunidades/${id}/historial/imprimir`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-50 hover:text-red-700"
+                  >
+                    <FaPrint />
+                    Imprimir historial
+                  </Link>
                 </div>
               </div>
 
