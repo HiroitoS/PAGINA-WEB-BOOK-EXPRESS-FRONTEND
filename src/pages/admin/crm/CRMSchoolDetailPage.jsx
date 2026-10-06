@@ -32,6 +32,7 @@ import {
   updateCRMSchoolCommercialProfile,
 } from "../../../api/crmApi";
 import CRMSchoolActivityDrawer from "../../../components/admin/crm/CRMSchoolActivityDrawer";
+import CRMActivityDetailDrawer from "../../../components/admin/crm/CRMActivityDetailDrawer";
 import CRMActivityEvidenceList from "../../../components/admin/crm/CRMActivityEvidenceList";
 import CRMActivityLocationSummary from "../../../components/admin/crm/CRMActivityLocationSummary";
 import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
@@ -328,8 +329,24 @@ function isPendingWorkItem(workItem) {
 }
 
 function LoadingState() {
+  const selectedOpportunity = selectedActivity?.opportunity_id
+    ? schoolOpportunities.find(
+        (opportunity) => opportunity.id === selectedActivity.opportunity_id,
+      )
+    : null;
+
   return (
     <div className="space-y-4">
+      <CRMActivityDetailDrawer
+        activity={selectedActivity}
+        schoolName={school?.name || ""}
+        opportunityLabel={
+          selectedOpportunity?.campaign?.name
+          || selectedOpportunity?.title
+          || ""
+        }
+        onClose={() => setSelectedActivity(null)}
+      />
       <div className="h-28 animate-pulse rounded-3xl bg-gray-200" />
       <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
@@ -362,6 +379,7 @@ export default function CRMSchoolDetailPage() {
   const [activityFilter, setActivityFilter] = useState("all");
   const [activeInfoTab, setActiveInfoTab] = useState("activity");
   const [showAllActivities, setShowAllActivities] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [showAllContacts, setShowAllContacts] = useState(false);
   const [showAllWorkItems, setShowAllWorkItems] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1629,24 +1647,34 @@ export default function CRMSchoolDetailPage() {
                                   </span>
                                 </p>
 
-                                {activity.contact ? (
-                                  <Link
-                                    to={`/admin/crm/contactos/${activity.contact.id}`}
-                                    state={buildNavigationState({
-                                      from: `/admin/crm/colegios/${school.id}`,
-                                      fromLabel: school.name,
-                                      fromType: "school",
-                                      currentState: location.state,
-                                    })}
-                                    className="font-black text-red-700 transition hover:text-red-900"
+                                <div className="flex flex-wrap items-center gap-3">
+                                  {activity.contact ? (
+                                    <Link
+                                      to={`/admin/crm/contactos/${activity.contact.id}`}
+                                      state={buildNavigationState({
+                                        from: `/admin/crm/colegios/${school.id}`,
+                                        fromLabel: school.name,
+                                        fromType: "school",
+                                        currentState: location.state,
+                                      })}
+                                      className="font-black text-red-700 transition hover:text-red-900"
+                                    >
+                                      {activity.contact.full_name}
+                                    </Link>
+                                  ) : (
+                                    <span className="font-semibold text-gray-400">
+                                      Actividad general del colegio
+                                    </span>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedActivity(activity)}
+                                    className="font-black text-gray-950 transition hover:text-red-700"
                                   >
-                                    {activity.contact.full_name}
-                                  </Link>
-                                ) : (
-                                  <span className="font-semibold text-gray-400">
-                                    Actividad general del colegio
-                                  </span>
-                                )}
+                                    Ver detalle
+                                  </button>
+                                </div>
                               </div>
                             </article>
                           ))}
