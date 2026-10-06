@@ -606,10 +606,10 @@ export default function CRMOpportunityActivitySection({
                   </label>
 
                   {form.schedule_next_action ? (
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
-                      <label>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <label className="min-w-0">
                         <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                          Tipo de próxima actividad
+                          Tipo de actividad
                         </span>
                         <select
                           value={form.next_action_type}
@@ -633,7 +633,25 @@ export default function CRMOpportunityActivitySection({
                         </select>
                       </label>
 
-                      <label className="md:col-span-2">
+                      <label className="min-w-0">
+                        <span className="text-xs font-black uppercase tracking-wide text-gray-500">
+                          Fecha y hora
+                        </span>
+                        <input
+                          type="datetime-local"
+                          value={form.next_action_at}
+                          onChange={(event) =>
+                            updateField(
+                              "next_action_at",
+                              event.target.value,
+                            )
+                          }
+                          disabled={saving}
+                          className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+                        />
+                      </label>
+
+                      <label className="min-w-0 md:col-span-2">
                         <span className="text-xs font-black uppercase tracking-wide text-gray-500">
                           Próxima acción
                         </span>
@@ -648,24 +666,6 @@ export default function CRMOpportunityActivitySection({
                           }
                           disabled={saving}
                           placeholder="Ej. Enviar propuesta y llamar al director"
-                          className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
-                        />
-                      </label>
-
-                      <label className="md:col-span-3">
-                        <span className="text-xs font-black uppercase tracking-wide text-gray-500">
-                          Fecha y hora programada
-                        </span>
-                        <input
-                          type="datetime-local"
-                          value={form.next_action_at}
-                          onChange={(event) =>
-                            updateField(
-                              "next_action_at",
-                              event.target.value,
-                            )
-                          }
-                          disabled={saving}
                           className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                         />
                       </label>
