@@ -15,6 +15,7 @@ import {
   getCRMOpportunityActivities,
   getCRMOpportunityAdoptions,
   getCRMOpportunityCommercialHistory,
+  getCRMSchoolCommercialHistory,
 } from "../../../api/crmApi";
 import CRMOpportunityActivitySection from "../../../components/admin/crm/CRMOpportunityActivitySection";
 import CRMOpportunityAdoptionSection from "../../../components/admin/crm/CRMOpportunityAdoptionSection";
@@ -93,6 +94,9 @@ export default function CRMOpportunityDetailPage() {
   const [activities, setActivities] = useState([]);
   const [adoptions, setAdoptions] = useState([]);
   const [history, setHistory] = useState([]);
+  const [schoolAntecedents, setSchoolAntecedents] = useState([]);
+  const [antecedentsLoaded, setAntecedentsLoaded] = useState(false);
+  const [antecedentsLoading, setAntecedentsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("summary");
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -157,6 +161,67 @@ export default function CRMOpportunityDetailPage() {
   function refreshWorkspace() {
     setRefreshKey((current) => current + 1);
   }
+
+  useEffect(() => {
+    if (
+      activeTab !== "history"
+      || antecedentsLoaded
+      || !opportunity?.school?.id
+      || !opportunity?.created_at
+    ) {
+      return undefined;
+    }
+
+    let ignore = false;
+
+    async function loadSchoolAntecedents() {
+      try {
+        setAntecedentsLoading(true);
+        const schoolHistory = normalizeList(
+          await getCRMSchoolCommercialHistory(opportunity.school.id),
+        );
+        const opportunityCreatedAt = new Date(
+          opportunity.created_at,
+        ).getTime();
+
+        const antecedents = schoolHistory
+          .filter((item) => {
+            const occurredAt = new Date(item.occurred_at).getTime();
+            return (
+              Number.isFinite(occurredAt)
+              && Number.isFinite(opportunityCreatedAt)
+              && occurredAt < opportunityCreatedAt
+            );
+          })
+          .slice(0, 5);
+
+        if (!ignore) {
+          setSchoolAntecedents(antecedents);
+          setAntecedentsLoaded(true);
+        }
+      } catch {
+        if (!ignore) {
+          setSchoolAntecedents([]);
+          setAntecedentsLoaded(true);
+        }
+      } finally {
+        if (!ignore) {
+          setAntecedentsLoading(false);
+        }
+      }
+    }
+
+    loadSchoolAntecedents();
+
+    return () => {
+      ignore = true;
+    };
+  }, [
+    activeTab,
+    antecedentsLoaded,
+    opportunity?.created_at,
+    opportunity?.school?.id,
+  ]);
 
   const navigationState = useMemo(
     () =>
@@ -460,6 +525,64 @@ export default function CRMOpportunityDetailPage() {
                     Imprimir historial
                   </Link>
                 </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Antecedentes del colegio
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      Muestra las últimas gestiones registradas antes de crear esta oportunidad, sin adjudicarlas a este proceso.
+                    </p>
+                  </div>
+
+                  {opportunity.school?.id ? (
+                    <Link
+                      to={`/admin/crm/colegios/${opportunity.school.id}`}
+                      state={navigationState}
+                      className="inline-flex shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:bg-gray-100"
+                    >
+                      Ver historial del colegio
+                    </Link>
+                  ) : null}
+                </div>
+
+                {antecedentsLoading ? (
+                  <p className="mt-3 text-sm font-bold text-gray-500">
+                    Cargando antecedentes...
+                  </p>
+                ) : schoolAntecedents.length > 0 ? (
+                  <div className="mt-3 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
+                    {schoolAntecedents.map((item) => (
+                      <div
+                        key={item.id}
+                        className="grid gap-2 px-3 py-3 sm:grid-cols-[10rem_1fr]"
+                      >
+                        <p className="text-xs font-bold text-gray-500">
+                          {formatDateTime(item.occurred_at)}
+                        </p>
+                        <div>
+                          <p className="text-sm font-black text-gray-950">
+                            {item.title}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-gray-500">
+                            {item.event_type_display || "Evento CRM"}
+                            {" · "}
+                            {item.actor?.full_name
+                              || item.actor?.username
+                              || "Sistema"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-gray-500">
+                    No hay gestiones anteriores registradas para este colegio.
+                  </p>
+                )}
               </div>
 
               {history.length > 0 ? (
