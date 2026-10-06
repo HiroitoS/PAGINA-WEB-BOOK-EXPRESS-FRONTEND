@@ -43,10 +43,6 @@ export function gradeLevelKey(value) {
     return EDUCATION_LEVELS.SECONDARY;
   }
 
-  if (label.includes("inicial")) {
-    return EDUCATION_LEVELS.INITIAL;
-  }
-
   if (/\b[345]\s+anos?\b/.test(label)) {
     return EDUCATION_LEVELS.INITIAL;
   }
