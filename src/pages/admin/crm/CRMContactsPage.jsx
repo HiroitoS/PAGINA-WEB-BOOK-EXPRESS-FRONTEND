@@ -359,7 +359,7 @@ export default function CRMContactsPage() {
                         className="align-middle transition hover:bg-gray-50"
                       >
                         <td className="px-3 py-4">
-                          <p className="font-black text-gray-950">
+                          <p className="font-black uppercase text-gray-950">
                             {contact.full_name}
                           </p>
                           <p className="mt-1 text-xs text-gray-500">
@@ -414,7 +414,7 @@ export default function CRMContactsPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="wrap-break-word text-base font-black text-gray-950">
+                        <p className="wrap-break-word text-base font-black uppercase text-gray-950">
                           {contact.full_name}
                         </p>
                         <p className="mt-1 text-xs text-gray-500">
