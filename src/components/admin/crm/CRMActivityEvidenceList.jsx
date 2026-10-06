@@ -56,50 +56,61 @@ export default function CRMActivityEvidenceList({
             && evidence.longitude !== undefined
           );
 
+          const mapUrl = hasLocation
+            ? `https://www.google.com/maps?q=${evidence.latitude},${evidence.longitude}`
+            : "";
+
           return (
-            <a
+            <div
               key={evidence.id}
-              href={evidence.file_url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex min-w-0 items-center gap-3 rounded-xl border border-gray-200 bg-white p-2.5 transition hover:border-red-200 hover:bg-red-50/30"
-              title={evidence.original_name}
+              className="min-w-0 rounded-xl border border-gray-200 bg-white p-2.5"
             >
-              {canPreviewImage(evidence) ? (
-                <img
-                  src={evidence.file_url}
-                  alt=""
-                  className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-gray-200"
-                  loading="lazy"
-                />
-              ) : (
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 ring-1 ring-gray-200">
-                  {isPhoto ? <FaRegImage /> : <FaFileAlt />}
-                </span>
-              )}
+              <a
+                href={evidence.file_url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex min-w-0 items-center gap-3 transition hover:text-red-700"
+                title={evidence.original_name}
+              >
+                {canPreviewImage(evidence) ? (
+                  <img
+                    src={evidence.file_url}
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-gray-200"
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 ring-1 ring-gray-200">
+                    {isPhoto ? <FaRegImage /> : <FaFileAlt />}
+                  </span>
+                )}
 
-              <span className="min-w-0">
-                <span className="block truncate text-xs font-black text-gray-900">
-                  {evidence.original_name || evidence.evidence_type_display}
-                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-black text-gray-900">
+                    {evidence.original_name || evidence.evidence_type_display}
+                  </span>
 
-                <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                  <span>
+                  <span className="mt-1 block text-xs text-gray-500">
                     {evidence.evidence_type_display || (isPhoto ? "Foto" : "Documento")}
                     {formatFileSize(evidence.size_bytes)
                       ? ` · ${formatFileSize(evidence.size_bytes)}`
                       : ""}
                   </span>
-
-                  {hasLocation ? (
-                    <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
-                      <FaMapMarkerAlt />
-                      Con ubicación
-                    </span>
-                  ) : null}
                 </span>
-              </span>
-            </a>
+              </a>
+
+              {hasLocation ? (
+                <a
+                  href={mapUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-black text-emerald-700 transition hover:text-emerald-900"
+                >
+                  <FaMapMarkerAlt />
+                  Ver ubicación registrada
+                </a>
+              ) : null}
+            </div>
           );
         })}
       </div>
