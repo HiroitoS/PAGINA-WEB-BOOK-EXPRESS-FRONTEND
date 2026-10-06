@@ -574,6 +574,14 @@ export async function getCRMOpportunityHistory(opportunityId) {
   return response.data;
 }
 
+export async function getCRMOpportunityCommercialHistory(opportunityId) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/commercial-history/`,
+  );
+
+  return response.data;
+}
+
 export async function getCRMOpportunityQuotations(opportunityId) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/quotations/`,
