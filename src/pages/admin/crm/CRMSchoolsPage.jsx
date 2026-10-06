@@ -139,6 +139,7 @@ export default function CRMSchoolsPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedSchoolIds, setSelectedSchoolIds] = useState([]);
+  const [selectAllFiltered, setSelectAllFiltered] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [locationOptions, setLocationOptions] = useState({
     departments: [],
@@ -157,10 +158,17 @@ export default function CRMSchoolsPage() {
   );
 
   const allVisibleSelected =
-    schools.length > 0
-    && schools.every((school) =>
-      selectedSchoolIds.includes(school.id),
+    selectAllFiltered
+    || (
+      schools.length > 0
+      && schools.every((school) =>
+        selectedSchoolIds.includes(school.id),
+      )
     );
+
+  const selectionCount = selectAllFiltered
+    ? Number(pagination.count || 0)
+    : selectedSchoolIds.length;
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((pagination.count || 0) / pageSize)),
@@ -275,6 +283,7 @@ export default function CRMSchoolsPage() {
 
     setPage(1);
     setSelectedSchoolIds([]);
+    setSelectAllFiltered(false);
     setFilters((currentFilters) => {
       if (name === "department") {
         return {
@@ -303,10 +312,21 @@ export default function CRMSchoolsPage() {
   function clearFilters() {
     setPage(1);
     setSelectedSchoolIds([]);
+    setSelectAllFiltered(false);
     setFilters(INITIAL_FILTERS);
   }
 
   function toggleSchoolSelection(schoolId) {
+    if (selectAllFiltered) {
+      setSelectAllFiltered(false);
+      setSelectedSchoolIds(
+        schools
+          .filter((school) => school.id !== schoolId)
+          .map((school) => school.id),
+      );
+      return;
+    }
+
     setSelectedSchoolIds((currentIds) =>
       currentIds.includes(schoolId)
         ? currentIds.filter((id) => id !== schoolId)
@@ -315,7 +335,8 @@ export default function CRMSchoolsPage() {
   }
 
   function toggleVisibleSelection() {
-    if (allVisibleSelected) {
+    if (selectAllFiltered || allVisibleSelected) {
+      setSelectAllFiltered(false);
       setSelectedSchoolIds([]);
       return;
     }
@@ -323,8 +344,18 @@ export default function CRMSchoolsPage() {
     setSelectedSchoolIds(schools.map((school) => school.id));
   }
 
-  function handleAssignmentCompleted() {
+  function selectFilteredPortfolio() {
     setSelectedSchoolIds([]);
+    setSelectAllFiltered(true);
+  }
+
+  function clearSelection() {
+    setSelectedSchoolIds([]);
+    setSelectAllFiltered(false);
+  }
+
+  function handleAssignmentCompleted() {
+    clearSelection();
     setRefreshKey((current) => current + 1);
   }
 
@@ -529,7 +560,9 @@ export default function CRMSchoolsPage() {
                 value={pageSize}
                 onChange={(event) => {
                   setPage(1);
-                  setSelectedSchoolIds([]);
+                  if (!selectAllFiltered) {
+                    setSelectedSchoolIds([]);
+                  }
                   setPageSize(Number(event.target.value));
                 }}
                 className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs font-black text-gray-800 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
@@ -540,11 +573,14 @@ export default function CRMSchoolsPage() {
               </select>
             </label>
 
-            {canAssignSchools && selectedSchools.length > 0 ? (
+            {canAssignSchools && selectionCount > 0 ? (
               <CRMSchoolAssignmentPanel
                 schools={selectedSchools}
+                selectionMode={selectAllFiltered ? "filters" : "ids"}
+                selectionFilters={filters}
+                selectionCount={selectionCount}
                 onAssigned={handleAssignmentCompleted}
-                buttonLabel={`Asignar cartera (${selectedSchools.length})`}
+                buttonLabel={`Asignar cartera (${selectionCount})`}
               />
             ) : null}
           </div>
@@ -557,6 +593,30 @@ export default function CRMSchoolsPage() {
             <EmptyState />
           ) : (
             <>
+              {canAssignSchools && allVisibleSelected && pagination.count > schools.length ? (
+                <div className="mb-4 flex flex-col justify-between gap-3 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 sm:flex-row sm:items-center">
+                  <p className="text-sm leading-6 text-red-900">
+                    {selectAllFiltered
+                      ? `Seleccionaste los ${pagination.count} colegios que cumplen los filtros actuales.`
+                      : `Seleccionaste los ${schools.length} colegios visibles de esta página.`}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={
+                      selectAllFiltered
+                        ? clearSelection
+                        : selectFilteredPortfolio
+                    }
+                    className="shrink-0 text-left text-sm font-black text-red-800 underline decoration-red-300 underline-offset-4 transition hover:text-red-950"
+                  >
+                    {selectAllFiltered
+                      ? "Cancelar selección total"
+                      : `Seleccionar los ${pagination.count} colegios filtrados`}
+                  </button>
+                </div>
+              ) : null}
+
               <div className="hidden overflow-x-auto lg:block">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead>
@@ -591,7 +651,10 @@ export default function CRMSchoolsPage() {
                           <td className="px-3 py-4">
                             <input
                               type="checkbox"
-                              checked={selectedSchoolIds.includes(school.id)}
+                              checked={
+                                selectAllFiltered
+                                || selectedSchoolIds.includes(school.id)
+                              }
                               onChange={() => toggleSchoolSelection(school.id)}
                               aria-label={`Seleccionar ${school.name}`}
                               className="h-4 w-4 rounded border-gray-300 text-red-700 accent-red-700"
@@ -666,7 +729,10 @@ export default function CRMSchoolsPage() {
                         {canAssignSchools ? (
                           <input
                             type="checkbox"
-                            checked={selectedSchoolIds.includes(school.id)}
+                            checked={
+                                selectAllFiltered
+                                || selectedSchoolIds.includes(school.id)
+                              }
                             onChange={() => toggleSchoolSelection(school.id)}
                             aria-label={`Seleccionar ${school.name}`}
                             className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-red-700 accent-red-700"
