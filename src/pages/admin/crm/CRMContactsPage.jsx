@@ -247,23 +247,11 @@ export default function CRMContactsPage() {
       </motion.section>
 
       <section className="mt-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wide text-red-700">
-              Gestión de contactos
-            </p>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
-              Registra una persona y vincúlala desde el inicio con el colegio al
-              que pertenece.
-            </p>
-          </div>
-
-          <CRMContactCreatePanel
-            onCreated={() =>
-              setRefreshKey((currentKey) => currentKey + 1)
-            }
-          />
-        </div>
+        <CRMContactCreatePanel
+          onCreated={() =>
+            setRefreshKey((currentKey) => currentKey + 1)
+          }
+        />
       </section>
 
       <section className="mt-4 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
