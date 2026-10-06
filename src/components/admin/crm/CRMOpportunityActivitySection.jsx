@@ -9,8 +9,12 @@ import {
   createCRMOpportunityActivity,
   createCRMSchoolEvent,
   getCRMSchoolContacts,
+  uploadCRMOpportunityActivityEvidence,
 } from "../../../api/crmApi";
+import CRMActivityEvidenceFields from "./CRMActivityEvidenceFields";
+import CRMActivityEvidenceList from "./CRMActivityEvidenceList";
 import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
+import { uploadCRMActivityEvidenceFiles } from "../../../utils/crmActivityEvidence";
 
 function normalizeList(data) {
   if (Array.isArray(data)) {
@@ -41,6 +45,8 @@ function createInitialForm(primaryContactId = "") {
     result: "",
     occurred_at: getCurrentLocalDateTimeValue(),
     is_important: false,
+    evidence_files: [],
+    evidence_location: null,
     schedule_next_action: false,
     next_action_type: "visit",
     next_action_title: "",
@@ -244,6 +250,23 @@ export default function CRMOpportunityActivitySection({
         },
       );
 
+      const evidenceUpload = await uploadCRMActivityEvidenceFiles({
+        files: form.evidence_files,
+        location: form.evidence_location,
+        uploadFile: (payload) =>
+          uploadCRMOpportunityActivityEvidence(
+            opportunity.id,
+            createdActivity.id,
+            payload,
+          ),
+      });
+
+      if (evidenceUpload.failed.length > 0) {
+        setWarningMessage(
+          `La actividad se guardó, pero ${evidenceUpload.failed.length} evidencia(s) no pudieron adjuntarse.`,
+        );
+      }
+
       let nextActionCreated = false;
 
       if (form.schedule_next_action && nextActionAt) {
@@ -370,6 +393,11 @@ export default function CRMOpportunityActivitySection({
                     {activity.result}
                   </p>
                 ) : null}
+
+                <CRMActivityEvidenceList
+                  evidences={activity.evidences}
+                  compact
+                />
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3 text-xs text-gray-500">
                   <span>
@@ -539,6 +567,18 @@ export default function CRMOpportunityActivitySection({
                     className="mt-2 w-full resize-y rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                   />
                 </label>
+
+                <CRMActivityEvidenceFields
+                  files={form.evidence_files}
+                  onFilesChange={(files) =>
+                    updateField("evidence_files", files)
+                  }
+                  location={form.evidence_location}
+                  onLocationChange={(location) =>
+                    updateField("evidence_location", location)
+                  }
+                  disabled={saving}
+                />
 
                 <div className="md:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 p-4">
                   <label className="flex items-start gap-3">
