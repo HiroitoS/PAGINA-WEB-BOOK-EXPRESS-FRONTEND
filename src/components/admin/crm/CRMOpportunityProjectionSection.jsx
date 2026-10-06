@@ -298,7 +298,11 @@ export default function CRMOpportunityProjectionSection({
 
     async function loadProjectionWorkspace() {
       try {
-        const [baseData, projectionData, providersData] = await Promise.all([
+        const [
+          baseResult,
+          projectionResult,
+          providersResult,
+        ] = await Promise.allSettled([
           getCRMOpportunityProjectionBase(opportunityId),
           getCRMOpportunityProjection(opportunityId),
           getCRMReferenceProviders(),
@@ -308,9 +312,21 @@ export default function CRMOpportunityProjectionSection({
           return;
         }
 
-        setProjectionBase(baseData);
-        setProjection(projectionData);
-        setProviderOptions(providersData);
+        if (baseResult.status === "rejected") {
+          throw baseResult.reason;
+        }
+
+        if (projectionResult.status === "rejected") {
+          throw projectionResult.reason;
+        }
+
+        setProjectionBase(baseResult.value);
+        setProjection(projectionResult.value);
+        setProviderOptions(
+          providersResult.status === "fulfilled"
+            ? providersResult.value
+            : [],
+        );
         setLoadError("");
       } catch (error) {
         if (!ignore) {
