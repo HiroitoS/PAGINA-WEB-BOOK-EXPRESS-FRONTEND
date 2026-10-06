@@ -8,6 +8,7 @@ import {
   FaChartLine,
   FaEnvelope,
   FaExclamationTriangle,
+  FaHistory,
   FaMapMarkerAlt,
   FaPhoneAlt,
   FaPlus,
@@ -26,6 +27,7 @@ import {
   getCRMOpportunities,
   getCRMSchool,
   getCRMSchoolActivities,
+  getCRMSchoolCommercialHistory,
   getCRMSchoolWorkItems,
   updateCRMSchoolCommercialProfile,
 } from "../../../api/crmApi";
@@ -346,6 +348,7 @@ export default function CRMSchoolDetailPage() {
 
   const [school, setSchool] = useState(null);
   const [activities, setActivities] = useState([]);
+  const [schoolHistory, setSchoolHistory] = useState([]);
   const [workItems, setWorkItems] = useState([]);
   const [schoolOpportunities, setSchoolOpportunities] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -391,11 +394,13 @@ export default function CRMSchoolDetailPage() {
 
         const [
           activitiesResult,
+          historyResult,
           workItemsResult,
           opportunitiesResult,
           campaignsResult,
         ] = await Promise.allSettled([
           getCRMSchoolActivities(id),
+          getCRMSchoolCommercialHistory(id),
           getCRMSchoolWorkItems(id),
           getCRMOpportunities({
             school: id,
@@ -415,6 +420,17 @@ export default function CRMSchoolDetailPage() {
           setActivities([]);
           setSupportingWarning(
             "La ficha cargó, pero no se pudo mostrar el historial comercial.",
+          );
+        }
+
+        if (historyResult.status === "fulfilled") {
+          setSchoolHistory(normalizeResults(historyResult.value));
+        } else {
+          setSchoolHistory([]);
+          setSupportingWarning((currentWarning) =>
+            currentWarning
+              ? `${currentWarning} Tampoco se pudo cargar el historial completo del colegio.`
+              : "La ficha cargó, pero no se pudo mostrar el historial completo del colegio.",
           );
         }
 
@@ -696,13 +712,19 @@ export default function CRMSchoolDetailPage() {
   }
 
   async function refreshCommercialActivityData() {
-    const [activitiesResult, workItemsResult] = await Promise.allSettled([
-      getCRMSchoolActivities(id),
-      getCRMSchoolWorkItems(id),
-    ]);
+    const [activitiesResult, historyResult, workItemsResult] =
+      await Promise.allSettled([
+        getCRMSchoolActivities(id),
+        getCRMSchoolCommercialHistory(id),
+        getCRMSchoolWorkItems(id),
+      ]);
 
     if (activitiesResult.status === "fulfilled") {
       setActivities(normalizeResults(activitiesResult.value));
+    }
+
+    if (historyResult.status === "fulfilled") {
+      setSchoolHistory(normalizeResults(historyResult.value));
     }
 
     if (workItemsResult.status === "fulfilled") {
@@ -1411,6 +1433,23 @@ export default function CRMSchoolDetailPage() {
                     <button
                       type="button"
                       role="tab"
+                      aria-selected={activeInfoTab === "history"}
+                      onClick={() => setActiveInfoTab("history")}
+                      className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
+                        activeInfoTab === "history"
+                          ? "bg-gray-950 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-700"
+                      }`}
+                    >
+                      Historial
+                      <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                        {schoolHistory.length}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      role="tab"
                       aria-selected={activeInfoTab === "population"}
                       onClick={() => setActiveInfoTab("population")}
                       className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${
@@ -1596,6 +1635,86 @@ export default function CRMSchoolDetailPage() {
                       )}
                     </div>
                   </>
+                ) : null}
+
+                {activeInfoTab === "history" ? (
+                  <div className="p-4 sm:p-5">
+                    <div className="mb-4 flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
+                        <FaHistory />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                          Trazabilidad del colegio
+                        </p>
+                        <h3 className="mt-1 text-lg font-black text-gray-950">
+                          Historial comercial completo
+                        </h3>
+                        <p className="mt-1 text-sm leading-6 text-gray-500">
+                          Incluye actividades previas a una oportunidad y los eventos de sus procesos comerciales.
+                        </p>
+                      </div>
+                    </div>
+
+                    {schoolHistory.length > 0 ? (
+                      <div className="overflow-hidden rounded-2xl border border-gray-200">
+                        <div className="max-h-[48vh] overflow-y-auto">
+                          <table className="w-full table-fixed border-collapse text-left text-sm">
+                            <colgroup>
+                              <col style={{ width: "22%" }} />
+                              <col style={{ width: "22%" }} />
+                              <col style={{ width: "56%" }} />
+                            </colgroup>
+                            <thead className="sticky top-0 z-10 bg-gray-100 text-xs font-black uppercase tracking-wide text-gray-500">
+                              <tr>
+                                <th className="px-3 py-3">Fecha</th>
+                                <th className="px-3 py-3">Usuario</th>
+                                <th className="px-3 py-3">Evento</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {schoolHistory.map((item) => (
+                                <tr key={item.id} className="align-top">
+                                  <td className="px-3 py-3 font-semibold text-gray-600">
+                                    {formatDateTime(item.occurred_at)}
+                                  </td>
+                                  <td className="px-3 py-3 font-black text-gray-950">
+                                    {item.actor?.full_name
+                                      || item.actor?.username
+                                      || "Sistema"}
+                                  </td>
+                                  <td className="px-3 py-3">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
+                                        {item.event_type_display || "Evento CRM"}
+                                      </span>
+                                      <span className="font-black text-gray-950">
+                                        {item.title}
+                                      </span>
+                                    </div>
+                                    {item.description ? (
+                                      <p className="mt-2 leading-6 text-gray-600">
+                                        {item.description}
+                                      </p>
+                                    ) : null}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-10 text-center">
+                        <p className="font-black text-gray-950">
+                          Sin historial comercial
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-gray-500">
+                          Las actividades, contactos, oportunidades, cotizaciones y adopciones aparecerán aquí.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 ) : null}
 
                 {activeInfoTab === "population" ? (
