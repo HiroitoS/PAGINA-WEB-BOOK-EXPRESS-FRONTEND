@@ -13,7 +13,7 @@ import {
   getCRMOpportunity,
   getCRMOpportunityActivities,
   getCRMOpportunityAdoptions,
-  getCRMOpportunityHistory,
+  getCRMOpportunityCommercialHistory,
 } from "../../../api/crmApi";
 import CRMOpportunityActivitySection from "../../../components/admin/crm/CRMOpportunityActivitySection";
 import CRMOpportunityAdoptionSection from "../../../components/admin/crm/CRMOpportunityAdoptionSection";
@@ -120,7 +120,7 @@ export default function CRMOpportunityDetailPage() {
           getCRMOpportunity(id),
           getCRMOpportunityActivities(id, { page_size: 100 }),
           getCRMOpportunityAdoptions(id),
-          getCRMOpportunityHistory(id),
+          getCRMOpportunityCommercialHistory(id),
         ]);
 
         if (ignore) {
@@ -432,49 +432,113 @@ export default function CRMOpportunityDetailPage() {
 
           {activeTab === "history" ? (
             <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-black uppercase tracking-wide text-red-700">
-                Trazabilidad
-              </p>
-              <h2 className="mt-1 text-xl font-black text-gray-950">
-                Historial de etapas
-              </h2>
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                    Trazabilidad
+                  </p>
+                  <h2 className="mt-1 text-xl font-black text-gray-950">
+                    Historial comercial
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-gray-500">
+                    Reúne las acciones relevantes de la oportunidad desde su creación hasta la adopción.
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white">
+                  {history.length} evento{history.length === 1 ? "" : "s"}
+                </div>
+              </div>
 
               {history.length > 0 ? (
-                <div className="mt-4 space-y-3">
-                  {history.map((item) => (
-                    <article
-                      key={item.id}
-                      className="flex gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4"
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
-                        <FaHistory />
-                      </div>
+                <>
+                  <div className="mt-5 hidden overflow-hidden rounded-2xl border border-gray-200 lg:block">
+                    <div className="grid grid-cols-[160px_120px_180px_minmax(0,1fr)] bg-gray-100 px-4 py-3 text-xs font-black uppercase tracking-wide text-gray-500">
+                      <span>Fecha y hora</span>
+                      <span>Plataforma</span>
+                      <span>Usuario</span>
+                      <span>Descripción</span>
+                    </div>
 
-                      <div className="min-w-0">
-                        <p className="font-black text-gray-950">
-                          {item.from_stage?.name || "Inicio"}
-                          {" → "}
-                          {item.to_stage?.name || "Etapa"}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {item.transition_type_display || "Cambio de etapa"}
-                          {" · "}
-                          {formatDateTime(item.created_at)}
-                        </p>
-                        {item.note ? (
-                          <p className="mt-2 text-sm leading-6 text-gray-600">
-                            {item.note}
+                    <div className="divide-y divide-gray-200">
+                      {history.map((item) => (
+                        <article
+                          key={item.id}
+                          className="grid grid-cols-[160px_120px_180px_minmax(0,1fr)] items-start gap-0 px-4 py-4 text-sm"
+                        >
+                          <p className="pr-4 font-semibold text-gray-600">
+                            {formatDateTime(item.occurred_at)}
                           </p>
-                        ) : null}
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                          <p className="pr-4 text-gray-600">
+                            {item.platform || "Página Web"}
+                          </p>
+                          <p className="pr-4 font-black text-gray-950">
+                            {item.actor?.full_name
+                              || item.actor?.username
+                              || "Sistema"}
+                          </p>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
+                                {item.event_type_display || "Evento CRM"}
+                              </span>
+                              <p className="font-black text-gray-950">
+                                {item.title}
+                              </p>
+                            </div>
+                            {item.description ? (
+                              <p className="mt-2 leading-6 text-gray-600">
+                                {item.description}
+                              </p>
+                            ) : null}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 space-y-3 lg:hidden">
+                    {history.map((item) => (
+                      <article
+                        key={item.id}
+                        className="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
+                            <FaHistory />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-gray-700 ring-1 ring-gray-200">
+                              {item.event_type_display || "Evento CRM"}
+                            </span>
+                            <p className="mt-3 font-black text-gray-950">
+                              {item.title}
+                            </p>
+                            {item.description ? (
+                              <p className="mt-2 text-sm leading-6 text-gray-600">
+                                {item.description}
+                              </p>
+                            ) : null}
+                            <p className="mt-3 text-xs leading-5 text-gray-500">
+                              {formatDateTime(item.occurred_at)}
+                              {" · "}
+                              {item.platform || "Página Web"}
+                              {" · "}
+                              {item.actor?.full_name
+                                || item.actor?.username
+                                || "Sistema"}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="mt-4">
                   <EmptyState
-                    title="Sin cambios de etapa"
-                    description="Los movimientos del pipeline quedarán registrados aquí para mantener la trazabilidad comercial."
+                    title="Sin historial comercial"
+                    description="Las actividades, proyecciones, cotizaciones, cambios de etapa y adopciones aparecerán aquí."
                   />
                 </div>
               )}
