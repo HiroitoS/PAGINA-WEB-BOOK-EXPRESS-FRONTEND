@@ -379,6 +379,19 @@ export async function createCRMSchoolActivity(
   return response.data;
 }
 
+export async function uploadCRMSchoolActivityEvidence(
+  schoolId,
+  activityId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/schools/${schoolId}/activities/${activityId}/evidence/`,
+    payload,
+  );
+
+  return response.data;
+}
+
 export async function getCRMSchoolWorkItems(
   schoolId,
   params = {},
@@ -556,6 +569,19 @@ export async function createCRMOpportunityActivity(
 ) {
   const response = await axiosClient.post(
     `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/activities/`,
+    payload,
+  );
+
+  return response.data;
+}
+
+export async function uploadCRMOpportunityActivityEvidence(
+  opportunityId,
+  activityId,
+  payload,
+) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/activities/${activityId}/evidence/`,
     payload,
   );
 
