@@ -12,7 +12,10 @@ import {
 } from "../../../api/crmApi";
 import CRMActivityEvidenceFields from "./CRMActivityEvidenceFields";
 import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
-import { uploadCRMActivityEvidenceFiles } from "../../../utils/crmActivityEvidence";
+import {
+  buildCRMActivityLocationPayload,
+  uploadCRMActivityEvidenceFiles,
+} from "../../../utils/crmActivityEvidence";
 
 function getCurrentLocalDateTimeValue() {
   const now = new Date();
@@ -194,13 +197,14 @@ export default function CRMSchoolActivityDrawer({
           contact: contactId,
           opportunity: opportunityId,
           occurred_at: occurredAt.toISOString(),
+          ...buildCRMActivityLocationPayload(form.evidence_location),
           is_important: form.is_important,
         },
       );
 
       const evidenceUpload = await uploadCRMActivityEvidenceFiles({
         files: form.evidence_files,
-        location: form.evidence_location,
+        location: null,
         uploadFile: (payload) =>
           uploadCRMSchoolActivityEvidence(
             school.id,
