@@ -1475,9 +1475,11 @@ export default function CRMSchoolDetailPage() {
                       }`}
                     >
                       Historial
-                      <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
-                        {schoolHistory.length}
-                      </span>
+                      {historyLoaded ? (
+                        <span className="ml-2 rounded-full bg-white/15 px-2 py-0.5 text-xs">
+                          {schoolHistory.length}
+                        </span>
+                      ) : null}
                     </button>
 
                     <button
