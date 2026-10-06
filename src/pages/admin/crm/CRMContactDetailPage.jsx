@@ -28,6 +28,7 @@ import {
   getCRMOpportunities,
   updateCRMContact,
 } from "../../../api/crmApi";
+import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
 import {
   buildNavigationState,
   resolveReturnContext,
@@ -40,20 +41,6 @@ const ACTIVITY_FILTERS = [
   { value: "cold_visit", label: "Visitas en frío" },
   { value: "meeting", label: "Reuniones" },
   { value: "follow_up", label: "Seguimientos" },
-];
-
-const ACTIVITY_TYPES = [
-  { value: "call", label: "Llamada" },
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "email", label: "Correo" },
-  { value: "meeting", label: "Reunión" },
-  { value: "visit", label: "Visita coordinada" },
-  { value: "cold_visit", label: "Visita en frío" },
-  { value: "presentation", label: "Presentación" },
-  { value: "sample_delivery", label: "Entrega de muestra" },
-  { value: "sample_return", label: "Devolución de muestra" },
-  { value: "follow_up", label: "Seguimiento" },
-  { value: "other", label: "Otro" },
 ];
 
 const POSITION_OPTIONS = [
@@ -1263,7 +1250,7 @@ export default function CRMContactDetailPage() {
                         disabled={savingActivity}
                         className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
                       >
-                        {ACTIVITY_TYPES.map((activityType) => (
+                        {CRM_ACTIVITY_TYPES.map((activityType) => (
                           <option
                             key={activityType.value}
                             value={activityType.value}
