@@ -349,6 +349,8 @@ export default function CRMSchoolDetailPage() {
   const [school, setSchool] = useState(null);
   const [activities, setActivities] = useState([]);
   const [schoolHistory, setSchoolHistory] = useState([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [workItems, setWorkItems] = useState([]);
   const [schoolOpportunities, setSchoolOpportunities] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -394,13 +396,11 @@ export default function CRMSchoolDetailPage() {
 
         const [
           activitiesResult,
-          historyResult,
           workItemsResult,
           opportunitiesResult,
           campaignsResult,
         ] = await Promise.allSettled([
           getCRMSchoolActivities(id),
-          getCRMSchoolCommercialHistory(id),
           getCRMSchoolWorkItems(id),
           getCRMOpportunities({
             school: id,
@@ -420,17 +420,6 @@ export default function CRMSchoolDetailPage() {
           setActivities([]);
           setSupportingWarning(
             "La ficha cargó, pero no se pudo mostrar el historial comercial.",
-          );
-        }
-
-        if (historyResult.status === "fulfilled") {
-          setSchoolHistory(normalizeResults(historyResult.value));
-        } else {
-          setSchoolHistory([]);
-          setSupportingWarning((currentWarning) =>
-            currentWarning
-              ? `${currentWarning} Tampoco se pudo cargar el historial completo del colegio.`
-              : "La ficha cargó, pero no se pudo mostrar el historial completo del colegio.",
           );
         }
 
@@ -494,6 +483,45 @@ export default function CRMSchoolDetailPage() {
       ignore = true;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (activeInfoTab !== "history" || historyLoaded || historyLoading) {
+      return undefined;
+    }
+
+    let ignore = false;
+
+    async function loadSchoolHistory() {
+      try {
+        setHistoryLoading(true);
+        const historyData = await getCRMSchoolCommercialHistory(id);
+
+        if (!ignore) {
+          setSchoolHistory(normalizeResults(historyData));
+          setHistoryLoaded(true);
+        }
+      } catch {
+        if (!ignore) {
+          setSchoolHistory([]);
+          setSupportingWarning((currentWarning) =>
+            currentWarning
+              ? `${currentWarning} No se pudo cargar el historial completo del colegio.`
+              : "No se pudo cargar el historial completo del colegio.",
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setHistoryLoading(false);
+        }
+      }
+    }
+
+    loadSchoolHistory();
+
+    return () => {
+      ignore = true;
+    };
+  }, [activeInfoTab, historyLoaded, historyLoading, id]);
 
   const hasAdditionalData =
     school &&
@@ -712,23 +740,26 @@ export default function CRMSchoolDetailPage() {
   }
 
   async function refreshCommercialActivityData() {
-    const [activitiesResult, historyResult, workItemsResult] =
-      await Promise.allSettled([
-        getCRMSchoolActivities(id),
-        getCRMSchoolCommercialHistory(id),
-        getCRMSchoolWorkItems(id),
-      ]);
+    const [activitiesResult, workItemsResult] = await Promise.allSettled([
+      getCRMSchoolActivities(id),
+      getCRMSchoolWorkItems(id),
+    ]);
 
     if (activitiesResult.status === "fulfilled") {
       setActivities(normalizeResults(activitiesResult.value));
     }
 
-    if (historyResult.status === "fulfilled") {
-      setSchoolHistory(normalizeResults(historyResult.value));
-    }
-
     if (workItemsResult.status === "fulfilled") {
       setWorkItems(normalizeResults(workItemsResult.value));
+    }
+
+    if (historyLoaded) {
+      try {
+        const historyData = await getCRMSchoolCommercialHistory(id);
+        setSchoolHistory(normalizeResults(historyData));
+      } catch {
+        // La actividad ya quedó registrada; el historial podrá recargarse después.
+      }
     }
 
     if (currentOpportunityId) {
@@ -1656,7 +1687,13 @@ export default function CRMSchoolDetailPage() {
                       </div>
                     </div>
 
-                    {schoolHistory.length > 0 ? (
+                    {historyLoading ? (
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 px-5 py-10 text-center">
+                        <p className="font-black text-gray-950">
+                          Cargando historial...
+                        </p>
+                      </div>
+                    ) : schoolHistory.length > 0 ? (
                       <div className="overflow-hidden rounded-2xl border border-gray-200">
                         <div className="max-h-[48vh] overflow-y-auto">
                           <table className="w-full table-fixed border-collapse text-left text-sm">
