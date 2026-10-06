@@ -13,6 +13,7 @@ import {
   getCRMReferenceLevels,
   updateCRMSchoolInstitutionalPopulation,
 } from "../../../api/crmApi";
+import { gradeMatchesLevel } from "../../../utils/educationLevels";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -349,6 +350,7 @@ export default function SchoolInstitutionalPopulationSection({
           );
 
           nextRow.levelName = level?.name || "";
+          nextRow.details = [];
         }
 
         if (field === "status") {
@@ -490,6 +492,17 @@ export default function SchoolInstitutionalPopulationSection({
           studentsPerSection <= 0
         ) {
           return `Completa correctamente el desglose por grado de ${row.levelName}.`;
+        }
+
+        const selectedGrade = availableGrades.find(
+          (grade) => grade.id === gradeId,
+        );
+
+        if (
+          !selectedGrade
+          || !gradeMatchesLevel(selectedGrade.name, row.levelName)
+        ) {
+          return `Selecciona únicamente grados correspondientes a ${row.levelName}.`;
         }
 
         if (gradeIds.has(gradeId)) {
@@ -730,6 +743,10 @@ export default function SchoolInstitutionalPopulationSection({
                         Number.isInteger(gradeId) && gradeId > 0,
                     ),
                 );
+                const compatibleGrades = availableGrades.filter(
+                  (grade) =>
+                    gradeMatchesLevel(grade.name, row.levelName),
+                );
 
                 return (
                   <article
@@ -868,7 +885,7 @@ export default function SchoolInstitutionalPopulationSection({
                                         <option value="">
                                           Seleccionar grado
                                         </option>
-                                        {availableGrades.map((grade) => {
+                                        {compatibleGrades.map((grade) => {
                                           const usedByAnotherDetail =
                                             selectedGradeIds.has(grade.id) &&
                                             Number(detail.gradeId) !==
