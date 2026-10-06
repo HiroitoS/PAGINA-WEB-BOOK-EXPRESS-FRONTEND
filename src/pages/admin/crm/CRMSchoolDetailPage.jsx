@@ -1799,7 +1799,7 @@ export default function CRMSchoolDetailPage() {
 
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="wrap-break-word text-sm font-black text-gray-950">
+                              <p className="wrap-break-word text-sm font-black uppercase text-gray-950">
                                 {contact.full_name}
                               </p>
 
