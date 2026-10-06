@@ -1186,7 +1186,7 @@ export default function CRMOpportunityProjectionSection({
                                 {draft.gradeName}
                               </span>
                               <span className="mt-0.5 block text-xs text-gray-500">
-                                Base registrada: {calculateProjectedStudents(draft)} alumnos
+                                Proyección actual: {calculateProjectedStudents(draft)} alumnos
                               </span>
                             </span>
                           </label>
