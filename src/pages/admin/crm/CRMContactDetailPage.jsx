@@ -755,7 +755,7 @@ export default function CRMContactDetailPage() {
             <p className="text-xs font-black uppercase tracking-wide text-red-300">
               CRM Comercial · Contacto
             </p>
-            <h1 className="mt-1 wrap-break-word text-2xl font-black sm:text-3xl">
+            <h1 className="mt-1 wrap-break-word text-2xl font-black uppercase sm:text-3xl">
               {contact.full_name}
             </h1>
             <p className="mt-2 text-sm text-gray-300">
