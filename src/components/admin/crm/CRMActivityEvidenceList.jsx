@@ -18,6 +18,15 @@ function formatFileSize(bytes) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function canPreviewImage(evidence) {
+  return (
+    evidence?.evidence_type === "photo"
+    && typeof evidence?.file_url === "string"
+    && evidence.file_url
+    && !/\.(heic|heif)(\?|$)/i.test(evidence.file_url)
+  );
+}
+
 export default function CRMActivityEvidenceList({
   evidences = [],
   compact = false,
@@ -28,14 +37,24 @@ export default function CRMActivityEvidenceList({
 
   return (
     <div className={compact ? "mt-3" : "mt-4"}>
-      <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-        Evidencias · {evidences.length}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+          Evidencias · {evidences.length}
+        </p>
+        <p className="text-xs font-semibold text-gray-400">
+          Abrir para revisar
+        </p>
+      </div>
 
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
         {evidences.map((evidence) => {
           const isPhoto = evidence.evidence_type === "photo";
-          const Icon = isPhoto ? FaRegImage : FaFileAlt;
+          const hasLocation = (
+            evidence.latitude !== null
+            && evidence.latitude !== undefined
+            && evidence.longitude !== null
+            && evidence.longitude !== undefined
+          );
 
           return (
             <a
@@ -43,27 +62,43 @@ export default function CRMActivityEvidenceList({
               href={evidence.file_url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex max-w-full items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 transition hover:border-red-200 hover:text-red-700"
+              className="flex min-w-0 items-center gap-3 rounded-xl border border-gray-200 bg-white p-2.5 transition hover:border-red-200 hover:bg-red-50/30"
               title={evidence.original_name}
             >
-              <Icon className="shrink-0" />
-              <span className="max-w-48 truncate">
-                {evidence.original_name || evidence.evidence_type_display}
-              </span>
-              {formatFileSize(evidence.size_bytes) ? (
-                <span className="shrink-0 font-medium text-gray-400">
-                  {formatFileSize(evidence.size_bytes)}
-                </span>
-              ) : null}
-              {evidence.latitude !== null
-              && evidence.latitude !== undefined
-              && evidence.longitude !== null
-              && evidence.longitude !== undefined ? (
-                <FaMapMarkerAlt
-                  className="shrink-0 text-emerald-600"
-                  title="Ubicación registrada"
+              {canPreviewImage(evidence) ? (
+                <img
+                  src={evidence.file_url}
+                  alt=""
+                  className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-gray-200"
+                  loading="lazy"
                 />
-              ) : null}
+              ) : (
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 ring-1 ring-gray-200">
+                  {isPhoto ? <FaRegImage /> : <FaFileAlt />}
+                </span>
+              )}
+
+              <span className="min-w-0">
+                <span className="block truncate text-xs font-black text-gray-900">
+                  {evidence.original_name || evidence.evidence_type_display}
+                </span>
+
+                <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                  <span>
+                    {evidence.evidence_type_display || (isPhoto ? "Foto" : "Documento")}
+                    {formatFileSize(evidence.size_bytes)
+                      ? ` · ${formatFileSize(evidence.size_bytes)}`
+                      : ""}
+                  </span>
+
+                  {hasLocation ? (
+                    <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
+                      <FaMapMarkerAlt />
+                      Con ubicación
+                    </span>
+                  ) : null}
+                </span>
+              </span>
             </a>
           );
         })}
