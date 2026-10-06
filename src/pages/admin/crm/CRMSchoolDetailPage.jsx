@@ -281,6 +281,10 @@ function getWorkItemDate(workItem) {
 }
 
 function getWorkItemTypeLabel(workItem) {
+  if (workItem?.commercial_action_type_display) {
+    return workItem.commercial_action_type_display;
+  }
+
   if (workItem?.type === "event") {
     return (
       getCRMActivityTypeLabel(workItem.item?.event_type)
