@@ -13,8 +13,12 @@ import {
 } from "../../../api/crmApi";
 import CRMActivityEvidenceFields from "./CRMActivityEvidenceFields";
 import CRMActivityEvidenceList from "./CRMActivityEvidenceList";
+import CRMActivityLocationSummary from "./CRMActivityLocationSummary";
 import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
-import { uploadCRMActivityEvidenceFiles } from "../../../utils/crmActivityEvidence";
+import {
+  buildCRMActivityLocationPayload,
+  uploadCRMActivityEvidenceFiles,
+} from "../../../utils/crmActivityEvidence";
 
 function normalizeList(data) {
   if (Array.isArray(data)) {
@@ -246,13 +250,14 @@ export default function CRMOpportunityActivitySection({
           result: form.result.trim(),
           contact: contactId,
           occurred_at: occurredAt.toISOString(),
+          ...buildCRMActivityLocationPayload(form.evidence_location),
           is_important: form.is_important,
         },
       );
 
       const evidenceUpload = await uploadCRMActivityEvidenceFiles({
         files: form.evidence_files,
-        location: form.evidence_location,
+        location: null,
         uploadFile: (payload) =>
           uploadCRMOpportunityActivityEvidence(
             opportunity.id,
@@ -393,6 +398,8 @@ export default function CRMOpportunityActivitySection({
                     {activity.result}
                   </p>
                 ) : null}
+
+                <CRMActivityLocationSummary activity={activity} />
 
                 <CRMActivityEvidenceList
                   evidences={activity.evidences}
