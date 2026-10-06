@@ -329,24 +329,8 @@ function isPendingWorkItem(workItem) {
 }
 
 function LoadingState() {
-  const selectedOpportunity = selectedActivity?.opportunity_id
-    ? schoolOpportunities.find(
-        (opportunity) => opportunity.id === selectedActivity.opportunity_id,
-      )
-    : null;
-
   return (
     <div className="space-y-4">
-      <CRMActivityDetailDrawer
-        activity={selectedActivity}
-        schoolName={school?.name || ""}
-        opportunityLabel={
-          selectedOpportunity?.campaign?.name
-          || selectedOpportunity?.title
-          || ""
-        }
-        onClose={() => setSelectedActivity(null)}
-      />
       <div className="h-28 animate-pulse rounded-3xl bg-gray-200" />
       <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
@@ -885,8 +869,25 @@ export default function CRMSchoolDetailPage() {
     }
   }
 
+  const selectedOpportunity = selectedActivity?.opportunity_id
+    ? schoolOpportunities.find(
+        (opportunity) => opportunity.id === selectedActivity.opportunity_id,
+      )
+    : null;
+
   return (
     <div className="mx-auto w-full max-w-7xl">
+      <CRMActivityDetailDrawer
+        activity={selectedActivity}
+        schoolName={school?.name || ""}
+        opportunityLabel={
+          selectedOpportunity?.campaign?.name
+          || selectedOpportunity?.title
+          || ""
+        }
+        onClose={() => setSelectedActivity(null)}
+      />
+
       <div className="mb-3">
         <Link
           className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-black text-gray-700 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
