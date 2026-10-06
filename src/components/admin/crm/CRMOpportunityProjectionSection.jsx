@@ -1093,22 +1093,27 @@ export default function CRMOpportunityProjectionSection({
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {levelOptions.map((option) => (
-                      <button
-                        key={option.serviceId}
-                        type="button"
-                        onClick={() => selectService(option.serviceId)}
-                        className={`shrink-0 rounded-xl px-4 py-2 text-sm font-black transition ${
-                          activeServiceId === option.serviceId
-                            ? "bg-gray-950 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
+                <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                      Nivel educativo
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {levelOptions.map((option) => (
+                        <button
+                          key={option.serviceId}
+                          type="button"
+                          onClick={() => selectService(option.serviceId)}
+                          className={`min-w-32 shrink-0 rounded-xl px-5 py-3 text-center text-sm font-black transition ${
+                            activeServiceId === option.serviceId
+                              ? "bg-gray-950 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <label className="text-sm font-bold text-gray-700">
