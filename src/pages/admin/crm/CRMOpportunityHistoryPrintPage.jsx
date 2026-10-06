@@ -10,8 +10,8 @@ import logoBookExpress from "../../../assets/brand/logo-book-express-negro-recor
 
 const PRINT_STYLES = `
   @page {
-    size: A4 landscape;
-    margin: 10mm;
+    size: A4 portrait;
+    margin: 12mm;
   }
 
   @media print {
@@ -36,6 +36,7 @@ const PRINT_STYLES = `
     }
 
     .history-print-page {
+      width: 100% !important;
       max-width: none !important;
       margin: 0 !important;
       padding: 0 !important;
@@ -201,7 +202,7 @@ export default function CRMOpportunityHistoryPrintPage() {
     <div className="history-print-shell min-h-screen bg-gray-100 px-4 py-5 print:bg-white print:p-0">
       <style>{PRINT_STYLES}</style>
 
-      <div className="mx-auto mb-4 flex w-full max-w-7xl items-center justify-between gap-3 print:hidden">
+      <div className="mx-auto mb-4 flex w-full max-w-5xl items-center justify-between gap-3 print:hidden">
         <button
           type="button"
           onClick={closePreview}
@@ -221,18 +222,18 @@ export default function CRMOpportunityHistoryPrintPage() {
         </button>
       </div>
 
-      <main className="history-print-page mx-auto w-full max-w-7xl bg-white p-7 shadow-sm print:p-0 print:shadow-none">
+      <main className="history-print-page mx-auto w-full max-w-5xl bg-white p-6 shadow-sm print:p-0 print:shadow-none">
         <header className="flex items-start justify-between gap-8 border-b-2 border-gray-950 pb-5">
           <div className="flex items-start gap-4">
-            <div className="flex h-20 w-32 shrink-0 items-center justify-center bg-white">
+            <div className="flex h-16 w-24 shrink-0 items-center justify-center bg-white">
               <img
                 src={logoBookExpress}
                 alt="Book Express"
-                className="max-h-16 w-auto object-contain"
+                className="max-h-14 w-auto object-contain"
               />
             </div>
             <div className="pt-1">
-              <p className="text-xl font-black leading-tight text-gray-950">
+              <p className="text-lg font-black leading-tight text-gray-950">
                 Distribuidora y Comercializadora Book Express SAC
               </p>
               <p className="mt-2 text-sm font-semibold text-gray-600">
@@ -286,10 +287,10 @@ export default function CRMOpportunityHistoryPrintPage() {
         <section className="mt-5 overflow-hidden rounded-2xl border border-gray-300">
           <table className="history-print-table w-full table-fixed border-collapse text-xs">
             <colgroup>
-              <col style={{ width: "17%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "18%" }} />
-              <col style={{ width: "53%" }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "45%" }} />
             </colgroup>
             <thead className="bg-gray-950 text-white">
               <tr>
