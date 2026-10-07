@@ -368,7 +368,7 @@ export default function CRMOpportunityAdoptionSection({
             <button
               type="button"
               onClick={openDrawer}
-              disabled={contacts.length === 0}
+              disabled={contacts.length === 0 || !opportunity?.owner}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               <FaFileSignature />
@@ -391,6 +391,20 @@ export default function CRMOpportunityAdoptionSection({
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-500">
               Primero marca la cotización como enviada y registra la
               aceptación del colegio. Luego podrás registrar la adopción.
+            </p>
+          </div>
+        ) : null}
+
+        {!currentAdoption
+        && acceptedQuotations.length > 0
+        && !opportunity?.owner ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-black">
+              Falta asignar un asesor responsable
+            </p>
+            <p className="mt-1 leading-6">
+              La adopción solo puede confirmarse cuando la oportunidad tiene
+              un asesor comercial responsable.
             </p>
           </div>
         ) : null}
@@ -531,18 +545,30 @@ export default function CRMOpportunityAdoptionSection({
                   <div className="flex flex-col items-start gap-3 sm:items-end">
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        if (adoption.can_print === false) {
+                          return;
+                        }
+
                         window.open(
                           `/admin/crm/oportunidades/${opportunity.id}/adopciones/${adoption.id}/imprimir`,
                           "_blank",
                           "noopener,noreferrer",
-                        )
-                      }
-                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-white px-3 py-2 text-xs font-black text-emerald-800 transition hover:bg-emerald-50"
+                        );
+                      }}
+                      disabled={adoption.can_print === false}
+                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-white px-3 py-2 text-xs font-black text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                     >
                       <FaPrint />
                       Imprimir adopción
                     </button>
+
+                    {adoption.can_print === false ? (
+                      <p className="max-w-xs text-left text-xs leading-5 text-amber-800 sm:text-right">
+                        {adoption.print_block_reason
+                          || "Asigna un asesor responsable antes de imprimir la adopción."}
+                      </p>
+                    ) : null}
 
                     <div className="text-left text-xs text-gray-600 sm:text-right">
                       <p>
