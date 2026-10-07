@@ -466,6 +466,30 @@ export default function CRMAdoptionPrintPage() {
     );
   }
 
+  if (adoption.can_print === false) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
+        <div className="w-full max-w-xl rounded-3xl border border-amber-200 bg-white p-6 shadow-sm">
+          <p className="font-black text-amber-900">
+            La adopción aún no puede imprimirse.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-gray-600">
+            {adoption.print_block_reason
+              || "Asigna un asesor responsable antes de imprimir el documento."}
+          </p>
+          <button
+            type="button"
+            onClick={closePreview}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-black text-white"
+          >
+            <FaTimes />
+            Cerrar vista previa
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const location = formatLocation(school);
   const contactName =
     adoption.authorized_contact_name_snapshot
