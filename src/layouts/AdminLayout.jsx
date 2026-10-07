@@ -141,6 +141,12 @@ const NAV_SECTIONS = [
         permissions: ["crm.view_crm"],
       },
       {
+        label: "Reportes",
+        to: "/admin/crm/reportes",
+        icon: <FaClipboardList />,
+        permissions: ["crm.supervise_crm"],
+      },
+      {
         label: "Contactos",
         to: "/admin/crm/contactos",
         icon: <FaAddressBook />,
