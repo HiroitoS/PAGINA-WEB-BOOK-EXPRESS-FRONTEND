@@ -43,6 +43,10 @@ const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
 );
 
+const CRMReportsPage = lazy(
+  () => import("../pages/admin/crm/CRMReportsPage"),
+);
+
 const CRMContactsPage = lazy(
   () => import("../pages/admin/crm/CRMContactsPage"),
 );
@@ -195,6 +199,13 @@ const router = createBrowserRouter([
             element: protectPermission(
               renderLazyPage(CRMSummaryPage),
               ["crm.view_crm"],
+            ),
+          },
+          {
+            path: "crm/reportes",
+            element: protectPermission(
+              renderLazyPage(CRMReportsPage),
+              ["crm.supervise_crm"],
             ),
           },
           {
