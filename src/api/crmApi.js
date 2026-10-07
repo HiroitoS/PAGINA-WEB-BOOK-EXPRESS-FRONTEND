@@ -23,6 +23,17 @@ export async function getCRMSummary(params = {}) {
   return response.data;
 }
 
+export async function getCRMCommercialReport(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/reports/commercial/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
 export async function getCRMSchools(params = {}) {
   const response = await axiosClient.get(`${CRM_ADMIN_BASE}/schools/`, {
     params,
