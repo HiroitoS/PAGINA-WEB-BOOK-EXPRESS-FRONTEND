@@ -262,7 +262,7 @@ function ActivityTrend({ trend }) {
               <p className="mt-2 text-xs font-black capitalize text-gray-700">
                 {formatWeekday(item.date)}
               </p>
-              <p className="mt-0.5 text-[11px] text-gray-400">
+              <p className="mt-0.5 text-xs text-gray-400">
                 {formatShortDate(item.date)}
               </p>
             </div>
@@ -410,7 +410,7 @@ export default function CRMSummaryPage() {
   return (
     <div className="mx-auto w-full max-w-7xl">
       <section className="overflow-hidden rounded-3xl bg-gray-950 text-white shadow-sm">
-        <div className="grid gap-6 px-5 py-6 sm:px-7 lg:grid-cols-[1fr_auto] lg:items-center lg:px-8 lg:py-7">
+        <div className="flex flex-col gap-6 px-5 py-6 sm:px-7 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-7">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-red-200 ring-1 ring-white/10">
               <FaBriefcase />
@@ -557,8 +557,8 @@ export default function CRMSummaryPage() {
         </div>
       </section>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
-        <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="mt-5 grid gap-5 xl:grid-cols-3">
+        <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6 xl:col-span-2">
           <div className="flex flex-col justify-between gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-end">
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-red-700">
@@ -696,8 +696,8 @@ export default function CRMSummaryPage() {
         </div>
       </section>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
-        <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="mt-5 grid gap-5 xl:grid-cols-3">
+        <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6 xl:col-span-2">
           <div className="flex flex-col justify-between gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-end">
             <div>
               <p className="text-xs font-black uppercase tracking-wide text-red-700">
