@@ -143,6 +143,15 @@ export default function CRMSummaryPage() {
     ],
   );
 
+  const lastSevenDaysActivities = useMemo(
+    () =>
+      (summary.activity_trend || []).reduce(
+        (total, item) => total + Number(item?.total || 0),
+        0,
+      ),
+    [summary.activity_trend],
+  );
+
   if (loading) {
     return <LoadingState />;
   }
@@ -312,13 +321,24 @@ export default function CRMSummaryPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-gray-950 px-4 py-3 text-white">
-              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
-                Hoy
-              </p>
-              <p className="mt-1 text-2xl font-black">
-                {formatInteger(summary.activities_today)}
-              </p>
+            <div className="flex gap-2">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                  Últimos 7 días
+                </p>
+                <p className="mt-1 text-2xl font-black text-gray-950">
+                  {formatInteger(lastSevenDaysActivities)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-gray-950 px-4 py-3 text-white">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                  Hoy
+                </p>
+                <p className="mt-1 text-2xl font-black">
+                  {formatInteger(summary.activities_today)}
+                </p>
+              </div>
             </div>
           </div>
 
