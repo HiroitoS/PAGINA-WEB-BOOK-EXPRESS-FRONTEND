@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { FaLayerGroup } from "react-icons/fa";
 
 function uniqueSorted(values) {
@@ -25,51 +25,53 @@ export default function QuotationBulkSupplierDiscountPanel({
   const [discount, setDiscount] = useState("");
   const [feedback, setFeedback] = useState("");
 
+  const selectedProviderName = useMemo(() => {
+    if (providerName && providers.includes(providerName)) {
+      return providerName;
+    }
+
+    if (providers.length === 1) {
+      return providers[0];
+    }
+
+    return "";
+  }, [providerName, providers]);
+
   const levels = useMemo(
     () =>
       uniqueSorted(
         items
-          .filter((item) => item.provider_name === providerName)
+          .filter(
+            (item) =>
+              item.provider_name === selectedProviderName,
+          )
           .map((item) => item.level_name),
       ),
-    [items, providerName],
+    [items, selectedProviderName],
   );
+
+  const selectedLevelName =
+    levelName && levels.includes(levelName)
+      ? levelName
+      : "";
 
   const matchingCount = useMemo(
     () =>
       items.filter(
         (item) =>
-          item.provider_name === providerName
-          && (!levelName || item.level_name === levelName),
+          item.provider_name === selectedProviderName
+          && (
+            !selectedLevelName
+            || item.level_name === selectedLevelName
+          ),
       ).length,
-    [items, levelName, providerName],
+    [items, selectedLevelName, selectedProviderName],
   );
-
-  useEffect(() => {
-    if (providers.length === 1 && !providerName) {
-      setProviderName(providers[0]);
-      return;
-    }
-
-    if (
-      providerName
-      && !providers.includes(providerName)
-    ) {
-      setProviderName("");
-      setLevelName("");
-    }
-  }, [providerName, providers]);
-
-  useEffect(() => {
-    if (levelName && !levels.includes(levelName)) {
-      setLevelName("");
-    }
-  }, [levelName, levels]);
 
   function handleApply() {
     const numericDiscount = Number(discount);
 
-    if (!providerName) {
+    if (!selectedProviderName) {
       setFeedback("Selecciona una editorial.");
       return;
     }
@@ -80,18 +82,22 @@ export default function QuotationBulkSupplierDiscountPanel({
       || numericDiscount < 0
       || numericDiscount > 100
     ) {
-      setFeedback("Ingresa un descuento editorial válido entre 0 y 100 %.");
+      setFeedback(
+        "Ingresa un descuento editorial válido entre 0 y 100 %.",
+      );
       return;
     }
 
     if (matchingCount === 0) {
-      setFeedback("No hay productos que coincidan con el alcance seleccionado.");
+      setFeedback(
+        "No hay productos que coincidan con el alcance seleccionado.",
+      );
       return;
     }
 
     onApply({
-      providerName,
-      levelName,
+      providerName: selectedProviderName,
+      levelName: selectedLevelName,
       discount: String(discount),
     });
 
@@ -125,7 +131,7 @@ export default function QuotationBulkSupplierDiscountPanel({
         <label className="text-xs font-bold text-gray-700">
           Editorial
           <select
-            value={providerName}
+            value={selectedProviderName}
             disabled={disabled}
             onChange={(event) => {
               setProviderName(event.target.value);
@@ -146,8 +152,8 @@ export default function QuotationBulkSupplierDiscountPanel({
         <label className="text-xs font-bold text-gray-700">
           Nivel
           <select
-            value={levelName}
-            disabled={disabled || !providerName}
+            value={selectedLevelName}
+            disabled={disabled || !selectedProviderName}
             onChange={(event) => {
               setLevelName(event.target.value);
               setFeedback("");
@@ -186,7 +192,7 @@ export default function QuotationBulkSupplierDiscountPanel({
             type="button"
             disabled={
               disabled
-              || !providerName
+              || !selectedProviderName
               || discount === ""
               || matchingCount === 0
             }
