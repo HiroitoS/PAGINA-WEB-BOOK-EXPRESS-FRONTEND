@@ -15,6 +15,8 @@ import {
 
 import { useAuth } from "../../../hooks/useAuth";
 
+import QuotationBulkSupplierDiscountPanel from "./quotation/QuotationBulkSupplierDiscountPanel";
+
 import {
   acceptCRMOpportunityQuotation,
   approveCRMOpportunityQuotationDiscount,
@@ -950,6 +952,30 @@ export default function CRMOpportunityQuotationSection({
             }
           : item,
       ),
+    );
+  }
+
+  function applyBulkSupplierDiscount({
+    providerName,
+    levelName,
+    discount,
+  }) {
+    setDraftItems((current) =>
+      current.map((item) => {
+        const matchesProvider =
+          item.provider_name === providerName;
+        const matchesLevel =
+          !levelName || item.level_name === levelName;
+
+        if (!matchesProvider || !matchesLevel) {
+          return item;
+        }
+
+        return {
+          ...item,
+          supplier_discount_percent: discount,
+        };
+      }),
     );
   }
 
@@ -2357,6 +2383,14 @@ export default function CRMOpportunityQuotationSection({
                     actualizan automáticamente al guardar los cambios.
                   </p>
                 </div>
+              ) : null}
+
+              {canViewFinancials && draftItems.length > 1 ? (
+                <QuotationBulkSupplierDiscountPanel
+                  items={draftItems}
+                  onApply={applyBulkSupplierDiscount}
+                  disabled={saving}
+                />
               ) : null}
 
               <div className="mt-5 space-y-3">
