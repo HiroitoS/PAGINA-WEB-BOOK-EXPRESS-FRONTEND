@@ -34,6 +34,17 @@ export async function getCRMCommercialReport(params = {}) {
   return response.data;
 }
 
+export async function getCRMActivityReport(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/reports/activities/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
 export async function getCRMEditorialReport(params = {}) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/reports/editorials/`,
