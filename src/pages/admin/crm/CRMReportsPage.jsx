@@ -421,8 +421,8 @@ function SchoolReport({ report }) {
           Estado comercial por colegio
         </h2>
         <p className="mt-1 text-sm leading-6 text-gray-500">
-          Incluye colegios con y sin oportunidad para identificar cartera aún
-          no trabajada.
+          Muestra únicamente colegios que ya tienen una proyección comercial
+          vigente dentro del alcance seleccionado.
         </p>
       </div>
 
@@ -715,7 +715,7 @@ function SummaryStrip({ activeReport, report }) {
       <div className="grid overflow-hidden rounded-2xl border border-gray-200 bg-white md:grid-cols-5 md:divide-x md:divide-gray-200">
         <CompactMetric label="Colegios" value={formatInteger(summary.schools)} />
         <CompactMetric label="Población" value={formatInteger(summary.population_total)} />
-        <CompactMetric label="Sin oportunidad" value={formatInteger(summary.schools_without_opportunity)} />
+        <CompactMetric label="Con adopción" value={formatInteger(summary.schools_with_adoption)} />
         <CompactMetric label="Unid. proyectadas" value={formatInteger(summary.projected_units)} />
         <CompactMetric label="Unid. adoptadas" value={formatInteger(summary.adopted_units)} />
       </div>
