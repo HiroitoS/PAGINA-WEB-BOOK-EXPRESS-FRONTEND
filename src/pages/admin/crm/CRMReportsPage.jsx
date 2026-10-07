@@ -434,6 +434,8 @@ function SchoolReport({ report }) {
                 <th className="px-4 py-3">Colegio</th>
                 <th className="px-4 py-3">Ubicación</th>
                 <th className="px-4 py-3">Equipo / asesor</th>
+                <th className="px-4 py-3 text-center">Población</th>
+                <th className="px-4 py-3 text-center">Segmento / score</th>
                 <th className="px-4 py-3 text-center">Abiertas</th>
                 <th className="px-4 py-3 text-center">Ganadas</th>
                 <th className="px-4 py-3 text-center">No concretadas</th>
@@ -462,6 +464,22 @@ function SchoolReport({ report }) {
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
                       {school.advisor || "Sin asesor"}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <p className="font-black text-gray-950">
+                      {formatInteger(school.population_total)}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      alumnos
+                    </p>
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <p className="font-black text-gray-950">
+                      {school.segment || "—"} · {formatInteger(school.priority_score)}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {school.priority || "Sin evaluar"}
                     </p>
                   </td>
                   <td className="px-4 py-4 text-center font-black">
@@ -694,8 +712,9 @@ function SummaryStrip({ activeReport, report }) {
 
   if (activeReport === "schools") {
     return (
-      <div className="grid overflow-hidden rounded-2xl border border-gray-200 bg-white md:grid-cols-4 md:divide-x md:divide-gray-200">
+      <div className="grid overflow-hidden rounded-2xl border border-gray-200 bg-white md:grid-cols-5 md:divide-x md:divide-gray-200">
         <CompactMetric label="Colegios" value={formatInteger(summary.schools)} />
+        <CompactMetric label="Población" value={formatInteger(summary.population_total)} />
         <CompactMetric label="Sin oportunidad" value={formatInteger(summary.schools_without_opportunity)} />
         <CompactMetric label="Unid. proyectadas" value={formatInteger(summary.projected_units)} />
         <CompactMetric label="Unid. adoptadas" value={formatInteger(summary.adopted_units)} />
