@@ -34,6 +34,49 @@ export async function getCRMCommercialReport(params = {}) {
   return response.data;
 }
 
+export async function getCRMEditorialReport(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/reports/editorials/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+export async function getCRMSchoolReport(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/reports/schools/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+export async function getCRMOpportunityReport(params = {}) {
+  const response = await axiosClient.get(
+    `${CRM_ADMIN_BASE}/reports/opportunities/`,
+    {
+      params,
+    },
+  );
+
+  return response.data;
+}
+
+export async function exportCRMReports(params = {}) {
+  return axiosClient.get(
+    `${CRM_ADMIN_BASE}/reports/export/`,
+    {
+      params,
+      responseType: "blob",
+    },
+  );
+}
+
 export async function getCRMSchools(params = {}) {
   const response = await axiosClient.get(`${CRM_ADMIN_BASE}/schools/`, {
     params,
