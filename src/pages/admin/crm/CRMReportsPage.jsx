@@ -269,7 +269,7 @@ export default function CRMReportsPage() {
 
           <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10">
             <p className="text-xs font-bold uppercase text-gray-400">
-              Asesores con actividad
+              Asesores en reporte
             </p>
             <p className="mt-1 text-2xl font-black">
               {formatInteger(advisors.length)}
