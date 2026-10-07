@@ -8,6 +8,7 @@ import {
 
 import {
   exportCRMReports,
+  getCRMActivityReport,
   getCRMCampaigns,
   getCRMCommercialReport,
   getCRMCommercialTeams,
@@ -22,6 +23,7 @@ const REPORT_TABS = [
   { key: "editorials", label: "Por editorial" },
   { key: "schools", label: "Por colegio" },
   { key: "opportunities", label: "Oportunidades" },
+  { key: "activities", label: "Actividades" },
 ];
 
 function toInputDate(date) {
@@ -582,8 +584,102 @@ function OpportunityReport({ report }) {
   );
 }
 
+function ActivityReport({ report }) {
+  const activities = report?.activities || [];
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+      <div className="border-b border-gray-100 px-5 py-4">
+        <p className="text-xs font-black uppercase tracking-wide text-red-700">
+          Gestión realizada
+        </p>
+        <h2 className="mt-1 text-xl font-black text-gray-950">
+          Detalle de actividades
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-gray-500">
+          Evidencia la gestión comercial registrada durante el periodo
+          seleccionado.
+        </p>
+      </div>
+
+      {activities.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-[1500px] w-full text-left text-sm">
+            <thead className="bg-gray-950 text-xs uppercase tracking-wide text-white">
+              <tr>
+                <th className="px-4 py-3">Fecha</th>
+                <th className="px-4 py-3">Asesor</th>
+                <th className="px-4 py-3">Colegio</th>
+                <th className="px-4 py-3">Contacto</th>
+                <th className="px-4 py-3">Tipo</th>
+                <th className="px-4 py-3">Resumen</th>
+                <th className="px-4 py-3">Resultado</th>
+                <th className="px-4 py-3">Oportunidad</th>
+                <th className="px-4 py-3 text-center">Ubicación</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {activities.map((activity) => (
+                <tr
+                  key={activity.activity_id}
+                  className="align-top transition hover:bg-gray-50"
+                >
+                  <td className="px-4 py-4 text-gray-600">
+                    {formatDateTime(activity.occurred_at)}
+                  </td>
+                  <td className="px-4 py-4 font-bold text-gray-900">
+                    {activity.advisor || "Sin responsable"}
+                  </td>
+                  <td className="px-4 py-4 font-black text-gray-950">
+                    {activity.school}
+                  </td>
+                  <td className="px-4 py-4 text-gray-700">
+                    {activity.contact || "—"}
+                  </td>
+                  <td className="px-4 py-4 text-gray-700">
+                    {activity.activity_type}
+                  </td>
+                  <td className="px-4 py-4 text-gray-700">
+                    {activity.summary}
+                  </td>
+                  <td className="px-4 py-4 text-gray-700">
+                    {activity.result}
+                  </td>
+                  <td className="px-4 py-4 text-gray-700">
+                    {activity.opportunity || "—"}
+                  </td>
+                  <td className="px-4 py-4 text-center font-bold text-gray-700">
+                    {activity.has_location ? "Sí" : "No"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <EmptyState />
+      )}
+    </section>
+  );
+}
+
 function SummaryStrip({ activeReport, report }) {
   const summary = report?.summary || {};
+
+  if (activeReport === "activities") {
+    return (
+      <div className="grid overflow-hidden rounded-2xl border border-gray-200 bg-white md:grid-cols-2 md:divide-x md:divide-gray-200">
+        <CompactMetric
+          label="Actividades del periodo"
+          value={formatInteger(summary.activities)}
+        />
+        <CompactMetric
+          label="Alcance"
+          value="Gestión comercial registrada"
+        />
+      </div>
+    );
+  }
 
   if (activeReport === "editorials") {
     return (
@@ -705,6 +801,8 @@ export default function CRMReportsPage() {
           data = await getCRMSchoolReport(commercialParams);
         } else if (activeReport === "opportunities") {
           data = await getCRMOpportunityReport(commercialParams);
+        } else if (activeReport === "activities") {
+          data = await getCRMActivityReport(datedParams);
         } else {
           data = await getCRMCommercialReport(datedParams);
         }
@@ -1044,6 +1142,10 @@ export default function CRMReportsPage() {
 
           {activeReport === "opportunities" ? (
             <OpportunityReport report={report} />
+          ) : null}
+
+          {activeReport === "activities" ? (
+            <ActivityReport report={report} />
           ) : null}
 
           {activeReport === "advisors" ? (
