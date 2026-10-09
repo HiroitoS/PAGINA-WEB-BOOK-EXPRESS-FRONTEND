@@ -3,6 +3,7 @@ import {
   FaAddressBook,
   FaBars,
   FaBell,
+  FaCalendarAlt,
   FaBookOpen,
   FaBoxOpen,
   FaBriefcase,
@@ -14,10 +15,13 @@ import {
   FaFileExcel,
   FaLayerGroup,
   FaSchool,
+  FaStar,
+  FaSun,
   FaTags,
   FaTasks,
   FaThLarge,
   FaTimes,
+  FaUserCheck,
   FaUsers,
 } from "react-icons/fa";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
@@ -97,14 +101,32 @@ const NAV_SECTIONS = [
     permissions: ["workspaces.use_workspace"],
     children: [
       {
-        label: "Resumen",
+        label: "Mi día",
         to: "/admin/workspace",
-        icon: <FaClipboardList />,
+        icon: <FaSun />,
         permissions: ["workspaces.use_workspace"],
       },
       {
-        label: "Tareas",
-        to: "/admin/workspace/tasks",
+        label: "Importantes",
+        to: "/admin/workspace/important",
+        icon: <FaStar />,
+        permissions: ["workspaces.use_workspace"],
+      },
+      {
+        label: "Planificadas",
+        to: "/admin/workspace/planned",
+        icon: <FaCalendarAlt />,
+        permissions: ["workspaces.use_workspace"],
+      },
+      {
+        label: "Asignadas a mí",
+        to: "/admin/workspace/assigned",
+        icon: <FaUserCheck />,
+        permissions: ["workspaces.use_workspace"],
+      },
+      {
+        label: "Todas las tareas",
+        to: "/admin/workspace/all",
         icon: <FaTasks />,
         permissions: ["workspaces.use_workspace"],
       },
@@ -121,7 +143,7 @@ const NAV_SECTIONS = [
         permissions: ["workspaces.use_workspace"],
       },
       {
-        label: "Grupos de trabajo",
+        label: "Equipos de trabajo",
         to: "/admin/workspace/groups",
         icon: <FaUsers />,
         permissions: ["workspaces.use_workspace"],
