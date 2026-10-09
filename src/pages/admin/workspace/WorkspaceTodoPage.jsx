@@ -183,9 +183,6 @@ export default function WorkspaceTodoPage({ view = "today" }) {
 
     async function loadTasks() {
       try {
-        setIsLoading(true);
-        setErrorMessage("");
-
         const data = await getWorkspaceTasks({
           ordering: "due_at",
         });
