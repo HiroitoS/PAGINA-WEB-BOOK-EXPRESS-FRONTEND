@@ -20,9 +20,11 @@ import {
 } from "react-router";
 
 import {
+  addWorkspaceTaskToMyDay,
   createWorkspaceTask,
   getWorkspaceTaskById,
   getWorkspaceTasks,
+  removeWorkspaceTaskFromMyDay,
 } from "../../../api/adminApi";
 import TodoQuickTaskInput from "../../../components/admin/workspace/todo/TodoQuickTaskInput";
 import TodoTaskDetailDrawer from "../../../components/admin/workspace/todo/TodoTaskDetailDrawer";
@@ -36,7 +38,7 @@ const VIEW_CONFIG = {
     eyebrow: "Enfoque diario",
     title: "Mi día",
     description:
-      "Tareas vencidas y tareas con fecha para hoy dentro de tu alcance.",
+      "Selecciona el trabajo en el que quieres concentrarte durante el día.",
     icon: FaClock,
   },
   important: {
@@ -235,7 +237,6 @@ function taskMatchesView(
   task,
   view,
   currentUserId,
-  todayKey,
 ) {
   if (view === "important") {
     return Boolean(task.is_important);
@@ -251,14 +252,7 @@ function taskMatchesView(
   }
 
   if (view === "today") {
-    return Boolean(
-      task.is_overdue
-      || (
-        task.due_at
-        && todayKey
-        && getLocalDateKey(task.due_at) === todayKey
-      ),
-    );
+    return Boolean(task.in_my_day);
   }
 
   return true;
@@ -295,6 +289,7 @@ export default function WorkspaceTodoPage({
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingMyDay, setIsUpdatingMyDay] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [detailError, setDetailError] = useState("");
 
@@ -342,10 +337,9 @@ export default function WorkspaceTodoPage({
           task,
           view,
           user?.id,
-          todayKey,
         ),
       ),
-    [tasks, todayKey, user?.id, view],
+    [tasks, user?.id, view],
   );
 
   const activeTasks = useMemo(
@@ -406,8 +400,28 @@ export default function WorkspaceTodoPage({
         payload,
       );
 
+      let taskToShow = createdTask;
+
+      if (view === "today") {
+        try {
+          taskToShow = await addWorkspaceTaskToMyDay(
+            createdTask.id,
+          );
+        } catch (myDayError) {
+          setTasks((currentTasks) => [
+            createdTask,
+            ...currentTasks,
+          ]);
+          setErrorMessage(
+            "La tarea se creó, pero no se pudo agregar a Mi día.",
+          );
+          console.error(myDayError);
+          return true;
+        }
+      }
+
       setTasks((currentTasks) => [
-        createdTask,
+        taskToShow,
         ...currentTasks,
       ]);
 
@@ -454,6 +468,33 @@ export default function WorkspaceTodoPage({
     setSelectedTask(null);
     setDetailError("");
     setIsLoadingDetail(false);
+  }
+
+  async function toggleTaskMyDay(task) {
+    try {
+      setIsUpdatingMyDay(true);
+      setDetailError("");
+
+      const updatedTask = task.in_my_day
+        ? await removeWorkspaceTaskFromMyDay(task.id)
+        : await addWorkspaceTaskToMyDay(task.id);
+
+      setTasks((currentTasks) =>
+        currentTasks.map((currentTask) =>
+          currentTask.id === updatedTask.id
+            ? updatedTask
+            : currentTask,
+        ),
+      );
+      setSelectedTask(updatedTask);
+    } catch (error) {
+      setDetailError(
+        "No se pudo actualizar Mi día. Intenta nuevamente.",
+      );
+      console.error(error);
+    } finally {
+      setIsUpdatingMyDay(false);
+    }
   }
 
   function manageTask(task) {
@@ -539,7 +580,6 @@ export default function WorkspaceTodoPage({
           key={view}
           onCreate={handleCreateTask}
           isSaving={isSaving}
-          defaultToday={view === "today"}
           requireDate={view === "planned"}
         />
       </div>
@@ -627,8 +667,10 @@ export default function WorkspaceTodoPage({
         task={selectedTask}
         isLoading={isLoadingDetail}
         errorMessage={detailError}
+        isUpdatingMyDay={isUpdatingMyDay}
         onClose={closeTaskDetail}
         onManage={manageTask}
+        onToggleMyDay={toggleTaskMyDay}
       />
     </div>
   );
