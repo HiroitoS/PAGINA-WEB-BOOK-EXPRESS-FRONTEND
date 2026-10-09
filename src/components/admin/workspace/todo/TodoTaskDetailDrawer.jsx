@@ -4,6 +4,7 @@ import {
   FaExternalLinkAlt,
   FaFlag,
   FaFolderOpen,
+  FaSun,
   FaTimes,
   FaUser,
   FaUserEdit,
@@ -49,8 +50,10 @@ export default function TodoTaskDetailDrawer({
   task,
   isLoading = false,
   errorMessage = "",
+  isUpdatingMyDay = false,
   onClose,
   onManage,
+  onToggleMyDay,
 }) {
   if (!task) {
     return null;
@@ -171,6 +174,22 @@ export default function TodoTaskDetailDrawer({
         </div>
 
         <footer className="shrink-0 border-t border-gray-200 bg-white px-4 py-3 sm:px-5">
+          {task.status !== "completed" && task.status !== "cancelled" ? (
+            <button
+              className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-black text-gray-900 transition hover:border-red-200 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              disabled={isUpdatingMyDay}
+              onClick={() => onToggleMyDay(task)}
+            >
+              <FaSun className="text-red-700" />
+              {isUpdatingMyDay
+                ? "Actualizando..."
+                : task.in_my_day
+                  ? "Quitar de Mi día"
+                  : "Agregar a Mi día"}
+            </button>
+          ) : null}
+
           <button
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-3 text-sm font-black text-white transition hover:bg-gray-800"
             type="button"
