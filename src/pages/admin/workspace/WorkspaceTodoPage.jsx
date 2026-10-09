@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   FaArrowRight,
   FaCalendarAlt,
@@ -9,16 +14,22 @@ import {
   FaTasks,
   FaUserCheck,
 } from "react-icons/fa";
-import { useNavigate } from "react-router";
+import {
+  useLocation,
+  useNavigate,
+} from "react-router";
 
 import {
   createWorkspaceTask,
+  getWorkspaceTaskById,
   getWorkspaceTasks,
 } from "../../../api/adminApi";
 import TodoQuickTaskInput from "../../../components/admin/workspace/todo/TodoQuickTaskInput";
+import TodoTaskDetailDrawer from "../../../components/admin/workspace/todo/TodoTaskDetailDrawer";
 import TodoTaskRow from "../../../components/admin/workspace/todo/TodoTaskRow";
 import { useAuth } from "../../../hooks/useAuth";
 import { getResults } from "../../../utils/formatters";
+import { buildNavigationState } from "../../../utils/navigationContext";
 
 const VIEW_CONFIG = {
   today: {
@@ -53,9 +64,16 @@ const VIEW_CONFIG = {
     eyebrow: "Trabajo pendiente",
     title: "Todas las tareas",
     description:
-      "Todas las tareas activas visibles según tus permisos.",
+      "Todas las tareas visibles según tus permisos.",
     icon: FaTasks,
   },
+};
+
+const PRIORITY_RANK = {
+  urgent: 0,
+  high: 2,
+  medium: 3,
+  low: 4,
 };
 
 function normalizeList(data) {
@@ -73,35 +91,129 @@ function taskIsClosed(task) {
   );
 }
 
-function getDueTimestamp(task) {
-  if (!task?.due_at) {
-    return Number.MAX_SAFE_INTEGER;
+function getDateTimestamp(value, fallback) {
+  if (!value) {
+    return fallback;
   }
 
-  const date = new Date(task.due_at);
+  const date = new Date(value);
 
   return Number.isNaN(date.getTime())
-    ? Number.MAX_SAFE_INTEGER
+    ? fallback
     : date.getTime();
 }
 
-function sortTasks(tasks) {
+function getLocalDateKey(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = value instanceof Date
+    ? value
+    : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getOperationalBucket(task, todayKey) {
+  if (task.is_overdue) {
+    return 0;
+  }
+
+  if (!task.due_at) {
+    return 3;
+  }
+
+  if (
+    todayKey
+    && getLocalDateKey(task.due_at) === todayKey
+  ) {
+    return 1;
+  }
+
+  return 2;
+}
+
+function getPriorityRank(task) {
+  if (task.priority === "urgent") {
+    return 0;
+  }
+
+  if (task.is_important) {
+    return 1;
+  }
+
+  return PRIORITY_RANK[task.priority] ?? 3;
+}
+
+function sortTasks(tasks, todayKey) {
   return [...tasks].sort((first, second) => {
-    const firstOverdue = Boolean(first.is_overdue);
-    const secondOverdue = Boolean(second.is_overdue);
+    const firstBucket = getOperationalBucket(
+      first,
+      todayKey,
+    );
+    const secondBucket = getOperationalBucket(
+      second,
+      todayKey,
+    );
 
-    if (firstOverdue !== secondOverdue) {
-      return firstOverdue ? -1 : 1;
+    if (firstBucket !== secondBucket) {
+      return firstBucket - secondBucket;
     }
 
-    if (
-      Boolean(first.is_important)
-      !== Boolean(second.is_important)
-    ) {
-      return first.is_important ? -1 : 1;
+    const firstPriority = getPriorityRank(first);
+    const secondPriority = getPriorityRank(second);
+
+    if (firstPriority !== secondPriority) {
+      return firstPriority - secondPriority;
     }
 
-    return getDueTimestamp(first) - getDueTimestamp(second);
+    const firstDue = getDateTimestamp(
+      first.due_at,
+      Number.MAX_SAFE_INTEGER,
+    );
+    const secondDue = getDateTimestamp(
+      second.due_at,
+      Number.MAX_SAFE_INTEGER,
+    );
+
+    if (firstDue !== secondDue) {
+      return firstDue - secondDue;
+    }
+
+    const firstCreated = getDateTimestamp(
+      first.created_at,
+      0,
+    );
+    const secondCreated = getDateTimestamp(
+      second.created_at,
+      0,
+    );
+
+    return secondCreated - firstCreated;
+  });
+}
+
+function sortCompletedTasks(tasks) {
+  return [...tasks].sort((first, second) => {
+    const firstCompleted = getDateTimestamp(
+      first.completed_at || first.updated_at,
+      0,
+    );
+    const secondCompleted = getDateTimestamp(
+      second.completed_at || second.updated_at,
+      0,
+    );
+
+    return secondCompleted - firstCompleted;
   });
 }
 
@@ -119,15 +231,12 @@ function getEndOfLocalDayIso(dateValue) {
   return date.toISOString();
 }
 
-function getTodayEndTimestamp() {
-  const date = new Date();
-
-  date.setHours(23, 59, 59, 999);
-
-  return date.getTime();
-}
-
-function taskMatchesView(task, view, currentUserId) {
+function taskMatchesView(
+  task,
+  view,
+  currentUserId,
+  todayKey,
+) {
   if (view === "important") {
     return Boolean(task.is_important);
   }
@@ -137,15 +246,19 @@ function taskMatchesView(task, view, currentUserId) {
   }
 
   if (view === "assigned") {
-    return Number(task.assigned_to) === Number(currentUserId);
+    return Number(task.assigned_to)
+      === Number(currentUserId);
   }
 
   if (view === "today") {
-    if (!task.due_at) {
-      return false;
-    }
-
-    return getDueTimestamp(task) <= getTodayEndTimestamp();
+    return Boolean(
+      task.is_overdue
+      || (
+        task.due_at
+        && todayKey
+        && getLocalDateKey(task.due_at) === todayKey
+      ),
+    );
   }
 
   return true;
@@ -158,20 +271,32 @@ function getApiErrorMessage(error) {
     return data.detail;
   }
 
-  if (Array.isArray(data?.title) && data.title.length > 0) {
+  if (
+    Array.isArray(data?.title)
+    && data.title.length > 0
+  ) {
     return data.title[0];
   }
 
   return "No se pudo guardar la tarea. Intenta nuevamente.";
 }
 
-export default function WorkspaceTodoPage({ view = "today" }) {
+export default function WorkspaceTodoPage({
+  view = "today",
+}) {
   const { user } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
+  const detailRequestRef = useRef(0);
+
   const [tasks, setTasks] = useState([]);
+  const [todayKey, setTodayKey] = useState("");
+  const [selectedTask, setSelectedTask] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [detailError, setDetailError] = useState("");
 
   const config = VIEW_CONFIG[view] || VIEW_CONFIG.today;
   const ViewIcon = config.icon;
@@ -187,6 +312,7 @@ export default function WorkspaceTodoPage({ view = "today" }) {
 
         if (!ignore) {
           setTasks(normalizeList(data));
+          setTodayKey(getLocalDateKey(new Date()));
         }
       } catch (error) {
         if (!ignore) {
@@ -209,53 +335,55 @@ export default function WorkspaceTodoPage({ view = "today" }) {
     };
   }, []);
 
+  const viewTasks = useMemo(
+    () =>
+      tasks.filter((task) =>
+        taskMatchesView(
+          task,
+          view,
+          user?.id,
+          todayKey,
+        ),
+      ),
+    [tasks, todayKey, user?.id, view],
+  );
+
   const activeTasks = useMemo(
     () =>
       sortTasks(
-        tasks.filter(
-          (task) =>
-            !taskIsClosed(task)
-            && taskMatchesView(task, view, user?.id),
+        viewTasks.filter(
+          (task) => !taskIsClosed(task),
         ),
+        todayKey,
       ),
-    [tasks, user?.id, view],
+    [todayKey, viewTasks],
   );
 
   const completedTasks = useMemo(
     () =>
-      tasks
-        .filter(
-          (task) =>
-            taskIsClosed(task)
-            && taskMatchesView(task, view, user?.id),
-        )
-        .sort(
-          (first, second) =>
-            new Date(second.completed_at || second.updated_at).getTime()
-            - new Date(first.completed_at || first.updated_at).getTime(),
+      sortCompletedTasks(
+        viewTasks.filter(
+          (task) => task.status === "completed",
         ),
-    [tasks, user?.id, view],
-  );
-
-  const visibleActiveTasks = useMemo(
-    () => tasks.filter((task) => !taskIsClosed(task)),
-    [tasks],
+      ),
+    [viewTasks],
   );
 
   const summary = useMemo(
     () => ({
-      pending: visibleActiveTasks.length,
-      overdue: visibleActiveTasks.filter(
+      pending: activeTasks.length,
+      overdue: activeTasks.filter(
         (task) => task.is_overdue,
       ).length,
-      completed: tasks.filter(
-        (task) => task.status === "completed",
-      ).length,
+      completed: completedTasks.length,
     }),
-    [tasks, visibleActiveTasks],
+    [activeTasks, completedTasks],
   );
 
-  async function handleCreateTask({ title, dueDate }) {
+  async function handleCreateTask({
+    title,
+    dueDate,
+  }) {
     try {
       setIsSaving(true);
       setErrorMessage("");
@@ -274,7 +402,9 @@ export default function WorkspaceTodoPage({ view = "today" }) {
         payload.is_important = true;
       }
 
-      const createdTask = await createWorkspaceTask(payload);
+      const createdTask = await createWorkspaceTask(
+        payload,
+      );
 
       setTasks((currentTasks) => [
         createdTask,
@@ -291,9 +421,52 @@ export default function WorkspaceTodoPage({ view = "today" }) {
     }
   }
 
-  function openTask(task) {
+  async function openTask(task) {
+    const requestId = detailRequestRef.current + 1;
+
+    detailRequestRef.current = requestId;
+    setSelectedTask(task);
+    setDetailError("");
+    setIsLoadingDetail(true);
+
+    try {
+      const detail = await getWorkspaceTaskById(task.id);
+
+      if (detailRequestRef.current === requestId) {
+        setSelectedTask(detail);
+      }
+    } catch (error) {
+      if (detailRequestRef.current === requestId) {
+        setDetailError(
+          "No se pudo cargar toda la información de la tarea.",
+        );
+      }
+      console.error(error);
+    } finally {
+      if (detailRequestRef.current === requestId) {
+        setIsLoadingDetail(false);
+      }
+    }
+  }
+
+  function closeTaskDetail() {
+    detailRequestRef.current += 1;
+    setSelectedTask(null);
+    setDetailError("");
+    setIsLoadingDetail(false);
+  }
+
+  function manageTask(task) {
     navigate(
       "/admin/workspace/tasks?task=" + task.id,
+      {
+        state: buildNavigationState({
+          from: location.pathname,
+          fromLabel: config.title,
+          fromType: "workspace-smart-view",
+          currentState: location.state,
+        }),
+      },
     );
   }
 
@@ -321,7 +494,9 @@ export default function WorkspaceTodoPage({ view = "today" }) {
 
           <button
             type="button"
-            onClick={() => navigate("/admin/workspace/tasks")}
+            onClick={() =>
+              navigate("/admin/workspace/tasks")
+            }
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/15"
           >
             Gestor completo
@@ -396,12 +571,15 @@ export default function WorkspaceTodoPage({ view = "today" }) {
 
         {isLoading ? (
           <div className="space-y-1 p-4 sm:p-5">
-            {Array.from({ length: 5 }, (_, index) => (
-              <div
-                key={index}
-                className="h-14 animate-pulse rounded-xl bg-gray-100"
-              />
-            ))}
+            {Array.from(
+              { length: 5 },
+              (_, index) => (
+                <div
+                  key={index}
+                  className="h-14 animate-pulse rounded-xl bg-gray-100"
+                />
+              ),
+            )}
           </div>
         ) : activeTasks.length > 0 ? (
           <div>
@@ -444,6 +622,14 @@ export default function WorkspaceTodoPage({ view = "today" }) {
           </div>
         </details>
       ) : null}
+
+      <TodoTaskDetailDrawer
+        task={selectedTask}
+        isLoading={isLoadingDetail}
+        errorMessage={detailError}
+        onClose={closeTaskDetail}
+        onManage={manageTask}
+      />
     </div>
   );
 }
