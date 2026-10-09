@@ -86,11 +86,9 @@ function getDueTimestamp(task) {
 }
 
 function sortTasks(tasks) {
-  const now = Date.now();
-
   return [...tasks].sort((first, second) => {
-    const firstOverdue = getDueTimestamp(first) < now;
-    const secondOverdue = getDueTimestamp(second) < now;
+    const firstOverdue = Boolean(first.is_overdue);
+    const secondOverdue = Boolean(second.is_overdue);
 
     if (firstOverdue !== secondOverdue) {
       return firstOverdue ? -1 : 1;
@@ -244,21 +242,18 @@ export default function WorkspaceTodoPage({ view = "today" }) {
     [tasks],
   );
 
-  const summary = useMemo(() => {
-    const now = Date.now();
-
-    return {
+  const summary = useMemo(
+    () => ({
       pending: visibleActiveTasks.length,
       overdue: visibleActiveTasks.filter(
-        (task) =>
-          task.due_at
-          && getDueTimestamp(task) < now,
+        (task) => task.is_overdue,
       ).length,
       completed: tasks.filter(
         (task) => task.status === "completed",
       ).length,
-    };
-  }, [tasks, visibleActiveTasks]);
+    }),
+    [tasks, visibleActiveTasks],
+  );
 
   async function handleCreateTask({ title, dueDate }) {
     try {
