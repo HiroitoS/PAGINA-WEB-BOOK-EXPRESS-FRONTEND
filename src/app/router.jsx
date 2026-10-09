@@ -33,7 +33,7 @@ import ImportsPage from "../pages/admin/ImportsPage";
 import UsersPage from "../pages/admin/UsersPage";
 import NotificationsPage from "../pages/admin/NotificationsPage";
 import UserPermissionsPage from "../pages/admin/UserPermissionsPage";
-import WorkspaceSummaryPage from "../pages/admin/workspace/WorkspaceSummaryPage";
+import WorkspaceTodoPage from "../pages/admin/workspace/WorkspaceTodoPage";
 import WorkspaceTasksPage from "../pages/admin/workspace/WorkspaceTasksPage";
 import WorkspaceRemindersPage from "../pages/admin/workspace/WorkspaceRemindersPage";
 import WorkspaceCalendarPage from "../pages/admin/workspace/WorkspaceCalendarPage";
@@ -267,7 +267,35 @@ const router = createBrowserRouter([
           {
             path: "workspace",
             element: protectPermission(
-              <WorkspaceSummaryPage />,
+              <WorkspaceTodoPage view="today" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/important",
+            element: protectPermission(
+              <WorkspaceTodoPage view="important" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/planned",
+            element: protectPermission(
+              <WorkspaceTodoPage view="planned" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/assigned",
+            element: protectPermission(
+              <WorkspaceTodoPage view="assigned" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/all",
+            element: protectPermission(
+              <WorkspaceTodoPage view="all" />,
               ["workspaces.use_workspace"],
             ),
           },
