@@ -417,6 +417,20 @@ export async function updateWorkspaceTask(id, payload) {
   return response.data;
 }
 
+export async function addWorkspaceTaskToMyDay(id) {
+  const response = await axiosClient.post(
+    `/admin/tasks/${id}/my-day/`
+  );
+  return response.data;
+}
+
+export async function removeWorkspaceTaskFromMyDay(id) {
+  const response = await axiosClient.delete(
+    `/admin/tasks/${id}/my-day/`
+  );
+  return response.data;
+}
+
 export async function changeWorkspaceTaskStatus(id, payload) {
   const response = await axiosClient.post(
     `/admin/tasks/${id}/change-status/`,
