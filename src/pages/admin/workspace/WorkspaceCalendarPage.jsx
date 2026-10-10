@@ -40,6 +40,7 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import { getResults } from "../../../utils/formatters";
+import { getCalendarRealId } from "../../../utils/calendarIdentity";
 import {
   buildNavigationState,
   resolveReturnContext,
@@ -386,24 +387,6 @@ function calendarItemIsClosed(item) {
   if (type === "event") return false;
 
   return item.status === "completed" || item.status === "cancelled";
-}
-
-function getCalendarRealId(item) {
-  const candidateId =
-    item?.real_id ||
-    item?.task_id ||
-    item?.event_id ||
-    item?.reminder_id ||
-    item?.task ||
-    item?.event ||
-    item?.id;
-
-  if (typeof candidateId === "string" && candidateId.includes("-")) {
-    const parts = candidateId.split("-");
-    return parts[parts.length - 1];
-  }
-
-  return candidateId;
 }
 
 function canEditCalendarItem(item, itemDetail = null) {
@@ -2340,15 +2323,25 @@ function MobileActivityCard({ item, onSelectItem }) {
 }
 
 function CalendarDrawer({ children, subtitle, title, onClose }) {
+  const drawerRef = useRef(null);
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
     }
 
+    function handlePointerDown(event) {
+      if (drawerRef.current && !drawerRef.current.contains(event.target)) {
+        onClose();
+      }
+    }
+
     window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown, true);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown, true);
     };
   }, [onClose]);
 
@@ -2356,13 +2349,12 @@ function CalendarDrawer({ children, subtitle, title, onClose }) {
     <div
       className="fixed inset-0 z-50 flex justify-end bg-black/50"
       role="presentation"
-      onClick={onClose}
     >
       <aside
+        ref={drawerRef}
         aria-modal="true"
         className="flex h-screen w-full flex-col overflow-hidden bg-white shadow-2xl sm:max-w-xl"
         role="dialog"
-        onClick={(event) => event.stopPropagation()}
       >
         <header className="border-b border-gray-200 bg-gray-950 px-4 py-4 text-white sm:px-5">
           <div className="flex items-start justify-between gap-4">
