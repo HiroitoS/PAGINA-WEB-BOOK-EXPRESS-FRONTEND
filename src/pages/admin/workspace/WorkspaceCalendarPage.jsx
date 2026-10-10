@@ -32,7 +32,6 @@ import {
   getWorkspaceEventById,
   getWorkspaceGroups,
   getWorkspaceTaskById,
-  getWorkspaceTasks,
   updateWorkspaceEvent,
   updateWorkspaceReminder,
   updateWorkspaceTask,
@@ -371,10 +370,6 @@ function getTaskCategoryLabel(type) {
   return TASK_CATEGORY_OPTIONS.find((option) => option.value === type)?.label || type || "General";
 }
 
-function taskIsClosed(task) {
-  return task.status === "completed" || task.status === "cancelled";
-}
-
 function calendarItemIsClosed(item) {
   const type = getCalendarType(item);
 
@@ -399,14 +394,6 @@ function getCalendarRealId(item) {
   }
 
   return candidateId;
-}
-
-function getTaskReminderCalendarKey(task) {
-  return `task_reminder-${task.id}`;
-}
-
-function getCalendarItemKey(item) {
-  return `${item.type || getCalendarType(item)}-${getCalendarRealId(item)}`;
 }
 
 function canEditCalendarItem(item, itemDetail = null) {
@@ -475,10 +462,8 @@ function getAgendaState(item) {
   };
 }
 
-function buildCalendarItems(apiItems, tasks) {
-  const normalizedApiItems = normalizeList(apiItems);
-
-  const apiCalendarItems = normalizedApiItems
+function normalizeCalendarItems(apiItems) {
+  return normalizeList(apiItems)
     .filter((item) => getCalendarItemDate(item))
     .map((item) => ({
       ...item,
@@ -487,62 +472,7 @@ function buildCalendarItems(apiItems, tasks) {
       type: item.type || getCalendarType(item),
       start: getCalendarItemDate(item),
       end: getCalendarItemEndDate(item),
-    }));
-
-  const existingKeys = new Set(apiCalendarItems.map((item) => getCalendarItemKey(item)));
-
-  const taskItems = tasks
-    .filter((task) => task.due_at && !taskIsClosed(task))
-    .map((task) => ({
-      id: task.id,
-      type: "task",
-      title: task.title,
-      start: task.due_at,
-      due_at: task.due_at,
-      group: task.group,
-      group_name: task.group_name,
-      assigned_to: task.assigned_to,
-      assigned_to_name: task.assigned_to_name,
-      priority: task.priority,
-      status: task.status,
-      task_type: task.task_type,
-      description: task.description,
-      can_edit_details: task.can_edit_details,
-      can_follow_up: task.can_follow_up,
-      can_complete: task.can_complete,
-      is_read_only: task.is_read_only,
-      source: "task",
     }))
-    .filter((item) => !existingKeys.has(getCalendarItemKey(item)));
-
-  const taskReminderItems = tasks
-    .filter((task) => task.reminder_at && !taskIsClosed(task))
-    .map((task) => ({
-      id: task.id,
-      type: "task_reminder",
-      title: `Recordatorio: ${task.title}`,
-      start: task.reminder_at,
-      remind_at: task.reminder_at,
-      reminder_at: task.reminder_at,
-      group: task.group,
-      group_name: task.group_name,
-      assigned_to: task.assigned_to,
-      assigned_to_name: task.assigned_to_name,
-      task_id: task.id,
-      priority: task.priority,
-      status: task.status,
-      task_type: task.task_type,
-      description: task.description,
-      can_edit_details: task.can_edit_details,
-      can_follow_up: task.can_follow_up,
-      can_complete: task.can_complete,
-      is_read_only: task.is_read_only,
-      source: "task_reminder",
-    }))
-    .filter((item) => !existingKeys.has(getTaskReminderCalendarKey(item)));
-
-  return [...apiCalendarItems, ...taskItems, ...taskReminderItems]
-    .filter((item) => getCalendarItemDate(item))
     .filter((item) => !calendarItemIsClosed(item))
     .sort(
       (firstItem, secondItem) =>
@@ -1008,23 +938,17 @@ export default function WorkspaceCalendarPage() {
     setIsLoading(true);
 
     try {
-      const [calendarData, tasksData, groupsData, visibleUsers] = await Promise.all([
+      const [calendarData, groupsData, visibleUsers] = await Promise.all([
         loadCalendarItemsFromApi(range),
-        getWorkspaceTasks({
-          ordering: "due_at",
-          page_size: 500,
-        }),
         loadVisibleGroups(),
         loadVisibleUsers(user, canAssignToOthers),
       ]);
 
-      const normalizedTasks = normalizeList(tasksData);
-
-      setCalendarItems(buildCalendarItems(calendarData, normalizedTasks));
+      setCalendarItems(normalizeCalendarItems(calendarData));
       setGroups(groupsData);
       setUsers(visibleUsers);
     } catch (requestError) {
-      setError("No se pudo cargar las tareas del calendario. Revisa el backend o la sesión.");
+      setError("No se pudo cargar el calendario. Revisa el backend o la sesión.");
       console.error(requestError);
     } finally {
       setIsLoading(false);
@@ -1039,26 +963,20 @@ export default function WorkspaceCalendarPage() {
       setIsLoading(true);
 
       try {
-        const [calendarData, tasksData, groupsData, visibleUsers] = await Promise.all([
+        const [calendarData, groupsData, visibleUsers] = await Promise.all([
           loadCalendarItemsFromApi(calendarRange),
-          getWorkspaceTasks({
-            ordering: "due_at",
-            page_size: 500,
-          }),
           loadVisibleGroups(),
           loadVisibleUsers(user, canAssignToOthers),
         ]);
 
-        const normalizedTasks = normalizeList(tasksData);
-
         if (!ignore) {
-          setCalendarItems(buildCalendarItems(calendarData, normalizedTasks));
+          setCalendarItems(normalizeCalendarItems(calendarData));
           setGroups(groupsData);
           setUsers(visibleUsers);
         }
       } catch (requestError) {
         if (!ignore) {
-          setError("No se pudo cargar las tareas del calendario. Revisa el backend o la sesión.");
+          setError("No se pudo cargar el calendario. Revisa el backend o la sesión.");
         }
 
         console.error(requestError);
