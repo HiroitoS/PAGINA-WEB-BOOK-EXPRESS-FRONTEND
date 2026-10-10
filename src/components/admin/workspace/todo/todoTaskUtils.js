@@ -146,6 +146,42 @@ export function sortCompletedTodoTasks(tasks) {
   });
 }
 
+/**
+ * Group visible tasks without changing Task.status or creating duplicate rows.
+ * Overdue takes precedence over waiting so delayed work stays noticeable.
+ */
+export function groupTodoTasksByStatus(tasks, todayKey) {
+  const groups = {
+    overdueTasks: [],
+    activeTasks: [],
+    waitingTasks: [],
+    completedTasks: [],
+    cancelledTasks: [],
+  };
+
+  for (const task of tasks) {
+    if (task.status === "completed") {
+      groups.completedTasks.push(task);
+    } else if (task.status === "cancelled") {
+      groups.cancelledTasks.push(task);
+    } else if (task.is_overdue) {
+      groups.overdueTasks.push(task);
+    } else if (task.status === "waiting") {
+      groups.waitingTasks.push(task);
+    } else {
+      groups.activeTasks.push(task);
+    }
+  }
+
+  return {
+    overdueTasks: sortTodoTasks(groups.overdueTasks, todayKey),
+    activeTasks: sortTodoTasks(groups.activeTasks, todayKey),
+    waitingTasks: sortTodoTasks(groups.waitingTasks, todayKey),
+    completedTasks: sortCompletedTodoTasks(groups.completedTasks),
+    cancelledTasks: sortCompletedTodoTasks(groups.cancelledTasks),
+  };
+}
+
 export function getEndOfLocalDayIso(dateValue) {
   if (!dateValue) {
     return null;
