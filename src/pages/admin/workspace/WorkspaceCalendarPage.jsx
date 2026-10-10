@@ -991,7 +991,7 @@ export default function WorkspaceCalendarPage() {
       setGroups(groupsData);
       setUsers(visibleUsers);
     } catch (requestError) {
-      setError("No se pudo cargar el calendario. Revisa el backend o la sesión.");
+      setError("No se pudo cargar el calendario. Verifica tu conexión e inténtalo nuevamente.");
       console.error(requestError);
     } finally {
       setIsLoading(false);
@@ -1019,7 +1019,7 @@ export default function WorkspaceCalendarPage() {
         }
       } catch (requestError) {
         if (!ignore) {
-          setError("No se pudo cargar el calendario. Revisa el backend o la sesión.");
+          setError("No se pudo cargar el calendario. Verifica tu conexión e inténtalo nuevamente.");
         }
 
         console.error(requestError);
