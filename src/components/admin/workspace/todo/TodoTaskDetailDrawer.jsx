@@ -60,6 +60,11 @@ export default function TodoTaskDetailDrawer({
     return null;
   }
 
+  const canManageTask =
+    task.can_edit_details === true
+    || task.can_follow_up === true
+    || task.can_reopen === true;
+
   return (
     <div
       className="fixed inset-0 z-50 flex justify-end bg-black/45"
@@ -204,10 +209,12 @@ export default function TodoTaskDetailDrawer({
             onClick={() => onManage(task)}
           >
             <FaExternalLinkAlt className="text-xs" />
-            Gestionar tarea
+            {canManageTask ? "Gestionar tarea" : "Ver detalle completo"}
           </button>
           <p className="mt-2 text-center text-xs leading-5 text-gray-500">
-            Edición, seguimiento e historial continúan disponibles en el gestor completo.
+            {canManageTask
+              ? "Edición, seguimiento e historial continúan disponibles en el gestor completo."
+              : "Puedes consultar la información y el historial, pero la gestión corresponde a la persona responsable."}
           </p>
         </footer>
       </aside>
