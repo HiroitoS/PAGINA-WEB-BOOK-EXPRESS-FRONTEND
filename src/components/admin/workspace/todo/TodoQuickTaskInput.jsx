@@ -3,6 +3,7 @@ import {
   FaCalendarAlt,
   FaPlus,
   FaSpinner,
+  FaUserCheck,
 } from "react-icons/fa";
 
 function getTodayInputValue() {
@@ -15,15 +16,18 @@ function getTodayInputValue() {
 }
 
 export default function TodoQuickTaskInput({
-  onCreate,
-  isSaving = false,
+  assigneeOptions = [],
   defaultToday = false,
+  isSaving = false,
+  onCreate,
   requireDate = false,
+  showAssignee = false,
 }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState(
     defaultToday ? getTodayInputValue() : "",
   );
+  const [assignedTo, setAssignedTo] = useState("");
   const [validationMessage, setValidationMessage] = useState("");
 
   async function submitTask() {
@@ -44,10 +48,12 @@ export default function TodoQuickTaskInput({
     const created = await onCreate({
       title: cleanTitle,
       dueDate,
+      assignedTo,
     });
 
     if (created) {
       setTitle("");
+      setAssignedTo("");
       setValidationMessage("");
     }
   }
@@ -87,20 +93,48 @@ export default function TodoQuickTaskInput({
       </div>
 
       <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-        <label className="inline-flex items-center gap-2 text-xs font-bold text-gray-600">
-          <FaCalendarAlt className="text-gray-400" />
-          <span>Fecha</span>
-          <input
-            type="date"
-            value={dueDate}
-            disabled={isSaving}
-            onChange={(event) => {
-              setDueDate(event.target.value);
-              setValidationMessage("");
-            }}
-            className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-red-400"
-          />
-        </label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="inline-flex items-center gap-2 text-xs font-bold text-gray-600">
+            <FaCalendarAlt className="text-gray-400" />
+            <span>Fecha</span>
+            <input
+              type="date"
+              value={dueDate}
+              disabled={isSaving}
+              onChange={(event) => {
+                setDueDate(event.target.value);
+                setValidationMessage("");
+              }}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-red-400"
+            />
+          </label>
+
+          {showAssignee ? (
+            <label className="inline-flex items-center gap-2 text-xs font-bold text-gray-600">
+              <FaUserCheck className="text-gray-400" />
+              <span>Responsable</span>
+              <select
+                value={assignedTo}
+                disabled={isSaving}
+                onChange={(event) => {
+                  setAssignedTo(event.target.value);
+                  setValidationMessage("");
+                }}
+                className="max-w-64 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-red-400"
+              >
+                <option value="">Sin asignar</option>
+                {assigneeOptions.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
 
         <p className="text-xs text-gray-500">
           Luego podrás agregar recordatorio, prioridad y más detalles.
