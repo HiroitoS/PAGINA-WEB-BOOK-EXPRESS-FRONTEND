@@ -174,7 +174,12 @@ function reminderIsReadOnly(reminder) {
   return !reminderCanEditDetails(reminder) && !reminderCanComplete(reminder);
 }
 
-function buildReminderPayload(form, canAssignToOthers = false) {
+function buildReminderPayload(form, canAssignToOthers = false, isTaskReminder = false) {
+  // La tarea es propietaria del título, grupo y responsable del aviso principal.
+  if (isTaskReminder) {
+    return { remind_at: form.remind_at || null };
+  }
+
   const payload = {
     title: form.title.trim(),
     description: form.description.trim(),
@@ -633,7 +638,11 @@ export default function WorkspaceRemindersPage() {
     try {
       await updateWorkspaceReminder(
         selectedReminder.id,
-        buildReminderPayload(editForm, canAssignToOthers)
+        buildReminderPayload(
+          editForm,
+          canAssignToOthers,
+          selectedReminder.source === "task",
+        )
       );
       closeReminderDetail();
       await loadRemindersData();
@@ -1323,6 +1332,7 @@ function ReminderDrawer({
   onReopen,
   onSubmit,
 }) {
+  const isTaskReminder = reminder.source === "task";
   const isCompleted = reminderIsCompleted(reminder);
   const isOverdue = reminderIsOverdue(reminder);
   const canEditDetails = reminderCanEditDetails(reminder);
@@ -1452,23 +1462,30 @@ function ReminderDrawer({
               </div>
 
               <div className="space-y-3">
-                <div>
-                  <label
-                    className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
-                    htmlFor="edit_reminder_title"
-                  >
-                    Título
-                  </label>
+                {isTaskReminder ? (
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm font-semibold text-blue-900">
+                    Este aviso pertenece a una tarea. Puedes reprogramar su fecha;
+                    para modificar el título o responsable, abre la tarea original.
+                  </div>
+                ) : (
+                  <div>
+                    <label
+                      className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
+                      htmlFor="edit_reminder_title"
+                    >
+                      Título
+                    </label>
 
-                  <input
-                    className="input-admin"
-                    id="edit_reminder_title"
-                    name="title"
-                    type="text"
-                    value={form.title}
-                    onChange={onChange}
-                  />
-                </div>
+                    <input
+                      className="input-admin"
+                      id="edit_reminder_title"
+                      name="title"
+                      type="text"
+                      value={form.title}
+                      onChange={onChange}
+                    />
+                  </div>
+                )}
 
                 <DateTimeField
                   helper="Día y hora del aviso."
@@ -1479,7 +1496,9 @@ function ReminderDrawer({
                   onChange={onChange}
                 />
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                {!isTaskReminder ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
                   <SelectField
                     id="edit_reminder_group"
                     label="Grupo"
@@ -1537,6 +1556,8 @@ function ReminderDrawer({
                     onChange={onChange}
                   />
                 </div>
+                  </>
+                ) : null}
 
                 <div className="flex flex-col gap-2 border-t border-gray-100 pt-4">
                   <ReminderCompletionButton
