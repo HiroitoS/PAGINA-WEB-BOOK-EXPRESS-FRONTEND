@@ -33,14 +33,27 @@ import ImportsPage from "../pages/admin/ImportsPage";
 import UsersPage from "../pages/admin/UsersPage";
 import NotificationsPage from "../pages/admin/NotificationsPage";
 import UserPermissionsPage from "../pages/admin/UserPermissionsPage";
-import WorkspaceSummaryPage from "../pages/admin/workspace/WorkspaceSummaryPage";
+import WorkspaceTodoPage from "../pages/admin/workspace/WorkspaceTodoPage";
 import WorkspaceTasksPage from "../pages/admin/workspace/WorkspaceTasksPage";
 import WorkspaceRemindersPage from "../pages/admin/workspace/WorkspaceRemindersPage";
 import WorkspaceCalendarPage from "../pages/admin/workspace/WorkspaceCalendarPage";
 import WorkspaceGroupsPage from "../pages/admin/workspace/WorkspaceGroupsPage";
+import WorkspaceTaskListsPage from "../pages/admin/workspace/WorkspaceTaskListsPage";
 
 const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
+);
+
+const CRMReportsPage = lazy(
+  () => import("../pages/admin/crm/CRMReportsPage"),
+);
+
+const CRMContactsPage = lazy(
+  () => import("../pages/admin/crm/CRMContactsPage"),
+);
+
+const CRMContactDetailPage = lazy(
+  () => import("../pages/admin/crm/CRMContactDetailPage"),
 );
 
 const CRMSchoolsPage = lazy(
@@ -49,6 +62,34 @@ const CRMSchoolsPage = lazy(
 
 const CRMSchoolDetailPage = lazy(
   () => import("../pages/admin/crm/CRMSchoolDetailPage"),
+);
+
+const CRMCommercialTeamsPage = lazy(
+  () => import("../pages/admin/crm/CRMCommercialTeamsPage"),
+);
+
+const CRMSchoolImportsPage = lazy(
+  () => import("../pages/admin/crm/CRMSchoolImportsPage"),
+);
+
+const CRMOpportunitiesPage = lazy(
+  () => import("../pages/admin/crm/CRMOpportunitiesPage"),
+);
+
+const CRMOpportunityDetailPage = lazy(
+  () => import("../pages/admin/crm/CRMOpportunityDetailPage"),
+);
+
+const CRMQuotationPrintPage = lazy(
+  () => import("../pages/admin/crm/CRMQuotationPrintPage"),
+);
+
+const CRMAdoptionPrintPage = lazy(
+  () => import("../pages/admin/crm/CRMAdoptionPrintPage"),
+);
+
+const CRMOpportunityHistoryPrintPage = lazy(
+  () => import("../pages/admin/crm/CRMOpportunityHistoryPrintPage"),
 );
 
 function protectRole(element, allowedRoles) {
@@ -123,6 +164,27 @@ const router = createBrowserRouter([
     element: <RequireAuth />,
     children: [
       {
+        path: "crm/oportunidades/:opportunityId/cotizaciones/:quotationId/imprimir",
+        element: protectPermission(
+          renderLazyPage(CRMQuotationPrintPage),
+          ["crm.view_crm"],
+        ),
+      },
+      {
+        path: "crm/oportunidades/:opportunityId/adopciones/:adoptionId/imprimir",
+        element: protectPermission(
+          renderLazyPage(CRMAdoptionPrintPage),
+          ["crm.view_crm"],
+        ),
+      },
+      {
+        path: "crm/oportunidades/:opportunityId/historial/imprimir",
+        element: protectPermission(
+          renderLazyPage(CRMOpportunityHistoryPrintPage),
+          ["crm.view_crm"],
+        ),
+      },
+      {
         element: <AdminLayout />,
         children: [
           {
@@ -141,6 +203,27 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: "crm/reportes",
+            element: protectPermission(
+              renderLazyPage(CRMReportsPage),
+              ["crm.supervise_crm"],
+            ),
+          },
+          {
+            path: "crm/contactos",
+            element: protectPermission(
+              renderLazyPage(CRMContactsPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
+            path: "crm/contactos/:id",
+            element: protectPermission(
+              renderLazyPage(CRMContactDetailPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
             path: "crm/colegios",
             element: protectPermission(
               renderLazyPage(CRMSchoolsPage),
@@ -155,9 +238,79 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: "crm/equipos",
+            element: protectPermission(
+              renderLazyPage(CRMCommercialTeamsPage),
+              ["crm.assign_schools"],
+            ),
+          },
+          {
+            path: "crm/colegios/importar",
+            element: protectPermission(
+              renderLazyPage(CRMSchoolImportsPage),
+              ["crm.assign_schools"],
+            ),
+          },
+          {
+            path: "crm/oportunidades",
+            element: protectPermission(
+              renderLazyPage(CRMOpportunitiesPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
+            path: "crm/oportunidades/:id",
+            element: protectPermission(
+              renderLazyPage(CRMOpportunityDetailPage),
+              ["crm.view_crm"],
+            ),
+          },
+          {
             path: "workspace",
             element: protectPermission(
-              <WorkspaceSummaryPage />,
+              <WorkspaceTodoPage view="today" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/important",
+            element: protectPermission(
+              <WorkspaceTodoPage view="important" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/planned",
+            element: protectPermission(
+              <WorkspaceTodoPage view="planned" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/assigned",
+            element: protectPermission(
+              <WorkspaceTodoPage view="assigned" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/all",
+            element: protectPermission(
+              <WorkspaceTodoPage view="all" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/lists",
+            element: protectPermission(
+              <WorkspaceTaskListsPage />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/lists/:listId",
+            element: protectPermission(
+              <WorkspaceTodoPage view="list" />,
               ["workspaces.use_workspace"],
             ),
           },

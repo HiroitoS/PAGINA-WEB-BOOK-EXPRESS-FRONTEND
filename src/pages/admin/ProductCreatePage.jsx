@@ -24,6 +24,11 @@ import {
 } from "../../api/adminApi";
 import { getDisplayName, getResults } from "../../utils/formatters";
 
+const COMMERCIAL_LINE_OPTIONS = [
+  { id: "school_text", name: "Texto escolar" },
+  { id: "reading_plan", name: "Plan lector" },
+];
+
 function normalizeNullableId(value) {
   return value ? Number(value) : "";
 }
@@ -73,6 +78,7 @@ export default function ProductCreatePage() {
     area: "",
     series: "",
     product_type: "",
+    commercial_line: "",
     description: "",
     is_active: true,
     is_featured: false,
@@ -149,6 +155,13 @@ export default function ProductCreatePage() {
       return;
     }
 
+    if (!["school_text", "reading_plan"].includes(form.commercial_line)) {
+      setError(
+        "Selecciona si el producto corresponde a Texto escolar o Plan lector.",
+      );
+      return;
+    }
+
     setSaving(true);
     setError("");
     setSuccessMessage("");
@@ -168,6 +181,7 @@ export default function ProductCreatePage() {
       "product_type",
       normalizeNullableId(form.product_type)
     );
+    appendIfHasValue(payload, "commercial_line", form.commercial_line);
     appendIfHasValue(payload, "description", form.description.trim());
 
     payload.append("is_active", form.is_active ? "true" : "false");
@@ -469,6 +483,15 @@ export default function ProductCreatePage() {
               value={form.product_type}
               onChange={handleChange}
               options={productTypes}
+              disabled={loadingFilters}
+            />
+
+            <SelectField
+              label="Línea comercial *"
+              name="commercial_line"
+              value={form.commercial_line}
+              onChange={handleChange}
+              options={COMMERCIAL_LINE_OPTIONS}
               disabled={loadingFilters}
             />
           </div>

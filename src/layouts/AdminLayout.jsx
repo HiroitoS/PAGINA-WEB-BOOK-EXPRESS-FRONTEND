@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import {
+  FaAddressBook,
   FaBars,
   FaBell,
+  FaCalendarAlt,
   FaBookOpen,
   FaBoxOpen,
   FaBriefcase,
+  FaBullseye,
   FaChartLine,
   FaChevronDown,
   FaClipboardList,
@@ -12,15 +15,19 @@ import {
   FaFileExcel,
   FaLayerGroup,
   FaSchool,
+  FaStar,
+  FaSun,
   FaTags,
   FaTasks,
   FaThLarge,
   FaTimes,
+  FaUserCheck,
   FaUsers,
 } from "react-icons/fa";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import NotificationBell from "../components/admin/NotificationBell";
+import TodoSidebarLists from "../components/admin/workspace/todo/TodoSidebarLists";
 import {
   ADMIN_ONLY_ROLES,
   DASHBOARD_ROLES,
@@ -95,15 +102,37 @@ const NAV_SECTIONS = [
     permissions: ["workspaces.use_workspace"],
     children: [
       {
-        label: "Resumen",
+        label: "Mi día",
         to: "/admin/workspace",
-        icon: <FaClipboardList />,
+        icon: <FaSun />,
         permissions: ["workspaces.use_workspace"],
       },
       {
-        label: "Tareas",
-        to: "/admin/workspace/tasks",
+        label: "Importantes",
+        to: "/admin/workspace/important",
+        icon: <FaStar />,
+        permissions: ["workspaces.use_workspace"],
+      },
+      {
+        label: "Planificadas",
+        to: "/admin/workspace/planned",
+        icon: <FaCalendarAlt />,
+        permissions: ["workspaces.use_workspace"],
+      },
+      {
+        label: "Asignadas a mí",
+        to: "/admin/workspace/assigned",
+        icon: <FaUserCheck />,
+        permissions: ["workspaces.use_workspace"],
+      },
+      {
+        label: "Todas las tareas",
+        to: "/admin/workspace/all",
         icon: <FaTasks />,
+        permissions: ["workspaces.use_workspace"],
+      },
+      {
+        type: "todo-task-lists",
         permissions: ["workspaces.use_workspace"],
       },
       {
@@ -119,7 +148,7 @@ const NAV_SECTIONS = [
         permissions: ["workspaces.use_workspace"],
       },
       {
-        label: "Grupos de trabajo",
+        label: "Equipos de trabajo",
         to: "/admin/workspace/groups",
         icon: <FaUsers />,
         permissions: ["workspaces.use_workspace"],
@@ -139,11 +168,35 @@ const NAV_SECTIONS = [
         permissions: ["crm.view_crm"],
       },
       {
+        label: "Reportes",
+        to: "/admin/crm/reportes",
+        icon: <FaClipboardList />,
+        permissions: ["crm.supervise_crm"],
+      },
+      {
+        label: "Contactos",
+        to: "/admin/crm/contactos",
+        icon: <FaAddressBook />,
+        permissions: ["crm.view_crm"],
+      },
+      {
         label: "Colegios",
         to: "/admin/crm/colegios",
         icon: <FaSchool />,
         permissions: ["crm.view_crm"],
-    },
+      },
+      {
+        label: "Equipos comerciales",
+        to: "/admin/crm/equipos",
+        icon: <FaUsers />,
+        permissions: ["crm.assign_schools"],
+      },
+      {
+        label: "Oportunidades",
+        to: "/admin/crm/oportunidades",
+        icon: <FaBullseye />,
+        permissions: ["crm.view_crm"],
+      },
     ],
   },
 ];
@@ -166,6 +219,14 @@ function sectionIsActive(section, pathname) {
   if (section.type !== "group") return false;
 
   return section.children.some((item) => {
+    if (item.type === "todo-task-lists") {
+      return pathname.startsWith("/admin/workspace/lists");
+    }
+
+    if (!item.to) {
+      return false;
+    }
+
     if (
       item.to === "/admin/workspace"
       || item.to === "/admin/dashboard"
@@ -267,22 +328,33 @@ function SidebarContent({
               >
                 <div className="overflow-hidden">
                   <div className="ml-4 space-y-1 border-l border-white/10 pl-3">
-                    {visibleChildren.map((item) => (
-                      <NavLink
-                        key={item.to}
-                        className={childNavClass}
-                        end={
-                          item.to === "/admin/workspace"
-                          || item.to === "/admin/dashboard"
-                          || item.to === "/admin/crm"
-                        }
-                        to={item.to}
-                        onClick={onCloseMenu}
-                      >
-                        <span className="text-xs">{item.icon}</span>
-                        <span>{item.label}</span>
-                      </NavLink>
-                    ))}
+                    {visibleChildren.map((item) => {
+                      if (item.type === "todo-task-lists") {
+                        return (
+                          <TodoSidebarLists
+                            key="todo-task-lists"
+                            onNavigate={onCloseMenu}
+                          />
+                        );
+                      }
+
+                      return (
+                        <NavLink
+                          key={item.to}
+                          className={childNavClass}
+                          end={
+                            item.to === "/admin/workspace"
+                            || item.to === "/admin/dashboard"
+                            || item.to === "/admin/crm"
+                          }
+                          to={item.to}
+                          onClick={onCloseMenu}
+                        >
+                          <span className="text-xs">{item.icon}</span>
+                          <span>{item.label}</span>
+                        </NavLink>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

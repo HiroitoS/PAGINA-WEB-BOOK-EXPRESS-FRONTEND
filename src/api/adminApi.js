@@ -380,6 +380,14 @@ export async function getWorkspaceGroups(params = {}) {
   return response.data;
 }
 
+export async function getWorkspaceGroupById(id) {
+  const response = await axiosClient.get(
+    `/admin/workspace-groups/${id}/`
+  );
+
+  return response.data;
+}
+
 export async function createWorkspaceGroup(payload) {
   const response = await axiosClient.post("/admin/workspace-groups/", payload);
   return response.data;
@@ -388,6 +396,33 @@ export async function createWorkspaceGroup(payload) {
 export async function updateWorkspaceGroup(id, payload) {
   const response = await axiosClient.patch(
     `/admin/workspace-groups/${id}/`,
+    payload
+  );
+
+  return response.data;
+}
+
+export async function getWorkspaceTaskLists(params = {}) {
+  const response = await axiosClient.get("/admin/task-lists/", {
+    params,
+  });
+
+  return response.data;
+}
+
+export async function getWorkspaceTaskListById(id) {
+  const response = await axiosClient.get(`/admin/task-lists/${id}/`);
+  return response.data;
+}
+
+export async function createWorkspaceTaskList(payload) {
+  const response = await axiosClient.post("/admin/task-lists/", payload);
+  return response.data;
+}
+
+export async function updateWorkspaceTaskList(id, payload) {
+  const response = await axiosClient.patch(
+    `/admin/task-lists/${id}/`,
     payload
   );
 
@@ -414,6 +449,20 @@ export async function createWorkspaceTask(payload) {
 
 export async function updateWorkspaceTask(id, payload) {
   const response = await axiosClient.patch(`/admin/tasks/${id}/`, payload);
+  return response.data;
+}
+
+export async function addWorkspaceTaskToMyDay(id) {
+  const response = await axiosClient.post(
+    `/admin/tasks/${id}/my-day/`
+  );
+  return response.data;
+}
+
+export async function removeWorkspaceTaskFromMyDay(id) {
+  const response = await axiosClient.delete(
+    `/admin/tasks/${id}/my-day/`
+  );
   return response.data;
 }
 
