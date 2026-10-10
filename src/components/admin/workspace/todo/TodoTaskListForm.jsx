@@ -96,7 +96,7 @@ export default function TodoTaskListForm({
           {editingId ? (
             <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
               <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                Alcance
+                Quién puede verla
               </p>
               <p className="mt-1 text-sm font-black text-gray-950">
                 {getTaskListScopeLabel(editingList || form)}
@@ -108,7 +108,7 @@ export default function TodoTaskListForm({
                 className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
                 htmlFor="task_list_group"
               >
-                Alcance
+                Quién puede verla
               </label>
               <select
                 className="input-admin"
