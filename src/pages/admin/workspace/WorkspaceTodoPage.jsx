@@ -14,6 +14,7 @@ import {
 import {
   addWorkspaceTaskToMyDay,
   createWorkspaceTask,
+  getWorkspaceGroupById,
   getWorkspaceTaskById,
   getWorkspaceTaskListById,
   getWorkspaceTasks,
@@ -49,6 +50,7 @@ export default function WorkspaceTodoPage({
 
   const [tasks, setTasks] = useState([]);
   const [taskListInfo, setTaskListInfo] = useState(null);
+  const [taskListGroup, setTaskListGroup] = useState(null);
   const [todayKey, setTodayKey] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,15 +88,32 @@ export default function WorkspaceTodoPage({
             : Promise.resolve(null),
         ]);
 
+        let groupData = null;
+
+        if (listData?.workspace_group) {
+          try {
+            groupData = await getWorkspaceGroupById(
+              listData.workspace_group,
+            );
+          } catch (groupError) {
+            console.error(
+              "No se pudieron cargar los responsables de la lista.",
+              groupError,
+            );
+          }
+        }
+
         if (!ignore) {
           setTasks(normalizeTodoTasks(tasksData));
           setTaskListInfo(listData);
+          setTaskListGroup(groupData);
           setTodayKey(getLocalDateKey(new Date()));
         }
       } catch (error) {
         if (!ignore) {
           setTasks([]);
           setTaskListInfo(null);
+          setTaskListGroup(null);
           setErrorMessage(
             isTaskListView
               ? "No se pudo cargar esta lista de tareas."
@@ -160,9 +179,39 @@ export default function WorkspaceTodoPage({
     [activeTasks, completedTasks],
   );
 
+  const quickAssigneeOptions = useMemo(
+    () => {
+      if (
+        !isTaskListView
+        || !taskListInfo?.is_shared
+        || !taskListInfo?.can_manage
+      ) {
+        return [];
+      }
+
+      return (taskListGroup?.memberships || [])
+        .filter(
+          (membership) =>
+            membership.is_active
+            && membership.user,
+        )
+        .map((membership) => ({
+          value: String(membership.user),
+          label: membership.user_name || `Usuario ${membership.user}`,
+        }));
+    },
+    [
+      isTaskListView,
+      taskListGroup?.memberships,
+      taskListInfo?.can_manage,
+      taskListInfo?.is_shared,
+    ],
+  );
+
   async function handleCreateTask({
     title,
     dueDate,
+    assignedTo,
   }) {
     try {
       setIsSaving(true);
@@ -174,6 +223,16 @@ export default function WorkspaceTodoPage({
 
       if (isTaskListView && listId) {
         payload.task_list = Number(listId);
+
+        if (assignedTo) {
+          payload.assigned_to = Number(assignedTo);
+        } else if (
+          taskListInfo?.is_shared
+          && !taskListInfo?.can_manage
+          && user?.id
+        ) {
+          payload.assigned_to = Number(user.id);
+        }
       }
 
       const dueAt = getEndOfLocalDayIso(dueDate);
@@ -314,9 +373,15 @@ export default function WorkspaceTodoPage({
       <div className="mt-5">
         <TodoQuickTaskInput
           key={`${view}-${listId || "smart"}`}
-          onCreate={handleCreateTask}
+          assigneeOptions={quickAssigneeOptions}
           isSaving={isSaving}
+          onCreate={handleCreateTask}
           requireDate={view === "planned"}
+          showAssignee={
+            isTaskListView
+            && taskListInfo?.is_shared
+            && taskListInfo?.can_manage
+          }
         />
       </div>
 
