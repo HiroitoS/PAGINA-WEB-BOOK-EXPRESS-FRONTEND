@@ -31,7 +31,7 @@ export default function TodoTaskListForm({
         </h2>
         <p className="mt-1 text-sm leading-5 text-gray-500">
           {editingId
-            ? "Puedes cambiar nombre, descripción, color y disponibilidad. El alcance de la lista se conserva."
+            ? "Puedes cambiar nombre, descripción, color y disponibilidad. Quién puede verla se conserva."
             : "Una lista personal es solo tuya. Una lista compartida pertenece a un equipo que administras."}
         </p>
       </div>
