@@ -11,14 +11,7 @@ import {
 } from "react-router";
 
 import { getWorkspaceTaskLists } from "../../../../api/adminApi";
-
-function normalizeList(data) {
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  return Array.isArray(data?.results) ? data.results : [];
-}
+import { normalizeTaskLists } from "./taskListUtils";
 
 function listNavClass({ isActive }) {
   return isActive
@@ -45,7 +38,7 @@ export default function TodoSidebarLists({
         });
 
         if (!ignore) {
-          setTaskLists(normalizeList(data));
+          setTaskLists(normalizeTaskLists(data));
         }
       } catch (error) {
         if (!ignore) {
