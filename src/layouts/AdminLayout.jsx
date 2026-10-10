@@ -218,6 +218,17 @@ function userCanSeeEntry(user, entry) {
 function sectionIsActive(section, pathname) {
   if (section.type !== "group") return false;
 
+  // Nested ToDo and CRM screens, including task drawers and detail routes,
+  // belong to their parent sidebar group.
+  if (section.label === "ToDo") {
+    return pathname === "/admin/workspace"
+      || pathname.startsWith("/admin/workspace/");
+  }
+  if (section.label === "CRM") {
+    return pathname === "/admin/crm"
+      || pathname.startsWith("/admin/crm/");
+  }
+
   return section.children.some((item) => {
     if (item.type === "todo-task-lists") {
       return pathname.startsWith("/admin/workspace/lists");
@@ -289,7 +300,10 @@ function SidebarContent({
       <nav className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
         {visibleSections.map((section) => {
           const isOpen = openSection === section.label;
-          const isActive = sectionIsActive(section, location.pathname);
+          // Highlight the group the user chose to expand; otherwise
+          // highlight the group containing the current page.
+          const isActive = isOpen
+            || (openSection === null && sectionIsActive(section, location.pathname));
           const visibleChildren = section.children.filter((item) =>
             userCanSeeEntry(user, item),
           );
