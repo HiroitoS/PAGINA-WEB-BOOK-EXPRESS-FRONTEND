@@ -202,7 +202,7 @@ export default function WorkspaceTodoPage({
     },
     [
       isTaskListView,
-      taskListGroup?.memberships,
+      taskListGroup,
       taskListInfo?.can_manage,
       taskListInfo?.is_shared,
     ],
