@@ -380,6 +380,14 @@ export async function getWorkspaceGroups(params = {}) {
   return response.data;
 }
 
+export async function getWorkspaceGroupById(id) {
+  const response = await axiosClient.get(
+    `/admin/workspace-groups/${id}/`
+  );
+
+  return response.data;
+}
+
 export async function createWorkspaceGroup(payload) {
   const response = await axiosClient.post("/admin/workspace-groups/", payload);
   return response.data;
