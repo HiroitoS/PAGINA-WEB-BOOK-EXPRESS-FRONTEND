@@ -1499,63 +1499,63 @@ function ReminderDrawer({
                 {!isTaskReminder ? (
                   <>
                     <div className="grid gap-3 sm:grid-cols-2">
-                  <SelectField
-                    id="edit_reminder_group"
-                    label="Grupo"
-                    name="group"
-                    options={groups.map((group) => ({
-                      value: String(group.id),
-                      label: group.name,
-                    }))}
-                    placeholder="Sin grupo"
-                    value={form.group}
-                    onChange={onChange}
-                  />
+                      <SelectField
+                        id="edit_reminder_group"
+                        label="Grupo"
+                        name="group"
+                        options={groups.map((group) => ({
+                          value: String(group.id),
+                          label: group.name,
+                        }))}
+                        placeholder="Sin grupo"
+                        value={form.group}
+                        onChange={onChange}
+                      />
 
-                  {canAssignToOthers ? (
-                    <SelectField
-                      id="edit_reminder_assigned_to"
-                      label="Responsable"
-                      name="assigned_to"
-                      options={users.map((userItem) => ({
-                        value: String(userItem.id),
-                        label: getUserLabel(userItem),
-                      }))}
-                      placeholder="Para mí"
-                      value={form.assigned_to}
-                      onChange={onChange}
-                    />
-                  ) : (
-                    <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                      <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                        Responsable
-                      </p>
-                      <p className="mt-1 text-sm font-black text-gray-950">
-                        {reminder.user_name || reminder.assigned_to_name || "Para mí"}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-gray-500">
-                        Este campo no se cambia desde tu perfil.
-                      </p>
+                      {canAssignToOthers ? (
+                        <SelectField
+                          id="edit_reminder_assigned_to"
+                          label="Responsable"
+                          name="assigned_to"
+                          options={users.map((userItem) => ({
+                            value: String(userItem.id),
+                            label: getUserLabel(userItem),
+                          }))}
+                          placeholder="Para mí"
+                          value={form.assigned_to}
+                          onChange={onChange}
+                        />
+                      ) : (
+                        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                          <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                            Responsable
+                          </p>
+                          <p className="mt-1 text-sm font-black text-gray-950">
+                            {reminder.user_name || reminder.assigned_to_name || "Para mí"}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-gray-500">
+                            Este campo no se cambia desde tu perfil.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div>
-                  <label
-                    className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
-                    htmlFor="edit_reminder_description"
-                  >
-                    Nota breve
-                  </label>
+                    <div>
+                      <label
+                        className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
+                        htmlFor="edit_reminder_description"
+                      >
+                        Nota breve
+                      </label>
 
-                  <textarea
-                    className="input-admin min-h-24 resize-none"
-                    id="edit_reminder_description"
-                    name="description"
-                    value={form.description}
-                    onChange={onChange}
-                  />
-                </div>
+                      <textarea
+                        className="input-admin min-h-24 resize-none"
+                        id="edit_reminder_description"
+                        name="description"
+                        value={form.description}
+                        onChange={onChange}
+                      />
+                    </div>
                   </>
                 ) : null}
 
