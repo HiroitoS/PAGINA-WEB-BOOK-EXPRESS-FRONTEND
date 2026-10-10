@@ -31,6 +31,7 @@ import {
   getWorkspaceCalendar,
   getWorkspaceEventById,
   getWorkspaceGroups,
+  getWorkspaceReminderById,
   getWorkspaceTaskById,
   updateWorkspaceEvent,
   updateWorkspaceReminder,
@@ -43,6 +44,7 @@ import {
   buildNavigationState,
   resolveReturnContext,
 } from "../../../utils/navigationContext";
+import TodoReminderEditForm from "../../../components/admin/workspace/todo/TodoReminderEditForm";
 
 const INITIAL_EVENT_FORM = {
   title: "",
@@ -65,6 +67,15 @@ const INITIAL_TASK_FORM = {
   due_at: "",
   reminder_at: "",
   is_important: false,
+};
+
+const INITIAL_REMINDER_FORM = {
+  title: "",
+  description: "",
+  group: "",
+  assigned_to: "",
+  remind_at: "",
+  source: "manual",
 };
 
 const EVENT_TYPE_OPTIONS = [
@@ -564,6 +575,55 @@ function buildTaskFormFromTask(task) {
   };
 }
 
+function buildReminderFormFromReminder(reminder) {
+  return {
+    title: reminder.title || "",
+    description: reminder.description || reminder.message || "",
+    group: reminder.group ? String(reminder.group) : "",
+    assigned_to: reminder.assigned_to
+      ? String(reminder.assigned_to)
+      : reminder.user
+        ? String(reminder.user)
+        : "",
+    remind_at: formatDateTimeLocal(reminder.remind_at || reminder.start),
+    source: reminder.source || "manual",
+  };
+}
+
+function buildReminderPayload(form, isTaskReminder) {
+  if (isTaskReminder) {
+    return {
+      remind_at: form.remind_at || null,
+    };
+  }
+
+  return {
+    title: form.title.trim(),
+    description: form.description.trim(),
+    group: form.group ? Number(form.group) : null,
+    assigned_to: form.assigned_to ? Number(form.assigned_to) : null,
+    remind_at: form.remind_at || null,
+  };
+}
+
+function getReminderValidationMessage(form, isTaskReminder) {
+  if (!isTaskReminder && !form.title.trim()) {
+    return "Ingresa el título del recordatorio.";
+  }
+
+  if (!form.remind_at) {
+    return "Selecciona la fecha y hora del recordatorio.";
+  }
+
+  const remindAt = new Date(form.remind_at);
+
+  if (Number.isNaN(remindAt.getTime())) {
+    return "Revisa la fecha y hora del recordatorio.";
+  }
+
+  return "";
+}
+
 function getEventValidationMessage(form) {
   if (!form.title.trim()) return "Ingresa el título del evento.";
   if (!form.start_at) return "Selecciona la fecha y hora de inicio.";
@@ -803,6 +863,7 @@ export default function WorkspaceCalendarPage() {
   const [eventForm, setEventForm] = useState(INITIAL_EVENT_FORM);
   const [editEventForm, setEditEventForm] = useState(INITIAL_EVENT_FORM);
   const [editTaskForm, setEditTaskForm] = useState(INITIAL_TASK_FORM);
+  const [editReminderForm, setEditReminderForm] = useState(INITIAL_REMINDER_FORM);
 
   const [calendarView, setCalendarView] = useState("dayGridMonth");
   const [calendarInitialDate, setCalendarInitialDate] = useState(formatDateOnly(new Date()));
@@ -1040,6 +1101,17 @@ export default function WorkspaceCalendarPage() {
     if (error) setError("");
   }
 
+  function handleEditReminderFormChange(event) {
+    const { name, value } = event.target;
+
+    setEditReminderForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }));
+
+    if (error) setError("");
+  }
+
   function openEventForm() {
     const today = formatDateOnly(new Date());
 
@@ -1159,6 +1231,55 @@ export default function WorkspaceCalendarPage() {
     }
   }
 
+  async function handleUpdateReminder(event) {
+    event.preventDefault();
+
+    if (!selectedItem) return;
+
+    if (!canEditCalendarItem(selectedItem, selectedDetail)) {
+      setError("No tienes permiso para editar este recordatorio.");
+      setDetailMode("view");
+      return;
+    }
+
+    const reminderId = getCalendarRealId(selectedDetail || selectedItem);
+
+    if (!reminderId) return;
+
+    const isTaskReminder = selectedDetail?.source === "task";
+    const validationMessage = getReminderValidationMessage(
+      editReminderForm,
+      isTaskReminder,
+    );
+
+    if (validationMessage) {
+      setError(validationMessage);
+      return;
+    }
+
+    setError("");
+    setIsSavingEdit(true);
+
+    try {
+      await updateWorkspaceReminder(
+        reminderId,
+        buildReminderPayload(editReminderForm, isTaskReminder),
+      );
+      closeDetail();
+      await loadCalendarData(calendarRange);
+    } catch (requestError) {
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "No se pudo actualizar el recordatorio.",
+        ),
+      );
+      console.error(requestError);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
   async function handleCompleteTask() {
     if (!selectedItem) return;
 
@@ -1248,8 +1369,10 @@ export default function WorkspaceCalendarPage() {
       }
 
       if (itemType === "reminder" && item.type !== "task_reminder") {
-        setSelectedDetail(item);
-        setEditTaskForm(INITIAL_TASK_FORM);
+        const reminderDetail = await getWorkspaceReminderById(realId);
+
+        setSelectedDetail(reminderDetail);
+        setEditReminderForm(buildReminderFormFromReminder(reminderDetail));
         return;
       }
 
@@ -1266,6 +1389,8 @@ export default function WorkspaceCalendarPage() {
 
       if (getCalendarType(item) === "event") {
         setEditEventForm(buildEventFormFromEvent(item));
+      } else if (getCalendarType(item) === "reminder") {
+        setEditReminderForm(buildReminderFormFromReminder(item));
       } else {
         setEditTaskForm(buildTaskFormFromTask(item));
       }
@@ -1282,6 +1407,7 @@ export default function WorkspaceCalendarPage() {
     setDetailMode("view");
     setEditEventForm(INITIAL_EVENT_FORM);
     setEditTaskForm(INITIAL_TASK_FORM);
+    setEditReminderForm(INITIAL_REMINDER_FORM);
   }
 
   function forceCalendarRender(nextView, nextDate) {
@@ -1683,8 +1809,22 @@ export default function WorkspaceCalendarPage() {
                 onSubmit={handleUpdateTask}
               />
             ) : (
-              <ReadOnlyNotice
-                text="Este recordatorio se gestiona desde el módulo de Recordatorios. Desde calendario solo puedes consultarlo o completarlo si te corresponde."
+              <TodoReminderEditForm
+                assignedToName={
+                  selectedDetail?.assigned_to_name ||
+                  selectedDetail?.user_name ||
+                  selectedItem?.assigned_to_name ||
+                  ""
+                }
+                canAssignToOthers={canAssignToOthers}
+                form={editReminderForm}
+                groups={groups}
+                isSaving={isSavingEdit}
+                isTaskReminder={selectedDetail?.source === "task"}
+                users={users}
+                onCancel={() => setDetailMode("view")}
+                onChange={handleEditReminderFormChange}
+                onSubmit={handleUpdateReminder}
               />
             )
           ) : (
