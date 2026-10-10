@@ -338,7 +338,6 @@ function getCalendarItemEndDate(item) {
 }
 
 function getCalendarType(item) {
-  if (item.type === "task_reminder") return "reminder";
   if (item.type === "reminder") return "reminder";
   if (item.type === "event") return "event";
 
@@ -347,7 +346,7 @@ function getCalendarType(item) {
 
 function getCalendarTypeLabel(type) {
   if (type === "event") return "Evento";
-  if (type === "reminder" || type === "task_reminder") return "Recordatorio";
+  if (type === "reminder") return "Recordatorio";
 
   return "Tarea";
 }
@@ -355,7 +354,7 @@ function getCalendarTypeLabel(type) {
 function getCalendarTypeClass(type) {
   if (type === "event") return "border-blue-100 bg-blue-50 text-blue-700";
 
-  if (type === "reminder" || type === "task_reminder") {
+  if (type === "reminder") {
     return "border-yellow-100 bg-yellow-50 text-yellow-800";
   }
 
@@ -364,7 +363,7 @@ function getCalendarTypeClass(type) {
 
 function getCalendarDotClass(type) {
   if (type === "event") return "bg-blue-600";
-  if (type === "reminder" || type === "task_reminder") return "bg-yellow-500";
+  if (type === "reminder") return "bg-yellow-500";
 
   return "bg-red-700";
 }
@@ -1297,7 +1296,7 @@ export default function WorkspaceCalendarPage() {
     setIsCompletingTask(true);
 
     try {
-      if (selectedType === "reminder" && selectedItem.type !== "task_reminder") {
+      if (selectedType === "reminder") {
         await updateWorkspaceReminder(realId, {
           completed_at: new Date().toISOString(),
           is_completed: true,
@@ -1329,7 +1328,7 @@ export default function WorkspaceCalendarPage() {
   async function openCalendarItemDetail(item) {
     const calendarItemType = item?.type;
 
-    if (calendarItemType === "task" || calendarItemType === "task_reminder") {
+    if (calendarItemType === "task") {
       const taskId = item.task_id || item.task || getCalendarRealId(item);
 
       if (taskId) {
@@ -1368,7 +1367,7 @@ export default function WorkspaceCalendarPage() {
         return;
       }
 
-      if (itemType === "reminder" && item.type !== "task_reminder") {
+      if (itemType === "reminder") {
         const reminderDetail = await getWorkspaceReminderById(realId);
 
         setSelectedDetail(reminderDetail);
