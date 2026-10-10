@@ -27,6 +27,7 @@ import {
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import NotificationBell from "../components/admin/NotificationBell";
+import TodoSidebarLists from "../components/admin/workspace/todo/TodoSidebarLists";
 import {
   ADMIN_ONLY_ROLES,
   DASHBOARD_ROLES,
@@ -131,6 +132,10 @@ const NAV_SECTIONS = [
         permissions: ["workspaces.use_workspace"],
       },
       {
+        type: "todo-task-lists",
+        permissions: ["workspaces.use_workspace"],
+      },
+      {
         label: "Recordatorios",
         to: "/admin/workspace/reminders",
         icon: <FaBell />,
@@ -214,6 +219,14 @@ function sectionIsActive(section, pathname) {
   if (section.type !== "group") return false;
 
   return section.children.some((item) => {
+    if (item.type === "todo-task-lists") {
+      return pathname.startsWith("/admin/workspace/lists");
+    }
+
+    if (!item.to) {
+      return false;
+    }
+
     if (
       item.to === "/admin/workspace"
       || item.to === "/admin/dashboard"
@@ -315,22 +328,33 @@ function SidebarContent({
               >
                 <div className="overflow-hidden">
                   <div className="ml-4 space-y-1 border-l border-white/10 pl-3">
-                    {visibleChildren.map((item) => (
-                      <NavLink
-                        key={item.to}
-                        className={childNavClass}
-                        end={
-                          item.to === "/admin/workspace"
-                          || item.to === "/admin/dashboard"
-                          || item.to === "/admin/crm"
-                        }
-                        to={item.to}
-                        onClick={onCloseMenu}
-                      >
-                        <span className="text-xs">{item.icon}</span>
-                        <span>{item.label}</span>
-                      </NavLink>
-                    ))}
+                    {visibleChildren.map((item) => {
+                      if (item.type === "todo-task-lists") {
+                        return (
+                          <TodoSidebarLists
+                            key="todo-task-lists"
+                            onNavigate={onCloseMenu}
+                          />
+                        );
+                      }
+
+                      return (
+                        <NavLink
+                          key={item.to}
+                          className={childNavClass}
+                          end={
+                            item.to === "/admin/workspace"
+                            || item.to === "/admin/dashboard"
+                            || item.to === "/admin/crm"
+                          }
+                          to={item.to}
+                          onClick={onCloseMenu}
+                        >
+                          <span className="text-xs">{item.icon}</span>
+                          <span>{item.label}</span>
+                        </NavLink>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

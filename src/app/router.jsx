@@ -38,6 +38,7 @@ import WorkspaceTasksPage from "../pages/admin/workspace/WorkspaceTasksPage";
 import WorkspaceRemindersPage from "../pages/admin/workspace/WorkspaceRemindersPage";
 import WorkspaceCalendarPage from "../pages/admin/workspace/WorkspaceCalendarPage";
 import WorkspaceGroupsPage from "../pages/admin/workspace/WorkspaceGroupsPage";
+import WorkspaceTaskListsPage from "../pages/admin/workspace/WorkspaceTaskListsPage";
 
 const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
@@ -296,6 +297,20 @@ const router = createBrowserRouter([
             path: "workspace/all",
             element: protectPermission(
               <WorkspaceTodoPage view="all" />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/lists",
+            element: protectPermission(
+              <WorkspaceTaskListsPage />,
+              ["workspaces.use_workspace"],
+            ),
+          },
+          {
+            path: "workspace/lists/:listId",
+            element: protectPermission(
+              <WorkspaceTodoPage view="list" />,
               ["workspaces.use_workspace"],
             ),
           },

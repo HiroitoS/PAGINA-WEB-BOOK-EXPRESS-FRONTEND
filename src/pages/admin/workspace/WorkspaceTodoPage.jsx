@@ -17,12 +17,14 @@ import {
 import {
   useLocation,
   useNavigate,
+  useParams,
 } from "react-router";
 
 import {
   addWorkspaceTaskToMyDay,
   createWorkspaceTask,
   getWorkspaceTaskById,
+  getWorkspaceTaskListById,
   getWorkspaceTasks,
   removeWorkspaceTaskFromMyDay,
 } from "../../../api/adminApi";
@@ -281,9 +283,12 @@ export default function WorkspaceTodoPage({
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { listId } = useParams();
   const detailRequestRef = useRef(0);
+  const isTaskListView = view === "list";
 
   const [tasks, setTasks] = useState([]);
+  const [taskListInfo, setTaskListInfo] = useState(null);
   const [todayKey, setTodayKey] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -293,26 +298,58 @@ export default function WorkspaceTodoPage({
   const [errorMessage, setErrorMessage] = useState("");
   const [detailError, setDetailError] = useState("");
 
-  const config = VIEW_CONFIG[view] || VIEW_CONFIG.today;
+  const config = isTaskListView
+    ? {
+        eyebrow: taskListInfo?.is_shared
+          ? "Lista compartida"
+          : "Lista personal",
+        title: taskListInfo?.name || "Lista de tareas",
+        description:
+          taskListInfo?.description
+          || (taskListInfo?.workspace_group_name
+            ? `Equipo: ${taskListInfo.workspace_group_name}. Tareas organizadas dentro de este espacio de trabajo.`
+            : "Organiza aquí las tareas que pertenecen a esta lista."),
+        icon: FaTasks,
+      }
+    : VIEW_CONFIG[view] || VIEW_CONFIG.today;
   const ViewIcon = config.icon;
 
   useEffect(() => {
     let ignore = false;
 
     async function loadTasks() {
+      setIsLoading(true);
+      setErrorMessage("");
+
       try {
-        const data = await getWorkspaceTasks({
+        const params = {
           ordering: "due_at",
-        });
+        };
+
+        if (isTaskListView && listId) {
+          params.task_list = listId;
+        }
+
+        const [tasksData, listData] = await Promise.all([
+          getWorkspaceTasks(params),
+          isTaskListView && listId
+            ? getWorkspaceTaskListById(listId)
+            : Promise.resolve(null),
+        ]);
 
         if (!ignore) {
-          setTasks(normalizeList(data));
+          setTasks(normalizeList(tasksData));
+          setTaskListInfo(listData);
           setTodayKey(getLocalDateKey(new Date()));
         }
       } catch (error) {
         if (!ignore) {
+          setTasks([]);
+          setTaskListInfo(null);
           setErrorMessage(
-            "No se pudieron cargar las tareas de ToDo.",
+            isTaskListView
+              ? "No se pudo cargar esta lista de tareas."
+              : "No se pudieron cargar las tareas de ToDo.",
           );
         }
         console.error(error);
@@ -328,7 +365,7 @@ export default function WorkspaceTodoPage({
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [isTaskListView, listId]);
 
   const viewTasks = useMemo(
     () =>
@@ -385,6 +422,10 @@ export default function WorkspaceTodoPage({
       const payload = {
         title,
       };
+
+      if (isTaskListView && listId) {
+        payload.task_list = Number(listId);
+      }
 
       const dueAt = getEndOfLocalDayIso(dueDate);
 
@@ -577,7 +618,7 @@ export default function WorkspaceTodoPage({
 
       <div className="mt-5">
         <TodoQuickTaskInput
-          key={view}
+          key={`${view}-${listId || "smart"}`}
           onCreate={handleCreateTask}
           isSaving={isSaving}
           requireDate={view === "planned"}

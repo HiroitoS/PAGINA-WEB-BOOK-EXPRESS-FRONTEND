@@ -8,6 +8,7 @@ import {
   FaTimes,
   FaUser,
   FaUserEdit,
+  FaUsers,
 } from "react-icons/fa";
 
 function formatDateTime(value) {
@@ -157,8 +158,15 @@ export default function TodoTaskDetailDrawer({
                   label="Tipo de tarea"
                   value={task.task_type_display}
                 />
+                {task.task_list_name ? (
+                  <InfoRow
+                    icon={<FaFolderOpen />}
+                    label="Lista"
+                    value={task.task_list_name}
+                  />
+                ) : null}
                 <InfoRow
-                  icon={<FaFolderOpen />}
+                  icon={<FaUsers />}
                   label="Equipo"
                   value={task.group_name}
                 />

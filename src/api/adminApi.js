@@ -394,6 +394,33 @@ export async function updateWorkspaceGroup(id, payload) {
   return response.data;
 }
 
+export async function getWorkspaceTaskLists(params = {}) {
+  const response = await axiosClient.get("/admin/task-lists/", {
+    params,
+  });
+
+  return response.data;
+}
+
+export async function getWorkspaceTaskListById(id) {
+  const response = await axiosClient.get(`/admin/task-lists/${id}/`);
+  return response.data;
+}
+
+export async function createWorkspaceTaskList(payload) {
+  const response = await axiosClient.post("/admin/task-lists/", payload);
+  return response.data;
+}
+
+export async function updateWorkspaceTaskList(id, payload) {
+  const response = await axiosClient.patch(
+    `/admin/task-lists/${id}/`,
+    payload
+  );
+
+  return response.data;
+}
+
 export async function getWorkspaceTasks(params = {}) {
   const response = await axiosClient.get("/admin/tasks/", {
     params,

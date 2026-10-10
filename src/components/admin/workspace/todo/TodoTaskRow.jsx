@@ -83,8 +83,12 @@ export default function TodoTaskRow({
             </span>
           ) : null}
 
+          {task.task_list_name ? (
+            <span>Lista: {task.task_list_name}</span>
+          ) : null}
+
           {task.group_name ? (
-            <span>{task.group_name}</span>
+            <span>Equipo: {task.group_name}</span>
           ) : null}
         </span>
       </span>
