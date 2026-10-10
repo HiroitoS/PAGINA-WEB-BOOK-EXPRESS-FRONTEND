@@ -5,14 +5,13 @@ import TodoTaskRow from "./TodoTaskRow";
 
 function TaskStatusGroup({
   completed = false,
-  defaultExpanded = false,
   emphasis = false,
   label,
   onOpenTask,
   showWhenEmpty = false,
   tasks,
 }) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [expanded, setExpanded] = useState(false);
   const contentId = useId();
 
   if (!tasks.length && !showWhenEmpty) {
@@ -126,14 +125,12 @@ export default function TodoTaskSections({
       ) : (
         <div className="divide-y divide-gray-100">
           <TaskStatusGroup
-            defaultExpanded
             emphasis
             label="Vencidas"
             tasks={overdueTasks}
             onOpenTask={onOpenTask}
           />
           <TaskStatusGroup
-            defaultExpanded
             label="Activas"
             tasks={activeTasks}
             onOpenTask={onOpenTask}
