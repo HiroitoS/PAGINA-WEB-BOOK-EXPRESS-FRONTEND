@@ -533,7 +533,7 @@ function buildTaskPayload(form) {
     assigned_to: form.assigned_to ? Number(form.assigned_to) : null,
     due_at: form.due_at || null,
     reminder_at: form.reminder_at || null,
-    is_important: false,
+    is_important: Boolean(form.is_important),
   };
 }
 
@@ -569,9 +569,9 @@ function buildTaskFormFromTask(task) {
     priority: task.priority || "medium",
     group: task.group ? String(task.group) : "",
     assigned_to: task.assigned_to ? String(task.assigned_to) : "",
-    due_at: formatDateTimeLocal(task.due_at || task.start),
+    due_at: formatDateTimeLocal(task.due_at),
     reminder_at: formatDateTimeLocal(task.reminder_at || task.remind_at),
-    is_important: false,
+    is_important: Boolean(task.is_important),
   };
 }
 
