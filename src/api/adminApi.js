@@ -1,4 +1,5 @@
 import axiosClient from "./axiosClient";
+import { collectPaginatedResults } from "../utils/collectPaginatedResults";
 
 export async function getAdminContactRequests(params = {}) {
   const response = await axiosClient.get("/admin/contact-requests/", {
@@ -535,6 +536,10 @@ export async function getWorkspaceReminders(params = {}) {
   });
 
   return response.data;
+}
+
+export async function getAllWorkspaceReminders(params = {}) {
+  return collectPaginatedResults(getWorkspaceReminders, params);
 }
 
 export async function createWorkspaceReminder(payload) {
