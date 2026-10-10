@@ -28,10 +28,8 @@ import {
   getEndOfLocalDayIso,
   getLocalDateKey,
   getTodoApiErrorMessage,
+  groupTodoTasksByStatus,
   normalizeTodoTasks,
-  sortCompletedTodoTasks,
-  sortTodoTasks,
-  taskIsClosed,
   taskMatchesTodoView,
 } from "../../../components/admin/workspace/todo/todoTaskUtils";
 import { getTodoViewConfig } from "../../../components/admin/workspace/todo/todoViewConfig";
@@ -147,36 +145,22 @@ export default function WorkspaceTodoPage({
     [tasks, user?.id, view],
   );
 
-  const activeTasks = useMemo(
-    () =>
-      sortTodoTasks(
-        viewTasks.filter(
-          (task) => !taskIsClosed(task),
-        ),
-        todayKey,
-      ),
+  const taskGroups = useMemo(
+    () => groupTodoTasksByStatus(viewTasks, todayKey),
     [todayKey, viewTasks],
-  );
-
-  const completedTasks = useMemo(
-    () =>
-      sortCompletedTodoTasks(
-        viewTasks.filter(
-          (task) => task.status === "completed",
-        ),
-      ),
-    [viewTasks],
   );
 
   const summary = useMemo(
     () => ({
-      pending: activeTasks.length,
-      overdue: activeTasks.filter(
-        (task) => task.is_overdue,
-      ).length,
-      completed: completedTasks.length,
+      pending: (
+        taskGroups.overdueTasks.length
+        + taskGroups.activeTasks.length
+        + taskGroups.waitingTasks.length
+      ),
+      overdue: taskGroups.overdueTasks.length,
+      completed: taskGroups.completedTasks.length,
     }),
-    [activeTasks, completedTasks],
+    [taskGroups],
   );
 
   const quickAssigneeOptions = useMemo(
@@ -395,8 +379,7 @@ export default function WorkspaceTodoPage({
       ) : null}
 
       <TodoTaskSections
-        activeTasks={activeTasks}
-        completedTasks={completedTasks}
+        groups={taskGroups}
         isLoading={isLoading}
         title={config.title}
         onOpenTask={openTask}
