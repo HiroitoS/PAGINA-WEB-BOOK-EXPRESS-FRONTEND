@@ -17,7 +17,7 @@ import {
   getWorkspaceAssignableUsers,
   getWorkspaceGroups,
   getWorkspaceReminderById,
-  getWorkspaceReminders,
+  getAllWorkspaceReminders,
   updateWorkspaceReminder,
 } from "../../../api/adminApi";
 import { useAuth } from "../../../hooks/useAuth";
@@ -470,10 +470,7 @@ export default function WorkspaceRemindersPage() {
 
     try {
       const [remindersData, groupsData, visibleUsers] = await Promise.all([
-        getWorkspaceReminders({
-          ordering: "remind_at",
-          page_size: 500,
-        }),
+        getAllWorkspaceReminders({ ordering: "remind_at" }),
         loadVisibleGroups(),
         loadVisibleUsers(user, canAssignToOthers),
       ]);
@@ -482,7 +479,7 @@ export default function WorkspaceRemindersPage() {
       setGroups(groupsData);
       setUsers(visibleUsers);
     } catch (requestError) {
-      setError("No se pudo cargar el módulo de recordatorios. Revisa el backend o la sesión.");
+      setError("No se pudieron cargar los recordatorios. Verifica tu conexión e inténtalo nuevamente.");
       console.error(requestError);
     } finally {
       setIsLoading(false);
@@ -498,10 +495,7 @@ export default function WorkspaceRemindersPage() {
 
       try {
         const [remindersData, groupsData, visibleUsers] = await Promise.all([
-          getWorkspaceReminders({
-            ordering: "remind_at",
-            page_size: 500,
-          }),
+          getAllWorkspaceReminders({ ordering: "remind_at" }),
           loadVisibleGroups(),
           loadVisibleUsers(user, canAssignToOthers),
         ]);
@@ -513,7 +507,7 @@ export default function WorkspaceRemindersPage() {
         }
       } catch (requestError) {
         if (!ignore) {
-          setError("No se pudo cargar el módulo de recordatorios. Revisa el backend o la sesión.");
+          setError("No se pudieron cargar los recordatorios. Verifica tu conexión e inténtalo nuevamente.");
         }
 
         console.error(requestError);
