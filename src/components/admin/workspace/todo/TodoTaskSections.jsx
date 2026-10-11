@@ -23,7 +23,7 @@ function TaskStatusGroup({
       <button
         aria-controls={contentId}
         aria-expanded={expanded}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-gray-50 sm:px-5"
+        className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition hover:bg-gray-50"
         type="button"
         onClick={() => setExpanded((current) => !current)}
       >
@@ -97,13 +97,13 @@ export default function TodoTaskSections({
   ) > 0;
 
   return (
-    <section className="mt-5 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-4 border-b border-gray-100 px-4 py-4 sm:px-5">
+    <section className="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between gap-4 border-b border-gray-100 px-4 py-3">
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-red-700">
             Organización de tareas
           </p>
-          <h2 className="mt-1 text-lg font-black text-gray-950">
+          <h2 className="mt-0.5 text-base font-black text-gray-950">
             {title}
           </h2>
         </div>
