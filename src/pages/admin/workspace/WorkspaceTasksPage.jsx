@@ -309,7 +309,19 @@ function buildTaskTimeline(task) {
     createdAt: historyItem.created_at,
   }));
 
-  return [...managementItems, ...statusItems].sort(
+  const planningItems = (task.change_history || []).map((entry) => ({
+    id: `planning-${entry.id}`,
+    sourceId: String(entry.id),
+    kind: "planning",
+    title: "Planificación actualizada",
+    detail: (entry.changes || [])
+      .map((change) => `${change.label || change.field}: ${change.old} → ${change.new}`)
+      .join("; "),
+    actor: entry.changed_by_name || "Usuario",
+    createdAt: entry.created_at,
+  }));
+
+  return [...managementItems, ...statusItems, ...planningItems].sort(
     (firstItem, secondItem) =>
       new Date(secondItem.createdAt).getTime() -
       new Date(firstItem.createdAt).getTime()
@@ -2611,7 +2623,7 @@ function TaskDetailPanel({
 
                 <p className="mt-1 text-sm leading-5 text-gray-500">
                   Aquí se muestran juntas las gestiones realizadas y los
-                  cambios de estado.
+                  cambios de estado y planificación.
                 </p>
               </div>
 
