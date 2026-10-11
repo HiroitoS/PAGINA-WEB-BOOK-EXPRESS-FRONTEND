@@ -69,8 +69,8 @@ export default function TodoQuickTaskInput({
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-red-200 text-red-700">
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-red-200 text-red-700">
           <FaPlus className="text-xs" />
         </span>
 
@@ -92,7 +92,7 @@ export default function TodoQuickTaskInput({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div className="flex flex-col gap-2 border-t border-gray-100 bg-gray-50 px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="inline-flex items-center gap-2 text-xs font-bold text-gray-600">
             <FaCalendarAlt className="text-gray-400" />
