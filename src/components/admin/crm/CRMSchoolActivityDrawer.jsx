@@ -7,11 +7,12 @@ import {
 
 import {
   createCRMSchoolActivity,
-  createCRMSchoolEvent,
+  createCRMSchoolTask,
   uploadCRMSchoolActivityEvidence,
 } from "../../../api/crmApi";
 import CRMActivityEvidenceFields from "./CRMActivityEvidenceFields";
 import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
+import { buildCRMNextActionTaskPayload } from "../../../utils/crmNextAction";
 import {
   buildCRMActivityLocationPayload,
   uploadCRMActivityEvidenceFiles,
@@ -222,19 +223,18 @@ export default function CRMSchoolActivityDrawer({
       let nextActionCreated = false;
 
       if (form.schedule_next_action && nextActionAt) {
-        const commonWorkItem = {
-          title: form.next_action_title.trim(),
-          origin_activity: createdActivity.id,
-          opportunity: opportunityId,
-          ...(contactId ? { contact: contactId } : {}),
-        };
-
         try {
-          await createCRMSchoolEvent(school.id, {
-            ...commonWorkItem,
-            start_at: nextActionAt.toISOString(),
-            event_type: form.next_action_type,
-          });
+          await createCRMSchoolTask(
+            school.id,
+            buildCRMNextActionTaskPayload({
+              title: form.next_action_title,
+              actionType: form.next_action_type,
+              dueAt: nextActionAt,
+              originActivityId: createdActivity.id,
+              opportunityId,
+              contactId,
+            }),
+          );
 
           nextActionCreated = true;
         } catch (nextActionError) {
