@@ -18,6 +18,7 @@ function getTodayInputValue() {
 export default function TodoQuickTaskInput({
   assigneeOptions = [],
   defaultToday = false,
+  groupOptions = [],
   isSaving = false,
   onCreate,
   requireDate = false,
@@ -28,6 +29,12 @@ export default function TodoQuickTaskInput({
     defaultToday ? getTodayInputValue() : "",
   );
   const [assignedTo, setAssignedTo] = useState("");
+  const [groupId, setGroupId] = useState("");
+  const selectedGroup = groupOptions.find((group) => group.value === groupId);
+  const showGroupAssignee = Boolean(selectedGroup);
+  const visibleAssignees = showGroupAssignee
+    ? selectedGroup.members
+    : assigneeOptions;
   const [validationMessage, setValidationMessage] = useState("");
 
   async function submitTask() {
@@ -45,15 +52,22 @@ export default function TodoQuickTaskInput({
       return;
     }
 
+    if (showGroupAssignee && !assignedTo) {
+      setValidationMessage("Selecciona un responsable del equipo.");
+      return;
+    }
+
     const created = await onCreate({
       title: cleanTitle,
       dueDate,
       assignedTo,
+      groupId,
     });
 
     if (created) {
       setTitle("");
       setAssignedTo("");
+      setGroupId("");
       setValidationMessage("");
     }
   }
@@ -109,7 +123,31 @@ export default function TodoQuickTaskInput({
             />
           </label>
 
-          {showAssignee ? (
+          {groupOptions.length ? (
+            <label className="inline-flex items-center gap-2 text-xs font-bold text-gray-600">
+              <span>Equipo</span>
+              <select
+                aria-label="Equipo para la nueva tarea"
+                value={groupId}
+                disabled={isSaving}
+                onChange={(event) => {
+                  setGroupId(event.target.value);
+                  setAssignedTo("");
+                  setValidationMessage("");
+                }}
+                className="max-w-52 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-red-400"
+              >
+                <option value="">Tarea personal</option>
+                {groupOptions.map((group) => (
+                  <option key={group.value} value={group.value}>
+                    {group.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          {showAssignee || showGroupAssignee ? (
             <label className="inline-flex items-center gap-2 text-xs font-bold text-gray-600">
               <FaUserCheck className="text-gray-400" />
               <span>Responsable</span>
@@ -122,8 +160,10 @@ export default function TodoQuickTaskInput({
                 }}
                 className="max-w-64 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-bold text-gray-700 outline-none focus:border-red-400"
               >
-                <option value="">Sin asignar</option>
-                {assigneeOptions.map((option) => (
+                <option value="">
+                  {showGroupAssignee ? "Seleccionar integrante" : "Sin asignar"}
+                </option>
+                {visibleAssignees.map((option) => (
                   <option
                     key={option.value}
                     value={option.value}
