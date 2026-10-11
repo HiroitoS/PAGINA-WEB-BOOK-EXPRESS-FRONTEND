@@ -15,6 +15,7 @@ import {
   addWorkspaceTaskToMyDay,
   createWorkspaceTask,
   getWorkspaceGroupById,
+  getWorkspaceGroups,
   getWorkspaceTaskById,
   getWorkspaceTaskListById,
   getWorkspaceTasks,
@@ -35,6 +36,7 @@ import {
 import { getTodoViewConfig } from "../../../components/admin/workspace/todo/todoViewConfig";
 import { useAuth } from "../../../hooks/useAuth";
 import { buildNavigationState } from "../../../utils/navigationContext";
+import { getResults } from "../../../utils/formatters";
 
 export default function WorkspaceTodoPage({
   view = "today",
@@ -49,6 +51,7 @@ export default function WorkspaceTodoPage({
   const [tasks, setTasks] = useState([]);
   const [taskListInfo, setTaskListInfo] = useState(null);
   const [taskListGroup, setTaskListGroup] = useState(null);
+  const [managedGroups, setManagedGroups] = useState([]);
   const [todayKey, setTodayKey] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,6 +136,59 @@ export default function WorkspaceTodoPage({
     };
   }, [isTaskListView, listId]);
 
+  useEffect(() => {
+    if (isTaskListView || !user?.id) {
+      return undefined;
+    }
+
+    let ignore = false;
+
+    async function loadManagedGroups() {
+      try {
+        const response = await getWorkspaceGroups({ is_active: "true" });
+        const availableGroups = getResults(response).filter(
+          (group) =>
+            group.is_active
+            && group.can_manage
+            && (group.memberships || []).some(
+              (membership) =>
+                membership.is_active
+                && Number(membership.user) === Number(user.id),
+            ),
+        );
+
+        if (!ignore) {
+          setManagedGroups(availableGroups);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setManagedGroups([]);
+        }
+        console.error("No se pudieron consultar los equipos para asignar tareas.", error);
+      }
+    }
+
+    loadManagedGroups();
+
+    return () => {
+      ignore = true;
+    };
+  }, [isTaskListView, user?.id]);
+
+  const quickTeamOptions = useMemo(
+    () => managedGroups.map((group) => ({
+      value: String(group.id),
+      label: group.name,
+      members: (group.memberships || [])
+        .filter((member) => member.is_active && member.user)
+        .map((member) => ({
+          value: String(member.user),
+          label: member.user_name || `Usuario ${member.user}`,
+        })),
+    })),
+    [managedGroups],
+  );
+
   const viewTasks = useMemo(
     () =>
       tasks.filter((task) =>
@@ -196,6 +252,7 @@ export default function WorkspaceTodoPage({
     title,
     dueDate,
     assignedTo,
+    groupId,
   }) {
     try {
       setIsSaving(true);
@@ -217,6 +274,9 @@ export default function WorkspaceTodoPage({
         ) {
           payload.assigned_to = Number(user.id);
         }
+      } else if (groupId && assignedTo) {
+        payload.group = Number(groupId);
+        payload.assigned_to = Number(assignedTo);
       }
 
       const dueAt = getEndOfLocalDayIso(dueDate);
@@ -358,6 +418,7 @@ export default function WorkspaceTodoPage({
         <TodoQuickTaskInput
           key={`${view}-${listId || "smart"}`}
           assigneeOptions={quickAssigneeOptions}
+          groupOptions={isTaskListView ? [] : quickTeamOptions}
           isSaving={isSaving}
           onCreate={handleCreateTask}
           requireDate={view === "planned"}
