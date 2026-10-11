@@ -354,7 +354,7 @@ export default function WorkspaceTodoPage({
         }
       />
 
-      <div className="mt-5">
+      <div className="mt-3">
         <TodoQuickTaskInput
           key={`${view}-${listId || "smart"}`}
           assigneeOptions={quickAssigneeOptions}
