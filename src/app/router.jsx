@@ -13,32 +13,33 @@ import {
 } from "../utils/adminAccess";
 
 import HomePage from "../pages/public/HomePage";
-import AboutPage from "../pages/public/AboutPage";
-import ServicesPage from "../pages/public/ServicesPage";
-import CatalogPage from "../pages/public/CatalogPage";
-import ProductDetailPage from "../pages/public/ProductDetailPage";
-import ReadingPlanPage from "../pages/public/ReadingPlanPage";
-import ContactPage from "../pages/public/ContactPage";
 
-import ClassificationsPage from "../pages/admin/ClassificationsPage";
 import LoginPage from "../pages/admin/LoginPage";
-import DashboardPage from "../pages/admin/DashboardPage";
-import ProductsPage from "../pages/admin/ProductsPage";
-import ProductCreatePage from "../pages/admin/ProductCreatePage";
-import ProductEditPage from "../pages/admin/ProductEditPage";
-import PricesPage from "../pages/admin/PricesPage";
-import ProvidersPage from "../pages/admin/ProvidersPage";
-import ContactRequestsPage from "../pages/admin/ContactRequestsPage";
-import ImportsPage from "../pages/admin/ImportsPage";
-import UsersPage from "../pages/admin/UsersPage";
-import NotificationsPage from "../pages/admin/NotificationsPage";
-import UserPermissionsPage from "../pages/admin/UserPermissionsPage";
-import WorkspaceTodoPage from "../pages/admin/workspace/WorkspaceTodoPage";
-import WorkspaceTasksPage from "../pages/admin/workspace/WorkspaceTasksPage";
-import WorkspaceRemindersPage from "../pages/admin/workspace/WorkspaceRemindersPage";
-import WorkspaceCalendarPage from "../pages/admin/workspace/WorkspaceCalendarPage";
-import WorkspaceGroupsPage from "../pages/admin/workspace/WorkspaceGroupsPage";
-import WorkspaceTaskListsPage from "../pages/admin/workspace/WorkspaceTaskListsPage";
+
+const AboutPage = lazy(() => import("../pages/public/AboutPage"));
+const ServicesPage = lazy(() => import("../pages/public/ServicesPage"));
+const CatalogPage = lazy(() => import("../pages/public/CatalogPage"));
+const ProductDetailPage = lazy(() => import("../pages/public/ProductDetailPage"));
+const ReadingPlanPage = lazy(() => import("../pages/public/ReadingPlanPage"));
+const ContactPage = lazy(() => import("../pages/public/ContactPage"));
+const ClassificationsPage = lazy(() => import("../pages/admin/ClassificationsPage"));
+const DashboardPage = lazy(() => import("../pages/admin/DashboardPage"));
+const ProductsPage = lazy(() => import("../pages/admin/ProductsPage"));
+const ProductCreatePage = lazy(() => import("../pages/admin/ProductCreatePage"));
+const ProductEditPage = lazy(() => import("../pages/admin/ProductEditPage"));
+const PricesPage = lazy(() => import("../pages/admin/PricesPage"));
+const ProvidersPage = lazy(() => import("../pages/admin/ProvidersPage"));
+const ContactRequestsPage = lazy(() => import("../pages/admin/ContactRequestsPage"));
+const ImportsPage = lazy(() => import("../pages/admin/ImportsPage"));
+const UsersPage = lazy(() => import("../pages/admin/UsersPage"));
+const NotificationsPage = lazy(() => import("../pages/admin/NotificationsPage"));
+const UserPermissionsPage = lazy(() => import("../pages/admin/UserPermissionsPage"));
+const WorkspaceTodoPage = lazy(() => import("../pages/admin/workspace/WorkspaceTodoPage"));
+const WorkspaceTasksPage = lazy(() => import("../pages/admin/workspace/WorkspaceTasksPage"));
+const WorkspaceRemindersPage = lazy(() => import("../pages/admin/workspace/WorkspaceRemindersPage"));
+const WorkspaceCalendarPage = lazy(() => import("../pages/admin/workspace/WorkspaceCalendarPage"));
+const WorkspaceGroupsPage = lazy(() => import("../pages/admin/workspace/WorkspaceGroupsPage"));
+const WorkspaceTaskListsPage = lazy(() => import("../pages/admin/workspace/WorkspaceTaskListsPage"));
 
 const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
@@ -104,18 +105,18 @@ function protectPermission(element, requiredPermissions) {
   );
 }
 
-function renderLazyPage(Component) {
+function renderLazyPage(Component, props = {}) {
   return (
     <Suspense
       fallback={
         <div className="flex min-h-[45vh] items-center justify-center">
           <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm font-bold text-gray-600 shadow-sm">
-            Cargando módulo...
+            Cargando contenido...
           </div>
         </div>
       }
     >
-      <Component />
+      <Component {...props} />
     </Suspense>
   );
 }
@@ -131,27 +132,27 @@ const router = createBrowserRouter([
       },
       {
         path: "nosotros",
-        element: <AboutPage />,
+        element: renderLazyPage(AboutPage),
       },
       {
         path: "servicios",
-        element: <ServicesPage />,
+        element: renderLazyPage(ServicesPage),
       },
       {
         path: "catalogo",
-        element: <CatalogPage />,
+        element: renderLazyPage(CatalogPage),
       },
       {
         path: "catalogo/:slug",
-        element: <ProductDetailPage />,
+        element: renderLazyPage(ProductDetailPage),
       },
       {
         path: "plan-lector",
-        element: <ReadingPlanPage />,
+        element: renderLazyPage(ReadingPlanPage),
       },
       {
         path: "contacto",
-        element: <ContactPage />,
+        element: renderLazyPage(ContactPage),
       },
     ],
   },
@@ -193,7 +194,7 @@ const router = createBrowserRouter([
           },
           {
             path: "dashboard",
-            element: protectRole(<DashboardPage />, DASHBOARD_ROLES),
+            element: protectRole(renderLazyPage(DashboardPage), DASHBOARD_ROLES),
           },
           {
             path: "crm",
@@ -268,148 +269,148 @@ const router = createBrowserRouter([
           {
             path: "workspace",
             element: protectPermission(
-              <WorkspaceTodoPage view="today" />,
+              renderLazyPage(WorkspaceTodoPage, { view: "today" }),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/important",
             element: protectPermission(
-              <WorkspaceTodoPage view="important" />,
+              renderLazyPage(WorkspaceTodoPage, { view: "important" }),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/planned",
             element: protectPermission(
-              <WorkspaceTodoPage view="planned" />,
+              renderLazyPage(WorkspaceTodoPage, { view: "planned" }),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/assigned",
             element: protectPermission(
-              <WorkspaceTodoPage view="assigned" />,
+              renderLazyPage(WorkspaceTodoPage, { view: "assigned" }),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/all",
             element: protectPermission(
-              <WorkspaceTodoPage view="all" />,
+              renderLazyPage(WorkspaceTodoPage, { view: "all" }),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/lists",
             element: protectPermission(
-              <WorkspaceTaskListsPage />,
+              renderLazyPage(WorkspaceTaskListsPage),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/lists/:listId",
             element: protectPermission(
-              <WorkspaceTodoPage view="list" />,
+              renderLazyPage(WorkspaceTodoPage, { view: "list" }),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/tasks",
             element: protectPermission(
-              <WorkspaceTasksPage />,
+              renderLazyPage(WorkspaceTasksPage),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/reminders",
             element: protectPermission(
-              <WorkspaceRemindersPage />,
+              renderLazyPage(WorkspaceRemindersPage),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/calendar",
             element: protectPermission(
-              <WorkspaceCalendarPage />,
+              renderLazyPage(WorkspaceCalendarPage),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "workspace/groups",
             element: protectPermission(
-              <WorkspaceGroupsPage />,
+              renderLazyPage(WorkspaceGroupsPage),
               ["workspaces.use_workspace"],
             ),
           },
           {
             path: "productos",
             element: protectPermission(
-              <ProductsPage />,
+              renderLazyPage(ProductsPage),
               ["catalog.view_catalog"],
             ),
           },
           {
             path: "productos/crear",
             element: protectPermission(
-              <ProductCreatePage />,
+              renderLazyPage(ProductCreatePage),
               ["catalog.manage_catalog"],
             ),
           },
           {
             path: "productos/:id/editar",
             element: protectPermission(
-              <ProductEditPage />,
+              renderLazyPage(ProductEditPage),
               ["catalog.manage_catalog"],
             ),
           },
           {
             path: "precios",
             element: protectPermission(
-              <PricesPage />,
+              renderLazyPage(PricesPage),
               ["catalog.view_prices"],
             ),
           },
           {
             path: "proveedores",
             element: protectPermission(
-              <ProvidersPage />,
+              renderLazyPage(ProvidersPage),
               ["catalog.manage_catalog"],
             ),
           },
           {
             path: "clasificaciones",
             element: protectPermission(
-              <ClassificationsPage />,
+              renderLazyPage(ClassificationsPage),
               ["catalog.manage_catalog"],
             ),
           },
           {
             path: "solicitudes",
             element: protectPermission(
-              <ContactRequestsPage />,
+              renderLazyPage(ContactRequestsPage),
               ["inquiries.view_inquiries"],
             ),
           },
           {
             path: "importaciones",
             element: protectPermission(
-              <ImportsPage />,
+              renderLazyPage(ImportsPage),
               ["catalog.manage_imports"],
             ),
           },
           {
             path: "notificaciones",
-            element: <NotificationsPage />,
+            element: renderLazyPage(NotificationsPage),
           },
           {
             path: "usuarios",
-            element: protectRole(<UsersPage />, ADMIN_ONLY_ROLES),
+            element: protectRole(renderLazyPage(UsersPage), ADMIN_ONLY_ROLES),
           },
           {
             path: "usuarios/:id/permisos",
             element: protectRole(
-              <UserPermissionsPage />,
+              renderLazyPage(UserPermissionsPage),
               ADMIN_ONLY_ROLES,
             ),
           },
