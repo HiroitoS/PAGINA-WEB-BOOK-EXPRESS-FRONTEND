@@ -1,0 +1,35 @@
+name: Frontend - lint, tests y compilacion
+
+on:
+  push:
+    branches:
+      - main
+      - crm/gestion-colegios
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: React - pruebas de regresion
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Instalar dependencias segun lockfile
+        run: npm ci
+      - name: Revisar lint
+        run: npm run lint
+      - name: Tests de utilidades y CRM
+        run: node --test tests/*.test.js
+      - name: Compilar Vite
+        run: npm run build
