@@ -1611,7 +1611,9 @@ function ReminderCompletionButton({ canComplete, canReopen, isCompleted, isSavin
   if (isCompleted && !canReopen) {
     return (
       <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-        Aviso atendido. Para programar uno nuevo, reabre primero la tarea.
+        {canComplete
+          ? "Aviso atendido. La tarea está cerrada; reábrela solo si necesitas programar otro aviso."
+          : "Aviso atendido. No tienes permiso para reabrirlo."}
       </div>
     );
   }
