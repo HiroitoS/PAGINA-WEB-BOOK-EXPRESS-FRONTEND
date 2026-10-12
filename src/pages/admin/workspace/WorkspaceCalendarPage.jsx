@@ -42,6 +42,24 @@ import { userHasPermission } from "../../../utils/adminAccess";
 import { getResults } from "../../../utils/formatters";
 import { getCalendarRealId } from "../../../utils/calendarIdentity";
 import {
+  formatDateOnly,
+  formatMonthTitle,
+  formatDateTitle,
+  formatDateTime,
+  formatShortDate,
+  formatShortTime,
+  formatDateTimeLocal,
+  getDateTimeValue,
+  getInitialCalendarRange,
+  getDateKey,
+  getMonthCalendarDays,
+  moveMonth,
+  getWeekCalendarDays,
+  moveWeek,
+  formatWeekRangeTitle,
+  formatWeekDayLabel,
+} from "../../../utils/calendarDates";
+import {
   buildNavigationState,
   resolveReturnContext,
 } from "../../../utils/navigationContext";
@@ -126,142 +144,6 @@ const WEEK_DAYS = ["D", "L", "M", "M", "J", "V", "S"];
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
   return getResults(data);
-}
-
-function parseCalendarDate(value) {
-  if (value instanceof Date) {
-    return new Date(value.getTime());
-  }
-
-  if (typeof value === "string") {
-    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-
-    if (dateOnlyMatch) {
-      const [, year, month, day] = dateOnlyMatch;
-
-      return new Date(
-        Number(year),
-        Number(month) - 1,
-        Number(day),
-      );
-    }
-  }
-
-  return new Date(value);
-}
-
-function formatDateOnly(value) {
-  const date = parseCalendarDate(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return formatDateOnly(new Date());
-  }
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function formatMonthTitle(value) {
-  const date = value ? parseCalendarDate(value) : new Date();
-
-  if (Number.isNaN(date.getTime())) return "Mes actual";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
-
-function formatDateTitle(value) {
-  const date = value ? parseCalendarDate(value) : new Date();
-
-  if (Number.isNaN(date.getTime())) return "Fecha";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  }).format(date);
-}
-
-function formatDateTime(value) {
-  if (!value) return "Sin fecha";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "Fecha no válida";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function formatShortDate(value) {
-  if (!value) return "Sin fecha";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "Fecha no válida";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function formatShortTime(value) {
-  if (!value) return "Sin hora";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "Sin hora";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function formatDateTimeLocal(value) {
-  if (!value) return "";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-
-  return offsetDate.toISOString().slice(0, 16);
-}
-
-function getDateTimeValue(value) {
-  if (!value) return Number.MAX_SAFE_INTEGER;
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return Number.MAX_SAFE_INTEGER;
-
-  return date.getTime();
-}
-
-function getInitialCalendarRange() {
-  const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-  start.setDate(start.getDate() - 14);
-  end.setDate(end.getDate() + 14);
-
-  return {
-    start: formatDateOnly(start),
-    end: formatDateOnly(end),
-  };
 }
 
 function getInitialCompactMode() {
@@ -716,103 +598,8 @@ function groupItemsByMobilePeriod(items) {
   };
 }
 
-function getDateKey(value) {
-  const date = parseCalendarDate(value);
-
-  if (Number.isNaN(date.getTime())) return "sin-fecha";
-
-  return formatDateOnly(date);
-}
-
 function getItemsForDate(items, dateKey) {
   return items.filter((item) => getDateKey(getCalendarItemDate(item)) === dateKey);
-}
-
-function getMonthCalendarDays(monthDate) {
-  const baseDate = parseCalendarDate(monthDate);
-
-  if (Number.isNaN(baseDate.getTime())) return [];
-
-  const firstDay = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
-  const lastDay = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
-  const days = [];
-
-  for (let index = 0; index < firstDay.getDay(); index += 1) {
-    days.push(null);
-  }
-
-  for (let day = 1; day <= lastDay.getDate(); day += 1) {
-    days.push(new Date(baseDate.getFullYear(), baseDate.getMonth(), day));
-  }
-
-  return days;
-}
-
-function moveMonth(value, amount) {
-  const date = parseCalendarDate(value);
-
-  if (Number.isNaN(date.getTime())) return formatDateOnly(new Date());
-
-  date.setMonth(date.getMonth() + amount);
-
-  return formatDateOnly(date);
-}
-
-function getStartOfWeek(value) {
-  const date = parseCalendarDate(value);
-
-  if (Number.isNaN(date.getTime())) {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
-  }
-
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay());
-}
-
-function getWeekCalendarDays(value) {
-  const startDate = getStartOfWeek(value);
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + index);
-
-    return date;
-  });
-}
-
-function moveWeek(value, amount) {
-  const date = parseCalendarDate(value);
-
-  if (Number.isNaN(date.getTime())) return formatDateOnly(new Date());
-
-  date.setDate(date.getDate() + amount * 7);
-
-  return formatDateOnly(date);
-}
-
-function formatWeekRangeTitle(value) {
-  const weekDays = getWeekCalendarDays(value);
-  const firstDay = weekDays[0];
-  const lastDay = weekDays[6];
-
-  return `${new Intl.DateTimeFormat("es-PE", {
-    day: "2-digit",
-    month: "short",
-  }).format(firstDay)} - ${new Intl.DateTimeFormat("es-PE", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(lastDay)}`;
-}
-
-function formatWeekDayLabel(value) {
-  const date = parseCalendarDate(value);
-
-  if (Number.isNaN(date.getTime())) return "Día";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    weekday: "short",
-  }).format(date);
 }
 
 export default function WorkspaceCalendarPage() {
