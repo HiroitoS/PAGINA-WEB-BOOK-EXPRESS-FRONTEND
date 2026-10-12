@@ -410,7 +410,14 @@ export default function WorkspaceTodoPage({
         config={config}
         summary={summary}
         onOpenManager={() =>
-          navigate("/admin/workspace/tasks")
+          navigate("/admin/workspace/tasks", {
+            state: buildNavigationState({
+              from: location.pathname,
+              fromLabel: config.title,
+              fromType: "workspace-smart-view",
+              currentState: location.state,
+            }),
+          })
         }
       />
 
