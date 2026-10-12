@@ -788,7 +788,7 @@ export default function WorkspaceRemindersPage() {
           Cargando recordatorios...
         </div>
       ) : (
-        <section className="rounded-3xl border border-gray-200 bg-white p-3 shadow-sm sm:p-5">
+        <section className="rounded-3xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-wide text-red-700">
@@ -857,7 +857,7 @@ export default function WorkspaceRemindersPage() {
             {visibleReminders.length === 0 ? (
               <EmptyState text="No hay recordatorios para este filtro." />
             ) : (
-              <div className="grid gap-3 xl:grid-cols-2">
+              <div className="grid gap-2">
                 {visibleReminders.map((reminder) => (
                   <ReminderCard
                     key={reminder.id}
@@ -1189,123 +1189,109 @@ function ReminderCard({
   const isOpening = openingReminderId === reminder.id;
   const canComplete = reminderCanComplete(reminder);
   const readOnly = reminderIsReadOnly(reminder);
+  const reminderOrigin = reminder.source === "task"
+    ? "Aviso de tarea"
+    : reminder.event
+      ? "Aviso de evento"
+      : "Aviso independiente";
 
   return (
     <article
-      className={`rounded-3xl border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-        isOverdue ? "border-red-100" : isCompleted ? "border-green-100" : "border-gray-100"
-      } ${compact ? "p-3" : "p-4"}`}
+      className={`rounded-xl border bg-white px-3 py-3 transition hover:border-gray-300 sm:px-4 ${
+        isOverdue ? "border-red-200" : "border-gray-200"
+      } ${compact ? "" : "shadow-sm"}`}
     >
-      <div className="flex items-start gap-3">
-        <button
-          aria-label={isCompleted ? "Reabrir recordatorio" : "Completar recordatorio"}
-          className={`mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs transition ${
-            isCompleted
-              ? "border-green-200 bg-green-50 text-green-700"
-              : canComplete
-                ? "border-gray-300 bg-white text-transparent hover:border-green-300 hover:bg-green-50 hover:text-green-700"
-                : "border-gray-200 bg-gray-50 text-gray-300"
-          }`}
-          disabled={isSaving || !canComplete}
-          title={canComplete ? "" : "Solo lectura"}
-          type="button"
-          onClick={isCompleted ? onReopen : onComplete}
-        >
-          <FaCheckCircle />
-        </button>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span
-              className={`rounded-full border px-2 py-0.5 text-xs font-black ${
-                isCompleted
-                  ? "border-green-100 bg-green-50 text-green-700"
-                  : isOverdue
-                    ? "border-red-100 bg-red-50 text-red-700"
-                    : "border-yellow-100 bg-yellow-50 text-yellow-800"
-              }`}
-            >
-              {isCompleted ? "Completado" : isOverdue ? "Vencido" : "Activo"}
-            </span>
-
-            <span className="rounded-full border border-gray-100 bg-gray-50 px-2 py-0.5 text-xs font-black text-gray-600">
-              Recordatorio
-            </span>
-
-            {readOnly ? (
-              <span className="rounded-full border border-gray-100 bg-gray-50 px-2 py-0.5 text-xs font-black text-gray-500">
-                Solo lectura
-              </span>
-            ) : null}
-          </div>
-
-          <h3
-            className={`mt-2 line-clamp-2 text-sm font-black ${
-              isCompleted ? "text-gray-400 line-through" : "text-gray-950"
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <span
+            aria-hidden="true"
+            className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+              isCompleted
+                ? "border-gray-200 bg-gray-100 text-gray-600"
+                : isOverdue
+                  ? "border-red-100 bg-red-50 text-red-700"
+                  : "border-gray-200 bg-gray-50 text-gray-500"
             }`}
           >
-            {reminder.title}
-          </h3>
+            {isCompleted ? <FaCheckCircle /> : <FaBell />}
+          </span>
 
-          {reminder.description && !compact ? (
-            <p className="mt-1 line-clamp-2 text-sm leading-5 text-gray-600">
-              {reminder.description}
-            </p>
-          ) : null}
-
-          <div className="mt-3 grid gap-1.5 text-xs font-bold text-gray-500">
-            <span className="inline-flex items-center gap-2 text-yellow-700">
-              <FaClock />
-              {formatShortDate(getReminderDate(reminder))}
-            </span>
-
-            <span className="inline-flex items-center gap-2">
-              <FaFolderOpen />
-              {reminder.group_name || "Sin grupo"}
-            </span>
-
-            <span className="inline-flex items-center gap-2">
-              <FaUserCheck />
-              {reminder.assigned_to_name || reminder.user_name || "Sin asignar"}
-            </span>
-          </div>
-
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <button
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-black text-gray-700 transition hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isOpening}
-              type="button"
-              onClick={onDetail}
-            >
-              {isOpening ? "Abriendo..." : "Ver detalle"}
-            </button>
-
-            {canComplete ? (
-              isCompleted ? (
-                <button
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-black text-gray-700 transition hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isSaving}
-                  type="button"
-                  onClick={onReopen}
-                >
-                  Reabrir
-                </button>
-              ) : (
-                <button
-                  className="rounded-xl bg-green-600 px-4 py-2.5 text-xs font-black text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isSaving}
-                  type="button"
-                  onClick={onComplete}
-                >
-                  Completar
-                </button>
-              )
-            ) : (
-              <span className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-center text-xs font-black text-gray-400">
-                Solo lectura
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3
+                className={`min-w-0 text-sm font-black leading-5 ${
+                  isCompleted ? "text-gray-500 line-through" : "text-gray-950"
+                }`}
+              >
+                {reminder.title}
+              </h3>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                  isOverdue
+                    ? "bg-red-50 text-red-700"
+                    : isCompleted
+                      ? "bg-gray-100 text-gray-600"
+                      : "bg-gray-100 text-gray-700"
+                }`}
+              >
+                {isCompleted ? "Atendido" : isOverdue ? "Vencido" : "Programado"}
               </span>
-            )}
+            </div>
+
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-gray-600">
+              <span className="inline-flex items-center gap-1.5">
+                <FaClock className="text-gray-500" aria-hidden="true" />
+                {formatShortDate(getReminderDate(reminder))}
+              </span>
+              <span>{reminderOrigin}</span>
+              {reminder.group_name ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <FaFolderOpen aria-hidden="true" />
+                  {reminder.group_name}
+                </span>
+              ) : null}
+              <span className="inline-flex items-center gap-1.5">
+                <FaUserCheck aria-hidden="true" />
+                {reminder.assigned_to_name || reminder.user_name || "Sin asignar"}
+              </span>
+            </div>
+
+            {reminder.description && !compact ? (
+              <p className="mt-1.5 line-clamp-1 text-xs text-gray-500">
+                {reminder.description}
+              </p>
+            ) : null}
           </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2 pl-11 sm:pl-0">
+          <button
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 transition hover:border-red-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isOpening}
+            type="button"
+            onClick={onDetail}
+          >
+            {isOpening ? "Abriendo..." : "Ver detalle"}
+          </button>
+
+          {canComplete ? (
+            <button
+              className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                isCompleted
+                  ? "border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                  : "bg-gray-950 text-white hover:bg-gray-800"
+              }`}
+              disabled={isSaving}
+              type="button"
+              onClick={isCompleted ? onReopen : onComplete}
+            >
+              {isCompleted ? "Reabrir" : "Marcar atendido"}
+            </button>
+          ) : readOnly ? (
+            <span className="rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-500">
+              Solo lectura
+            </span>
+          ) : null}
         </div>
       </div>
     </article>
@@ -1632,7 +1618,7 @@ function ReminderCompletionButton({ canComplete, isCompleted, isSaving, onComple
 
   return (
     <button
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-black text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-3 text-sm font-black text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
       disabled={isSaving}
       type="button"
       onClick={onComplete}
