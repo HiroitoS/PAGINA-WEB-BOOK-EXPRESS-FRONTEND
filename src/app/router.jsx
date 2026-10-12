@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router";
 
 import PublicLayout from "../layouts/PublicLayout";
-import AdminLayout from "../layouts/AdminLayout";
+
 import AdminHomeRedirect from "../routes/AdminHomeRedirect";
 import RequireAuth from "../routes/RequireAuth";
 import RequirePermission from "../routes/RequirePermission";
@@ -12,10 +12,12 @@ import {
   DASHBOARD_ROLES,
 } from "../utils/adminAccess";
 
-import HomePage from "../pages/public/HomePage";
+
 
 import LoginPage from "../pages/admin/LoginPage";
 
+const AdminLayout = lazy(() => import("../layouts/AdminLayout"));
+const HomePage = lazy(() => import("../pages/public/HomePage"));
 const AboutPage = lazy(() => import("../pages/public/AboutPage"));
 const ServicesPage = lazy(() => import("../pages/public/ServicesPage"));
 const CatalogPage = lazy(() => import("../pages/public/CatalogPage"));
@@ -128,7 +130,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <HomePage />,
+        element: renderLazyPage(HomePage),
       },
       {
         path: "nosotros",
@@ -186,7 +188,7 @@ const router = createBrowserRouter([
         ),
       },
       {
-        element: <AdminLayout />,
+        element: renderLazyPage(AdminLayout),
         children: [
           {
             index: true,
