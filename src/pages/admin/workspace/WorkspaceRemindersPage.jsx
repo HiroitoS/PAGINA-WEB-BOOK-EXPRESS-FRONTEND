@@ -1125,7 +1125,7 @@ function MobileReminderAccordion({
                       section.variant === "danger"
                         ? "bg-red-50 text-red-700"
                         : section.variant === "success"
-                          ? "bg-green-50 text-green-700"
+                          ? "bg-gray-100 text-gray-700"
                           : "bg-gray-100 text-gray-700"
                     }`}
                   >
@@ -1394,7 +1394,7 @@ function ReminderDrawer({
               <span
                 className={`rounded-full border px-2.5 py-1 text-xs font-black ${
                   isCompleted
-                    ? "border-green-100 bg-green-50 text-green-700"
+                    ? "border-gray-200 bg-gray-100 text-gray-700"
                     : isOverdue
                       ? "border-red-100 bg-red-50 text-red-700"
                       : "border-yellow-100 bg-yellow-50 text-yellow-800"
@@ -1634,7 +1634,7 @@ function ReminderMetricCard({ label, value, variant = "default" }) {
     variant === "danger"
       ? "bg-red-50 text-red-700"
       : variant === "success"
-        ? "bg-green-50 text-green-700"
+        ? "bg-gray-100 text-gray-700"
         : "bg-yellow-50 text-yellow-800";
 
   return (
