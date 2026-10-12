@@ -168,6 +168,12 @@ function reminderCanComplete(reminder) {
   return Boolean(reminder.can_complete);
 }
 
+function reminderCanReopen(reminder) {
+  return typeof reminder.can_reopen === "boolean"
+    ? reminder.can_reopen
+    : reminderCanComplete(reminder);
+}
+
 function reminderIsReadOnly(reminder) {
   if (typeof reminder.is_read_only === "boolean") return reminder.is_read_only;
 
@@ -1188,6 +1194,8 @@ function ReminderCard({
   const isOverdue = reminderIsOverdue(reminder);
   const isOpening = openingReminderId === reminder.id;
   const canComplete = reminderCanComplete(reminder);
+  const canReopen = reminderCanReopen(reminder);
+  const canAct = isCompleted ? canReopen : canComplete;
   const readOnly = reminderIsReadOnly(reminder);
   const reminderOrigin = reminder.source === "task"
     ? "Aviso de tarea"
@@ -1274,7 +1282,7 @@ function ReminderCard({
             {isOpening ? "Abriendo..." : "Ver detalle"}
           </button>
 
-          {canComplete ? (
+          {canAct ? (
             <button
               className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                 isCompleted
@@ -1287,11 +1295,13 @@ function ReminderCard({
             >
               {isCompleted ? "Reabrir" : "Marcar atendido"}
             </button>
-          ) : readOnly ? (
+          ) : (
             <span className="rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-500">
-              Solo lectura
+              {isCompleted && !canReopen && !readOnly
+                ? "Cerrado con la tarea"
+                : "Solo lectura"}
             </span>
-          ) : null}
+          )}
         </div>
       </div>
     </article>
@@ -1317,6 +1327,7 @@ function ReminderDrawer({
   const isOverdue = reminderIsOverdue(reminder);
   const canEditDetails = reminderCanEditDetails(reminder);
   const canComplete = reminderCanComplete(reminder);
+  const canReopen = reminderCanReopen(reminder);
   const readOnly = reminderIsReadOnly(reminder);
 
   useEffect(() => {
@@ -1542,6 +1553,7 @@ function ReminderDrawer({
                 <div className="flex flex-col gap-2 border-t border-gray-100 pt-4">
                   <ReminderCompletionButton
                     canComplete={canComplete}
+                    canReopen={canReopen}
                     isCompleted={isCompleted}
                     isSaving={isSaving}
                     onComplete={onComplete}
@@ -1581,6 +1593,7 @@ function ReminderDrawer({
 
               <ReminderCompletionButton
                 canComplete={canComplete}
+                canReopen={canReopen}
                 isCompleted={isCompleted}
                 isSaving={isSaving}
                 onComplete={onComplete}
@@ -1594,11 +1607,19 @@ function ReminderDrawer({
   );
 }
 
-function ReminderCompletionButton({ canComplete, isCompleted, isSaving, onComplete, onReopen }) {
+function ReminderCompletionButton({ canComplete, canReopen, isCompleted, isSaving, onComplete, onReopen }) {
+  if (isCompleted && !canReopen) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+        Aviso atendido. Para programar uno nuevo, reabre primero la tarea.
+      </div>
+    );
+  }
+
   if (!canComplete) {
     return (
       <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm font-bold text-gray-500">
-        Solo lectura. No puedes completar este recordatorio.
+        Solo lectura. No tienes permiso para atender este aviso.
       </div>
     );
   }
@@ -1624,7 +1645,7 @@ function ReminderCompletionButton({ canComplete, isCompleted, isSaving, onComple
       onClick={onComplete}
     >
       <FaCheckCircle />
-      Marcar como completado
+      Marcar atendido
     </button>
   );
 }
