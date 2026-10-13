@@ -215,7 +215,15 @@ export function taskMatchesTodoView(
   }
 
   if (view === "today") {
-    return Boolean(task.in_my_day);
+    if (taskIsClosed(task)) return false;
+    if (task.in_my_day) return true;
+
+    return (
+      Number(task.assigned_to) === Number(currentUserId)
+      && currentUserId != null
+      && Boolean(task.due_at)
+      && getLocalDateKey(task.due_at) === getLocalDateKey(new Date())
+    );
   }
 
   return true;
