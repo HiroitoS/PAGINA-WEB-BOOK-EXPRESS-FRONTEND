@@ -71,6 +71,13 @@ import {
   EmptyState,
 } from "../../../components/admin/workspace/calendar/CalendarChrome";
 import MobileDayCalendar from "../../../components/admin/workspace/calendar/MobileDayCalendar";
+import {
+  getCalendarItemDate,
+  getCalendarItemEndDate,
+  getCalendarType,
+  calendarItemIsClosed,
+  buildFullCalendarEvents,
+} from "../../../utils/calendarItems";
 
 const INITIAL_EVENT_FORM = {
   title: "",
@@ -219,21 +226,6 @@ async function loadCalendarItemsFromApi(range) {
   }
 }
 
-function getCalendarItemDate(item) {
-  return item.start || item.start_at || item.due_at || item.remind_at || item.reminder_at || "";
-}
-
-function getCalendarItemEndDate(item) {
-  return item.end || item.end_at || "";
-}
-
-function getCalendarType(item) {
-  if (item.type === "reminder") return "reminder";
-  if (item.type === "event") return "event";
-
-  return "task";
-}
-
 function getCalendarTypeLabel(type) {
   if (type === "event") return "Evento";
   if (type === "reminder") return "Recordatorio";
@@ -268,14 +260,6 @@ function getPriorityLabel(priority) {
 
 function getTaskCategoryLabel(type) {
   return TASK_CATEGORY_OPTIONS.find((option) => option.value === type)?.label || type || "General";
-}
-
-function calendarItemIsClosed(item) {
-  const type = getCalendarType(item);
-
-  if (type === "event") return false;
-
-  return item.status === "completed" || item.status === "cancelled";
 }
 
 function canEditCalendarItem(item, itemDetail = null) {
@@ -361,24 +345,6 @@ function normalizeCalendarItems(apiItems) {
         getDateTimeValue(getCalendarItemDate(firstItem)) -
         getDateTimeValue(getCalendarItemDate(secondItem))
     );
-}
-
-function buildFullCalendarEvents(items) {
-  return items.map((item) => {
-    const type = getCalendarType(item);
-
-    return {
-      id: `${item.type || type}-${item.id}`,
-      title: item.title,
-      start: getCalendarItemDate(item),
-      end: getCalendarItemEndDate(item) || undefined,
-      display: "block",
-      extendedProps: {
-        item,
-        type,
-      },
-    };
-  });
 }
 
 function buildEventPayload(form) {
