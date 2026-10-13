@@ -616,6 +616,13 @@ export default function SchoolEducationalServicesSection({
           );
 
           serviceId = service.id;
+          setRows((currentRows) =>
+            currentRows.map((currentRow) =>
+              currentRow.clientId === row.clientId
+                ? { ...currentRow, id: service.id }
+                : currentRow,
+            ),
+          );
         }
 
         const hasPopulation =
