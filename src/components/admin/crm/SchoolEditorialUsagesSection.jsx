@@ -224,6 +224,17 @@ export default function SchoolEditorialUsagesSection({
       name,
     });
 
+    setForm((current) => ({
+      ...current,
+      editorialId: String(editorial.id),
+      newEditorialName: "",
+    }));
+    setEditorials((current) =>
+      current.some((item) => item.id === editorial.id)
+        ? current
+        : [...current, editorial],
+    );
+
     return editorial.id;
   }
 
