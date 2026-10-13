@@ -375,6 +375,17 @@ function SidebarContent({
             </div>
           );
         })}
+        <div className="mt-4 border-t border-white/10 pt-4">
+          <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3" aria-label="ERP Book Express, próximamente">
+            <span className="flex items-center gap-3 text-sm font-bold text-gray-300">
+              <FaBoxOpen aria-hidden="true" />
+              ERP
+            </span>
+            <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-semibold text-gray-400">
+              Próximamente
+            </span>
+          </div>
+        </div>
       </nav>
 
       <div className="border-t border-white/10 bg-gray-950 p-4">
