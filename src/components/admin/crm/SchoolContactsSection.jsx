@@ -198,12 +198,19 @@ export default function SchoolContactsSection({
 
     const contactNumber = form.contact_number.trim();
     const alternatePhone = form.alternate_phone.trim();
+    const originalContact = mode === "edit"
+      ? contacts.find((contact) => contact.id === editingId)
+      : null;
+    const originalPhone = String(originalContact?.phone || "").trim();
+    const originalWhatsapp = String(originalContact?.whatsapp || "").trim();
+    const phoneOnly = Boolean(originalPhone) && !originalWhatsapp;
+    const whatsappOnly = Boolean(originalWhatsapp) && !originalPhone;
 
     const payload = {
       full_name: form.full_name.trim(),
       position: form.position.trim(),
-      phone: mode === "edit" && !alternatePhone && !form.alternate_phone.trim() ? (contacts.find((contact) => contact.id === editingId)?.phone || "") : (alternatePhone || contactNumber),
-      whatsapp: mode === "edit" && !contacts.find((contact) => contact.id === editingId)?.whatsapp && !alternatePhone ? "" : contactNumber,
+      phone: alternatePhone || (whatsappOnly ? "" : contactNumber),
+      whatsapp: phoneOnly && !alternatePhone ? "" : contactNumber,
       email: form.email.trim(),
       decision_role: form.decision_role,
       relationship_level: form.relationship_level
