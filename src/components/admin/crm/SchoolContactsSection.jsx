@@ -202,8 +202,8 @@ export default function SchoolContactsSection({
     const payload = {
       full_name: form.full_name.trim(),
       position: form.position.trim(),
-      phone: alternatePhone || contactNumber,
-      whatsapp: contactNumber,
+      phone: mode === "edit" && !alternatePhone && !form.alternate_phone.trim() ? (contacts.find((contact) => contact.id === editingId)?.phone || "") : (alternatePhone || contactNumber),
+      whatsapp: mode === "edit" && !contacts.find((contact) => contact.id === editingId)?.whatsapp && !alternatePhone ? "" : contactNumber,
       email: form.email.trim(),
       decision_role: form.decision_role,
       relationship_level: form.relationship_level
