@@ -16,7 +16,10 @@ import {
   getUnreadNotificationCount,
   markAllNotificationsRead,
   markNotificationRead,
+  syncWorkspaceReminderAlerts,
 } from "../../api/notificationsApi";
+import { useAuth } from "../../hooks/useAuth";
+import { userHasPermission } from "../../utils/adminAccess";
 import { getNotificationDestination } from "../../utils/notificationNavigation";
 
 const POLLING_INTERVAL_MS = 60_000;
@@ -84,8 +87,13 @@ async function fetchUnreadCount() {
 }
 
 export default function NotificationBell() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const containerRef = useRef(null);
+  const canUseWorkspace = userHasPermission(
+    user,
+    ["workspaces.use_workspace"],
+  );
 
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -199,6 +207,14 @@ export default function NotificationBell() {
 
     async function syncNotifications({ allowToast }) {
       try {
+        if (canUseWorkspace) {
+          try {
+            await syncWorkspaceReminderAlerts();
+          } catch {
+            // Los recordatorios no deben bloquear el resto de notificaciones.
+          }
+        }
+
         const [countData, listData] = await Promise.all([
           getUnreadNotificationCount(),
           getAdminNotifications(),
@@ -254,7 +270,7 @@ export default function NotificationBell() {
       window.clearInterval(intervalId);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [isOpen]);
+  }, [canUseWorkspace, isOpen]);
 
   useEffect(() => {
     if (!toastNotification) return undefined;

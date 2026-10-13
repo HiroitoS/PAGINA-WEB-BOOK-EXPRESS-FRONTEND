@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
 import timeGridPlugin from "@fullcalendar/react/timegrid";
@@ -9,7 +9,7 @@ import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
 import "@fullcalendar/react/themes/classic/palette.css";
 import {
-  FaCalendarAlt,
+  FaArrowLeft,
   FaCheckCircle,
   FaChevronDown,
   FaClock,
@@ -20,7 +20,6 @@ import {
   FaPlus,
   FaRegCalendarCheck,
   FaSpinner,
-  FaTimes,
   FaUserCheck,
 } from "react-icons/fa";
 import {
@@ -30,8 +29,8 @@ import {
   getWorkspaceCalendar,
   getWorkspaceEventById,
   getWorkspaceGroups,
+  getWorkspaceReminderById,
   getWorkspaceTaskById,
-  getWorkspaceTasks,
   updateWorkspaceEvent,
   updateWorkspaceReminder,
   updateWorkspaceTask,
@@ -39,6 +38,46 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import { getResults } from "../../../utils/formatters";
+import { getCalendarRealId } from "../../../utils/calendarIdentity";
+import {
+  formatDateOnly,
+  formatMonthTitle,
+  formatDateTitle,
+  formatDateTime,
+  formatShortDate,
+  formatShortTime,
+  formatDateTimeLocal,
+  getDateTimeValue,
+  getInitialCalendarRange,
+  getDateKey,
+  getMonthCalendarDays,
+  moveMonth,
+  getWeekCalendarDays,
+  moveWeek,
+  formatWeekRangeTitle,
+  formatWeekDayLabel,
+} from "../../../utils/calendarDates";
+import {
+  buildNavigationState,
+  resolveReturnContext,
+} from "../../../utils/navigationContext";
+import TodoReminderEditForm from "../../../components/admin/workspace/todo/TodoReminderEditForm";
+import {
+  CalendarMetricCard,
+  CalendarViewButton,
+  MobileModeButton,
+  CalendarDrawer,
+  LegendItem,
+  EmptyState,
+} from "../../../components/admin/workspace/calendar/CalendarChrome";
+import MobileDayCalendar from "../../../components/admin/workspace/calendar/MobileDayCalendar";
+import {
+  getCalendarItemDate,
+  getCalendarItemEndDate,
+  getCalendarType,
+  calendarItemIsClosed,
+  buildFullCalendarEvents,
+} from "../../../utils/calendarItems";
 
 const INITIAL_EVENT_FORM = {
   title: "",
@@ -61,6 +100,15 @@ const INITIAL_TASK_FORM = {
   due_at: "",
   reminder_at: "",
   is_important: false,
+};
+
+const INITIAL_REMINDER_FORM = {
+  title: "",
+  description: "",
+  group: "",
+  assigned_to: "",
+  remind_at: "",
+  source: "manual",
 };
 
 const EVENT_TYPE_OPTIONS = [
@@ -110,114 +158,6 @@ const WEEK_DAYS = ["D", "L", "M", "M", "J", "V", "S"];
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
   return getResults(data);
-}
-
-function formatDateOnly(value) {
-  const date = value instanceof Date ? value : new Date(value);
-
-  if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
-
-  return date.toISOString().slice(0, 10);
-}
-
-function formatMonthTitle(value) {
-  const date = value ? new Date(value) : new Date();
-
-  if (Number.isNaN(date.getTime())) return "Mes actual";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
-
-function formatDateTitle(value) {
-  const date = value ? new Date(value) : new Date();
-
-  if (Number.isNaN(date.getTime())) return "Fecha";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  }).format(date);
-}
-
-function formatDateTime(value) {
-  if (!value) return "Sin fecha";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "Fecha no válida";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function formatShortDate(value) {
-  if (!value) return "Sin fecha";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "Fecha no válida";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function formatShortTime(value) {
-  if (!value) return "Sin hora";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "Sin hora";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function formatDateTimeLocal(value) {
-  if (!value) return "";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-
-  return offsetDate.toISOString().slice(0, 16);
-}
-
-function getDateTimeValue(value) {
-  if (!value) return Number.MAX_SAFE_INTEGER;
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return Number.MAX_SAFE_INTEGER;
-
-  return date.getTime();
-}
-
-function getInitialCalendarRange() {
-  const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-  start.setDate(start.getDate() - 14);
-  end.setDate(end.getDate() + 14);
-
-  return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
-  };
 }
 
 function getInitialCompactMode() {
@@ -286,25 +226,9 @@ async function loadCalendarItemsFromApi(range) {
   }
 }
 
-function getCalendarItemDate(item) {
-  return item.start || item.start_at || item.due_at || item.remind_at || item.reminder_at || "";
-}
-
-function getCalendarItemEndDate(item) {
-  return item.end || item.end_at || "";
-}
-
-function getCalendarType(item) {
-  if (item.type === "task_reminder") return "reminder";
-  if (item.type === "reminder") return "reminder";
-  if (item.type === "event") return "event";
-
-  return "task";
-}
-
 function getCalendarTypeLabel(type) {
   if (type === "event") return "Evento";
-  if (type === "reminder" || type === "task_reminder") return "Recordatorio";
+  if (type === "reminder") return "Recordatorio";
 
   return "Tarea";
 }
@@ -312,7 +236,7 @@ function getCalendarTypeLabel(type) {
 function getCalendarTypeClass(type) {
   if (type === "event") return "border-blue-100 bg-blue-50 text-blue-700";
 
-  if (type === "reminder" || type === "task_reminder") {
+  if (type === "reminder") {
     return "border-yellow-100 bg-yellow-50 text-yellow-800";
   }
 
@@ -321,7 +245,7 @@ function getCalendarTypeClass(type) {
 
 function getCalendarDotClass(type) {
   if (type === "event") return "bg-blue-600";
-  if (type === "reminder" || type === "task_reminder") return "bg-yellow-500";
+  if (type === "reminder") return "bg-yellow-500";
 
   return "bg-red-700";
 }
@@ -336,44 +260,6 @@ function getPriorityLabel(priority) {
 
 function getTaskCategoryLabel(type) {
   return TASK_CATEGORY_OPTIONS.find((option) => option.value === type)?.label || type || "General";
-}
-
-function taskIsClosed(task) {
-  return task.status === "completed" || task.status === "cancelled";
-}
-
-function calendarItemIsClosed(item) {
-  const type = getCalendarType(item);
-
-  if (type === "event") return false;
-
-  return item.status === "completed" || item.status === "cancelled";
-}
-
-function getCalendarRealId(item) {
-  const candidateId =
-    item?.real_id ||
-    item?.task_id ||
-    item?.event_id ||
-    item?.reminder_id ||
-    item?.task ||
-    item?.event ||
-    item?.id;
-
-  if (typeof candidateId === "string" && candidateId.includes("-")) {
-    const parts = candidateId.split("-");
-    return parts[parts.length - 1];
-  }
-
-  return candidateId;
-}
-
-function getTaskReminderCalendarKey(task) {
-  return `task_reminder-${task.id}`;
-}
-
-function getCalendarItemKey(item) {
-  return `${item.type || getCalendarType(item)}-${getCalendarRealId(item)}`;
 }
 
 function canEditCalendarItem(item, itemDetail = null) {
@@ -442,10 +328,8 @@ function getAgendaState(item) {
   };
 }
 
-function buildCalendarItems(apiItems, tasks) {
-  const normalizedApiItems = normalizeList(apiItems);
-
-  const apiCalendarItems = normalizedApiItems
+function normalizeCalendarItems(apiItems) {
+  return normalizeList(apiItems)
     .filter((item) => getCalendarItemDate(item))
     .map((item) => ({
       ...item,
@@ -454,86 +338,13 @@ function buildCalendarItems(apiItems, tasks) {
       type: item.type || getCalendarType(item),
       start: getCalendarItemDate(item),
       end: getCalendarItemEndDate(item),
-    }));
-
-  const existingKeys = new Set(apiCalendarItems.map((item) => getCalendarItemKey(item)));
-
-  const taskItems = tasks
-    .filter((task) => task.due_at && !taskIsClosed(task))
-    .map((task) => ({
-      id: task.id,
-      type: "task",
-      title: task.title,
-      start: task.due_at,
-      due_at: task.due_at,
-      group: task.group,
-      group_name: task.group_name,
-      assigned_to: task.assigned_to,
-      assigned_to_name: task.assigned_to_name,
-      priority: task.priority,
-      status: task.status,
-      task_type: task.task_type,
-      description: task.description,
-      can_edit_details: task.can_edit_details,
-      can_follow_up: task.can_follow_up,
-      can_complete: task.can_complete,
-      is_read_only: task.is_read_only,
-      source: "task",
     }))
-    .filter((item) => !existingKeys.has(getCalendarItemKey(item)));
-
-  const taskReminderItems = tasks
-    .filter((task) => task.reminder_at && !taskIsClosed(task))
-    .map((task) => ({
-      id: task.id,
-      type: "task_reminder",
-      title: `Recordatorio: ${task.title}`,
-      start: task.reminder_at,
-      remind_at: task.reminder_at,
-      reminder_at: task.reminder_at,
-      group: task.group,
-      group_name: task.group_name,
-      assigned_to: task.assigned_to,
-      assigned_to_name: task.assigned_to_name,
-      task_id: task.id,
-      priority: task.priority,
-      status: task.status,
-      task_type: task.task_type,
-      description: task.description,
-      can_edit_details: task.can_edit_details,
-      can_follow_up: task.can_follow_up,
-      can_complete: task.can_complete,
-      is_read_only: task.is_read_only,
-      source: "task_reminder",
-    }))
-    .filter((item) => !existingKeys.has(getTaskReminderCalendarKey(item)));
-
-  return [...apiCalendarItems, ...taskItems, ...taskReminderItems]
-    .filter((item) => getCalendarItemDate(item))
     .filter((item) => !calendarItemIsClosed(item))
     .sort(
       (firstItem, secondItem) =>
         getDateTimeValue(getCalendarItemDate(firstItem)) -
         getDateTimeValue(getCalendarItemDate(secondItem))
     );
-}
-
-function buildFullCalendarEvents(items) {
-  return items.map((item) => {
-    const type = getCalendarType(item);
-
-    return {
-      id: `${item.type || type}-${item.id}`,
-      title: item.title,
-      start: getCalendarItemDate(item),
-      end: getCalendarItemEndDate(item) || undefined,
-      display: "block",
-      extendedProps: {
-        item,
-        type,
-      },
-    };
-  });
 }
 
 function buildEventPayload(form) {
@@ -559,7 +370,7 @@ function buildTaskPayload(form) {
     assigned_to: form.assigned_to ? Number(form.assigned_to) : null,
     due_at: form.due_at || null,
     reminder_at: form.reminder_at || null,
-    is_important: false,
+    is_important: Boolean(form.is_important),
   };
 }
 
@@ -595,10 +406,59 @@ function buildTaskFormFromTask(task) {
     priority: task.priority || "medium",
     group: task.group ? String(task.group) : "",
     assigned_to: task.assigned_to ? String(task.assigned_to) : "",
-    due_at: formatDateTimeLocal(task.due_at || task.start),
+    due_at: formatDateTimeLocal(task.due_at),
     reminder_at: formatDateTimeLocal(task.reminder_at || task.remind_at),
-    is_important: false,
+    is_important: Boolean(task.is_important),
   };
+}
+
+function buildReminderFormFromReminder(reminder) {
+  return {
+    title: reminder.title || "",
+    description: reminder.description || reminder.message || "",
+    group: reminder.group ? String(reminder.group) : "",
+    assigned_to: reminder.assigned_to
+      ? String(reminder.assigned_to)
+      : reminder.user
+        ? String(reminder.user)
+        : "",
+    remind_at: formatDateTimeLocal(reminder.remind_at || reminder.start),
+    source: reminder.source || "manual",
+  };
+}
+
+function buildReminderPayload(form, isTaskReminder) {
+  if (isTaskReminder) {
+    return {
+      remind_at: form.remind_at || null,
+    };
+  }
+
+  return {
+    title: form.title.trim(),
+    description: form.description.trim(),
+    group: form.group ? Number(form.group) : null,
+    assigned_to: form.assigned_to ? Number(form.assigned_to) : null,
+    remind_at: form.remind_at || null,
+  };
+}
+
+function getReminderValidationMessage(form, isTaskReminder) {
+  if (!isTaskReminder && !form.title.trim()) {
+    return "Ingresa el título del recordatorio.";
+  }
+
+  if (!form.remind_at) {
+    return "Selecciona la fecha y hora del recordatorio.";
+  }
+
+  const remindAt = new Date(form.remind_at);
+
+  if (Number.isNaN(remindAt.getTime())) {
+    return "Revisa la fecha y hora del recordatorio.";
+  }
+
+  return "";
 }
 
 function getEventValidationMessage(form) {
@@ -711,108 +571,17 @@ function groupItemsByMobilePeriod(items) {
   };
 }
 
-function getDateKey(value) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "sin-fecha";
-
-  return date.toISOString().slice(0, 10);
-}
-
 function getItemsForDate(items, dateKey) {
   return items.filter((item) => getDateKey(getCalendarItemDate(item)) === dateKey);
-}
-
-function getMonthCalendarDays(monthDate) {
-  const baseDate = new Date(monthDate);
-
-  if (Number.isNaN(baseDate.getTime())) return [];
-
-  const firstDay = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
-  const lastDay = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
-  const days = [];
-
-  for (let index = 0; index < firstDay.getDay(); index += 1) {
-    days.push(null);
-  }
-
-  for (let day = 1; day <= lastDay.getDate(); day += 1) {
-    days.push(new Date(baseDate.getFullYear(), baseDate.getMonth(), day));
-  }
-
-  return days;
-}
-
-function moveMonth(value, amount) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return formatDateOnly(new Date());
-
-  date.setMonth(date.getMonth() + amount);
-
-  return formatDateOnly(date);
-}
-
-function getStartOfWeek(value) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
-  }
-
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay());
-}
-
-function getWeekCalendarDays(value) {
-  const startDate = getStartOfWeek(value);
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + index);
-
-    return date;
-  });
-}
-
-function moveWeek(value, amount) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return formatDateOnly(new Date());
-
-  date.setDate(date.getDate() + amount * 7);
-
-  return formatDateOnly(date);
-}
-
-function formatWeekRangeTitle(value) {
-  const weekDays = getWeekCalendarDays(value);
-  const firstDay = weekDays[0];
-  const lastDay = weekDays[6];
-
-  return `${new Intl.DateTimeFormat("es-PE", {
-    day: "2-digit",
-    month: "short",
-  }).format(firstDay)} - ${new Intl.DateTimeFormat("es-PE", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(lastDay)}`;
-}
-
-function formatWeekDayLabel(value) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "Día";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    weekday: "short",
-  }).format(date);
 }
 
 export default function WorkspaceCalendarPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const returnContext = resolveReturnContext(location.state);
+
   const canAssignToOthers = userHasPermission(
     user,
     ["workspaces.assign_work"]
@@ -836,6 +605,7 @@ export default function WorkspaceCalendarPage() {
   const [eventForm, setEventForm] = useState(INITIAL_EVENT_FORM);
   const [editEventForm, setEditEventForm] = useState(INITIAL_EVENT_FORM);
   const [editTaskForm, setEditTaskForm] = useState(INITIAL_TASK_FORM);
+  const [editReminderForm, setEditReminderForm] = useState(INITIAL_REMINDER_FORM);
 
   const [calendarView, setCalendarView] = useState("dayGridMonth");
   const [calendarInitialDate, setCalendarInitialDate] = useState(formatDateOnly(new Date()));
@@ -971,23 +741,17 @@ export default function WorkspaceCalendarPage() {
     setIsLoading(true);
 
     try {
-      const [calendarData, tasksData, groupsData, visibleUsers] = await Promise.all([
+      const [calendarData, groupsData, visibleUsers] = await Promise.all([
         loadCalendarItemsFromApi(range),
-        getWorkspaceTasks({
-          ordering: "due_at",
-          page_size: 500,
-        }),
         loadVisibleGroups(),
         loadVisibleUsers(user, canAssignToOthers),
       ]);
 
-      const normalizedTasks = normalizeList(tasksData);
-
-      setCalendarItems(buildCalendarItems(calendarData, normalizedTasks));
+      setCalendarItems(normalizeCalendarItems(calendarData));
       setGroups(groupsData);
       setUsers(visibleUsers);
     } catch (requestError) {
-      setError("No se pudo cargar las tareas del calendario. Revisa el backend o la sesión.");
+      setError("No se pudo cargar el calendario. Verifica tu conexión e inténtalo nuevamente.");
       console.error(requestError);
     } finally {
       setIsLoading(false);
@@ -1002,26 +766,20 @@ export default function WorkspaceCalendarPage() {
       setIsLoading(true);
 
       try {
-        const [calendarData, tasksData, groupsData, visibleUsers] = await Promise.all([
+        const [calendarData, groupsData, visibleUsers] = await Promise.all([
           loadCalendarItemsFromApi(calendarRange),
-          getWorkspaceTasks({
-            ordering: "due_at",
-            page_size: 500,
-          }),
           loadVisibleGroups(),
           loadVisibleUsers(user, canAssignToOthers),
         ]);
 
-        const normalizedTasks = normalizeList(tasksData);
-
         if (!ignore) {
-          setCalendarItems(buildCalendarItems(calendarData, normalizedTasks));
+          setCalendarItems(normalizeCalendarItems(calendarData));
           setGroups(groupsData);
           setUsers(visibleUsers);
         }
       } catch (requestError) {
         if (!ignore) {
-          setError("No se pudo cargar las tareas del calendario. Revisa el backend o la sesión.");
+          setError("No se pudo cargar el calendario. Verifica tu conexión e inténtalo nuevamente.");
         }
 
         console.error(requestError);
@@ -1085,8 +843,19 @@ export default function WorkspaceCalendarPage() {
     if (error) setError("");
   }
 
+  function handleEditReminderFormChange(event) {
+    const { name, value } = event.target;
+
+    setEditReminderForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }));
+
+    if (error) setError("");
+  }
+
   function openEventForm() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = formatDateOnly(new Date());
 
     setEventForm(buildEventFormFromDate(today));
     setShowEventForm(true);
@@ -1204,6 +973,55 @@ export default function WorkspaceCalendarPage() {
     }
   }
 
+  async function handleUpdateReminder(event) {
+    event.preventDefault();
+
+    if (!selectedItem) return;
+
+    if (!canEditCalendarItem(selectedItem, selectedDetail)) {
+      setError("No tienes permiso para editar este recordatorio.");
+      setDetailMode("view");
+      return;
+    }
+
+    const reminderId = getCalendarRealId(selectedDetail || selectedItem);
+
+    if (!reminderId) return;
+
+    const isTaskReminder = selectedDetail?.source === "task";
+    const validationMessage = getReminderValidationMessage(
+      editReminderForm,
+      isTaskReminder,
+    );
+
+    if (validationMessage) {
+      setError(validationMessage);
+      return;
+    }
+
+    setError("");
+    setIsSavingEdit(true);
+
+    try {
+      await updateWorkspaceReminder(
+        reminderId,
+        buildReminderPayload(editReminderForm, isTaskReminder),
+      );
+      closeDetail();
+      await loadCalendarData(calendarRange);
+    } catch (requestError) {
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "No se pudo actualizar el recordatorio.",
+        ),
+      );
+      console.error(requestError);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }
+
   async function handleCompleteTask() {
     if (!selectedItem) return;
 
@@ -1221,7 +1039,7 @@ export default function WorkspaceCalendarPage() {
     setIsCompletingTask(true);
 
     try {
-      if (selectedType === "reminder" && selectedItem.type !== "task_reminder") {
+      if (selectedType === "reminder") {
         await updateWorkspaceReminder(realId, {
           completed_at: new Date().toISOString(),
           is_completed: true,
@@ -1253,11 +1071,21 @@ export default function WorkspaceCalendarPage() {
   async function openCalendarItemDetail(item) {
     const calendarItemType = item?.type;
 
-    if (calendarItemType === "task" || calendarItemType === "task_reminder") {
+    if (calendarItemType === "task") {
       const taskId = item.task_id || item.task || getCalendarRealId(item);
 
       if (taskId) {
-        navigate(`/admin/workspace/tasks?task=${taskId}&tab=info`);
+        navigate(
+          `/admin/workspace/tasks?task=${taskId}&tab=info`,
+          {
+            state: buildNavigationState({
+              from: "/admin/workspace/calendar",
+              fromLabel: "Calendario",
+              fromType: "calendar",
+              currentState: location.state,
+            }),
+          },
+        );
       }
 
       return;
@@ -1282,9 +1110,11 @@ export default function WorkspaceCalendarPage() {
         return;
       }
 
-      if (itemType === "reminder" && item.type !== "task_reminder") {
-        setSelectedDetail(item);
-        setEditTaskForm(INITIAL_TASK_FORM);
+      if (itemType === "reminder") {
+        const reminderDetail = await getWorkspaceReminderById(realId);
+
+        setSelectedDetail(reminderDetail);
+        setEditReminderForm(buildReminderFormFromReminder(reminderDetail));
         return;
       }
 
@@ -1301,6 +1131,8 @@ export default function WorkspaceCalendarPage() {
 
       if (getCalendarType(item) === "event") {
         setEditEventForm(buildEventFormFromEvent(item));
+      } else if (getCalendarType(item) === "reminder") {
+        setEditReminderForm(buildReminderFormFromReminder(item));
       } else {
         setEditTaskForm(buildTaskFormFromTask(item));
       }
@@ -1317,6 +1149,7 @@ export default function WorkspaceCalendarPage() {
     setDetailMode("view");
     setEditEventForm(INITIAL_EVENT_FORM);
     setEditTaskForm(INITIAL_TASK_FORM);
+    setEditReminderForm(INITIAL_REMINDER_FORM);
   }
 
   function forceCalendarRender(nextView, nextDate) {
@@ -1335,21 +1168,10 @@ export default function WorkspaceCalendarPage() {
   }
 
   function goToToday() {
-    const today = formatDateOnly(new Date());
-
-    forceCalendarRender(calendarView, today);
-
-    const todayDate = new Date();
-    const start = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
-    const end = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0);
-
-    start.setDate(start.getDate() - 14);
-    end.setDate(end.getDate() + 14);
-
-    setCalendarRange({
-      start: start.toISOString().slice(0, 10),
-      end: end.toISOString().slice(0, 10),
-    });
+    forceCalendarRender(
+      "timeGridDay",
+      formatDateOnly(new Date()),
+    );
   }
 
   function renderEventContent(eventInfo) {
@@ -1381,6 +1203,22 @@ export default function WorkspaceCalendarPage() {
             </div>
 
             <div className="grid gap-2 sm:flex sm:flex-wrap">
+              {returnContext.path ? (
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-gray-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 sm:py-3"
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      returnContext.path,
+                      { state: returnContext.state },
+                    )
+                  }
+                >
+                  <FaArrowLeft />
+                  Volver a {returnContext.label || "origen"}
+                </button>
+              ) : null}
+
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white px-4 py-2.5 text-sm font-black text-gray-950 transition hover:bg-gray-100 sm:py-3"
                 type="button"
@@ -1486,10 +1324,19 @@ export default function WorkspaceCalendarPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <LegendItem className="border-red-100 bg-red-50 text-red-700" label="Tareas" />
-                <LegendItem className="border-blue-100 bg-blue-50 text-blue-700" label="Eventos" />
+                <LegendItem
+                  className="border-red-100 bg-red-50 text-red-700"
+                  dotClassName="bg-red-700"
+                  label="Tareas"
+                />
+                <LegendItem
+                  className="border-blue-100 bg-blue-50 text-blue-700"
+                  dotClassName="bg-blue-600"
+                  label="Eventos"
+                />
                 <LegendItem
                   className="border-yellow-100 bg-yellow-50 text-yellow-800"
+                  dotClassName="bg-yellow-500"
                   label="Recordatorios"
                 />
               </div>
@@ -1507,12 +1354,11 @@ export default function WorkspaceCalendarPage() {
             </div>
 
             <div className="mb-3 hidden flex-col gap-3 border-t border-gray-100 pt-3 lg:flex lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                <CalendarViewButton active={false} label="Hoy" onClick={goToToday} />
+              <div className="flex flex-wrap gap-2">
                 <CalendarViewButton
-                  active={calendarView === "dayGridMonth"}
-                  label="Mes"
-                  onClick={() => changeCalendarView("dayGridMonth")}
+                  active={calendarView === "timeGridDay"}
+                  label="Hoy"
+                  onClick={goToToday}
                 />
                 <CalendarViewButton
                   active={calendarView === "timeGridWeek"}
@@ -1520,14 +1366,14 @@ export default function WorkspaceCalendarPage() {
                   onClick={() => changeCalendarView("timeGridWeek")}
                 />
                 <CalendarViewButton
-                  active={calendarView === "timeGridDay"}
-                  label="Día"
-                  onClick={() => changeCalendarView("timeGridDay")}
+                  active={calendarView === "dayGridMonth"}
+                  label="Mes"
+                  onClick={() => changeCalendarView("dayGridMonth")}
                 />
               </div>
 
               <p className="text-xs font-bold text-gray-500">
-                Vista compacta: 7:00 a. m. a 9:00 p. m.
+                Usa las flechas del calendario para avanzar o retroceder el periodo.
               </p>
             </div>
 
@@ -1544,14 +1390,15 @@ export default function WorkspaceCalendarPage() {
               </div>
             )}
 
-            <div className="todo-calendar rounded-2xl border border-gray-100 bg-white p-2 sm:p-3">
+            <div className="todo-calendar relative rounded-2xl border border-gray-100 bg-white p-2 sm:p-3">
               {isLoading ? (
-                <div className="flex min-h-80 items-center justify-center text-sm font-bold text-gray-500">
-                  <FaSpinner className="mr-3 animate-spin" />
-                  Cargando calendario...
+                <div className="pointer-events-none absolute right-3 top-3 z-20 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/95 px-3 py-2 text-xs font-black text-gray-600 shadow-sm">
+                  <FaSpinner className="animate-spin" />
+                  Actualizando
                 </div>
-              ) : (
-                <>
+              ) : null}
+
+              <>
                   <div className="block lg:hidden">
                     {mobileViewMode === "agenda" ? (
                       <MobileCalendarList
@@ -1638,7 +1485,6 @@ export default function WorkspaceCalendarPage() {
                     />
                   </div>
                 </>
-              )}
             </div>
 
             <p className="mt-3 text-xs font-semibold leading-5 text-gray-500">
@@ -1705,8 +1551,22 @@ export default function WorkspaceCalendarPage() {
                 onSubmit={handleUpdateTask}
               />
             ) : (
-              <ReadOnlyNotice
-                text="Este recordatorio se gestiona desde el módulo de Recordatorios. Desde calendario solo puedes consultarlo o completarlo si te corresponde."
+              <TodoReminderEditForm
+                assignedToName={
+                  selectedDetail?.assigned_to_name ||
+                  selectedDetail?.user_name ||
+                  selectedItem?.assigned_to_name ||
+                  ""
+                }
+                canAssignToOthers={canAssignToOthers}
+                form={editReminderForm}
+                groups={groups}
+                isSaving={isSavingEdit}
+                isTaskReminder={selectedDetail?.source === "task"}
+                users={users}
+                onCancel={() => setDetailMode("view")}
+                onChange={handleEditReminderFormChange}
+                onSubmit={handleUpdateReminder}
               />
             )
           ) : (
@@ -1732,112 +1592,6 @@ export default function WorkspaceCalendarPage() {
   );
 }
 
-function CalendarMetricCard({ className = "", label, value, variant = "default" }) {
-  const variantClass = {
-    default: "bg-gray-100 text-gray-700",
-    task: "bg-red-50 text-red-700",
-    event: "bg-blue-50 text-blue-700",
-    reminder: "bg-yellow-50 text-yellow-800",
-  };
-
-  return (
-    <div className={`border-b border-gray-100 p-3 sm:p-4 xl:border-b-0 xl:border-r ${className}`}>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-black text-gray-700 sm:text-sm">{label}</p>
-          <p className="mt-1 text-2xl font-black text-gray-950 sm:mt-2 sm:text-3xl">{value}</p>
-        </div>
-
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl sm:h-10 sm:w-10 ${
-            variantClass[variant] || variantClass.default
-          }`}
-        >
-          <FaCalendarAlt />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CalendarViewButton({ active, label, onClick }) {
-  return (
-    <button
-      className={`shrink-0 rounded-xl px-4 py-2 text-xs font-black transition ${
-        active ? "bg-red-700 text-white shadow-sm" : "bg-gray-950 text-white hover:bg-black"
-      }`}
-      type="button"
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
-}
-
-function MobileModeButton({ active, label, onClick }) {
-  return (
-    <button
-      className={`rounded-xl px-2 py-2.5 text-xs font-black transition ${
-        active ? "bg-red-700 text-white shadow-sm" : "bg-gray-100 text-gray-700"
-      }`}
-      type="button"
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
-}
-
-function MobileDayCalendar({ events, initialDate, onDateClick, onEventClick, renderEventContent }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-2">
-      <FullCalendar
-        key={`mobile-day-${initialDate}`}
-        allDaySlot={false}
-        contentHeight={520}
-        dateClick={onDateClick}
-        dayHeaderFormat={{
-          weekday: "long",
-          day: "2-digit",
-          month: "short",
-        }}
-        eventClick={onEventClick}
-        eventContent={renderEventContent}
-        eventDisplay="block"
-        eventMaxStack={2}
-        eventMinHeight={22}
-        eventShortHeight={22}
-        eventTimeFormat={{
-          hour: "2-digit",
-          minute: "2-digit",
-          meridiem: "short",
-        }}
-        events={events}
-        expandRows
-        headerToolbar={{
-          left: "prev,next",
-          center: "title",
-          right: "",
-        }}
-        initialDate={initialDate}
-        initialView="timeGridDay"
-        locale="es"
-        nowIndicator
-        plugins={[classicThemePlugin, timeGridPlugin, interactionPlugin]}
-        slotDuration="00:30:00"
-        slotEventOverlap={false}
-        slotLabelFormat={{
-          hour: "2-digit",
-          minute: "2-digit",
-          meridiem: "short",
-        }}
-        slotLabelInterval="01:00:00"
-        slotMaxTime="21:00:00"
-        slotMinTime="07:00:00"
-      />
-    </div>
-  );
-}
 
 function MobileWeekCalendar({ initialDate, items, onSelectItem }) {
   const [weekDate, setWeekDate] = useState(initialDate);
@@ -2222,62 +1976,6 @@ function MobileActivityCard({ item, onSelectItem }) {
   );
 }
 
-function CalendarDrawer({ children, subtitle, title, onClose }) {
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/50"
-      role="presentation"
-      onClick={onClose}
-    >
-      <aside
-        aria-modal="true"
-        className="flex h-screen w-full flex-col overflow-hidden bg-white shadow-2xl sm:max-w-xl"
-        role="dialog"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <header className="border-b border-gray-200 bg-gray-950 px-4 py-4 text-white sm:px-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-wide text-red-300">Calendario</p>
-              <h2 className="mt-1 text-xl font-black sm:text-2xl">{title}</h2>
-              {subtitle ? <p className="mt-1 text-sm leading-5 text-gray-300">{subtitle}</p> : null}
-            </div>
-
-            <button
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20"
-              type="button"
-              onClick={onClose}
-            >
-              <FaTimes />
-            </button>
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-5">{children}</div>
-      </aside>
-    </div>
-  );
-}
-
-function LegendItem({ className, label }) {
-  return (
-    <div className={`rounded-full border px-2 py-2 text-center text-xs font-black ${className}`}>
-      {label}
-    </div>
-  );
-}
 
 function AgendaPanel({ items, onSelectItem }) {
   return (
@@ -2855,10 +2553,3 @@ function DateTimeField({ id, label, name, value, onChange }) {
   );
 }
 
-function EmptyState({ text }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm font-semibold text-gray-500 sm:p-5">
-      {text}
-    </div>
-  );
-}

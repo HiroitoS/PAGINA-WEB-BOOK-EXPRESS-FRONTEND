@@ -8,6 +8,14 @@ export async function getAdminNotifications(params = {}) {
   return response.data;
 }
 
+export async function syncWorkspaceReminderAlerts() {
+  const response = await axiosClient.post(
+    "/admin/reminders/sync-alerts/"
+  );
+
+  return response.data;
+}
+
 export async function getUnreadNotificationCount() {
   const response = await axiosClient.get(
     "/admin/notifications/unread-count/"

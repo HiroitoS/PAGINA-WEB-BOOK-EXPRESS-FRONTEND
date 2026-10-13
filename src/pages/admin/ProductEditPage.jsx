@@ -33,6 +33,11 @@ import {
 } from "../../api/adminApi";
 import { getDisplayName, getResults } from "../../utils/formatters";
 
+const COMMERCIAL_LINE_OPTIONS = [
+  { id: "school_text", name: "Texto escolar" },
+  { id: "reading_plan", name: "Plan lector" },
+];
+
 function getRelationId(value) {
   if (!value) return "";
 
@@ -54,6 +59,10 @@ function getInitialForm(product) {
     area: getRelationId(product.area),
     series: getRelationId(product.series),
     product_type: getRelationId(product.product_type),
+    commercial_line:
+      product.commercial_line === "other"
+        ? ""
+        : product.commercial_line || "",
     description: product.description || "",
     is_active: Boolean(product.is_active),
     is_featured: Boolean(product.is_featured),
@@ -177,8 +186,9 @@ function getFriendlyPriceError(error) {
   }
 
   if (backendData?.price) {
-    return "El precio ingresado no es válido.";
+    return "El precio referencial ingresado no es válido.";
   }
+
 
   if (backendData?.detail) {
     return String(backendData.detail);
@@ -190,7 +200,7 @@ function getFriendlyPriceError(error) {
 function getEmptyEditPriceForm() {
   return {
     year: "",
-    campaign: "",
+    campaign: "Campaña escolar",
     price: "",
     show_price: false,
     consult_price: true,
@@ -213,6 +223,7 @@ export default function ProductEditPage() {
     area: "",
     series: "",
     product_type: "",
+    commercial_line: "",
     description: "",
     is_active: true,
     is_featured: false,
@@ -220,7 +231,7 @@ export default function ProductEditPage() {
 
   const [priceForm, setPriceForm] = useState({
     year: "2026",
-    campaign: "",
+    campaign: "Campaña escolar",
     price: "",
     show_price: false,
     consult_price: true,
@@ -347,7 +358,7 @@ export default function ProductEditPage() {
 
     setEditPriceForm({
       year: String(price.year || ""),
-      campaign: price.campaign || "",
+      campaign: price.campaign || "Campaña escolar",
       price: getPriceValue(price) ? String(getPriceValue(price)) : "",
       show_price: getShowPriceValue(price),
       consult_price:
@@ -394,6 +405,13 @@ export default function ProductEditPage() {
       return;
     }
 
+    if (!["school_text", "reading_plan"].includes(form.commercial_line)) {
+      setError(
+        "Selecciona si el producto corresponde a Texto escolar o Plan lector.",
+      );
+      return;
+    }
+
     setSaving(true);
     setError("");
     setSuccessMessage("");
@@ -413,6 +431,7 @@ export default function ProductEditPage() {
       "product_type",
       normalizeNullableId(form.product_type)
     );
+    appendFormValue(payload, "commercial_line", form.commercial_line);
     appendFormValue(payload, "description", form.description.trim());
 
     payload.append("is_active", form.is_active ? "true" : "false");
@@ -456,7 +475,7 @@ export default function ProductEditPage() {
     const payload = {
       product: Number(id),
       year: Number(priceForm.year),
-      campaign: priceForm.campaign.trim(),
+      campaign: priceForm.campaign.trim() || "Campaña escolar",
       price: priceForm.price ? Number(priceForm.price) : null,
       show_price: priceForm.show_price,
       consult_price: priceForm.consult_price,
@@ -471,7 +490,7 @@ export default function ProductEditPage() {
 
       setPriceForm((prev) => ({
         ...prev,
-        campaign: "",
+        campaign: "Campaña escolar",
         price: "",
         show_price: false,
         consult_price: true,
@@ -506,7 +525,7 @@ export default function ProductEditPage() {
 
     const payload = {
       year: Number(editPriceForm.year),
-      campaign: editPriceForm.campaign.trim(),
+      campaign: editPriceForm.campaign.trim() || "Campaña escolar",
       price: editPriceForm.price ? Number(editPriceForm.price) : null,
       show_price: editPriceForm.show_price,
       consult_price: editPriceForm.consult_price,
@@ -896,6 +915,14 @@ export default function ProductEditPage() {
               onChange={handleChange}
               options={productTypes}
             />
+
+            <SelectField
+              label="Línea comercial *"
+              name="commercial_line"
+              value={form.commercial_line}
+              onChange={handleChange}
+              options={COMMERCIAL_LINE_OPTIONS}
+            />
           </div>
         </section>
 
@@ -996,7 +1023,8 @@ export default function ProductEditPage() {
             <div>
               <h3 className="font-black text-gray-950">Agregar precio</h3>
               <p className="mt-1 text-xs text-gray-500">
-                Úsalo para registrar precio 2026, 2027 o campañas futuras.
+                Registra el PVP por campaña. El costo editorial real se define
+                en la cotización según el descuento negociado con la editorial.
               </p>
             </div>
           </div>
@@ -1008,7 +1036,7 @@ export default function ProductEditPage() {
               name="year"
               value={priceForm.year}
               onChange={handlePriceChange}
-              placeholder="2026"
+              placeholder="2027"
             />
 
             <TextField
@@ -1016,7 +1044,8 @@ export default function ProductEditPage() {
               name="campaign"
               value={priceForm.campaign}
               onChange={handlePriceChange}
-              placeholder="Ejemplo: Campaña escolar 2026"
+              placeholder="Campaña escolar"
+              helper="Para la campaña escolar del CRM usa exactamente “Campaña escolar”."
             />
 
             <TextField

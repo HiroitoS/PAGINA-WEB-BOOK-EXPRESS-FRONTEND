@@ -40,6 +40,8 @@ const EMPTY_FORM = {
   email: "",
   first_name: "",
   last_name: "",
+  phone: "",
+  whatsapp: "",
   password: "",
   is_active: true,
   groups: [],
@@ -268,6 +270,8 @@ export default function UsersPage() {
       email: user.email || "",
       first_name: user.first_name || "",
       last_name: user.last_name || "",
+      phone: user.phone || "",
+      whatsapp: user.whatsapp || "",
       password: "",
       is_active: Boolean(user.is_active),
       groups: Array.isArray(user.groups) ? user.groups.slice(0, 1) : [],
@@ -314,6 +318,8 @@ export default function UsersPage() {
         email: form.email.trim(),
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
+        phone: form.phone.trim(),
+        whatsapp: form.whatsapp.trim(),
         is_active: form.is_active,
         groups: form.groups,
       };
@@ -872,6 +878,24 @@ function UserFormModal({
               placeholder="correo@book-express.com"
             />
           </div>
+
+          <TextField
+            label="Celular"
+            value={form.phone}
+            onChange={(event) =>
+              onUpdateField("phone", event.target.value)
+            }
+            placeholder="Ejemplo: 987654321"
+          />
+
+          <TextField
+            label="WhatsApp"
+            value={form.whatsapp}
+            onChange={(event) =>
+              onUpdateField("whatsapp", event.target.value)
+            }
+            placeholder="Ejemplo: 987654321"
+          />
         </div>
 
         {!editingUser && (

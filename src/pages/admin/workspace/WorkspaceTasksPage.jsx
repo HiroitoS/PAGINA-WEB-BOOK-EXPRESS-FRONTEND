@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
 import {
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
+import {
+  FaArrowLeft,
   FaCheckCircle,
   FaChevronDown,
   FaClock,
@@ -29,6 +34,31 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import { getResults } from "../../../utils/formatters";
+import { resolveReturnContext } from "../../../utils/navigationContext";
+import { buildTaskTimeline } from "../../../utils/taskTimeline";
+import {
+  formatDateTimeLocal,
+  taskIsClosed,
+  taskCanEditDetails,
+  taskCanFollowUp,
+  taskCanComplete,
+  taskCanReopen,
+  taskIsReadOnly,
+  sortTasks,
+  buildTaskPayload,
+  buildEditFormFromTask,
+  getTaskValidationMessage,
+} from "../../../utils/workspaceTaskRules";
+import WorkspaceTaskQuickForm from "../../../components/admin/workspace/WorkspaceTaskQuickForm";
+import {
+  SelectField,
+  DateTimeField,
+  QuickDateButton,
+  TaskMetricCard,
+  PermissionNotice,
+  InfoItem,
+  EmptyState,
+} from "../../../components/admin/workspace/WorkspaceTaskUI";
 
 const INITIAL_TASK_FORM = {
   title: "",
@@ -81,21 +111,6 @@ const ACTION_TYPE_OPTIONS = [
   { value: "other", label: "Otro" },
 ];
 
-const STATUS_ORDER = {
-  pending: 1,
-  in_progress: 2,
-  waiting: 3,
-  completed: 4,
-  cancelled: 5,
-};
-
-const PRIORITY_ORDER = {
-  urgent: 1,
-  high: 2,
-  medium: 3,
-  low: 4,
-};
-
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
   return getResults(data);
@@ -128,28 +143,6 @@ function formatShortDate(value) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-}
-
-function formatDateTimeLocal(value) {
-  if (!value) return "";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-
-  return offsetDate.toISOString().slice(0, 16);
-}
-
-function getDateTimeValue(value) {
-  if (!value) return Number.MAX_SAFE_INTEGER;
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return Number.MAX_SAFE_INTEGER;
-
-  return date.getTime();
 }
 
 function getUserLabel(user) {
@@ -228,150 +221,6 @@ function getPriorityBadgeClass(priority) {
   if (priority === "low") return "border-gray-200 bg-gray-50 text-gray-600";
 
   return "border-blue-200 bg-blue-50 text-blue-700";
-}
-
-function taskIsClosed(task) {
-  return task.status === "completed" || task.status === "cancelled";
-}
-
-function taskCanEditDetails(task) {
-  return task?.can_edit_details === true;
-}
-
-function taskCanFollowUp(task) {
-  return task?.can_follow_up === true;
-}
-
-function taskCanComplete(task) {
-  return task?.can_complete === true;
-}
-
-function taskCanReopen(task) {
-  return task?.can_reopen === true;
-}
-
-function taskIsReadOnly(task) {
-  return task?.is_read_only === true || (!taskCanEditDetails(task) && !taskCanFollowUp(task));
-}
-
-function sortTasks(tasks) {
-  return [...tasks].sort((firstTask, secondTask) => {
-    const firstClosed = taskIsClosed(firstTask);
-    const secondClosed = taskIsClosed(secondTask);
-
-    if (firstClosed !== secondClosed) return firstClosed ? 1 : -1;
-
-    const firstOverdue = Boolean(firstTask.is_overdue);
-    const secondOverdue = Boolean(secondTask.is_overdue);
-
-    if (firstOverdue !== secondOverdue) return firstOverdue ? -1 : 1;
-
-    const firstPriority = PRIORITY_ORDER[firstTask.priority] || 99;
-    const secondPriority = PRIORITY_ORDER[secondTask.priority] || 99;
-
-    if (firstPriority !== secondPriority) return firstPriority - secondPriority;
-
-    const firstStatus = STATUS_ORDER[firstTask.status] || 99;
-    const secondStatus = STATUS_ORDER[secondTask.status] || 99;
-
-    if (firstStatus !== secondStatus) return firstStatus - secondStatus;
-
-    return getDateTimeValue(firstTask.due_at) - getDateTimeValue(secondTask.due_at);
-  });
-}
-
-function buildTaskTimeline(task) {
-  const managementItems = (task.comments || []).map((comment) => ({
-    id: `management-${comment.id}`,
-    sourceId: String(comment.id),
-    kind: "management",
-    title: comment.action_type_display || "Gestión",
-    detail: comment.comment || "",
-    actor: comment.user_name || "Usuario",
-    createdAt: comment.created_at,
-  }));
-
-  const statusItems = (task.status_history || task.history || []).map((historyItem) => ({
-    id: `status-${historyItem.id}`,
-    sourceId: String(historyItem.id),
-    kind: "status",
-    title: `${historyItem.old_status_display || "Sin estado"} → ${
-      historyItem.new_status_display || "Nuevo estado"
-    }`,
-    detail: historyItem.note || "",
-    actor: historyItem.changed_by_name || "Usuario",
-    createdAt: historyItem.created_at,
-  }));
-
-  return [...managementItems, ...statusItems].sort(
-    (firstItem, secondItem) =>
-      new Date(secondItem.createdAt).getTime() -
-      new Date(firstItem.createdAt).getTime()
-  );
-}
-
-function buildTaskPayload(form, canAssignToOthers = false) {
-  const payload = {
-    title: form.title.trim(),
-    description: form.description.trim(),
-    task_type: form.task_type,
-    priority: form.priority,
-    group: form.group ? Number(form.group) : null,
-    due_at: form.due_at || null,
-    reminder_at: form.reminder_at || null,
-    is_important: false,
-  };
-
-  if (canAssignToOthers && form.assigned_to) {
-    payload.assigned_to = Number(form.assigned_to);
-  }
-
-  return payload;
-}
-
-function buildEditFormFromTask(task) {
-  return {
-    title: task.title || "",
-    description: task.description || "",
-    task_type: task.task_type || "general",
-    priority: task.priority || "medium",
-    group: task.group ? String(task.group) : "",
-    assigned_to: task.assigned_to ? String(task.assigned_to) : "",
-    due_at: formatDateTimeLocal(task.due_at),
-    reminder_at: formatDateTimeLocal(task.reminder_at),
-    is_important: false,
-  };
-}
-
-function getTaskValidationMessage(form) {
-  if (!form.title.trim()) return "Ingresa el título de la tarea.";
-
-  if (form.reminder_at) {
-    const reminderDate = new Date(form.reminder_at);
-
-    if (Number.isNaN(reminderDate.getTime())) {
-      return "Revisa el recordatorio. La fecha no es válida.";
-    }
-  }
-
-  if (form.due_at) {
-    const dueDate = new Date(form.due_at);
-
-    if (Number.isNaN(dueDate.getTime())) {
-      return "Revisa la fecha límite. La fecha no es válida.";
-    }
-  }
-
-  if (form.due_at && form.reminder_at) {
-    const dueDate = new Date(form.due_at);
-    const reminderDate = new Date(form.reminder_at);
-
-    if (reminderDate > dueDate) {
-      return "El recordatorio no puede ser después de la fecha límite.";
-    }
-  }
-
-  return "";
 }
 
 function getApiErrorMessage(error, fallbackMessage) {
@@ -515,7 +364,10 @@ function getMobileTaskSections({
 
 export default function WorkspaceTasksPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const returnContext = resolveReturnContext(location.state);
   const linkedTaskId = searchParams.get("task");
   const linkedTab = searchParams.get("tab");
   const linkedCommentId = searchParams.get("comment");
@@ -919,7 +771,23 @@ export default function WorkspaceTasksPage() {
     );
   }
 
+  function returnToContext() {
+    if (!returnContext.path) {
+      return;
+    }
+
+    navigate(
+      returnContext.path,
+      { state: returnContext.state },
+    );
+  }
+
   function closeTaskDetail() {
+    if (linkedTaskId && returnContext.path) {
+      returnToContext();
+      return;
+    }
+
     if (linkedTaskId) {
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete("task");
@@ -1076,6 +944,22 @@ export default function WorkspaceTasksPage() {
             </div>
 
             <div className="grid gap-2 sm:flex sm:flex-wrap">
+              {returnContext.path ? (
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-gray-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-gray-800 sm:py-3"
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      returnContext.path,
+                      { state: returnContext.state },
+                    )
+                  }
+                >
+                  <FaArrowLeft />
+                  Volver a {returnContext.label || "origen"}
+                </button>
+              ) : null}
+
               <button
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white px-4 py-2.5 text-sm font-black text-gray-950 transition hover:bg-gray-100 sm:py-3"
                 type="button"
@@ -1114,8 +998,15 @@ export default function WorkspaceTasksPage() {
       ) : null}
 
       {showCreateForm ? (
-        <QuickTaskForm
+        <WorkspaceTaskQuickForm
           canAssignToOthers={canAssignToOthers}
+          categoryOptions={TASK_CATEGORY_OPTIONS}
+          priorityOptions={PRIORITY_OPTIONS}
+          getUserLabel={getUserLabel}
+          getTodayAt={getTodayAt}
+          getTomorrowAt={getTomorrowAt}
+          getReminderBeforeDue={getReminderBeforeDue}
+          getTodayReminderAt={getTodayReminderAt}
           groups={groups}
           isSaving={isSavingTask}
           taskForm={taskForm}
@@ -1256,6 +1147,8 @@ export default function WorkspaceTasksPage() {
           onRegisterManagement={handleRegisterManagement}
           onReopenTask={handleReopenTask}
           onClose={closeTaskDetail}
+          onReturn={returnContext.path ? returnToContext : null}
+          returnLabel={returnContext.label}
           onManagementChange={setManagementForm}
           onEditTaskChange={handleEditTaskFormChange}
           onSetDetailTab={setDetailTab}
@@ -1268,251 +1161,6 @@ export default function WorkspaceTasksPage() {
   );
 }
 
-function QuickTaskForm({
-  canAssignToOthers,
-  groups,
-  isSaving,
-  taskForm,
-  users,
-  onChange,
-  onReset,
-  onSetField,
-  onSubmit,
-}) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
-  return (
-    <section className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-      <form onSubmit={onSubmit}>
-        <div className="border-b border-gray-100 bg-gray-50 px-4 py-4 sm:px-5">
-          <p className="text-xs font-black uppercase tracking-wide text-red-700">Nueva tarea</p>
-          <h2 className="mt-1 text-xl font-black text-gray-950">Registrar pendiente</h2>
-          <p className="mt-1 text-sm leading-5 text-gray-500">
-            Ingresa la actividad, define una fecha y agrega detalles solo si corresponde.
-          </p>
-        </div>
-
-        <div className="grid gap-0 lg:grid-cols-12">
-          <div className="space-y-4 p-4 sm:p-5 lg:col-span-7 lg:border-r lg:border-gray-100 xl:col-span-8">
-            <div>
-              <label
-                className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
-                htmlFor="task_title"
-              >
-                ¿Qué se debe hacer?
-              </label>
-
-              <input
-                className="input-admin"
-                id="task_title"
-                name="title"
-                placeholder="Ejemplo: Confirmar atención de solicitud"
-                type="text"
-                value={taskForm.title}
-                onChange={onChange}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <DateTimeField
-                helper="Fecha en la que debe estar terminado."
-                id="task_due_at"
-                label="Fecha límite"
-                name="due_at"
-                value={taskForm.due_at}
-                onChange={onChange}
-              />
-
-              <DateTimeField
-                helper="Día y hora del aviso."
-                id="task_reminder_at"
-                label="Recordatorio"
-                name="reminder_at"
-                value={taskForm.reminder_at}
-                onChange={onChange}
-              />
-            </div>
-
-            <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3">
-              <p className="mb-2 text-xs font-black uppercase tracking-wide text-gray-500">
-                Accesos rápidos
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-                <QuickDateButton
-                  label="Vence hoy 6 p. m."
-                  onClick={() => onSetField("due_at", getTodayAt(18))}
-                />
-
-                <QuickDateButton
-                  label="Vence mañana 9 a. m."
-                  onClick={() => onSetField("due_at", getTomorrowAt(9))}
-                />
-
-                <QuickDateButton
-                  label="Recordar en 1 hora"
-                  onClick={() => onSetField("reminder_at", getTodayReminderAt(60))}
-                />
-
-                <QuickDateButton
-                  label="1 h antes"
-                  onClick={() =>
-                    onSetField("reminder_at", getReminderBeforeDue(taskForm.due_at, 60))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="hidden lg:block">
-              <label
-                className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
-                htmlFor="task_description_desktop"
-              >
-                Descripción
-              </label>
-
-              <textarea
-                className="input-admin min-h-24 resize-none"
-                id="task_description_desktop"
-                name="description"
-                placeholder="Detalle breve del pendiente, indicación o resultado esperado."
-                value={taskForm.description}
-                onChange={onChange}
-              />
-            </div>
-
-            <button
-              className="flex w-full items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-black text-gray-800 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 lg:hidden"
-              type="button"
-              onClick={() => setShowAdvanced((currentValue) => !currentValue)}
-            >
-              <span>Más detalles opcionales</span>
-              <FaChevronDown
-                className={`text-xs transition ${showAdvanced ? "rotate-180" : "rotate-0"}`}
-              />
-            </button>
-          </div>
-
-          <div
-            className={`space-y-4 bg-gray-50 p-4 sm:p-5 lg:col-span-5 lg:block xl:col-span-4 ${
-              showAdvanced ? "block" : "hidden"
-            }`}
-          >
-            <div className="rounded-2xl border border-gray-100 bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-gray-500">Opcional</p>
-              <h3 className="mt-1 text-base font-black text-gray-950">Detalles de la tarea</h3>
-              <p className="mt-1 text-sm leading-5 text-gray-500">
-                Completa estos datos cuando el pendiente tenga grupo, responsable, prioridad o
-                clasificación interna.
-                {canAssignToOthers
-                  ? " Como administrador puedes asignarla a otro usuario."
-                  : " Esta tarea quedará asignada a ti."}
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-              <SelectField
-                id="task_group"
-                label="Grupo"
-                name="group"
-                options={groups.map((group) => ({
-                  value: String(group.id),
-                  label: group.name,
-                }))}
-                placeholder="Sin grupo"
-                value={taskForm.group}
-                onChange={onChange}
-              />
-
-              {canAssignToOthers ? (
-                <SelectField
-                  helper="Por defecto queda para ti."
-                  id="task_assigned_to"
-                  label="Asignado a"
-                  name="assigned_to"
-                  options={users.map((user) => ({
-                    value: String(user.id),
-                    label: getUserLabel(user),
-                  }))}
-                  placeholder="Para mí"
-                  value={taskForm.assigned_to}
-                  onChange={onChange}
-                />
-              ) : (
-                <div className="rounded-2xl border border-gray-100 bg-white p-4">
-                  <p className="text-xs font-black uppercase tracking-wide text-gray-500">
-                    Asignado a
-                  </p>
-                  <p className="mt-1 text-sm font-black text-gray-950">Para mí</p>
-                  <p className="mt-1 text-xs leading-5 text-gray-500">
-                    Los usuarios de atención o catálogo crean tareas propias.
-                  </p>
-                </div>
-              )}
-
-              <SelectField
-                id="task_type"
-                label="Categoría"
-                name="task_type"
-                options={TASK_CATEGORY_OPTIONS}
-                value={taskForm.task_type}
-                onChange={onChange}
-              />
-
-              <SelectField
-                id="task_priority"
-                label="Prioridad"
-                name="priority"
-                options={PRIORITY_OPTIONS}
-                value={taskForm.priority}
-                onChange={onChange}
-              />
-            </div>
-
-            <div className="lg:hidden">
-              <label
-                className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
-                htmlFor="task_description_mobile"
-              >
-                Descripción
-              </label>
-
-              <textarea
-                className="input-admin min-h-20 resize-none"
-                id="task_description_mobile"
-                name="description"
-                placeholder="Detalle breve del pendiente."
-                value={taskForm.description}
-                onChange={onChange}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-100 bg-white px-4 py-4 sm:px-5">
-          <div className="grid gap-2 sm:flex sm:justify-end">
-            <button
-              className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-black text-gray-700 transition hover:bg-gray-50"
-              type="button"
-              onClick={onReset}
-            >
-              Limpiar
-            </button>
-
-            <button
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-3 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isSaving}
-              type="submit"
-            >
-              {isSaving ? <FaSpinner className="animate-spin" /> : <FaPlus />}
-              {isSaving ? "Guardando..." : "Crear tarea"}
-            </button>
-          </div>
-        </div>
-      </form>
-    </section>
-  );
-}
 
 function MobileTaskAccordion({
   openingTaskId,
@@ -1713,87 +1361,9 @@ function CompactTaskItem({
   );
 }
 
-function SelectField({ helper, id, label, name, options, placeholder, value, onChange }) {
-  return (
-    <div>
-      <label
-        className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
-        htmlFor={id}
-      >
-        {label}
-      </label>
 
-      <select className="input-admin" id={id} name={name} value={value} onChange={onChange}>
-        {placeholder ? <option value="">{placeholder}</option> : null}
 
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
 
-      {helper ? <p className="mt-1 text-xs font-semibold text-gray-500">{helper}</p> : null}
-    </div>
-  );
-}
-
-function DateTimeField({ helper, id, label, name, value, onChange }) {
-  return (
-    <div>
-      <label
-        className="mb-1.5 block text-xs font-black uppercase tracking-wide text-gray-500"
-        htmlFor={id}
-      >
-        {label}
-      </label>
-
-      <input
-        className="input-admin"
-        id={id}
-        name={name}
-        type="datetime-local"
-        value={value}
-        onChange={onChange}
-      />
-
-      {helper ? <p className="mt-1 text-xs font-semibold text-gray-500">{helper}</p> : null}
-    </div>
-  );
-}
-
-function QuickDateButton({ label, onClick }) {
-  return (
-    <button
-      className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-black text-gray-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-      type="button"
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  );
-}
-
-function TaskMetricCard({ label, value, variant = "default" }) {
-  const valueClass = variant === "danger" ? "text-red-700" : "text-gray-950";
-  const iconClass =
-    variant === "danger" ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-700";
-
-  return (
-    <div className="border-b border-gray-100 p-3 sm:p-4 xl:border-b-0 xl:border-r">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-black text-gray-700 sm:text-sm">{label}</p>
-          <p className={`mt-1 text-2xl font-black sm:text-3xl ${valueClass}`}>{value}</p>
-        </div>
-
-        <div className={`flex h-9 w-9 items-center justify-center rounded-2xl ${iconClass}`}>
-          <FaTasks />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function TaskItem({
   openingTaskId,
@@ -1943,6 +1513,8 @@ function TaskDetailPanel({
   onRegisterManagement,
   onReopenTask,
   onClose,
+  onReturn,
+  returnLabel,
   onManagementChange,
   onEditTaskChange,
   onSetDetailTab,
@@ -2032,6 +1604,17 @@ function TaskDetailPanel({
       >
         {/* CABECERA FIJA */}
         <header className="shrink-0 border-b border-gray-200 bg-white px-4 py-4 sm:px-5">
+          {onReturn ? (
+            <button
+              className="mb-3 inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-black text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+              type="button"
+              onClick={onReturn}
+            >
+              <FaArrowLeft />
+              Volver a {returnLabel || "origen"}
+            </button>
+          ) : null}
+
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-wide text-red-700">
@@ -2555,7 +2138,7 @@ function TaskDetailPanel({
 
                 <p className="mt-1 text-sm leading-5 text-gray-500">
                   Aquí se muestran juntas las gestiones realizadas y los
-                  cambios de estado.
+                  cambios de estado y planificación.
                 </p>
               </div>
 
@@ -2704,28 +2287,4 @@ function TaskDetailPanel({
   );
 }
 
-function PermissionNotice({ title, text }) {
-  return (
-    <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-      <p className="font-black uppercase tracking-wide">{title}</p>
-      <p className="mt-1 font-semibold leading-5">{text}</p>
-    </div>
-  );
-}
 
-function InfoItem({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4">
-      <p className="text-xs font-black uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-2 text-sm font-black text-gray-900">{value}</p>
-    </div>
-  );
-}
-
-function EmptyState({ text }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm font-semibold text-gray-500 sm:p-5">
-      {text}
-    </div>
-  );
-}
