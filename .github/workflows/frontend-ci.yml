@@ -33,3 +33,12 @@ jobs:
         run: node --test tests/*.test.js
       - name: Compilar Vite
         run: npm run build
+        
+      - name: Guardar frontend compilado
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bookexpress-frontend-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7x|
