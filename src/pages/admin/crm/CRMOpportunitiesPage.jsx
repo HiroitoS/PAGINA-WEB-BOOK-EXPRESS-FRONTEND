@@ -18,7 +18,7 @@ import {
   getCRMCampaigns,
   getCRMOpportunities,
   getCRMPipelines,
-  getCRMSchools,
+  getAllCRMSchools,
 } from "../../../api/crmApi";
 import {
   buildNavigationState,
@@ -669,20 +669,12 @@ export default function CRMOpportunitiesPage() {
         const [pipelineData, campaignData, schoolData] = await Promise.all([
           getCRMPipelines(),
           getCRMCampaigns(),
-          getCRMSchools({
-            page: 1,
-            page_size: PAGE_SIZE,
-            is_active: "true",
-          }),
+          getAllCRMSchools({ is_active: "true" }),
         ]);
 
         if (ignore) return;
 
-        const schoolResults = Array.isArray(schoolData?.results)
-          ? schoolData.results
-          : Array.isArray(schoolData)
-            ? schoolData
-            : [];
+        const schoolResults = schoolData;
 
         setPipelines(pipelineData);
         setCampaigns(campaignData);
