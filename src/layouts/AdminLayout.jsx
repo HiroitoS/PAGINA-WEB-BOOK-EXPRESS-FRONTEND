@@ -87,6 +87,13 @@ const NAV_SECTIONS = [
         icon: <FaFileExcel />,
         permissions: ["catalog.manage_imports"],
       },
+    ],
+  },
+  {
+    type: "group",
+    label: "Seguridad y accesos",
+    icon: <FaUsers />,
+    children: [
       {
         label: "Usuarios",
         to: "/admin/usuarios",
