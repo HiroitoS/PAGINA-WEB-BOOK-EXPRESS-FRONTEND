@@ -8,7 +8,7 @@ import {
 
 import {
   createCRMSchoolContact,
-  getCRMSchools,
+  getAllCRMSchools,
 } from "../../../api/crmApi";
 
 const POSITION_OPTIONS = [
@@ -89,10 +89,7 @@ export default function CRMContactCreatePanel({ onCreated }) {
         setLoadingSchools(true);
         setErrorMessage("");
 
-        const data = await getCRMSchools({
-          page: 1,
-          page_size: 100,
-        });
+        const data = await getAllCRMSchools({ is_active: "true" });
 
         if (!ignore) {
           setSchools(
