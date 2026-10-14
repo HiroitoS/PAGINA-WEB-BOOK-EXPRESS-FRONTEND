@@ -1,4 +1,5 @@
 import axiosClient from "./axiosClient";
+import { collectPaginatedResults } from "../utils/collectPaginatedResults";
 
 const CRM_ADMIN_BASE = "/admin/crm";
 const PUBLIC_CATALOG_BASE = "/public";
@@ -94,6 +95,14 @@ export async function getCRMSchools(params = {}) {
   });
 
   return response.data;
+}
+
+// Recupera todas las páginas para selectores, sin truncar la cartera visible.
+// Las tablas siguen usando getCRMSchools con paginación normal.
+export async function getAllCRMSchools(params = {}) {
+  return collectPaginatedResults(getCRMSchools, params, {
+    pageSize: 100,
+  });
 }
 
 export async function getCRMSchool(schoolId) {
