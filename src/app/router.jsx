@@ -43,6 +43,8 @@ const WorkspaceCalendarPage = lazy(() => import("../pages/admin/workspace/Worksp
 const WorkspaceGroupsPage = lazy(() => import("../pages/admin/workspace/WorkspaceGroupsPage"));
 const WorkspaceTaskListsPage = lazy(() => import("../pages/admin/workspace/WorkspaceTaskListsPage"));
 
+const ERPPedidosPage = lazy(() => import("../pages/admin/erp/ERPPedidosPage"));
+
 const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
 );
@@ -197,6 +199,13 @@ const router = createBrowserRouter([
           {
             path: "dashboard",
             element: protectRole(renderLazyPage(DashboardPage), DASHBOARD_ROLES),
+          },
+          {
+            path: "erp/compras/pedidos",
+            element: protectPermission(
+              renderLazyPage(ERPPedidosPage),
+              ["purchasing.view_purchasing"],
+            ),
           },
           {
             path: "crm",
