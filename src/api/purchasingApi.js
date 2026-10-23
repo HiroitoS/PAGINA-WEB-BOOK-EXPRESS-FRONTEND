@@ -43,3 +43,8 @@ export async function obtenerAdopcionesConfirmadas(params = {}) {
   const { data } = await axiosClient.get(`${BASE}/adopciones-confirmadas/`, { params });
   return data;
 }
+
+export async function obtenerAdopcionesPorEditorial(params = {}) {
+  const { data } = await axiosClient.get(`${BASE}/adopciones-por-editorial/`, { params });
+  return data;
+}
