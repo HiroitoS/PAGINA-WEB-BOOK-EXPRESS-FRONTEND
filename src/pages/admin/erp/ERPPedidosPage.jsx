@@ -3,7 +3,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
   aprobarPedido, generarPedidosDesdeAdopcion, modificarCantidadPedido,
-  obtenerAdopcionesConfirmadas,
+  obtenerAdopcionesPorEditorial,
   obtenerPedido, obtenerPedidos, registrarEnvioPedido,
 } from "../../../api/purchasingApi";
 
@@ -27,10 +27,10 @@ export default function ERPPedidosPage() {
   const [pedidos, setPedidos] = useState([]);
   const [filtros, setFiltros] = useState({ status: "", provider: "", school: "", campaign: "" });
   const [seleccionado, setSeleccionado] = useState(null);
-  const [adopcionId, setAdopcionId] = useState("");
-  const [adopciones, setAdopciones] = useState([]);
+  const [gruposEditoriales, setGruposEditoriales] = useState([]);
   const [busquedaColegio, setBusquedaColegio] = useState("");
   const [cargandoAdopciones, setCargandoAdopciones] = useState(false);
+  const [editorialAbierta, setEditorialAbierta] = useState(null);
   const [evidencia, setEvidencia] = useState("");
   const [cantidades, setCantidades] = useState({});
   const [cargando, setCargando] = useState(false);
@@ -79,10 +79,10 @@ export default function ERPPedidosPage() {
     async function consultarAdopciones() {
       setCargandoAdopciones(true);
       try {
-        const response = await obtenerAdopcionesConfirmadas(
+        const response = await obtenerAdopcionesPorEditorial(
           busquedaColegio.trim() ? { buscar: busquedaColegio.trim() } : {},
         );
-        if (!ignore) setAdopciones(Array.isArray(response) ? response : response?.results ?? []);
+        if (!ignore) setGruposEditoriales(Array.isArray(response) ? response : response?.results ?? []);
       } catch (err) {
         if (!ignore) setError(obtenerError(err));
       } finally {
@@ -137,34 +137,60 @@ export default function ERPPedidosPage() {
       </header>
 
       {puedeEditar && (
-        <form className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!adopcionId || Number(adopcionId) < 1) return;
-            setFiltros({ status: "", provider: "", school: "", campaign: "" });
-            operar(() => generarPedidosDesdeAdopcion(Number(adopcionId)), "Pedidos generados o recuperados correctamente.");
-          }}>
-          <label className="space-y-1 text-sm font-semibold text-gray-800">
-            <span>Buscar colegio con adopción confirmada</span>
-            <input type="search" value={busquedaColegio} onChange={(event) => { setBusquedaColegio(event.target.value); setAdopcionId(""); }}
-              placeholder="Nombre del colegio" className="block w-64 rounded-xl border border-gray-300 px-3 py-2" />
+        <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+          <h2 className="text-base font-black text-gray-950">Adopciones confirmadas por editorial</h2>
+          <p className="text-sm text-gray-600">Selecciona un colegio. Los pedidos existentes se abren sin duplicarlos.</p>
+          <label className="block max-w-md space-y-1 text-sm font-semibold text-gray-700">
+            Buscar colegio
+            <input type="search" value={busquedaColegio}
+              onChange={(event) => setBusquedaColegio(event.target.value)}
+              placeholder="Nombre del colegio"
+              className="block w-full rounded-xl border border-gray-300 px-3 py-2" />
           </label>
-          <label className="space-y-1 text-sm font-semibold text-gray-800">
-            <span>Adopción vigente</span>
-            <select required value={adopcionId} onChange={(event) => setAdopcionId(event.target.value)}
-              className="block w-72 rounded-xl border border-gray-300 px-3 py-2">
-              <option value="">{cargandoAdopciones ? "Consultando adopciones..." : "Seleccionar colegio y campaña"}</option>
-              {adopciones.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.colegio} · {item.campania} · V{item.version} · {item.pedidos_existentes ? "Con pedidos" : "Sin pedidos"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button disabled={procesando} type="submit" className="rounded-xl bg-red-700 px-4 py-2 font-bold text-white disabled:opacity-50">
-            Generar pedidos
-          </button>
-        </form>
+          {cargandoAdopciones && <p className="text-sm text-gray-500">Consultando adopciones…</p>}
+          {!cargandoAdopciones && gruposEditoriales.length === 0 && (
+            <p className="text-sm text-gray-500">No hay adopciones confirmadas para esta búsqueda.</p>
+          )}
+          <div className="space-y-2">
+            {gruposEditoriales.map((grupo) => (
+              <div key={grupo.editorial_id} className="overflow-hidden rounded-xl border border-gray-200">
+                <button type="button" onClick={() => setEditorialAbierta((actual) => actual === grupo.editorial_id ? null : grupo.editorial_id)}
+                  aria-expanded={editorialAbierta === grupo.editorial_id}
+                  className="flex w-full items-center justify-between bg-gray-50 px-4 py-3 text-left font-bold text-gray-900">
+                  <span>{grupo.editorial}</span>
+                  <span className="text-xs text-gray-600">{grupo.adopciones.length} adopción(es) {editorialAbierta === grupo.editorial_id ? "▲" : "▼"}</span>
+                </button>
+                {editorialAbierta === grupo.editorial_id && (
+                  <div className="divide-y divide-gray-100">
+                    {grupo.adopciones.map((adopcion) => (
+                      <div key={adopcion.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                        <div>
+                          <p className="font-semibold text-gray-900">{adopcion.colegio}</p>
+                          <p className="text-xs text-gray-600">{adopcion.campania} · {adopcion.lineas} producto(s) · {adopcion.unidades} unidad(es)</p>
+                          <p className="mt-1 text-xs font-semibold text-gray-600">
+                            {adopcion.pedido_id ? `Pedido: ${estados[adopcion.estado_pedido] || adopcion.estado_pedido}` : "Pendiente de pedido"}
+                          </p>
+                        </div>
+                        <button type="button" disabled={procesando}
+                          onClick={() => {
+                            if (adopcion.pedido_id) {
+                              seleccionar(adopcion.pedido_id);
+                            } else {
+                              setFiltros({ status: "", provider: "", school: "", campaign: "" });
+                              operar(() => generarPedidosDesdeAdopcion(adopcion.id), "Pedidos generados correctamente.");
+                            }
+                          }}
+                          className="rounded-lg bg-red-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">
+                          {adopcion.pedido_id ? "Abrir pedido" : "Generar pedido"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
