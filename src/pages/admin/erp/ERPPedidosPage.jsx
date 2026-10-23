@@ -3,6 +3,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
   aprobarPedido, generarPedidosDesdeAdopcion, modificarCantidadPedido,
+  obtenerAdopcionesConfirmadas,
   obtenerPedido, obtenerPedidos, registrarEnvioPedido,
 } from "../../../api/purchasingApi";
 
@@ -27,6 +28,9 @@ export default function ERPPedidosPage() {
   const [filtros, setFiltros] = useState({ status: "", provider: "", school: "", campaign: "" });
   const [seleccionado, setSeleccionado] = useState(null);
   const [adopcionId, setAdopcionId] = useState("");
+  const [adopciones, setAdopciones] = useState([]);
+  const [busquedaColegio, setBusquedaColegio] = useState("");
+  const [cargandoAdopciones, setCargandoAdopciones] = useState(false);
   const [evidencia, setEvidencia] = useState("");
   const [cantidades, setCantidades] = useState({});
   const [cargando, setCargando] = useState(false);
@@ -68,6 +72,26 @@ export default function ERPPedidosPage() {
     consultar();
     return () => { ignore = true; };
   }, [filtros]);
+
+  useEffect(() => {
+    if (!puedeEditar) return undefined;
+    let ignore = false;
+    async function consultarAdopciones() {
+      setCargandoAdopciones(true);
+      try {
+        const response = await obtenerAdopcionesConfirmadas(
+          busquedaColegio.trim() ? { buscar: busquedaColegio.trim() } : {},
+        );
+        if (!ignore) setAdopciones(Array.isArray(response) ? response : response?.results ?? []);
+      } catch (err) {
+        if (!ignore) setError(obtenerError(err));
+      } finally {
+        if (!ignore) setCargandoAdopciones(false);
+      }
+    }
+    consultarAdopciones();
+    return () => { ignore = true; };
+  }, [puedeEditar, busquedaColegio]);
 
   async function seleccionar(id) {
     setError("");
@@ -117,12 +141,25 @@ export default function ERPPedidosPage() {
           onSubmit={(event) => {
             event.preventDefault();
             if (!adopcionId || Number(adopcionId) < 1) return;
+            setFiltros({ status: "", provider: "", school: "", campaign: "" });
             operar(() => generarPedidosDesdeAdopcion(Number(adopcionId)), "Pedidos generados o recuperados correctamente.");
           }}>
           <label className="space-y-1 text-sm font-semibold text-gray-800">
-            <span>ID de adopción confirmada</span>
-            <input type="number" min="1" required value={adopcionId} onChange={(event) => setAdopcionId(event.target.value)}
-              className="block w-52 rounded-xl border border-gray-300 px-3 py-2" />
+            <span>Buscar colegio con adopción confirmada</span>
+            <input type="search" value={busquedaColegio} onChange={(event) => { setBusquedaColegio(event.target.value); setAdopcionId(""); }}
+              placeholder="Nombre del colegio" className="block w-64 rounded-xl border border-gray-300 px-3 py-2" />
+          </label>
+          <label className="space-y-1 text-sm font-semibold text-gray-800">
+            <span>Adopción vigente</span>
+            <select required value={adopcionId} onChange={(event) => setAdopcionId(event.target.value)}
+              className="block w-72 rounded-xl border border-gray-300 px-3 py-2">
+              <option value="">{cargandoAdopciones ? "Consultando adopciones..." : "Seleccionar colegio y campaña"}</option>
+              {adopciones.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.colegio} · {item.campania} · V{item.version} · {item.pedidos_existentes ? "Con pedidos" : "Sin pedidos"}
+                </option>
+              ))}
+            </select>
           </label>
           <button disabled={procesando} type="submit" className="rounded-xl bg-red-700 px-4 py-2 font-bold text-white disabled:opacity-50">
             Generar pedidos
