@@ -38,3 +38,8 @@ export async function registrarEnvioPedido(orderId, evidence) {
   });
   return data;
 }
+
+export async function obtenerAdopcionesConfirmadas(params = {}) {
+  const { data } = await axiosClient.get(`${BASE}/adopciones-confirmadas/`, { params });
+  return data;
+}
