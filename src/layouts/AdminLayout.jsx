@@ -157,6 +157,20 @@ const NAV_SECTIONS = [
   },
   {
     type: "group",
+    label: "ERP",
+    icon: <FaBoxOpen />,
+    permissions: ["purchasing.view_purchasing"],
+    children: [
+      {
+        label: "Pedidos a Editoriales",
+        to: "/admin/erp/compras/pedidos",
+        icon: <FaClipboardList />,
+        permissions: ["purchasing.view_purchasing"],
+      },
+    ],
+  },
+  {
+    type: "group",
     label: "CRM",
     icon: <FaBriefcase />,
     permissions: ["crm.view_crm"],
@@ -223,6 +237,9 @@ function sectionIsActive(section, pathname) {
   if (section.label === "ToDo") {
     return pathname === "/admin/workspace"
       || pathname.startsWith("/admin/workspace/");
+  }
+  if (section.label === "ERP") {
+    return pathname.startsWith("/admin/erp/");
   }
   if (section.label === "CRM") {
     return pathname === "/admin/crm"
