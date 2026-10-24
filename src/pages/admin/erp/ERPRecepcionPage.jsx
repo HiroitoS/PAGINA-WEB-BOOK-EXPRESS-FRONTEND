@@ -561,7 +561,7 @@ export default function ERPRecepcionPage() {
       {cargando && <p className="text-sm text-gray-600">Actualizando registros…</p>}
 
       {pestana === "registro" && (
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid gap-4 xl:grid-cols-4">
           <div className="space-y-3">
             <div className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4">
               <label className="text-sm font-semibold text-gray-700">Editorial
@@ -606,7 +606,7 @@ export default function ERPRecepcionPage() {
             </div>
           </div>
 
-          <form onSubmit={registrarBorrador} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 xl:col-span-2">
+          <form onSubmit={registrarBorrador} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 xl:col-span-3">
             <div>
               <h2 className="font-black text-gray-950">Registrar entrega física</h2>
               <p className="mt-1 text-sm text-gray-600">Selecciona pedidos de una misma editorial. Una guía puede corresponder a varios colegios.</p>
@@ -649,11 +649,11 @@ export default function ERPRecepcionPage() {
                        <th className="px-2 text-center">Solicitadas</th>
                        <th className="px-2 text-center">Aceptadas prev.</th>
                        <th className="px-2 text-center">Pendiente</th>
-                       <th className="px-2">Según guía</th>
-                       <th className="px-2">Llegaron hoy</th>
-                       <th className="px-2">Observadas</th>
-                       <th className="px-2 text-center">Excedente</th>
-                       <th className="px-2 text-center">Aceptadas hoy</th>
+                       <th className="px-2">Guía</th>
+                       <th className="px-2">Conteo físico</th>
+                       <th className="px-2">No conformes</th>
+                       <th className="px-2 text-center">Adicionales</th>
+                       <th className="px-2 text-center">Al pedido</th>
                        <th className="px-2 text-center">Saldo después</th>
                      </tr>
                   </thead>
@@ -663,7 +663,7 @@ export default function ERPRecepcionPage() {
                       const observada = cantidades[linea.item_id]?.observada ?? "0";
                       const excedenteConforme = llegada === "" ? 0 : Math.max(0, Number(llegada) - Number(observada) - linea.pendientes);
                       const aceptadas = llegada === "" ? "—" : Number(llegada) - Number(observada) - excedenteConforme;
-                      const excedente = llegada === "" ? 0 : Math.max(0, Number(llegada) - linea.pendientes);
+                      const excedente = llegada === "" ? 0 : Math.max(0, Number(llegada) - Number(observada) - linea.pendientes);
                       return (
                         <tr key={linea.item_id} className="border-b border-gray-100">
                           <td className="sticky left-0 z-10 min-w-64 bg-white py-2 pr-3">
@@ -671,20 +671,20 @@ export default function ERPRecepcionPage() {
                             <span className="text-xs text-gray-500">{linea.colegio} · {linea.pedido}</span>
                             {excedente > 0 && (
                               <span className="mt-1 block text-xs font-semibold text-amber-800">
-                                Excedente: {excedente}. Regístralo como observado e indica el motivo.
+                                {excedente} adicionales sobre el saldo. Se conservan y deben justificarse.
                               </span>
                             )}
                           </td>
                           <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
                            <td className="px-2 text-center tabular-nums">{linea.aceptadas}</td>
                            <td className="px-2 text-center font-semibold tabular-nums text-amber-800">{linea.pendientes}</td>
-                          <td className="px-2"><input aria-label={`Según guía ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
+                          <td className="px-2"><input aria-label={`Guía ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
                             className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={cantidades[linea.item_id]?.documentada ?? ""}
                             onChange={(event) => cambiarCantidad(linea.item_id, "documentada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
-                          <td className="px-2"><input aria-label={`Llegaron ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
+                          <td className="px-2"><input aria-label={`Conteo físico ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
                             className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={llegada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "llegada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
-                          <td className="px-2"><input aria-label={`Observadas ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
+                          <td className="px-2"><input aria-label={`No conformes ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
                             className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={observada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "observada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
                           <td className="px-2 text-center font-bold tabular-nums text-amber-800">{excedenteConforme}</td>
@@ -706,8 +706,8 @@ export default function ERPRecepcionPage() {
                 placeholder="Ej.: cajas deterioradas, faltantes comunicados a la editorial" disabled={!puedeCrear} />
             </label>
             <p className="text-xs text-gray-500">
-              Las unidades recibidas de más deben registrarse como observadas con una explicación.
-              No incrementan el pedido ni generan stock. El borrador no significa disponibilidad.
+              Las unidades adicionales conformes se conservan identificadas por separado. Indica el motivo en observaciones generales.
+              Esta recepción no genera todavía movimientos de inventario.
             </p>
             {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando || !pedidosMarcados.length}>Guardar recepción en borrador</button>}
           </form>
