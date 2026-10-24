@@ -233,7 +233,21 @@ export default function ERPRecepcionPage() {
         })),
       });
       setRecepcionId(creada.id);
-      setEdicion(null);
+      setEdicion({
+        provider_id: creada.provider,
+        document_type: creada.document_type,
+        document_number: creada.document_number,
+        received_on: creada.received_on,
+        notes: creada.notes,
+        lines: creada.lines.map((linea) => ({
+          order_item_id: linea.order_item,
+          nombre: linea.product_name,
+          pedido: linea.order_id,
+          quantity_arrived: String(linea.quantity_arrived),
+          quantity_observed: String(linea.quantity_observed),
+          notes: linea.notes,
+        })),
+      });
       setDocumento(documentoInicial());
       setCantidades({});
       setPedidosMarcados([]);
