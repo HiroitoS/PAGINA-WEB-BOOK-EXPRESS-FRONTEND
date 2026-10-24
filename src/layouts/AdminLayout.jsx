@@ -166,13 +166,19 @@ const NAV_SECTIONS = [
     type: "group",
     label: "ERP",
     icon: <FaBoxOpen />,
-    permissions: ["purchasing.view_purchasing"],
+    permissions: ["purchasing.view_purchasing", "warehouse.view_receiving"],
     children: [
       {
         label: "Pedidos a Editoriales",
         to: "/admin/erp/compras/pedidos",
         icon: <FaClipboardList />,
         permissions: ["purchasing.view_purchasing"],
+      },
+      {
+        label: "Almacén · Recepción",
+        to: "/admin/erp/almacen/recepciones",
+        icon: <FaBoxOpen />,
+        permissions: ["warehouse.view_receiving"],
       },
     ],
   },
