@@ -58,7 +58,7 @@ export default function ERPPedidosPage() {
     async function consultar() {
       setCargando(true);
       try {
-        const params = Object.fromEntries(Object.entries(filtros).filter(([, value]) => value));
+        const params = filtros.status ? { status: filtros.status } : {};
         const data = await obtenerPedidos(params);
         if (!ignore) {
           setPedidos(Array.isArray(data) ? data : data?.results ?? []);
@@ -133,6 +133,19 @@ export default function ERPPedidosPage() {
       setProcesando(false);
     }
   }
+
+  const opcionesEditoriales = [...new Set(
+    pedidos.map((pedido) => pedido.provider_name_snapshot).filter(Boolean),
+  )].sort();
+  const opcionesCampanias = [...new Set(
+    pedidos.map((pedido) => pedido.campaign_name_snapshot).filter(Boolean),
+  )].sort();
+  const pedidosVisibles = pedidos.filter((pedido) =>
+    (!filtros.provider || pedido.provider_name_snapshot === filtros.provider)
+    && (!filtros.campaign || pedido.campaign_name_snapshot === filtros.campaign)
+    && (!filtros.school || (pedido.school_name_snapshot || "").toLocaleLowerCase("es")
+      .includes(filtros.school.toLocaleLowerCase("es")))
+  );
 
   return (
     <section className="space-y-5">
