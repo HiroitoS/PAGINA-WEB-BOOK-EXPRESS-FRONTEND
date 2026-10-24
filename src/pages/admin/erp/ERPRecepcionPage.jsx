@@ -711,7 +711,10 @@ export default function ERPRecepcionPage() {
                   <EstadoRecepcion estado={recepcion.status} cumplimiento={recepcion.fulfillment_status} />
                 </span>
                 <span className="mt-1 block text-sm text-gray-700">{recepcion.document_number || "Sin número de documento"}</span>
-                <span className="block text-xs text-gray-500">{recepcion.received_on} · {recepcion.lines.length} producto(s)</span>
+                <span className="block text-xs text-gray-500">
+                   {recepcion.received_on} · {recepcion.lines.length} producto(s)
+                   {" · "}{recepcion.lines.reduce((suma, linea) => suma + linea.quantity_accepted, 0)} aceptadas en esta guía
+                 </span>
               </button>
             ))}
             {masRecepciones && (
@@ -735,18 +738,51 @@ export default function ERPRecepcionPage() {
                   <EstadoRecepcion estado={recepcionSeleccionada.status} cumplimiento={recepcionSeleccionada.fulfillment_status} />
                 </div>
                 {recepcionSeleccionada.status === "validated" ? (
-                  <div className="overflow-x-auto">
-                    <p className="mb-2 text-sm text-gray-600">Documento: {recepcionSeleccionada.document_number}</p>
-                    <table className="w-full text-left text-sm">
-                      <thead><tr className="border-b text-xs text-gray-500"><th className="py-2">Producto</th><th>Llegaron</th><th>Aceptadas</th><th>Observadas</th></tr></thead>
-                      <tbody>{recepcionSeleccionada.lines.map((linea) => (
-                        <tr key={linea.id} className="border-b border-gray-100">
-                          <td className="py-2 font-semibold">{linea.product_name}<span className="block text-xs font-normal text-gray-500">Pedido BE-OC-{String(linea.order_id).padStart(6, "0")}</span></td>
-                          <td>{linea.quantity_arrived}</td><td>{linea.quantity_accepted}</td><td>{linea.quantity_observed}</td>
-                        </tr>
-                      ))}</tbody>
-                    </table>
-                    <p className="mt-3 text-xs text-gray-600">Recepción confirmada. Los saldos se actualizaron; el inventario y las facturas se gestionarán en sus módulos.</p>
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-700">
+                      <strong>Documento:</strong> {recepcionSeleccionada.document_number}
+                    </p>
+                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-3 text-center">
+                      <div><p className="text-xs text-gray-600">Llegaron en esta guía</p>
+                        <p className="text-lg font-black tabular-nums">
+                          {recepcionSeleccionada.lines.reduce((suma, linea) => suma + linea.quantity_arrived, 0)}
+                        </p>
+                      </div>
+                      <div><p className="text-xs text-gray-600">Aceptadas en esta guía</p>
+                        <p className="text-lg font-black tabular-nums">
+                          {recepcionSeleccionada.lines.reduce((suma, linea) => suma + linea.quantity_accepted, 0)}
+                        </p>
+                      </div>
+                      <div><p className="text-xs text-gray-600">Observadas en esta guía</p>
+                        <p className="text-lg font-black tabular-nums">
+                          {recepcionSeleccionada.lines.reduce((suma, linea) => suma + linea.quantity_observed, 0)}
+                        </p>
+                      </div>
+                    </div>
+                    <details className="rounded-lg border border-gray-200 p-3">
+                      <summary className="cursor-pointer text-sm font-bold text-gray-700">
+                        Ver solo los productos de esta guía ({recepcionSeleccionada.lines.length})
+                      </summary>
+                      <div className="mt-2 overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead><tr className="border-b text-xs text-gray-500"><th className="py-2">Producto</th><th>Llegaron</th><th>Aceptadas</th><th>Observadas</th></tr></thead>
+                          <tbody>{recepcionSeleccionada.lines.map((linea) => (
+                            <tr key={linea.id} className="border-b border-gray-100">
+                              <td className="py-2 font-semibold">{linea.product_name}
+                                <span className="block text-xs font-normal text-gray-500">Pedido BE-OC-{String(linea.order_id).padStart(6, "0")}</span>
+                              </td>
+                              <td>{linea.quantity_arrived}</td>
+                              <td>{linea.quantity_accepted}</td>
+                              <td>{linea.quantity_observed}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </details>
+                    <p className="text-xs text-gray-600">
+                      Recepción validada. Estas cantidades son de esta guía; los saldos actuales y las entregas anteriores o posteriores aparecen abajo.
+                      Aún no registra stock ni facturas.
+                    </p>
                   </div>
                 ) : (
                   <form onSubmit={guardarBorrador} className="space-y-3">
