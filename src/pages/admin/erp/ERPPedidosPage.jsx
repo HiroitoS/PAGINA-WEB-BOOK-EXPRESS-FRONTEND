@@ -492,8 +492,22 @@ export default function ERPPedidosPage() {
                         className="rounded-lg border border-gray-800 bg-white px-3 py-2 text-sm font-bold text-gray-900 hover:bg-gray-100">
                         Abrir en mi aplicación de correo
                       </button>
+                      <button type="button"
+                        onClick={async () => {
+                          const { asunto, mensaje } = datosCorreoPedido(seleccionado);
+                          try {
+                            await navigator.clipboard.writeText(`Asunto: ${asunto}\n\n${mensaje}`);
+                            setMensaje("Texto del correo copiado. Pégalo en Outlook y adjunta el PDF antes de enviar.");
+                            setError("");
+                          } catch {
+                            setError("No se pudo copiar automáticamente. Selecciona y copia el asunto y el mensaje.");
+                          }
+                        }}
+                        className="ml-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100">
+                        Copiar correo
+                      </button>
                       <p className="text-xs text-gray-600">
-                        Si Outlook es tu aplicación de correo predeterminada, se abrirá allí. Antes de enviar, añade el destinatario correcto y el archivo {datosCorreoPedido(seleccionado).archivo}. El envío se registrará posteriormente en el ERP.
+                        Si Outlook es tu aplicación de correo predeterminada, se abrirá allí. Si usas Outlook web, puedes copiar el mensaje y pegarlo. Antes de enviar, añade el destinatario correcto y el archivo {datosCorreoPedido(seleccionado).archivo}. El envío se registrará posteriormente en el ERP.
                       </p>
                     </div>
                   )}
