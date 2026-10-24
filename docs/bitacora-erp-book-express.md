@@ -108,3 +108,9 @@ Precios 2027 se actualizarán más adelante desde listas del proveedor; no alter
 - **Corrección:** generar `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(mensaje.replace(/\\n/g, "\\r\\n"))}`; `encodeURIComponent` usa `%20` para espacios y los saltos de línea se normalizan a CRLF para clientes de correo. Se mantiene «Copiar correo» como alternativa.
 - **Alcance:** solo frontend, sin migraciones ni modificaciones de backend/credenciales. No envía ni adjunta PDF automáticamente.
 - **Validación pendiente con usuario:** `git pull --ff-only origin crm/gestion-colegios`, `npm run lint`, `npm run build`; pulsar «Abrir en mi aplicación de correo» desde un pedido aprobado y verificar asunto sin signos `+`, líneas y tildes correctas. Confirmar manualmente destinatario y adjunto antes de enviar.
+
+## P-05 – 23/10/2026: texto institucional de correo de pedidos
+- Validación del usuario: el enlace `mailto` corregido abre Outlook con espacios y tildes correctamente.
+- Mejora del contenido automático: saludo neutro, solicitud formal de libros y materiales educativos, datos de editorial/colegio/campaña/unidades y código de solicitud, confirmación de recepción, disponibilidad y fecha de despacho, incluyendo tratamiento de entregas parciales.
+- Retirada del **cuerpo de correo** la instrucción técnica `[Adjuntar el archivo ... antes de enviar]`; el recordatorio operativo para que el usuario agregue PDF y destinatario se mantiene solo en la interfaz del ERP. Sin integración de envío automático.
+- Confirmación pendiente: pull del frontend y revisión manual de un borrador con Outlook. No hay cambios de backend ni migraciones. Próximo trabajo P-06 Recepción de Mercadería.
