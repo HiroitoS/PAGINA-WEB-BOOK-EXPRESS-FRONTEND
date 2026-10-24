@@ -669,7 +669,7 @@ export default function ERPRecepcionPage() {
                             <span className="text-xs text-gray-500">{linea.colegio} · {linea.pedido}</span>
                             {excedente > 0 && (
                               <span className="mt-1 block text-xs font-semibold text-amber-800">
-                                {excedente} adicionales sobre el saldo. Se conservan y deben justificarse.
+                                {excedente} adicionales detectadas. Quedarán registradas automáticamente.
                               </span>
                             )}
                           </td>
@@ -702,7 +702,7 @@ export default function ERPRecepcionPage() {
                 placeholder="Ej.: cajas deterioradas, faltantes comunicados a la editorial" disabled={!puedeCrear} />
             </label>
             <p className="text-xs text-gray-500">
-              Las unidades adicionales conformes se conservan identificadas por separado. Indica el motivo en observaciones generales.
+              Las unidades adicionales conformes quedan identificadas automáticamente. Las observaciones generales son opcionales.
               Esta recepción no genera todavía movimientos de inventario.
             </p>
             {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando || !pedidosMarcados.length}>Guardar recepción en borrador</button>}
