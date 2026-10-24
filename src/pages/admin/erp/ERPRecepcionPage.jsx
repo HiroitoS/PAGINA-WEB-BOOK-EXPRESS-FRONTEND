@@ -98,6 +98,91 @@ function validarLineas(lineas) {
   return "";
 }
 
+function SeguimientoPedidos({ data, cargando, error }) {
+  if (cargando) return <p role="status" className="text-sm text-gray-600">Consultando entregas y saldos actualizados…</p>;
+  if (error) return <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>;
+  if (!data) return null;
+
+  return (
+    <section className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4" aria-label="Seguimiento de pedidos">
+      <div>
+        <h3 className="font-black text-gray-900">Saldos y entregas por pedido</h3>
+        <p className="mt-1 text-xs text-gray-600">
+          Datos acumulados de todas las recepciones validadas. «Esta guía» muestra únicamente la entrega seleccionada.
+        </p>
+      </div>
+      {data.pedidos.map((pedido) => (
+        <div key={pedido.pedido_id} className="space-y-3 rounded-xl border border-gray-200 bg-white p-3">
+          <div>
+            <p className="font-bold text-gray-900">{pedido.colegio}</p>
+            <p className="text-xs text-gray-500">{pedido.referencia}</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 p-2 text-center">
+            <div><p className="text-xs text-gray-600">Solicitadas</p><p className="text-lg font-black tabular-nums">{pedido.solicitadas}</p></div>
+            <div><p className="text-xs text-gray-600">Aceptadas total</p><p className="text-lg font-black tabular-nums">{pedido.aceptadas}</p></div>
+            <div><p className="text-xs text-gray-600">Saldo actual</p>
+              <p className={`text-lg font-black tabular-nums ${pedido.pendientes ? "text-amber-800" : "text-green-800"}`}>{pedido.pendientes}</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-gray-200 text-gray-600">
+                <tr>
+                  <th className="min-w-48 py-2 pr-2">Libro</th>
+                  <th className="px-2 text-center">Solic.</th>
+                  <th className="px-2 text-center">Acept. esta guía</th>
+                  <th className="px-2 text-center">Observ. esta guía</th>
+                  <th className="px-2 text-center">Acept. total</th>
+                  <th className="px-2 text-center">Pendiente</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pedido.productos.map((linea) => (
+                  <tr key={linea.item_id} className="border-b border-gray-100">
+                    <td className="py-2 pr-2 font-semibold text-gray-900">{linea.producto}</td>
+                    <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
+                    <td className="px-2 text-center tabular-nums">{linea.aceptadas_en_guia}</td>
+                    <td className="px-2 text-center tabular-nums">{linea.observadas_en_guia}</td>
+                    <td className="px-2 text-center tabular-nums">{linea.aceptadas_acumuladas}</td>
+                    <td className={`px-2 text-center font-bold tabular-nums ${linea.pendientes ? "text-amber-800" : "text-green-800"}`}>{linea.pendientes}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <details className="rounded-lg border border-gray-200 p-3">
+            <summary className="cursor-pointer text-sm font-bold text-gray-800">
+              Entregas validadas de este pedido ({pedido.entregas.length})
+            </summary>
+            {pedido.entregas.length === 0 ? (
+              <p className="mt-2 text-xs text-gray-600">Aún no hay entregas validadas.</p>
+            ) : (
+              <div className="mt-2 overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-gray-200 text-gray-600">
+                    <tr><th className="py-2">Fecha</th><th>Guía / documento</th><th className="text-center">Llegaron</th><th className="text-center">Aceptadas</th><th className="text-center">Observadas</th></tr>
+                  </thead>
+                  <tbody>
+                    {pedido.entregas.map((entrega, index) => (
+                      <tr key={entrega.receipt_id} className="border-b border-gray-100">
+                        <td className="py-2 pr-2">{index + 1}. {entrega.received_on}</td>
+                        <td className="pr-2">{entrega.document_number}{entrega.es_recepcion_actual ? " · Esta guía" : ""}</td>
+                        <td className="text-center tabular-nums">{entrega.llegaron}</td>
+                        <td className="text-center tabular-nums">{entrega.aceptadas}</td>
+                        <td className="text-center tabular-nums">{entrega.observadas}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </details>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export default function ERPRecepcionPage() {
   const { user } = useAuth();
   const puedeCrear = userHasPermission(user, ["warehouse.manage_receiving"]);
@@ -714,6 +799,12 @@ export default function ERPRecepcionPage() {
                     <p className="text-xs text-gray-500">Valida únicamente después de contrastar la mercadería física y el documento. Esta acción no registra stock.</p>
                   </form>
                 )}
+                {recepcionSeleccionada.notes && (
+                  <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+                    <strong>Observaciones:</strong> {recepcionSeleccionada.notes}
+                  </p>
+                )}
+                <SeguimientoPedidos data={seguimiento} cargando={cargandoSeguimiento} error={errorSeguimiento} />
                 <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                   <summary className="cursor-pointer text-sm font-bold text-gray-800">
                     Historial de registro y validación
