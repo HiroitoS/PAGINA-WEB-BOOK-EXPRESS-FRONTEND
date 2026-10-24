@@ -48,3 +48,10 @@ export async function obtenerAdopcionesPorEditorial(params = {}) {
   const { data } = await axiosClient.get(`${BASE}/adopciones-por-editorial/`, { params });
   return data;
 }
+
+export async function descargarOrdenCompraPdf(orderId) {
+  const { data } = await axiosClient.get(`${BASE}/${orderId}/orden-pdf/`, {
+    responseType: "blob",
+  });
+  return data;
+}
