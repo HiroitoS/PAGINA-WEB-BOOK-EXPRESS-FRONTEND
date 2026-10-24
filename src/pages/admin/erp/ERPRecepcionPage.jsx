@@ -4,6 +4,7 @@ import { userHasPermission } from "../../../utils/adminAccess";
 import {
   actualizarRecepcion,
   crearRecepcion,
+  consultarSeguimientoRecepcion,
   listarPedidosPorRecibir,
   listarRecepciones,
   validarRecepcion,
@@ -67,7 +68,7 @@ function EstadoRecepcion({ estado, cumplimiento }) {
       {validada && (
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold ${completo ? "border-green-300 bg-green-100 text-green-900" : "border-amber-300 bg-amber-100 text-amber-950"}`}>
           <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${completo ? "bg-green-600" : "bg-amber-500"}`} />
-          {completo ? "Pedido completo" : "Saldo pendiente"}
+          {completo ? "Pedido completo hoy" : "Saldo pendiente hoy"}
         </span>
       )}
     </span>
@@ -122,6 +123,9 @@ export default function ERPRecepcionPage() {
   const [edicion, setEdicion] = useState(null);
   const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
   const [cambiosSinGuardar, setCambiosSinGuardar] = useState(false);
+  const [seguimiento, setSeguimiento] = useState(null);
+  const [cargandoSeguimiento, setCargandoSeguimiento] = useState(false);
+  const [errorSeguimiento, setErrorSeguimiento] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -149,6 +153,29 @@ export default function ERPRecepcionPage() {
     consultar();
     return () => { ignore = true; };
   }, [revision]);
+
+  useEffect(() => {
+    if (pestana !== "historial" || !recepcionId) return;
+    let ignore = false;
+    async function consultar() {
+      try {
+        const data = await consultarSeguimientoRecepcion(recepcionId);
+        if (!ignore) {
+          setSeguimiento(data);
+          setErrorSeguimiento("");
+        }
+      } catch (err) {
+        if (!ignore) {
+          setSeguimiento(null);
+          setErrorSeguimiento(errorLegible(err));
+        }
+      } finally {
+        if (!ignore) setCargandoSeguimiento(false);
+      }
+    }
+    consultar();
+    return () => { ignore = true; };
+  }, [pestana, recepcionId, revision]);
 
   const editoriales = useMemo(() => {
     const items = new Map();
@@ -311,6 +338,9 @@ export default function ERPRecepcionPage() {
   }
 
   function abrirRecepcion(recepcion) {
+    setSeguimiento(null);
+    setCargandoSeguimiento(true);
+    setErrorSeguimiento("");
     setRecepcionId(recepcion.id);
     setConfirmacionAbierta(false);
     setCambiosSinGuardar(false);
@@ -515,11 +545,11 @@ export default function ERPRecepcionPage() {
                   <div><p className="text-xs text-gray-600">Pendientes</p><p className="text-lg font-black text-amber-800">{resumenSeleccion.pendientes}</p></div>
                 </div>
                 <p className="text-xs text-gray-500">El resumen es acumulado por pedido. Solo las recepciones validadas cuentan como aceptadas.</p>
-                <div className="overflow-x-auto">
+                <div key={pedidosMarcados.join("-")} className="overflow-x-auto">
                 <table className="w-full min-w-max text-left text-sm">
                   <thead className="border-b border-gray-200 text-xs text-gray-600">
                     <tr>
-                       <th className="py-2 pr-3">Producto / pedido</th>
+                       <th className="sticky left-0 z-10 min-w-64 bg-white py-2 pr-3">Producto / pedido</th>
                        <th className="px-2 text-center">Solicitadas</th>
                        <th className="px-2 text-center">Aceptadas prev.</th>
                        <th className="px-2 text-center">Pendiente</th>
@@ -534,11 +564,17 @@ export default function ERPRecepcionPage() {
                       const llegada = cantidades[linea.item_id]?.llegada ?? "";
                       const observada = cantidades[linea.item_id]?.observada ?? "0";
                       const aceptadas = llegada === "" ? "—" : Number(llegada) - Number(observada);
+                      const excedente = llegada === "" ? 0 : Math.max(0, Number(llegada) - linea.pendientes);
                       return (
                         <tr key={linea.item_id} className="border-b border-gray-100">
-                          <td className="py-2 pr-3">
+                          <td className="sticky left-0 z-10 min-w-64 bg-white py-2 pr-3">
                             <span className="block font-semibold text-gray-900">{linea.producto}</span>
                             <span className="text-xs text-gray-500">{linea.colegio} · {linea.pedido}</span>
+                            {excedente > 0 && (
+                              <span className="mt-1 block text-xs font-semibold text-amber-800">
+                                Excedente: {excedente}. Regístralo como observado e indica el motivo.
+                              </span>
+                            )}
                           </td>
                           <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
                            <td className="px-2 text-center tabular-nums">{linea.aceptadas}</td>
@@ -566,7 +602,10 @@ export default function ERPRecepcionPage() {
                 onChange={(event) => setDocumento((actual) => ({ ...actual, notes: event.target.value }))}
                 placeholder="Ej.: cajas deterioradas, faltantes comunicados a la editorial" disabled={!puedeCrear} />
             </label>
-            <p className="text-xs text-gray-500">Borrador no significa stock disponible. Las cantidades observadas quedan separadas de las aceptadas.</p>
+            <p className="text-xs text-gray-500">
+              Las unidades recibidas de más deben registrarse como observadas con una explicación.
+              No incrementan el pedido ni generan stock. El borrador no significa disponibilidad.
+            </p>
             {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando || !pedidosMarcados.length}>Guardar recepción en borrador</button>}
           </form>
         </div>
@@ -575,7 +614,7 @@ export default function ERPRecepcionPage() {
       {pestana === "historial" && (
         <div className="grid gap-4 xl:grid-cols-3">
           <div className="space-y-2">
-            <p className="text-xs text-gray-600">Amarillo: quedan libros pendientes · Verde: pedidos completos · Gris: borrador</p>
+            <p className="text-xs text-gray-600">El color indica el saldo actual de los pedidos relacionados, no cómo llegó la guía original. Amarillo: pendiente · Verde: completo · Gris: borrador.</p>
             {recepciones.length === 0 && !cargando && (
               <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">Todavía no se registraron recepciones.</p>
             )}
