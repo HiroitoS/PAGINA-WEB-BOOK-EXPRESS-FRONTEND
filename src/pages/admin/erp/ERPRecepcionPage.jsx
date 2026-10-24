@@ -640,21 +640,19 @@ export default function ERPRecepcionPage() {
                   <div><p className="text-xs text-gray-600">Aceptadas anteriormente</p><p className="text-lg font-black">{resumenSeleccion.aceptadas}</p></div>
                   <div><p className="text-xs text-gray-600">Pendientes</p><p className="text-lg font-black text-amber-800">{resumenSeleccion.pendientes}</p></div>
                 </div>
-                <p className="text-xs text-gray-500">El resumen es acumulado por pedido. Solo las recepciones validadas cuentan como aceptadas.</p>
+                <p className="text-xs text-gray-500">Saldo = unidades pendientes del pedido. El historial de solicitadas y aceptadas anteriormente se conserva en la conciliación. Una misma guía puede agrupar pedidos de varios colegios de la misma editorial; registra cada cantidad en el renglón del colegio correspondiente.</p>
                 <div key={pedidosMarcados.join("-")} className="overflow-x-auto">
-                <table className="w-full min-w-max text-left text-sm">
+                <table className="w-full min-w-[760px] text-left text-xs">
                   <thead className="border-b border-gray-200 text-xs text-gray-600">
                     <tr>
-                       <th className="sticky left-0 z-10 min-w-64 bg-white py-2 pr-3">Producto / pedido</th>
-                       <th className="px-2 text-center">Solicitadas</th>
-                       <th className="px-2 text-center">Aceptadas prev.</th>
-                       <th className="px-2 text-center">Pendiente</th>
-                       <th className="px-2">Guía</th>
-                       <th className="px-2">Conteo físico</th>
-                       <th className="px-2">No conformes</th>
-                       <th className="px-2 text-center">Adicionales</th>
-                       <th className="px-2 text-center">Al pedido</th>
-                       <th className="px-2 text-center">Saldo después</th>
+                       <th className="sticky left-0 z-10 min-w-52 max-w-72 bg-white py-2 pr-2">Producto / pedido</th>
+                       <th className="px-1 text-center">Saldo</th>
+                       <th className="px-1">Guía</th>
+                       <th className="px-1">Físico</th>
+                       <th className="px-1">No conf.</th>
+                       <th className="px-1 text-center">Adic.</th>
+                       <th className="px-1 text-center">Al pedido</th>
+                       <th className="px-1 text-center">Saldo final</th>
                      </tr>
                   </thead>
                   <tbody>
@@ -675,17 +673,15 @@ export default function ERPRecepcionPage() {
                               </span>
                             )}
                           </td>
-                          <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
-                           <td className="px-2 text-center tabular-nums">{linea.aceptadas}</td>
-                           <td className="px-2 text-center font-semibold tabular-nums text-amber-800">{linea.pendientes}</td>
+                          <td className="px-1 text-center font-semibold tabular-nums text-amber-800" title={`Solicitadas: ${linea.solicitadas} · Aceptadas anteriores: ${linea.aceptadas}`}>{linea.pendientes}</td>
                           <td className="px-2"><input aria-label={`Guía ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
-                            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={cantidades[linea.item_id]?.documentada ?? ""}
+                            className="w-14 rounded-lg border border-gray-300 px-1.5 py-1.5 text-center tabular-nums" value={cantidades[linea.item_id]?.documentada ?? ""}
                             onChange={(event) => cambiarCantidad(linea.item_id, "documentada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
                           <td className="px-2"><input aria-label={`Conteo físico ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
-                            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={llegada}
+                            className="w-14 rounded-lg border border-gray-300 px-1.5 py-1.5 text-center tabular-nums" value={llegada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "llegada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
                           <td className="px-2"><input aria-label={`No conformes ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
-                            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={observada}
+                            className="w-14 rounded-lg border border-gray-300 px-1.5 py-1.5 text-center tabular-nums" value={observada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "observada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
                           <td className="px-2 text-center font-bold tabular-nums text-amber-800">{excedenteConforme}</td>
                           <td className={`px-2 text-center font-bold tabular-nums ${Number(aceptadas) > linea.pendientes ? "text-red-700" : "text-gray-900"}`}>{aceptadas}</td>
