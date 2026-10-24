@@ -26,6 +26,7 @@ export default function ERPPedidosPage() {
   const puedeEnviar = userHasPermission(user, ["purchasing.record_purchase_dispatch"]);
   const [pedidos, setPedidos] = useState([]);
   const [filtros, setFiltros] = useState({ status: "", provider: "", school: "", campaign: "" });
+  const [pestana, setPestana] = useState("adopciones");
   const [seleccionado, setSeleccionado] = useState(null);
   const [gruposEditoriales, setGruposEditoriales] = useState([]);
   const [busquedaColegio, setBusquedaColegio] = useState("");
@@ -42,7 +43,7 @@ export default function ERPPedidosPage() {
     setCargando(true);
     setError("");
     try {
-      const params = Object.fromEntries(Object.entries(filtros).filter(([, value]) => value));
+      const params = filtros.status ? { status: filtros.status } : {};
       const data = await obtenerPedidos(params);
       setPedidos(Array.isArray(data) ? data : data?.results ?? []);
     } catch (err) {
@@ -136,7 +137,18 @@ export default function ERPPedidosPage() {
         <p className="mt-2 text-sm text-gray-600">Prepara pedidos por colegio, revisa cantidades y registra su aprobación y envío.</p>
       </header>
 
-      {puedeEditar && (
+      <div role="tablist" aria-label="Secciones de pedidos" className="flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white p-2">
+        <button role="tab" aria-selected={pestana === "adopciones"} type="button" onClick={() => setPestana("adopciones")}
+          className={`rounded-xl px-4 py-3 text-sm font-bold transition ${pestana === "adopciones" ? "bg-red-700 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
+          Adopciones confirmadas
+        </button>
+        <button role="tab" aria-selected={pestana === "pedidos"} type="button" onClick={() => setPestana("pedidos")}
+          className={`rounded-xl px-4 py-3 text-sm font-bold transition ${pestana === "pedidos" ? "bg-red-700 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
+          Pedidos generados
+        </button>
+      </div>
+
+      {pestana === "adopciones" && puedeEditar && (
         <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-base font-black text-gray-950">Adopciones confirmadas por editorial</h2>
           <p className="text-sm text-gray-600">Selecciona un colegio. Los pedidos existentes se abren sin duplicarlos.</p>
@@ -174,10 +186,12 @@ export default function ERPPedidosPage() {
                         <button type="button" disabled={procesando}
                           onClick={() => {
                             if (adopcion.pedido_id) {
+                              setFiltros({ status: "", provider: "", school: "", campaign: "" });
+                              setPestana("pedidos");
                               seleccionar(adopcion.pedido_id);
                             } else {
                               setFiltros({ status: "", provider: "", school: "", campaign: "" });
-                              operar(() => generarPedidosDesdeAdopcion(adopcion.id), "Pedidos generados correctamente.");
+                              operar(() => generarPedidosDesdeAdopcion(adopcion.id), "Pedidos generados correctamente.").then(() => setPestana("pedidos"));
                             }
                           }}
                           className="rounded-lg bg-red-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">
@@ -196,7 +210,7 @@ export default function ERPPedidosPage() {
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {mensaje && <p role="status" className="rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-800">{mensaje}</p>}
 
-      <div className="grid gap-5 xl:grid-cols-5">
+      {pestana === "pedidos" && <div className="grid gap-5 xl:grid-cols-5">
         <div className="space-y-3 xl:col-span-2">
           <div className="grid grid-cols-2 gap-2 rounded-2xl border border-gray-200 bg-white p-3">
             <label className="col-span-2 text-sm font-semibold text-gray-700">Estado
@@ -206,18 +220,30 @@ export default function ERPPedidosPage() {
                 {Object.entries(estados).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
-            {["provider", "school", "campaign"].map((key) => (
-              <label key={key} className="text-xs font-semibold text-gray-600">{({ provider: "Editorial ID", school: "Colegio ID", campaign: "Campaña ID" })[key]}
-                <input type="number" min="1" value={filtros[key]}
-                  onChange={(e) => setFiltros((prev) => ({ ...prev, [key]: e.target.value }))}
-                  className="mt-1 w-full rounded-lg border border-gray-300 p-2 text-sm" />
-              </label>
-            ))}
+            <label className="text-xs font-semibold text-gray-600">Editorial
+              <select value={filtros.provider} onChange={(e) => setFiltros((prev) => ({ ...prev, provider: e.target.value }))}
+                className="mt-1 w-full rounded-lg border border-gray-300 p-2 text-sm">
+                <option value="">Todas</option>
+                {opcionesEditoriales.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-gray-600">Campaña
+              <select value={filtros.campaign} onChange={(e) => setFiltros((prev) => ({ ...prev, campaign: e.target.value }))}
+                className="mt-1 w-full rounded-lg border border-gray-300 p-2 text-sm">
+                <option value="">Todas</option>
+                {opcionesCampanias.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
+              </select>
+            </label>
+            <label className="col-span-2 text-xs font-semibold text-gray-600">Colegio
+              <input type="search" value={filtros.school} placeholder="Buscar por nombre"
+                onChange={(e) => setFiltros((prev) => ({ ...prev, school: e.target.value }))}
+                className="mt-1 w-full rounded-lg border border-gray-300 p-2 text-sm" />
+            </label>
           </div>
           <div className="space-y-2">
             {cargando && <p className="text-sm text-gray-500">Consultando pedidos…</p>}
-            {!cargando && pedidos.length === 0 && <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">No hay pedidos para estos filtros.</p>}
-            {pedidos.map((pedido) => (
+            {!cargando && pedidosVisibles.length === 0 && <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">No hay pedidos para estos filtros.</p>}
+            {pedidosVisibles.map((pedido) => (
               <button key={pedido.id} type="button" onClick={() => seleccionar(pedido.id)}
                 className={`w-full rounded-xl border p-4 text-left transition hover:border-red-300 ${seleccionado?.id === pedido.id ? "border-red-500 bg-red-50" : "border-gray-200 bg-white"}`}>
                 <p className="font-bold text-gray-950">{pedido.provider_name_snapshot}</p>
