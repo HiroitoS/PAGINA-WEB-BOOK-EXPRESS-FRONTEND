@@ -175,10 +175,19 @@ const NAV_SECTIONS = [
         permissions: ["purchasing.view_purchasing"],
       },
       {
-        label: "Almacén · Recepción",
-        to: "/admin/erp/almacen/recepciones",
+        type: "subgroup",
+        label: "Almacén",
         icon: <FaBoxOpen />,
+        basePath: "/admin/erp/almacen/",
         permissions: ["warehouse.view_receiving"],
+        children: [
+          {
+            label: "Recepción de mercadería",
+            to: "/admin/erp/almacen/recepciones",
+            icon: <FaClipboardList />,
+            permissions: ["warehouse.view_receiving"],
+          },
+        ],
       },
     ],
   },
@@ -379,6 +388,29 @@ function SidebarContent({
                             key="todo-task-lists"
                             onNavigate={onCloseMenu}
                           />
+                        );
+                      }
+
+                      if (item.type === "subgroup") {
+                        const desplegado = location.pathname.startsWith(item.basePath);
+                        return (
+                          <details key={`${item.label}-${desplegado}`} defaultOpen={desplegado}
+                            className="rounded-xl border border-white/10 bg-white/5">
+                            <summary className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-200 hover:bg-white/10">
+                              <span className="text-sm">{item.icon}</span>
+                              <span>{item.label}</span>
+                            </summary>
+                            <div className="space-y-1 border-l border-white/10 py-1 pl-3">
+                              {item.children.filter((subitem) => userCanSeeEntry(user, subitem))
+                                .map((subitem) => (
+                                  <NavLink key={subitem.to} to={subitem.to}
+                                    className={childNavClass} onClick={onCloseMenu}>
+                                    <span className="text-xs">{subitem.icon}</span>
+                                    <span>{subitem.label}</span>
+                                  </NavLink>
+                                ))}
+                            </div>
+                          </details>
                         );
                       }
 
