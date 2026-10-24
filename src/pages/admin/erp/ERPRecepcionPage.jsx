@@ -106,7 +106,7 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
   return (
     <section className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4" aria-label="Seguimiento de pedidos">
       <div>
-        <h3 className="font-black text-gray-900">Saldos y entregas por pedido</h3>
+        <h3 className="font-black text-gray-900">Conciliación por pedido</h3>
         <p className="mt-1 text-xs text-gray-600">
           Datos acumulados de recepciones validadas. Las cantidades de la guía seleccionada
           son definitivas solo si esa recepción está validada.
@@ -120,8 +120,8 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
           </div>
           <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 p-2 text-center">
             <div><p className="text-xs text-gray-600">Solicitadas</p><p className="text-lg font-black tabular-nums">{pedido.solicitadas}</p></div>
-            <div><p className="text-xs text-gray-600">Aceptadas total</p><p className="text-lg font-black tabular-nums">{pedido.aceptadas}</p></div>
-            <div><p className="text-xs text-gray-600">Saldo actual</p>
+            <div><p className="text-xs text-gray-600">Aceptadas acumuladas</p><p className="text-lg font-black tabular-nums">{pedido.aceptadas}</p></div>
+            <div><p className="text-xs text-gray-600">Por recibir</p>
               <p className={`text-lg font-black tabular-nums ${pedido.pendientes ? "text-amber-800" : "text-green-800"}`}>{pedido.pendientes}</p>
             </div>
           </div>
@@ -153,7 +153,7 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
           </div>
           <details className="rounded-lg border border-gray-200 p-3">
             <summary className="cursor-pointer text-sm font-bold text-gray-800">
-              Entregas validadas de este pedido ({pedido.entregas.length})
+              Historial de entregas ({pedido.entregas.length})
             </summary>
             {pedido.entregas.length === 0 ? (
               <p className="mt-2 text-xs text-gray-600">Aún no hay entregas validadas.</p>
@@ -761,28 +761,11 @@ export default function ERPRecepcionPage() {
                         </p>
                       </div>
                     </div>
-                    <details className="rounded-lg border border-gray-200 p-3">
-                      <summary className="cursor-pointer text-sm font-bold text-gray-700">
-                        Ver solo los productos de esta guía ({recepcionSeleccionada.lines.length})
-                      </summary>
-                      <div className="mt-2 overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                          <thead><tr className="border-b text-xs text-gray-500"><th className="py-2">Producto</th><th>Llegaron</th><th>Aceptadas</th><th>Observadas</th></tr></thead>
-                          <tbody>{recepcionSeleccionada.lines.map((linea) => (
-                            <tr key={linea.id} className="border-b border-gray-100">
-                              <td className="py-2 font-semibold">{linea.product_name}
-                                <span className="block text-xs font-normal text-gray-500">Pedido BE-OC-{String(linea.order_id).padStart(6, "0")}</span>
-                              </td>
-                              <td>{linea.quantity_arrived}</td>
-                              <td>{linea.quantity_accepted}</td>
-                              <td>{linea.quantity_observed}</td>
-                            </tr>
-                          ))}</tbody>
-                        </table>
-                      </div>
-                    </details>
                     <p className="text-xs text-gray-600">
-                      Recepción validada. Estas cantidades son de esta guía; los saldos actuales y las entregas anteriores o posteriores aparecen abajo.
+                      El detalle de productos, entregas anteriores y saldos actuales se consulta en la tabla por pedido de abajo.
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Recepción validada. El detalle consolidado de productos y saldos actuales aparece debajo.
                       Aún no registra stock ni facturas.
                     </p>
                   </div>
