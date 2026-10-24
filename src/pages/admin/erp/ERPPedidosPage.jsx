@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
-  aprobarPedido, generarPedidosDesdeAdopcion, modificarCantidadPedido,
+  aprobarPedido, descargarOrdenCompraPdf, generarPedidosDesdeAdopcion, modificarCantidadPedido,
   obtenerAdopcionesPorEditorial,
   obtenerPedido, obtenerPedidos, registrarEnvioPedido,
 } from "../../../api/purchasingApi";
@@ -103,6 +103,29 @@ export default function ERPPedidosPage() {
       setCantidades(Object.fromEntries(pedido.items.map((item) => [item.id, String(item.quantity_ordered)])));
     } catch (err) {
       setError(obtenerError(err));
+    }
+  }
+
+  async function descargarPdf() {
+    if (!seleccionado || procesando) return;
+    setProcesando(true);
+    setError("");
+    setMensaje("");
+    try {
+      const archivo = await descargarOrdenCompraPdf(seleccionado.id);
+      const enlace = URL.createObjectURL(new Blob([archivo], { type: "application/pdf" }));
+      const descarga = document.createElement("a");
+      descarga.href = enlace;
+      descarga.download = `BE-OC-${String(seleccionado.id).padStart(6, "0")}.pdf`;
+      document.body.appendChild(descarga);
+      descarga.click();
+      descarga.remove();
+      window.setTimeout(() => URL.revokeObjectURL(enlace), 1000);
+      setMensaje("Orden de compra descargada. Puedes enviarla manualmente a la editorial.");
+    } catch (err) {
+      setError(obtenerError(err));
+    } finally {
+      setProcesando(false);
     }
   }
 
@@ -314,6 +337,17 @@ export default function ERPPedidosPage() {
                   </tbody>
                 </table>
               </div>
+              {["approved", "sent", "partially_received", "received", "closed_partial"].includes(seleccionado.status) && (
+                <button type="button" disabled={procesando} onClick={descargarPdf}
+                  className="rounded-xl border border-gray-800 bg-white px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-100 disabled:opacity-50">
+                  Descargar orden de compra (PDF)
+                </button>
+              )}
+              {seleccionado.status === "draft" && (
+                <p className="text-xs text-gray-500">
+                  La orden formal estará disponible cuando apruebes este pedido.
+                </p>
+              )}
               {seleccionado.status === "draft" && puedeAprobar && (
                 <button type="button" disabled={procesando} onClick={() => operar(() => aprobarPedido(seleccionado.id), "Pedido aprobado.")}
                   className="rounded-xl bg-red-700 px-4 py-2 font-bold text-white disabled:opacity-50">Aprobar pedido</button>
