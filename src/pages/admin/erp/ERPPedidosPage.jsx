@@ -8,7 +8,7 @@ import {
 } from "../../../api/purchasingApi";
 
 const estados = {
-  draft: "Borrador", approved: "Aprobado", sent: "Pedido enviado a editorial",
+  draft: "Pedido en borrador", approved: "Aprobado para enviar", sent: "Enviado a editorial",
   partially_received: "Recepción parcial", received: "Recibido",
   closed_partial: "Cerrado con saldo", cancelled: "Anulado",
 };
@@ -241,6 +241,13 @@ export default function ERPPedidosPage() {
                           <p className="mt-1 text-xs font-semibold text-gray-600">
                             {adopcion.pedido_id ? `Pedido: ${estados[adopcion.estado_pedido] || adopcion.estado_pedido}` : "Pendiente de pedido"}
                           </p>
+                          {grupo.adopciones.filter((otra) =>
+                            otra.colegio === adopcion.colegio && otra.campania === adopcion.campania
+                          ).length > 1 && (
+                            <p className="text-xs font-semibold text-amber-800">
+                              Revisar: existe otra adopción de este colegio en la misma campaña.
+                            </p>
+                          )}
                         </div>
                         <button type="button" disabled={procesando}
                           onClick={async () => {
@@ -378,6 +385,9 @@ export default function ERPPedidosPage() {
                     Guardar cambios
                   </button>
                   {cambiosInvalidos && <p role="alert" className="w-full text-xs text-red-700">Introduce cantidades enteras mayores que cero.</p>}
+                  {cambiosPendientes.length > 0 && !cambiosInvalidos && (
+                    <p className="w-full text-xs text-gray-500">Guarda los cambios antes de aprobar o cambiar de pedido.</p>
+                  )}
                 </div>
               )}
               {["approved", "sent", "partially_received", "received", "closed_partial"].includes(seleccionado.status) && (
@@ -406,7 +416,10 @@ export default function ERPPedidosPage() {
               {seleccionado.status === "approved" && puedeEnviar && (
                 <form className="space-y-2" onSubmit={(event) => {
                   event.preventDefault();
-                  operar(() => registrarEnvioPedido(seleccionado.id, evidencia), "Envío registrado.");
+                  operar(() => registrarEnvioPedido(seleccionado.id, evidencia), "Orden registrada como enviada a la editorial.")
+                    .then((registrado) => {
+                      if (registrado) setFiltros((prev) => ({ ...prev, status: "sent" }));
+                    });
                 }}>
                   <label className="block text-sm font-semibold text-gray-700">Constancia de envío de la orden a la editorial (correo, fecha y destinatario)
                     <textarea required maxLength="2000" value={evidencia} onChange={(event) => setEvidencia(event.target.value)}
