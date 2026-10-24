@@ -41,17 +41,19 @@ function normalizarListado(response) {
 }
 
 function EstadoRecepcion({ estado, cumplimiento }) {
-  const completo = estado === "validated" && cumplimiento === "complete";
-  const parcial = estado === "validated" && cumplimiento !== "complete";
-  const estilo = completo ? "border-green-300 bg-green-100 text-green-900"
-    : parcial ? "border-amber-300 bg-amber-100 text-amber-950"
-      : "border-gray-200 bg-gray-100 text-gray-700";
-  const texto = completo ? "Validada · pedido completo"
-    : parcial ? "Validada · saldo pendiente" : "En borrador";
+  const validada = estado === "validated";
+  const completo = validada && cumplimiento === "complete";
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold ${estilo}`}>
-      <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${completo ? "bg-green-600" : parcial ? "bg-amber-500" : "bg-gray-400"}`} />
-      {texto}
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span className={`rounded-full border px-2 py-1 text-xs font-bold ${validada ? "border-gray-300 bg-white text-gray-700" : "border-gray-200 bg-gray-100 text-gray-600"}`}>
+        {validada ? "Recepción validada" : "En borrador"}
+      </span>
+      {validada && (
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold ${completo ? "border-green-300 bg-green-100 text-green-900" : "border-amber-300 bg-amber-100 text-amber-950"}`}>
+          <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${completo ? "bg-green-600" : "bg-amber-500"}`} />
+          {completo ? "Pedido completo" : "Saldo pendiente"}
+        </span>
+      )}
     </span>
   );
 }
@@ -151,6 +153,21 @@ export default function ERPRecepcionPage() {
       pedido: pedido.referencia,
       colegio: pedido.colegio,
     })));
+
+  const resumenSeleccion = pedidos
+    .filter((pedido) => pedidosMarcados.includes(pedido.id))
+    .reduce((suma, pedido) => {
+      const totales = pedido.resumen ?? {
+        solicitadas: pedido.productos.reduce((n, linea) => n + linea.solicitadas, 0),
+        aceptadas: pedido.productos.reduce((n, linea) => n + linea.aceptadas, 0),
+        pendientes: pedido.productos.reduce((n, linea) => n + linea.pendientes, 0),
+      };
+      return {
+        solicitadas: suma.solicitadas + (totales.solicitadas || 0),
+        aceptadas: suma.aceptadas + (totales.aceptadas || 0),
+        pendientes: suma.pendientes + (totales.pendientes || 0),
+      };
+    }, { solicitadas: 0, aceptadas: 0, pendientes: 0 });
 
   const recepcionSeleccionada = recepciones.find((recepcion) => recepcion.id === recepcionId);
 
@@ -402,9 +419,9 @@ export default function ERPRecepcionPage() {
       {cargando && <p className="text-sm text-gray-600">Actualizando registros…</p>}
 
       {pestana === "registro" && (
-        <div className="grid gap-4 xl:grid-cols-5">
-          <div className="space-y-3 xl:col-span-2">
-            <div className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-3">
+          <div className="space-y-3">
+            <div className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4">
               <label className="text-sm font-semibold text-gray-700">Editorial
                 <select value={editorial} onChange={(event) => cambiarEditorial(event.target.value)} className={`mt-1 ${estilosCampo}`}>
                   <option value="">Todas las editoriales</option>
@@ -447,7 +464,7 @@ export default function ERPRecepcionPage() {
             </div>
           </div>
 
-          <form onSubmit={registrarBorrador} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 xl:col-span-3">
+          <form onSubmit={registrarBorrador} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 xl:col-span-2">
             <div>
               <h2 className="font-black text-gray-950">Registrar entrega física</h2>
               <p className="mt-1 text-sm text-gray-600">Selecciona pedidos de una misma editorial. Una guía puede corresponder a varios colegios.</p>
@@ -475,10 +492,26 @@ export default function ERPRecepcionPage() {
             {lineasPreparadas.length === 0 ? (
               <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">Marca uno o varios pedidos de la izquierda para registrar sus productos.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-96 text-left text-sm">
+              <>
+                <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-3 text-center">
+                  <div><p className="text-xs text-gray-600">Solicitadas</p><p className="text-lg font-black">{resumenSeleccion.solicitadas}</p></div>
+                  <div><p className="text-xs text-gray-600">Aceptadas anteriormente</p><p className="text-lg font-black">{resumenSeleccion.aceptadas}</p></div>
+                  <div><p className="text-xs text-gray-600">Pendientes</p><p className="text-lg font-black text-amber-800">{resumenSeleccion.pendientes}</p></div>
+                </div>
+                <p className="text-xs text-gray-500">El resumen es acumulado por pedido. Solo las recepciones validadas cuentan como aceptadas.</p>
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-max text-left text-sm">
                   <thead className="border-b border-gray-200 text-xs text-gray-600">
-                    <tr><th className="py-2">Producto / pedido</th><th className="px-2 text-center">Pendiente</th><th className="px-2">Llegaron</th><th className="px-2">Observadas</th><th>Aceptadas</th></tr>
+                    <tr>
+                       <th className="py-2 pr-3">Producto / pedido</th>
+                       <th className="px-2 text-center">Solicitadas</th>
+                       <th className="px-2 text-center">Aceptadas prev.</th>
+                       <th className="px-2 text-center">Pendiente</th>
+                       <th className="px-2">Llegaron hoy</th>
+                       <th className="px-2">Observadas</th>
+                       <th className="px-2 text-center">Aceptadas hoy</th>
+                       <th className="px-2 text-center">Saldo después</th>
+                     </tr>
                   </thead>
                   <tbody>
                     {lineasPreparadas.map((linea) => {
@@ -491,20 +524,26 @@ export default function ERPRecepcionPage() {
                             <span className="block font-semibold text-gray-900">{linea.producto}</span>
                             <span className="text-xs text-gray-500">{linea.colegio} · {linea.pedido}</span>
                           </td>
-                          <td className="px-2 text-center font-semibold">{linea.pendientes}</td>
+                          <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
+                           <td className="px-2 text-center tabular-nums">{linea.aceptadas}</td>
+                           <td className="px-2 text-center font-semibold tabular-nums text-amber-800">{linea.pendientes}</td>
                           <td className="px-2"><input aria-label={`Llegaron ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
                             className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={llegada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "llegada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
                           <td className="px-2"><input aria-label={`Observadas ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
                             className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={observada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "observada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
-                          <td className={`font-bold ${Number(aceptadas) > linea.pendientes ? "text-red-700" : "text-gray-900"}`}>{aceptadas}</td>
+                          <td className={`px-2 text-center font-bold tabular-nums ${Number(aceptadas) > linea.pendientes ? "text-red-700" : "text-gray-900"}`}>{aceptadas}</td>
+                           <td className={`px-2 text-center font-bold tabular-nums ${llegada !== "" && Number(aceptadas) > linea.pendientes ? "text-red-700" : "text-gray-900"}`}>
+                             {llegada === "" ? "—" : Math.max(0, linea.pendientes - Number(aceptadas))}
+                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
             <label className="block text-xs font-bold text-gray-700">Observaciones generales
               <textarea className={`mt-1 ${estilosCampo}`} rows={2} value={documento.notes}
@@ -518,8 +557,8 @@ export default function ERPRecepcionPage() {
       )}
 
       {pestana === "historial" && (
-        <div className="grid gap-4 xl:grid-cols-5">
-          <div className="space-y-2 xl:col-span-2">
+        <div className="grid gap-4 xl:grid-cols-3">
+          <div className="space-y-2">
             <p className="text-xs text-gray-600">Amarillo: quedan libros pendientes · Verde: pedidos completos · Gris: borrador</p>
             {recepciones.length === 0 && !cargando && (
               <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">Todavía no se registraron recepciones.</p>
@@ -543,7 +582,7 @@ export default function ERPRecepcionPage() {
             )}
           </div>
 
-          <div className="xl:col-span-3">
+          <div className="xl:col-span-2">
             {!recepcionSeleccionada ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-7 text-center text-sm text-gray-500">Selecciona una recepción para revisar sus cantidades.</div>
             ) : (
