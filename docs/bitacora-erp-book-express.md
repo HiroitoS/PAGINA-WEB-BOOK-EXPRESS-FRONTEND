@@ -37,3 +37,9 @@ Precios 2027 se actualizarán más adelante desde listas del proveedor; no alter
 2. Corregir/validar P-05, pruebas frontend lint/build e integración manual.
 3. Completar UX de selección de adopción (no IDs), filtros y paginación.
 4. Implementar P-06 recepciones parciales de compras y luego Almacén/Inventario, Packs, Ventas/Facturación.
+
+## Actualización 23/10/2026 — P-05 UX
+- Código React publicado en rama crm/gestion-colegios: dos pestañas, "Adopciones confirmadas" y "Pedidos generados"; filtros visibles con nombres (editorial, campaña, colegio) y estado de pedido.
+- El servidor continúa siendo autoridad sobre permisos y estados. Pendiente de validación local: npm run lint, npm run build y prueba manual de selección/generación/edición.
+- Limitación técnica aún pendiente: la lista de pedidos está paginada por DRF; los filtros de nombres actuales operan sobre la página cargada. Para escalar, construir filtros de búsqueda en backend con paginación real antes de desplegar a producción.
+- No integrar a main ni desplegar hasta validar y resolver limitaciones.
