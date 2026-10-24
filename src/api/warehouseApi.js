@@ -1,0 +1,39 @@
+import axiosClient from "./axiosClient";
+
+const BASE = "/admin/erp/almacen/recepciones";
+
+export async function listarPedidosPorRecibir(page = 1) {
+  const { data } = await axiosClient.get(`${BASE}/pedidos-pendientes/`, {
+    params: { page },
+  });
+  return data;
+}
+
+export async function listarRecepciones(page = 1) {
+  const { data } = await axiosClient.get(`${BASE}/`, {
+    params: { page },
+  });
+  return data;
+}
+
+export async function crearRecepcion(payload) {
+  const { data } = await axiosClient.post(`${BASE}/crear/`, payload);
+  return data;
+}
+
+export async function actualizarRecepcion(id, payload) {
+  const { data } = await axiosClient.post(`${BASE}/${id}/actualizar/`, payload);
+  return data;
+}
+
+export async function validarRecepcion(id) {
+  const { data } = await axiosClient.post(`${BASE}/${id}/validar/`, {});
+  return data;
+}
+
+export async function consultarSaldoPedido(id) {
+  const { data } = await axiosClient.get(`${BASE}/saldos/`, {
+    params: { pedido: id },
+  });
+  return data;
+}
