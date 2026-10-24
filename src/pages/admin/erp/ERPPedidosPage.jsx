@@ -16,19 +16,19 @@ const estados = {
 const estadosFiltro = ["draft", "approved", "sent"];
 
 function estadoSemaforo(pedidoId, estadoPedido) {
-  if (!pedidoId) return { tipo: "sinPedido", texto: "Sin pedido generado", punto: "bg-red-500", color: "text-red-700" };
-  if (estadoPedido === "cancelled") return { tipo: "sinPedido", texto: "Pedido anulado", punto: "bg-red-500", color: "text-red-700" };
+  if (!pedidoId) return { tipo: "sinPedido", texto: "Sin pedido generado", punto: "bg-red-600", estilo: "border-red-200 bg-red-50 text-red-800" };
+  if (estadoPedido === "cancelled") return { tipo: "sinPedido", texto: "Pedido anulado", punto: "bg-red-600", estilo: "border-red-200 bg-red-50 text-red-800" };
   if (["sent", "partially_received", "received", "closed_partial"].includes(estadoPedido)) {
-    return { tipo: "enviado", texto: "Enviado a editorial", punto: "bg-green-600", color: "text-green-700" };
+    return { tipo: "enviado", texto: "Enviado a editorial", punto: "bg-green-600", estilo: "border-green-200 bg-green-50 text-green-800" };
   }
-  return { tipo: "porEnviar", texto: "Pendiente de envío", punto: "bg-amber-500", color: "text-amber-800" };
+  return { tipo: "porEnviar", texto: "Pendiente de envío", punto: "bg-amber-500", estilo: "border-amber-200 bg-amber-50 text-amber-900" };
 }
 
 function SemaforoPedido({ pedidoId, estadoPedido }) {
   const indicador = estadoSemaforo(pedidoId, estadoPedido);
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${indicador.color}`}>
-      <span aria-hidden="true" className={`inline-block h-2 w-2 shrink-0 rounded-full ${indicador.punto}`} />
+    <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-sm font-bold ${indicador.estilo}`}>
+      <span aria-hidden="true" className={`inline-block h-3 w-3 shrink-0 rounded-full ${indicador.punto}`} />
       {indicador.texto}
     </span>
   );
@@ -273,7 +273,7 @@ export default function ERPPedidosPage() {
                   aria-expanded={editorialAbierta === grupo.editorial_id}
                   className="flex w-full items-center justify-between bg-gray-50 px-4 py-3 text-left font-bold text-gray-900">
                   <span>{grupo.editorial}</span>
-<span className="text-xs font-medium text-gray-600">
+<span className="text-sm font-semibold text-gray-600">
                     {grupo.adopciones.length} adopción(es) · {grupo.adopciones.reduce((total, adopcion) => total + adopcion.unidades, 0)} unidades · <span className="text-red-700">{grupo.adopciones.filter((adopcion) => estadoSemaforo(adopcion.pedido_id, adopcion.estado_pedido).tipo === "sinPedido").length} sin pedido</span>
                     {" · "}
                     <span className="text-amber-800">{grupo.adopciones.filter((adopcion) => estadoSemaforo(adopcion.pedido_id, adopcion.estado_pedido).tipo === "porEnviar").length} por enviar</span>
@@ -393,7 +393,9 @@ export default function ERPPedidosPage() {
             <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5">
               <div>
                 <p><SemaforoPedido pedidoId={seleccionado.id} estadoPedido={seleccionado.status} /></p>
-                <p className="text-xs font-semibold text-gray-500">{estados[seleccionado.status]}</p>
+                {seleccionado.status !== "sent" && (
+                  <p className="mt-1 text-xs font-semibold text-gray-500">{estados[seleccionado.status]}</p>
+                )}
                 <h2 className="text-xl font-black text-gray-950">{seleccionado.provider_name_snapshot}</h2>
                 <p className="text-sm text-gray-600">{seleccionado.school_name_snapshot || "Pedido independiente"} · {seleccionado.campaign_name_snapshot}</p>
               </div>
