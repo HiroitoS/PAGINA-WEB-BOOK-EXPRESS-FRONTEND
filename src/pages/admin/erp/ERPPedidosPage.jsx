@@ -489,7 +489,7 @@ export default function ERPPedidosPage() {
                       <button type="button"
                         onClick={() => {
                           const { asunto, mensaje } = datosCorreoPedido(seleccionado);
-                          window.location.href = `mailto:?${new URLSearchParams({ subject: asunto, body: mensaje }).toString()}`;
+                          window.location.href = `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(mensaje.replace(/\n/g, "\r\n"))}`;
                         }}
                         className="rounded-lg border border-gray-800 bg-white px-3 py-2 text-sm font-bold text-gray-900 hover:bg-gray-100">
                         Abrir en mi aplicación de correo
