@@ -40,13 +40,26 @@ function normalizarListado(response) {
   };
 }
 
-function EstadoRecepcion({ estado }) {
-  const validada = estado === "validated";
+function EstadoRecepcion({ estado, cumplimiento }) {
+  const completo = estado === "validated" && cumplimiento === "complete";
+  const parcial = estado === "validated" && cumplimiento !== "complete";
+  const estilo = completo ? "border-green-300 bg-green-100 text-green-900"
+    : parcial ? "border-amber-300 bg-amber-100 text-amber-950"
+      : "border-gray-200 bg-gray-100 text-gray-700";
+  const texto = completo ? "Validada · pedido completo"
+    : parcial ? "Validada · saldo pendiente" : "En borrador";
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${validada ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-900"}`}>
-      {validada ? "Validada" : "En borrador"}
+    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold ${estilo}`}>
+      <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${completo ? "bg-green-600" : parcial ? "bg-amber-500" : "bg-gray-400"}`} />
+      {texto}
     </span>
   );
+}
+
+function colorTarjetaRecepcion(recepcion) {
+  if (recepcion.status !== "validated") return "border-gray-200 bg-gray-50";
+  return recepcion.fulfillment_status === "complete"
+    ? "border-green-300 bg-green-50" : "border-amber-300 bg-amber-50";
 }
 
 function validarLineas(lineas) {
@@ -89,6 +102,8 @@ export default function ERPRecepcionPage() {
   const [documento, setDocumento] = useState(documentoInicial);
   const [recepcionId, setRecepcionId] = useState(null);
   const [edicion, setEdicion] = useState(null);
+  const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
+  const [cambiosSinGuardar, setCambiosSinGuardar] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -264,6 +279,8 @@ export default function ERPRecepcionPage() {
 
   function abrirRecepcion(recepcion) {
     setRecepcionId(recepcion.id);
+    setConfirmacionAbierta(false);
+    setCambiosSinGuardar(false);
     setEdicion({
       provider_id: recepcion.provider,
       document_type: recepcion.document_type,
@@ -282,6 +299,7 @@ export default function ERPRecepcionPage() {
   }
 
   function modificarLinea(index, campo, value) {
+    setCambiosSinGuardar(true);
     setEdicion((actual) => ({
       ...actual,
       lines: actual.lines.map((linea, posicion) =>
@@ -316,6 +334,7 @@ export default function ERPRecepcionPage() {
           notes: linea.notes,
         })),
       });
+      setCambiosSinGuardar(false);
       setMensaje("Borrador corregido y guardado.");
       setCargando(true);
       setRevision((actual) => actual + 1);
@@ -324,8 +343,7 @@ export default function ERPRecepcionPage() {
   }
 
   async function confirmarValidacion() {
-    if (!recepcionSeleccionada || procesando || !puedeValidar) return;
-    if (!window.confirm("¿Confirmas que las cantidades aceptadas fueron verificadas físicamente? Esta validación no se puede revertir desde la pantalla.")) return;
+    if (!recepcionSeleccionada || procesando || !puedeValidar || !confirmacionAbierta) return;
     setProcesando(true);
     setError("");
     setMensaje("");
@@ -333,11 +351,28 @@ export default function ERPRecepcionPage() {
       await validarRecepcion(recepcionSeleccionada.id);
       setMensaje("Recepción validada. Los saldos pendientes de los pedidos fueron actualizados. El stock se controlará en Inventario.");
       setEdicion(null);
+      setConfirmacionAbierta(false);
       setCargando(true);
       setRevision((actual) => actual + 1);
     } catch (err) { setError(errorLegible(err)); }
     finally { setProcesando(false); }
   }
+
+  function solicitarValidacion() {
+    if (cambiosSinGuardar) {
+      setError("Guarda las correcciones de cantidades o documento antes de validar.");
+      return;
+    }
+    if (!recepcionSeleccionada || recepcionSeleccionada.status !== "draft") return;
+    setError("");
+    setConfirmacionAbierta(true);
+  }
+
+  const totalLlegado = edicion?.lines.reduce((sum, linea) =>
+    sum + Number(linea.quantity_arrived), 0) ?? 0;
+  const totalObservado = edicion?.lines.reduce((sum, linea) =>
+    sum + Number(linea.quantity_observed), 0) ?? 0;
+  const totalAceptado = totalLlegado - totalObservado;
 
   return (
     <section className="space-y-4">
@@ -485,15 +520,16 @@ export default function ERPRecepcionPage() {
       {pestana === "historial" && (
         <div className="grid gap-4 xl:grid-cols-5">
           <div className="space-y-2 xl:col-span-2">
+            <p className="text-xs text-gray-600">Amarillo: quedan libros pendientes · Verde: pedidos completos · Gris: borrador</p>
             {recepciones.length === 0 && !cargando && (
               <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">Todavía no se registraron recepciones.</p>
             )}
             {recepciones.map((recepcion) => (
               <button type="button" key={recepcion.id} onClick={() => abrirRecepcion(recepcion)}
-                className={`w-full rounded-xl border p-3 text-left transition ${recepcionId === recepcion.id ? "border-red-400 bg-red-50" : "border-gray-200 bg-white hover:border-gray-400"}`}>
+                className={`w-full rounded-xl border p-3 text-left transition hover:shadow-sm ${colorTarjetaRecepcion(recepcion)} ${recepcionId === recepcion.id ? "ring-2 ring-red-600 ring-offset-1" : ""}`}>
                 <span className="flex items-center justify-between gap-2">
                   <strong className="text-sm text-gray-950">{recepcion.provider_name}</strong>
-                  <EstadoRecepcion estado={recepcion.status} />
+                  <EstadoRecepcion estado={recepcion.status} cumplimiento={recepcion.fulfillment_status} />
                 </span>
                 <span className="mt-1 block text-sm text-gray-700">{recepcion.document_number || "Sin número de documento"}</span>
                 <span className="block text-xs text-gray-500">{recepcion.received_on} · {recepcion.lines.length} producto(s)</span>
@@ -517,7 +553,7 @@ export default function ERPRecepcionPage() {
                     <h2 className="text-lg font-black text-gray-950">{recepcionSeleccionada.provider_name}</h2>
                     <p className="text-xs text-gray-600">Recepción N.º {recepcionSeleccionada.id} · {recepcionSeleccionada.received_on}</p>
                   </div>
-                  <EstadoRecepcion estado={recepcionSeleccionada.status} />
+                  <EstadoRecepcion estado={recepcionSeleccionada.status} cumplimiento={recepcionSeleccionada.fulfillment_status} />
                 </div>
                 {recepcionSeleccionada.status === "validated" ? (
                   <div className="overflow-x-auto">
@@ -538,7 +574,7 @@ export default function ERPRecepcionPage() {
                     <div className="grid gap-3 sm:grid-cols-3">
                       <label className="text-xs font-bold text-gray-700">Documento
                         <select className={`mt-1 ${estilosCampo}`} value={edicion?.document_type ?? ""}
-                          disabled={!puedeCrear} onChange={(event) => setEdicion((actual) => ({ ...actual, document_type: event.target.value }))}>
+                          disabled={!puedeCrear} onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_type: event.target.value })); }}>
                           <option value="guide">Guía de remisión</option>
                           <option value="invoice">Factura (referencia física)</option>
                           <option value="other">Otro documento</option>
@@ -546,11 +582,11 @@ export default function ERPRecepcionPage() {
                       </label>
                       <label className="text-xs font-bold text-gray-700">Número
                         <input className={`mt-1 ${estilosCampo}`} value={edicion?.document_number ?? ""}
-                          onChange={(event) => setEdicion((actual) => ({ ...actual, document_number: event.target.value }))} disabled={!puedeCrear} />
+                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_number: event.target.value })); }} disabled={!puedeCrear} />
                       </label>
                       <label className="text-xs font-bold text-gray-700">Fecha
                         <input className={`mt-1 ${estilosCampo}`} type="date" value={edicion?.received_on ?? ""}
-                          onChange={(event) => setEdicion((actual) => ({ ...actual, received_on: event.target.value }))} disabled={!puedeCrear} />
+                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, received_on: event.target.value })); }} disabled={!puedeCrear} />
                       </label>
                     </div>
                     <div className="overflow-x-auto">
@@ -572,11 +608,11 @@ export default function ERPRecepcionPage() {
                     </div>
                     <label className="block text-xs font-bold text-gray-700">Observaciones
                       <textarea className={`mt-1 ${estilosCampo}`} rows={2} value={edicion?.notes ?? ""}
-                        onChange={(event) => setEdicion((actual) => ({ ...actual, notes: event.target.value }))} disabled={!puedeCrear} />
+                        onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, notes: event.target.value })); }} disabled={!puedeCrear} />
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando}>Guardar correcciones</button>}
-                      {puedeValidar && <button type="button" onClick={confirmarValidacion} disabled={procesando}
+                      {puedeValidar && <button type="button" onClick={solicitarValidacion} disabled={procesando || cambiosSinGuardar}
                         className="rounded-lg border border-gray-900 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-50 disabled:opacity-50">
                         Validar recepción
                       </button>}
@@ -586,6 +622,43 @@ export default function ERPRecepcionPage() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {confirmacionAbierta && recepcionSeleccionada && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4 py-6">
+          <div role="dialog" aria-modal="true" aria-labelledby="confirmar-recepcion-titulo"
+            aria-describedby="confirmar-recepcion-descripcion"
+            onKeyDown={(event) => { if (event.key === "Escape" && !procesando) setConfirmacionAbierta(false); }}
+            className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6">
+            <p className="text-xs font-bold uppercase tracking-wide text-red-700">Confirmación de almacén</p>
+            <h2 id="confirmar-recepcion-titulo" className="mt-1 text-xl font-black text-gray-950">
+              Validar recepción física
+            </h2>
+            <p id="confirmar-recepcion-descripcion" className="mt-2 text-sm text-gray-700">
+              Confirmarás las cantidades verificadas de <strong>{recepcionSeleccionada.provider_name}</strong>,
+              documento <strong>{recepcionSeleccionada.document_number}</strong>.
+            </p>
+            <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-3 text-center">
+              <div><p className="text-xs text-gray-600">Llegaron</p><p className="text-lg font-black">{totalLlegado}</p></div>
+              <div><p className="text-xs text-gray-600">Aceptadas</p><p className="text-lg font-black">{totalAceptado}</p></div>
+              <div><p className="text-xs text-gray-600">Observadas</p><p className="text-lg font-black">{totalObservado}</p></div>
+            </div>
+            <p className="mt-3 text-sm text-amber-900">
+              Después de validar, no podrás editar este documento desde la pantalla.
+              Los saldos se actualizarán, pero esto no registra stock ni facturas.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button type="button" autoFocus disabled={procesando}
+                onClick={() => setConfirmacionAbierta(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-800 hover:bg-gray-50 disabled:opacity-50">
+                Revisar nuevamente
+              </button>
+              <button type="button" disabled={procesando} onClick={confirmarValidacion} className={estilosBoton}>
+                Confirmar recepción
+              </button>
+            </div>
           </div>
         </div>
       )}
