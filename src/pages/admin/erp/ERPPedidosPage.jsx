@@ -13,12 +13,15 @@ const estados = {
   closed_partial: "Cerrado con saldo", cancelled: "Anulado",
 };
 
-const estadosFiltro = ["draft", "approved", "sent"];
+const estadosFiltro = ["draft", "approved", "sent", "partially_received", "received", "closed_partial"];
 
 function estadoSemaforo(pedidoId, estadoPedido) {
   if (!pedidoId) return { tipo: "sinPedido", texto: "Sin pedido generado", punto: "bg-red-600", estilo: "border-red-200 bg-red-50 text-red-800" };
   if (estadoPedido === "cancelled") return { tipo: "sinPedido", texto: "Pedido anulado", punto: "bg-red-600", estilo: "border-red-200 bg-red-50 text-red-800" };
-  if (["sent", "partially_received", "received", "closed_partial"].includes(estadoPedido)) {
+  if (["partially_received", "received", "closed_partial"].includes(estadoPedido)) {
+    return { tipo: "enviado", texto: estados[estadoPedido], punto: "bg-green-600", estilo: "border-green-200 bg-green-50 text-green-800" };
+  }
+  if (estadoPedido === "sent") {
     return { tipo: "enviado", texto: "Enviado a editorial", punto: "bg-green-600", estilo: "border-green-200 bg-green-50 text-green-800" };
   }
   return { tipo: "porEnviar", texto: "Pendiente de envío", punto: "bg-amber-500", estilo: "border-amber-200 bg-amber-50 text-amber-900" };
