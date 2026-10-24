@@ -31,6 +31,11 @@ export async function validarRecepcion(id) {
   return data;
 }
 
+export async function consultarSeguimientoRecepcion(id) {
+  const { data } = await axiosClient.get(`${BASE}/${id}/seguimiento/`);
+  return data;
+}
+
 export async function consultarSaldoPedido(id) {
   const { data } = await axiosClient.get(`${BASE}/saldos/`, {
     params: { pedido: id },
