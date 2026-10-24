@@ -98,7 +98,7 @@ function validarLineas(lineas) {
   return "";
 }
 
-function SeguimientoPedidos({ data, cargando, error }) {
+function SeguimientoPedidos({ data, cargando, error, estado }) {
   if (cargando) return <p role="status" className="text-sm text-gray-600">Consultando entregas y saldos actualizados…</p>;
   if (error) return <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>;
   if (!data) return null;
@@ -108,7 +108,8 @@ function SeguimientoPedidos({ data, cargando, error }) {
       <div>
         <h3 className="font-black text-gray-900">Saldos y entregas por pedido</h3>
         <p className="mt-1 text-xs text-gray-600">
-          Datos acumulados de todas las recepciones validadas. «Esta guía» muestra únicamente la entrega seleccionada.
+          Datos acumulados de recepciones validadas. Las cantidades de la guía seleccionada
+          son definitivas solo si esa recepción está validada.
         </p>
       </div>
       {data.pedidos.map((pedido) => (
@@ -130,7 +131,7 @@ function SeguimientoPedidos({ data, cargando, error }) {
                 <tr>
                   <th className="min-w-48 py-2 pr-2">Libro</th>
                   <th className="px-2 text-center">Solic.</th>
-                  <th className="px-2 text-center">Acept. esta guía</th>
+                  <th className="px-2 text-center">{estado === "validated" ? "Acept. esta guía" : "Prop. aceptación"}</th>
                   <th className="px-2 text-center">Observ. esta guía</th>
                   <th className="px-2 text-center">Acept. total</th>
                   <th className="px-2 text-center">Pendiente</th>
@@ -713,7 +714,8 @@ export default function ERPRecepcionPage() {
                 <span className="mt-1 block text-sm text-gray-700">{recepcion.document_number || "Sin número de documento"}</span>
                 <span className="block text-xs text-gray-500">
                    {recepcion.received_on} · {recepcion.lines.length} producto(s)
-                   {" · "}{recepcion.lines.reduce((suma, linea) => suma + linea.quantity_accepted, 0)} aceptadas en esta guía
+                   {" · "}{recepcion.lines.reduce((suma, linea) => suma + linea.quantity_accepted, 0)}
+                   {recepcion.status === "validated" ? " aceptadas en esta guía" : " propuestas de aceptación"}
                  </span>
               </button>
             ))}
@@ -835,12 +837,13 @@ export default function ERPRecepcionPage() {
                     <p className="text-xs text-gray-500">Valida únicamente después de contrastar la mercadería física y el documento. Esta acción no registra stock.</p>
                   </form>
                 )}
-                {recepcionSeleccionada.notes && (
+                {recepcionSeleccionada.status === "validated" && recepcionSeleccionada.notes && (
                   <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
                     <strong>Observaciones:</strong> {recepcionSeleccionada.notes}
                   </p>
                 )}
-                <SeguimientoPedidos data={seguimiento} cargando={cargandoSeguimiento} error={errorSeguimiento} />
+                <SeguimientoPedidos data={seguimiento} cargando={cargandoSeguimiento}
+                  error={errorSeguimiento} estado={recepcionSeleccionada.status} />
                 <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                   <summary className="cursor-pointer text-sm font-bold text-gray-800">
                     Historial de registro y validación
