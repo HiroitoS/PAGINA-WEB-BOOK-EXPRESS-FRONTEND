@@ -1,0 +1,580 @@
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../../../hooks/useAuth";
+import { userHasPermission } from "../../../utils/adminAccess";
+import {
+  actualizarRecepcion,
+  crearRecepcion,
+  listarPedidosPorRecibir,
+  listarRecepciones,
+  validarRecepcion,
+} from "../../../api/warehouseApi";
+
+function fechaHoy() {
+  return new Date().toLocaleDateString("sv-SE");
+}
+
+const documentoInicial = () => ({
+  document_type: "guide",
+  document_number: "",
+  received_on: fechaHoy(),
+  notes: "",
+});
+
+const estilosCampo = "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-red-600 focus:outline-none";
+const estilosBoton = "rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
+
+function errorLegible(error) {
+  const data = error?.response?.data;
+  if (typeof data?.detail === "string") return data.detail;
+  if (Array.isArray(data?.detail)) return data.detail.join(" ");
+  if (data && typeof data === "object") {
+    return Object.values(data).flat().map(String).join(" ");
+  }
+  return "No se pudo completar la operación. Revisa los datos e inténtalo nuevamente.";
+}
+
+function normalizarListado(response) {
+  return {
+    items: Array.isArray(response) ? response : (response?.results ?? []),
+    next: Boolean(response?.next),
+  };
+}
+
+function EstadoRecepcion({ estado }) {
+  const validada = estado === "validated";
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${validada ? "bg-green-50 text-green-800" : "bg-amber-50 text-amber-900"}`}>
+      {validada ? "Validada" : "En borrador"}
+    </span>
+  );
+}
+
+function validarLineas(lineas) {
+  if (!lineas.length) return "Ingresa al menos un producto con mercadería recibida.";
+  for (const linea of lineas) {
+    const llegada = Number(linea.quantity_arrived);
+    const observada = Number(linea.quantity_observed);
+    if (!Number.isSafeInteger(llegada) || llegada < 1
+      || !Number.isSafeInteger(observada) || observada < 0 || observada > llegada) {
+      return "Las cantidades deben ser enteras y la observada no puede exceder la llegada.";
+    }
+    const aceptada = llegada - observada;
+    if (linea.pendientes !== undefined && aceptada > linea.pendientes) {
+      return `La cantidad aceptada supera el saldo pendiente de ${linea.producto}.`;
+    }
+  }
+  return "";
+}
+
+export default function ERPRecepcionPage() {
+  const { user } = useAuth();
+  const puedeCrear = userHasPermission(user, ["warehouse.manage_receiving"]);
+  const puedeValidar = userHasPermission(user, ["warehouse.validate_receiving"]);
+  const [pestana, setPestana] = useState("registro");
+  const [pedidos, setPedidos] = useState([]);
+  const [recepciones, setRecepciones] = useState([]);
+  const [paginaPedidos, setPaginaPedidos] = useState(1);
+  const [paginaRecepciones, setPaginaRecepciones] = useState(1);
+  const [masPedidos, setMasPedidos] = useState(false);
+  const [masRecepciones, setMasRecepciones] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const [cargando, setCargando] = useState(true);
+  const [procesando, setProcesando] = useState(false);
+  const [mensaje, setMensaje] = useState("");
+  const [error, setError] = useState("");
+  const [editorial, setEditorial] = useState("");
+  const [buscarColegio, setBuscarColegio] = useState("");
+  const [pedidosMarcados, setPedidosMarcados] = useState([]);
+  const [cantidades, setCantidades] = useState({});
+  const [documento, setDocumento] = useState(documentoInicial);
+  const [recepcionId, setRecepcionId] = useState(null);
+  const [edicion, setEdicion] = useState(null);
+
+  useEffect(() => {
+    let ignore = false;
+    async function consultar() {
+      try {
+        const [ordenes, entradas] = await Promise.all([
+          listarPedidosPorRecibir(), listarRecepciones(),
+        ]);
+        if (ignore) return;
+        const lOrdenes = normalizarListado(ordenes);
+        const lEntradas = normalizarListado(entradas);
+        setPedidos(lOrdenes.items);
+        setRecepciones(lEntradas.items);
+        setMasPedidos(lOrdenes.next);
+        setMasRecepciones(lEntradas.next);
+        setPaginaPedidos(1);
+        setPaginaRecepciones(1);
+        setError("");
+      } catch (err) {
+        if (!ignore) setError(errorLegible(err));
+      } finally {
+        if (!ignore) setCargando(false);
+      }
+    }
+    consultar();
+    return () => { ignore = true; };
+  }, [revision]);
+
+  const editoriales = useMemo(() => {
+    const items = new Map();
+    for (const pedido of pedidos) items.set(pedido.editorial_id, pedido.editorial);
+    return [...items.entries()].sort((a, b) => a[1].localeCompare(b[1], "es"));
+  }, [pedidos]);
+
+  const pedidosVisibles = pedidos.filter((pedido) =>
+    (!editorial || String(pedido.editorial_id) === editorial)
+    && (!buscarColegio || pedido.colegio.toLocaleLowerCase("es")
+      .includes(buscarColegio.toLocaleLowerCase("es")))
+  );
+
+  const lineasPreparadas = pedidos
+    .filter((pedido) => pedidosMarcados.includes(pedido.id))
+    .flatMap((pedido) => pedido.productos.map((producto) => ({
+      ...producto,
+      pedido: pedido.referencia,
+      colegio: pedido.colegio,
+    })));
+
+  const recepcionSeleccionada = recepciones.find((recepcion) => recepcion.id === recepcionId);
+
+  function cambiarEditorial(value) {
+    setEditorial(value);
+    setPedidosMarcados([]);
+    setCantidades({});
+  }
+
+  function marcarPedido(pedido) {
+    if (procesando) return;
+    if (pedidosMarcados.includes(pedido.id)) {
+      setPedidosMarcados((actual) => actual.filter((id) => id !== pedido.id));
+      return;
+    }
+    if (pedidosMarcados.length) {
+      const anterior = pedidos.find((item) => item.id === pedidosMarcados[0]);
+      if (anterior?.editorial_id !== pedido.editorial_id) {
+        setError("Cada recepción corresponde a una sola editorial.");
+        return;
+      }
+    }
+    setPedidosMarcados((actual) => [...actual, pedido.id]);
+    setError("");
+  }
+
+  function cambiarCantidad(itemId, campo, value) {
+    setCantidades((actual) => ({
+      ...actual,
+      [itemId]: { ...actual[itemId], [campo]: value },
+    }));
+  }
+
+  async function cargarMas(tipo) {
+    if (procesando) return;
+    setProcesando(true);
+    setError("");
+    try {
+      if (tipo === "pedidos") {
+        const response = normalizarListado(await listarPedidosPorRecibir(paginaPedidos + 1));
+        setPedidos((actual) => {
+          const encontrados = new Map([...actual, ...response.items].map((pedido) => [pedido.id, pedido]));
+          return [...encontrados.values()];
+        });
+        setPaginaPedidos((actual) => actual + 1);
+        setMasPedidos(response.next);
+      } else {
+        const response = normalizarListado(await listarRecepciones(paginaRecepciones + 1));
+        setRecepciones((actual) => {
+          const encontrados = new Map([...actual, ...response.items].map((recepcion) => [recepcion.id, recepcion]));
+          return [...encontrados.values()];
+        });
+        setPaginaRecepciones((actual) => actual + 1);
+        setMasRecepciones(response.next);
+      }
+    } catch (err) {
+      setError(errorLegible(err));
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  async function registrarBorrador(event) {
+    event.preventDefault();
+    if (procesando) return;
+    const ordenes = pedidos.filter((pedido) => pedidosMarcados.includes(pedido.id));
+    const lineas = lineasPreparadas
+      .filter((linea) => String(cantidades[linea.item_id]?.llegada ?? "").trim() !== "")
+      .map((linea) => {
+        const llegada = Number(cantidades[linea.item_id].llegada);
+        const observada = Number(cantidades[linea.item_id]?.observada ?? 0);
+        return {
+          order_item_id: linea.item_id,
+          quantity_arrived: llegada,
+          quantity_observed: observada,
+          quantity_accepted: llegada - observada,
+          pendientes: linea.pendientes,
+          producto: linea.producto,
+        };
+      });
+    const validacion = validarLineas(lineas);
+    if (!ordenes.length || validacion) {
+      setError(validacion || "Selecciona al menos un pedido de la editorial.");
+      return;
+    }
+    setProcesando(true);
+    setError("");
+    setMensaje("");
+    try {
+      const creada = await crearRecepcion({
+        ...documento,
+        provider_id: ordenes[0].editorial_id,
+        lines: lineas.map(({ order_item_id, quantity_arrived, quantity_observed, quantity_accepted }) => ({
+          order_item_id, quantity_arrived, quantity_observed, quantity_accepted,
+        })),
+      });
+      setRecepcionId(creada.id);
+      setEdicion(null);
+      setDocumento(documentoInicial());
+      setCantidades({});
+      setPedidosMarcados([]);
+      setPestana("historial");
+      setMensaje("Recepción guardada en borrador. Revísala y valídala cuando las cantidades estén verificadas.");
+      setCargando(true);
+      setRevision((actual) => actual + 1);
+    } catch (err) {
+      setError(errorLegible(err));
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  function abrirRecepcion(recepcion) {
+    setRecepcionId(recepcion.id);
+    setEdicion({
+      provider_id: recepcion.provider,
+      document_type: recepcion.document_type,
+      document_number: recepcion.document_number,
+      received_on: recepcion.received_on,
+      notes: recepcion.notes,
+      lines: recepcion.lines.map((linea) => ({
+        order_item_id: linea.order_item,
+        nombre: linea.product_name,
+        pedido: linea.order_id,
+        quantity_arrived: String(linea.quantity_arrived),
+        quantity_observed: String(linea.quantity_observed),
+        notes: linea.notes,
+      })),
+    });
+  }
+
+  function modificarLinea(index, campo, value) {
+    setEdicion((actual) => ({
+      ...actual,
+      lines: actual.lines.map((linea, posicion) =>
+        posicion === index ? { ...linea, [campo]: value } : linea),
+    }));
+  }
+
+  async function guardarBorrador(event) {
+    event.preventDefault();
+    if (!edicion || !recepcionSeleccionada || procesando) return;
+    const lineas = edicion.lines.map((linea) => ({
+      ...linea,
+      producto: linea.nombre,
+    }));
+    const errorLineas = validarLineas(lineas);
+    if (errorLineas) { setError(errorLineas); return; }
+    setProcesando(true);
+    setError("");
+    setMensaje("");
+    try {
+      await actualizarRecepcion(recepcionId, {
+        provider_id: edicion.provider_id,
+        document_type: edicion.document_type,
+        document_number: edicion.document_number,
+        received_on: edicion.received_on,
+        notes: edicion.notes,
+        lines: edicion.lines.map((linea) => ({
+          order_item_id: linea.order_item_id,
+          quantity_arrived: Number(linea.quantity_arrived),
+          quantity_observed: Number(linea.quantity_observed),
+          quantity_accepted: Number(linea.quantity_arrived) - Number(linea.quantity_observed),
+          notes: linea.notes,
+        })),
+      });
+      setMensaje("Borrador corregido y guardado.");
+      setCargando(true);
+      setRevision((actual) => actual + 1);
+    } catch (err) { setError(errorLegible(err)); }
+    finally { setProcesando(false); }
+  }
+
+  async function confirmarValidacion() {
+    if (!recepcionSeleccionada || procesando || !puedeValidar) return;
+    if (!window.confirm("¿Confirmas que las cantidades aceptadas fueron verificadas físicamente? Esta validación no se puede revertir desde la pantalla.")) return;
+    setProcesando(true);
+    setError("");
+    setMensaje("");
+    try {
+      await validarRecepcion(recepcionSeleccionada.id);
+      setMensaje("Recepción validada. Los saldos pendientes de los pedidos fueron actualizados. El stock se controlará en Inventario.");
+      setEdicion(null);
+      setCargando(true);
+      setRevision((actual) => actual + 1);
+    } catch (err) { setError(errorLegible(err)); }
+    finally { setProcesando(false); }
+  }
+
+  return (
+    <section className="space-y-4">
+      <header className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+        <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
+        <h1 className="mt-1 text-2xl font-black text-gray-950">Recepción de Mercadería</h1>
+        <p className="mt-1 text-sm text-gray-600">
+          Contrasta los pedidos enviados con los libros recibidos. Registra entregas parciales, observaciones y saldos pendientes.
+        </p>
+      </header>
+
+      <div role="tablist" aria-label="Secciones de recepción" className="flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white p-2">
+        {[
+          ["registro", "Pedidos pendientes"],
+          ["historial", "Recepciones registradas"],
+        ].map(([value, label]) => (
+          <button key={value} role="tab" aria-selected={pestana === value}
+            type="button" onClick={() => { setPestana(value); setError(""); }}
+            className={`rounded-xl px-4 py-2.5 text-sm font-bold transition ${pestana === value ? "bg-red-700 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+      {mensaje && <p role="status" className="rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-800">{mensaje}</p>}
+      {cargando && <p className="text-sm text-gray-600">Actualizando registros…</p>}
+
+      {pestana === "registro" && (
+        <div className="grid gap-4 xl:grid-cols-5">
+          <div className="space-y-3 xl:col-span-2">
+            <div className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4 sm:grid-cols-2">
+              <label className="text-sm font-semibold text-gray-700">Editorial
+                <select value={editorial} onChange={(event) => cambiarEditorial(event.target.value)} className={`mt-1 ${estilosCampo}`}>
+                  <option value="">Todas las editoriales</option>
+                  {editoriales.map(([id, nombre]) => <option key={id} value={String(id)}>{nombre}</option>)}
+                </select>
+              </label>
+              <label className="text-sm font-semibold text-gray-700">Colegio
+                <input type="search" value={buscarColegio} onChange={(event) => setBuscarColegio(event.target.value)}
+                  placeholder="Buscar colegio" className={`mt-1 ${estilosCampo}`} />
+              </label>
+            </div>
+            <div className="space-y-2">
+              {pedidosVisibles.length === 0 && !cargando && (
+                <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                  No hay pedidos enviados con unidades pendientes en esta búsqueda.
+                </div>
+              )}
+              {pedidosVisibles.map((pedido) => (
+                <label key={pedido.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${pedidosMarcados.includes(pedido.id) ? "border-red-400 bg-red-50" : "border-gray-200 bg-white hover:border-gray-400"}`}>
+                  <input type="checkbox" checked={pedidosMarcados.includes(pedido.id)}
+                    disabled={!puedeCrear || procesando}
+                    onChange={() => marcarPedido(pedido)}
+                    className="mt-1 h-4 w-4 accent-red-700" />
+                  <span className="min-w-0">
+                    <span className="block font-bold text-gray-950">{pedido.editorial}</span>
+                    <span className="block text-sm text-gray-700">{pedido.colegio}</span>
+                    <span className="block text-xs text-gray-500">{pedido.referencia} · {pedido.campania}</span>
+                    <span className="mt-1 block text-xs font-semibold text-amber-800">
+                      {pedido.productos.reduce((suma, linea) => suma + linea.pendientes, 0)} unidades pendientes
+                    </span>
+                  </span>
+                </label>
+              ))}
+              {masPedidos && (
+                <button type="button" onClick={() => cargarMas("pedidos")} disabled={procesando}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                  Ver más pedidos
+                </button>
+              )}
+            </div>
+          </div>
+
+          <form onSubmit={registrarBorrador} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 xl:col-span-3">
+            <div>
+              <h2 className="font-black text-gray-950">Registrar entrega física</h2>
+              <p className="mt-1 text-sm text-gray-600">Selecciona pedidos de una misma editorial. Una guía puede corresponder a varios colegios.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="text-xs font-bold text-gray-700">Documento recibido
+                <select className={`mt-1 ${estilosCampo}`} value={documento.document_type}
+                  onChange={(event) => setDocumento((actual) => ({ ...actual, document_type: event.target.value }))} disabled={!puedeCrear}>
+                  <option value="guide">Guía de remisión</option>
+                  <option value="invoice">Factura (referencia física)</option>
+                  <option value="other">Otro documento</option>
+                </select>
+              </label>
+              <label className="text-xs font-bold text-gray-700">Número del documento
+                <input className={`mt-1 ${estilosCampo}`} value={documento.document_number} maxLength={100}
+                  onChange={(event) => setDocumento((actual) => ({ ...actual, document_number: event.target.value }))}
+                  placeholder="Serie y número" disabled={!puedeCrear} />
+              </label>
+              <label className="text-xs font-bold text-gray-700">Fecha de recepción
+                <input type="date" className={`mt-1 ${estilosCampo}`} value={documento.received_on}
+                  onChange={(event) => setDocumento((actual) => ({ ...actual, received_on: event.target.value }))} disabled={!puedeCrear} />
+              </label>
+            </div>
+
+            {lineasPreparadas.length === 0 ? (
+              <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">Marca uno o varios pedidos de la izquierda para registrar sus productos.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-96 text-left text-sm">
+                  <thead className="border-b border-gray-200 text-xs text-gray-600">
+                    <tr><th className="py-2">Producto / pedido</th><th className="px-2 text-center">Pendiente</th><th className="px-2">Llegaron</th><th className="px-2">Observadas</th><th>Aceptadas</th></tr>
+                  </thead>
+                  <tbody>
+                    {lineasPreparadas.map((linea) => {
+                      const llegada = cantidades[linea.item_id]?.llegada ?? "";
+                      const observada = cantidades[linea.item_id]?.observada ?? "0";
+                      const aceptadas = llegada === "" ? "—" : Number(llegada) - Number(observada);
+                      return (
+                        <tr key={linea.item_id} className="border-b border-gray-100">
+                          <td className="py-2 pr-3">
+                            <span className="block font-semibold text-gray-900">{linea.producto}</span>
+                            <span className="text-xs text-gray-500">{linea.colegio} · {linea.pedido}</span>
+                          </td>
+                          <td className="px-2 text-center font-semibold">{linea.pendientes}</td>
+                          <td className="px-2"><input aria-label={`Llegaron ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
+                            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={llegada}
+                            onChange={(event) => cambiarCantidad(linea.item_id, "llegada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
+                          <td className="px-2"><input aria-label={`Observadas ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
+                            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={observada}
+                            onChange={(event) => cambiarCantidad(linea.item_id, "observada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
+                          <td className={`font-bold ${Number(aceptadas) > linea.pendientes ? "text-red-700" : "text-gray-900"}`}>{aceptadas}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <label className="block text-xs font-bold text-gray-700">Observaciones generales
+              <textarea className={`mt-1 ${estilosCampo}`} rows={2} value={documento.notes}
+                onChange={(event) => setDocumento((actual) => ({ ...actual, notes: event.target.value }))}
+                placeholder="Ej.: cajas deterioradas, faltantes comunicados a la editorial" disabled={!puedeCrear} />
+            </label>
+            <p className="text-xs text-gray-500">Borrador no significa stock disponible. Las cantidades observadas quedan separadas de las aceptadas.</p>
+            {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando || !pedidosMarcados.length}>Guardar recepción en borrador</button>}
+          </form>
+        </div>
+      )}
+
+      {pestana === "historial" && (
+        <div className="grid gap-4 xl:grid-cols-5">
+          <div className="space-y-2 xl:col-span-2">
+            {recepciones.length === 0 && !cargando && (
+              <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">Todavía no se registraron recepciones.</p>
+            )}
+            {recepciones.map((recepcion) => (
+              <button type="button" key={recepcion.id} onClick={() => abrirRecepcion(recepcion)}
+                className={`w-full rounded-xl border p-3 text-left transition ${recepcionId === recepcion.id ? "border-red-400 bg-red-50" : "border-gray-200 bg-white hover:border-gray-400"}`}>
+                <span className="flex items-center justify-between gap-2">
+                  <strong className="text-sm text-gray-950">{recepcion.provider_name}</strong>
+                  <EstadoRecepcion estado={recepcion.status} />
+                </span>
+                <span className="mt-1 block text-sm text-gray-700">{recepcion.document_number || "Sin número de documento"}</span>
+                <span className="block text-xs text-gray-500">{recepcion.received_on} · {recepcion.lines.length} producto(s)</span>
+              </button>
+            ))}
+            {masRecepciones && (
+              <button type="button" onClick={() => cargarMas("recepciones")} disabled={procesando}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700">
+                Ver más recepciones
+              </button>
+            )}
+          </div>
+
+          <div className="xl:col-span-3">
+            {!recepcionSeleccionada ? (
+              <div className="rounded-2xl border border-gray-200 bg-white p-7 text-center text-sm text-gray-500">Selecciona una recepción para revisar sus cantidades.</div>
+            ) : (
+              <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-lg font-black text-gray-950">{recepcionSeleccionada.provider_name}</h2>
+                    <p className="text-xs text-gray-600">Recepción N.º {recepcionSeleccionada.id} · {recepcionSeleccionada.received_on}</p>
+                  </div>
+                  <EstadoRecepcion estado={recepcionSeleccionada.status} />
+                </div>
+                {recepcionSeleccionada.status === "validated" ? (
+                  <div className="overflow-x-auto">
+                    <p className="mb-2 text-sm text-gray-600">Documento: {recepcionSeleccionada.document_number}</p>
+                    <table className="w-full text-left text-sm">
+                      <thead><tr className="border-b text-xs text-gray-500"><th className="py-2">Producto</th><th>Llegaron</th><th>Aceptadas</th><th>Observadas</th></tr></thead>
+                      <tbody>{recepcionSeleccionada.lines.map((linea) => (
+                        <tr key={linea.id} className="border-b border-gray-100">
+                          <td className="py-2 font-semibold">{linea.product_name}<span className="block text-xs font-normal text-gray-500">Pedido BE-OC-{String(linea.order_id).padStart(6, "0")}</span></td>
+                          <td>{linea.quantity_arrived}</td><td>{linea.quantity_accepted}</td><td>{linea.quantity_observed}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                    <p className="mt-3 text-xs text-gray-600">Recepción confirmada. Los saldos se actualizaron; el inventario y las facturas se gestionarán en sus módulos.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={guardarBorrador} className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <label className="text-xs font-bold text-gray-700">Documento
+                        <select className={`mt-1 ${estilosCampo}`} value={edicion?.document_type ?? ""}
+                          disabled={!puedeCrear} onChange={(event) => setEdicion((actual) => ({ ...actual, document_type: event.target.value }))}>
+                          <option value="guide">Guía de remisión</option>
+                          <option value="invoice">Factura (referencia física)</option>
+                          <option value="other">Otro documento</option>
+                        </select>
+                      </label>
+                      <label className="text-xs font-bold text-gray-700">Número
+                        <input className={`mt-1 ${estilosCampo}`} value={edicion?.document_number ?? ""}
+                          onChange={(event) => setEdicion((actual) => ({ ...actual, document_number: event.target.value }))} disabled={!puedeCrear} />
+                      </label>
+                      <label className="text-xs font-bold text-gray-700">Fecha
+                        <input className={`mt-1 ${estilosCampo}`} type="date" value={edicion?.received_on ?? ""}
+                          onChange={(event) => setEdicion((actual) => ({ ...actual, received_on: event.target.value }))} disabled={!puedeCrear} />
+                      </label>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-80 text-left text-sm">
+                        <thead><tr className="border-b text-xs text-gray-500"><th className="py-2">Producto / pedido</th><th>Llegaron</th><th>Observadas</th><th>Aceptadas</th></tr></thead>
+                        <tbody>{edicion?.lines.map((linea, index) => (
+                          <tr key={linea.order_item_id} className="border-b border-gray-100">
+                            <td className="py-2 pr-3 font-semibold">{linea.nombre}<span className="block text-xs font-normal text-gray-500">Pedido BE-OC-{String(linea.pedido).padStart(6, "0")}</span></td>
+                            <td><input type="number" min="1" step="1" className="w-20 rounded-lg border border-gray-300 p-2"
+                              aria-label={`Llegaron ${linea.nombre}`} value={linea.quantity_arrived} disabled={!puedeCrear}
+                              onChange={(event) => modificarLinea(index, "quantity_arrived", event.target.value)} /></td>
+                            <td><input type="number" min="0" step="1" className="w-20 rounded-lg border border-gray-300 p-2"
+                              aria-label={`Observadas ${linea.nombre}`} value={linea.quantity_observed} disabled={!puedeCrear}
+                              onChange={(event) => modificarLinea(index, "quantity_observed", event.target.value)} /></td>
+                            <td>{Number(linea.quantity_arrived) - Number(linea.quantity_observed)}</td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                    <label className="block text-xs font-bold text-gray-700">Observaciones
+                      <textarea className={`mt-1 ${estilosCampo}`} rows={2} value={edicion?.notes ?? ""}
+                        onChange={(event) => setEdicion((actual) => ({ ...actual, notes: event.target.value }))} disabled={!puedeCrear} />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando}>Guardar correcciones</button>}
+                      {puedeValidar && <button type="button" onClick={confirmarValidacion} disabled={procesando}
+                        className="rounded-lg border border-gray-900 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-50 disabled:opacity-50">
+                        Validar recepción
+                      </button>}
+                    </div>
+                    <p className="text-xs text-gray-500">Valida únicamente después de contrastar la mercadería física y el documento. Esta acción no registra stock.</p>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
