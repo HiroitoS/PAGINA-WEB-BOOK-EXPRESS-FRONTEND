@@ -23,6 +23,22 @@ const documentoInicial = () => ({
 const estilosCampo = "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-red-600 focus:outline-none";
 const estilosBoton = "rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
 
+function formatearFechaHora(valor) {
+  if (!valor) return "Fecha no disponible";
+  const fecha = new Date(valor);
+  return Number.isNaN(fecha.getTime())
+    ? "Fecha no disponible"
+    : fecha.toLocaleString("es-PE", { dateStyle: "short", timeStyle: "short" });
+}
+
+function nombreEvento(accion) {
+  return {
+    created: "Recepción registrada",
+    updated: "Borrador corregido",
+    validated: "Recepción validada",
+  }[accion] || "Acción registrada";
+}
+
 function errorLegible(error) {
   const data = error?.response?.data;
   if (typeof data?.detail === "string") return data.detail;
@@ -659,6 +675,35 @@ export default function ERPRecepcionPage() {
                     <p className="text-xs text-gray-500">Valida únicamente después de contrastar la mercadería física y el documento. Esta acción no registra stock.</p>
                   </form>
                 )}
+                <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                  <summary className="cursor-pointer text-sm font-bold text-gray-800">
+                    Historial de registro y validación
+                    {recepcionSeleccionada.events?.length ? ` (${recepcionSeleccionada.events.length})` : ""}
+                  </summary>
+                  <div className="mt-3 space-y-2 text-xs text-gray-700">
+                    <p>
+                      <strong>Registrada por:</strong> {recepcionSeleccionada.created_by_name || "No identificado"}
+                      {" · "}{formatearFechaHora(recepcionSeleccionada.created_at)}
+                    </p>
+                    {recepcionSeleccionada.validated_at && (
+                      <p>
+                        <strong>Validada por:</strong> {recepcionSeleccionada.validated_by_name || "No identificado"}
+                        {" · "}{formatearFechaHora(recepcionSeleccionada.validated_at)}
+                      </p>
+                    )}
+                    {recepcionSeleccionada.events?.length > 0 && (
+                      <ol className="space-y-1 border-l-2 border-gray-300 pl-3">
+                        {recepcionSeleccionada.events.map((evento) => (
+                          <li key={evento.id}>
+                            <strong>{nombreEvento(evento.action)}</strong>
+                            {" · "}{evento.actor_name || "Usuario no identificado"}
+                            {" · "}{formatearFechaHora(evento.created_at)}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                </details>
               </div>
             )}
           </div>
