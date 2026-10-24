@@ -90,7 +90,9 @@ function validarLineas(lineas) {
       || !Number.isSafeInteger(observada) || observada < 0 || observada > llegada) {
       return "Las cantidades deben ser enteras y la observada no puede exceder la llegada.";
     }
-    const aceptada = llegada - observada;
+    const extra = Number(linea.quantity_extra ?? 0);
+    const aceptada = llegada - observada - extra;
+    if (!Number.isSafeInteger(extra) || extra < 0 || aceptada < 0) return "Revisa la cantidad excedente.";
     if (linea.pendientes !== undefined && aceptada > linea.pendientes) {
       return `La cantidad aceptada supera el saldo pendiente de ${linea.producto}.`;
     }
@@ -372,7 +374,9 @@ export default function ERPRecepcionPage() {
           order_item_id: linea.item_id,
           quantity_arrived: llegada,
           quantity_observed: observada,
-          quantity_accepted: llegada - observada,
+          quantity_accepted: Math.min(llegada - observada, linea.pendientes),
+          quantity_extra: Math.max(0, llegada - observada - linea.pendientes),
+          quantity_documented: cantidades[linea.item_id]?.documentada === undefined || cantidades[linea.item_id]?.documentada === "" ? null : Number(cantidades[linea.item_id].documentada),
           pendientes: linea.pendientes,
           producto: linea.producto,
         };
@@ -389,8 +393,8 @@ export default function ERPRecepcionPage() {
       const creada = await crearRecepcion({
         ...documento,
         provider_id: ordenes[0].editorial_id,
-        lines: lineas.map(({ order_item_id, quantity_arrived, quantity_observed, quantity_accepted }) => ({
-          order_item_id, quantity_arrived, quantity_observed, quantity_accepted,
+        lines: lineas.map(({ order_item_id, quantity_arrived, quantity_observed, quantity_accepted, quantity_extra, quantity_documented }) => ({
+          order_item_id, quantity_arrived, quantity_observed, quantity_accepted, quantity_extra, quantity_documented,
         })),
       });
       setRecepcionId(creada.id);
@@ -406,6 +410,8 @@ export default function ERPRecepcionPage() {
           pedido: linea.order_id,
           quantity_arrived: String(linea.quantity_arrived),
           quantity_observed: String(linea.quantity_observed),
+          quantity_extra: String(linea.quantity_extra ?? 0),
+          quantity_documented: linea.quantity_documented == null ? "" : String(linea.quantity_documented),
           notes: linea.notes,
         })),
       });
@@ -442,6 +448,8 @@ export default function ERPRecepcionPage() {
         pedido: linea.order_id,
         quantity_arrived: String(linea.quantity_arrived),
         quantity_observed: String(linea.quantity_observed),
+          quantity_extra: String(linea.quantity_extra ?? 0),
+          quantity_documented: linea.quantity_documented == null ? "" : String(linea.quantity_documented),
         notes: linea.notes,
       })),
     });
@@ -479,7 +487,9 @@ export default function ERPRecepcionPage() {
           order_item_id: linea.order_item_id,
           quantity_arrived: Number(linea.quantity_arrived),
           quantity_observed: Number(linea.quantity_observed),
-          quantity_accepted: Number(linea.quantity_arrived) - Number(linea.quantity_observed),
+          quantity_accepted: Number(linea.quantity_arrived) - Number(linea.quantity_observed) - Number(linea.quantity_extra ?? 0),
+          quantity_extra: Number(linea.quantity_extra ?? 0),
+          quantity_documented: linea.quantity_documented === "" ? null : Number(linea.quantity_documented),
           notes: linea.notes,
         })),
       });
@@ -639,8 +649,10 @@ export default function ERPRecepcionPage() {
                        <th className="px-2 text-center">Solicitadas</th>
                        <th className="px-2 text-center">Aceptadas prev.</th>
                        <th className="px-2 text-center">Pendiente</th>
+                       <th className="px-2">Según guía</th>
                        <th className="px-2">Llegaron hoy</th>
                        <th className="px-2">Observadas</th>
+                       <th className="px-2 text-center">Excedente</th>
                        <th className="px-2 text-center">Aceptadas hoy</th>
                        <th className="px-2 text-center">Saldo después</th>
                      </tr>
@@ -649,7 +661,8 @@ export default function ERPRecepcionPage() {
                     {lineasPreparadas.map((linea) => {
                       const llegada = cantidades[linea.item_id]?.llegada ?? "";
                       const observada = cantidades[linea.item_id]?.observada ?? "0";
-                      const aceptadas = llegada === "" ? "—" : Number(llegada) - Number(observada);
+                      const excedenteConforme = llegada === "" ? 0 : Math.max(0, Number(llegada) - Number(observada) - linea.pendientes);
+                      const aceptadas = llegada === "" ? "—" : Number(llegada) - Number(observada) - excedenteConforme;
                       const excedente = llegada === "" ? 0 : Math.max(0, Number(llegada) - linea.pendientes);
                       return (
                         <tr key={linea.item_id} className="border-b border-gray-100">
@@ -665,12 +678,16 @@ export default function ERPRecepcionPage() {
                           <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
                            <td className="px-2 text-center tabular-nums">{linea.aceptadas}</td>
                            <td className="px-2 text-center font-semibold tabular-nums text-amber-800">{linea.pendientes}</td>
+                          <td className="px-2"><input aria-label={`Según guía ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
+                            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={cantidades[linea.item_id]?.documentada ?? ""}
+                            onChange={(event) => cambiarCantidad(linea.item_id, "documentada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
                           <td className="px-2"><input aria-label={`Llegaron ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
                             className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={llegada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "llegada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
                           <td className="px-2"><input aria-label={`Observadas ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
                             className="w-20 rounded-lg border border-gray-300 px-2 py-1.5" value={observada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "observada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
+                          <td className="px-2 text-center font-bold tabular-nums text-amber-800">{excedenteConforme}</td>
                           <td className={`px-2 text-center font-bold tabular-nums ${Number(aceptadas) > linea.pendientes ? "text-red-700" : "text-gray-900"}`}>{aceptadas}</td>
                            <td className={`px-2 text-center font-bold tabular-nums ${llegada !== "" && Number(aceptadas) > linea.pendientes ? "text-red-700" : "text-gray-900"}`}>
                              {llegada === "" ? "—" : Math.max(0, linea.pendientes - Number(aceptadas))}
@@ -762,10 +779,7 @@ export default function ERPRecepcionPage() {
                       </div>
                     </div>
                     <p className="text-xs text-gray-600">
-                      El detalle de productos, entregas anteriores y saldos actuales se consulta en la tabla por pedido de abajo.
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Recepción validada. El detalle consolidado de productos y saldos actuales aparece debajo.
+                      El excedente conforme queda identificado por separado.
                       Aún no registra stock ni facturas.
                     </p>
                   </div>
@@ -791,7 +805,7 @@ export default function ERPRecepcionPage() {
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-80 text-left text-sm">
-                        <thead><tr className="border-b text-xs text-gray-500"><th className="py-2">Producto / pedido</th><th>Llegaron</th><th>Observadas</th><th>Aceptadas</th></tr></thead>
+                        <thead><tr className="border-b text-xs text-gray-500"><th className="py-2">Producto / pedido</th><th>Llegaron</th><th>Según guía</th><th>Observadas</th><th>Excedente</th><th>Aceptadas</th></tr></thead>
                         <tbody>{edicion?.lines.map((linea, index) => (
                           <tr key={linea.order_item_id} className="border-b border-gray-100">
                             <td className="py-2 pr-3 font-semibold">{linea.nombre}<span className="block text-xs font-normal text-gray-500">Pedido BE-OC-{String(linea.pedido).padStart(6, "0")}</span></td>
@@ -799,9 +813,15 @@ export default function ERPRecepcionPage() {
                               aria-label={`Llegaron ${linea.nombre}`} value={linea.quantity_arrived} disabled={!puedeCrear}
                               onChange={(event) => modificarLinea(index, "quantity_arrived", event.target.value)} /></td>
                             <td><input type="number" min="0" step="1" className="w-20 rounded-lg border border-gray-300 p-2"
+                              aria-label={`Según guía ${linea.nombre}`} value={linea.quantity_documented ?? ""} disabled={!puedeCrear}
+                              onChange={(event) => modificarLinea(index, "quantity_documented", event.target.value)} /></td>
+                            <td><input type="number" min="0" step="1" className="w-20 rounded-lg border border-gray-300 p-2"
                               aria-label={`Observadas ${linea.nombre}`} value={linea.quantity_observed} disabled={!puedeCrear}
                               onChange={(event) => modificarLinea(index, "quantity_observed", event.target.value)} /></td>
-                            <td>{Number(linea.quantity_arrived) - Number(linea.quantity_observed)}</td>
+                            <td><input type="number" min="0" step="1" className="w-20 rounded-lg border border-gray-300 p-2"
+                              aria-label={`Excedente ${linea.nombre}`} value={linea.quantity_extra ?? "0"} disabled={!puedeCrear}
+                              onChange={(event) => modificarLinea(index, "quantity_extra", event.target.value)} /></td>
+                            <td>{Number(linea.quantity_arrived) - Number(linea.quantity_observed) - Number(linea.quantity_extra ?? 0)}</td>
                           </tr>
                         ))}</tbody>
                       </table>
