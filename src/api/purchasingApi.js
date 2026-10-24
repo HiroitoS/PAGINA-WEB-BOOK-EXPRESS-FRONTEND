@@ -20,6 +20,11 @@ export async function generarPedidosDesdeAdopcion(adoptionId, providerId = null)
   return data;
 }
 
+export async function guardarCantidadesPedido(orderId, items) {
+  const { data } = await axiosClient.post(`${BASE}/${orderId}/cambiar-cantidades/`, { items });
+  return data;
+}
+
 export async function modificarCantidadPedido(orderId, itemId, quantity) {
   const { data } = await axiosClient.post(`${BASE}/${orderId}/cambiar-cantidad/`, {
     item_id: itemId,
@@ -50,8 +55,9 @@ export async function obtenerAdopcionesPorEditorial(params = {}) {
   return data;
 }
 
-export async function descargarOrdenCompraPdf(orderId) {
+export async function descargarOrdenCompraPdf(orderId, formato = "solicitud") {
   const { data } = await axiosClient.get(`${BASE}/${orderId}/orden-pdf/`, {
+    params: { formato },
     responseType: "blob",
   });
   return data;
