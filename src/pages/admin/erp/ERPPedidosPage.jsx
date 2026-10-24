@@ -15,6 +15,51 @@ const estados = {
 
 const estadosFiltro = ["draft", "approved", "sent"];
 
+function estadoSemaforo(pedidoId, estadoPedido) {
+  if (!pedidoId) return { tipo: "sinPedido", texto: "Sin pedido generado", punto: "bg-red-500", color: "text-red-700" };
+  if (estadoPedido === "cancelled") return { tipo: "sinPedido", texto: "Pedido anulado", punto: "bg-red-500", color: "text-red-700" };
+  if (["sent", "partially_received", "received", "closed_partial"].includes(estadoPedido)) {
+    return { tipo: "enviado", texto: "Enviado a editorial", punto: "bg-green-600", color: "text-green-700" };
+  }
+  return { tipo: "porEnviar", texto: "Pendiente de envío", punto: "bg-amber-500", color: "text-amber-800" };
+}
+
+function SemaforoPedido({ pedidoId, estadoPedido }) {
+  const indicador = estadoSemaforo(pedidoId, estadoPedido);
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${indicador.color}`}>
+      <span aria-hidden="true" className={`inline-block h-2 w-2 shrink-0 rounded-full ${indicador.punto}`} />
+      {indicador.texto}
+    </span>
+  );
+}
+
+function datosCorreoPedido(pedido) {
+  const numero = `BE-SL-${String(pedido.id).padStart(6, "0")}`;
+  const archivo = `${numero}.pdf`;
+  const unidades = (pedido.items || []).reduce((total, item) => total + Number(item.quantity_ordered), 0);
+  const asunto = `Solicitud de libros ${numero} - ${pedido.provider_name_snapshot} - ${pedido.school_name_snapshot || "Pedido independiente"}`;
+  const mensaje = [
+    "Buen día:",
+    "",
+    "Mediante el presente, solicitamos la atención de los libros detallados en el documento adjunto.",
+    "",
+    `Editorial: ${pedido.provider_name_snapshot}`,
+    `Colegio: ${pedido.school_name_snapshot || "Pedido independiente"}`,
+    `Campaña: ${pedido.campaign_name_snapshot}`,
+    `Solicitud N.º: ${numero}`,
+    `Unidades solicitadas: ${unidades}`,
+    "",
+    `[Adjuntar el archivo ${archivo} antes de enviar]`,
+    "",
+    "Agradeceremos confirmar la recepción de esta solicitud e indicar la disponibilidad y fecha estimada de atención.",
+    "",
+    "Atentamente,",
+    "Book Express",
+  ].join("\n");
+  return { asunto, mensaje, archivo };
+}
+
 function obtenerError(error) {
   const detail = error?.response?.data?.detail;
   return Array.isArray(detail) ? detail.join(" ") : typeof detail === "string"
@@ -35,6 +80,7 @@ export default function ERPPedidosPage() {
   const [cargandoAdopciones, setCargandoAdopciones] = useState(false);
   const [editorialAbierta, setEditorialAbierta] = useState(null);
   const [evidencia, setEvidencia] = useState("");
+  const [mostrarCorreo, setMostrarCorreo] = useState(false);
   const [cantidades, setCantidades] = useState({});
   const [cargando, setCargando] = useState(false);
   const [procesando, setProcesando] = useState(false);
@@ -103,6 +149,7 @@ export default function ERPPedidosPage() {
       const pedido = await obtenerPedido(id);
       setSeleccionado(pedido);
       setEvidencia("");
+      setMostrarCorreo(false);
       setCantidades(Object.fromEntries(pedido.items.map((item) => [item.id, String(item.quantity_ordered)])));
     } catch (err) {
       setError(obtenerError(err));
@@ -227,7 +274,12 @@ export default function ERPPedidosPage() {
                   className="flex w-full items-center justify-between bg-gray-50 px-4 py-3 text-left font-bold text-gray-900">
                   <span>{grupo.editorial}</span>
 <span className="text-xs font-medium text-gray-600">
-                    {grupo.adopciones.length} adopción(es) · {grupo.adopciones.reduce((total, adopcion) => total + adopcion.unidades, 0)} unidades · {grupo.adopciones.filter((adopcion) => !adopcion.pedido_id).length} pendientes {editorialAbierta === grupo.editorial_id ? "▲" : "▼"}
+                    {grupo.adopciones.length} adopción(es) · {grupo.adopciones.reduce((total, adopcion) => total + adopcion.unidades, 0)} unidades · <span className="text-red-700">{grupo.adopciones.filter((adopcion) => estadoSemaforo(adopcion.pedido_id, adopcion.estado_pedido).tipo === "sinPedido").length} sin pedido</span>
+                    {" · "}
+                    <span className="text-amber-800">{grupo.adopciones.filter((adopcion) => estadoSemaforo(adopcion.pedido_id, adopcion.estado_pedido).tipo === "porEnviar").length} por enviar</span>
+                    {" · "}
+                    <span className="text-green-700">{grupo.adopciones.filter((adopcion) => estadoSemaforo(adopcion.pedido_id, adopcion.estado_pedido).tipo === "enviado").length} enviados</span>
+                    {" "}{editorialAbierta === grupo.editorial_id ? "▲" : "▼"}
                   </span>
                 </button>
                 {editorialAbierta === grupo.editorial_id && (
@@ -239,9 +291,7 @@ export default function ERPPedidosPage() {
                           <p className="text-xs text-gray-600">
                             Adopción N.º {adopcion.id}{adopcion.version ? ` · versión ${adopcion.version}` : ""} · {adopcion.campania} · {adopcion.lineas} producto(s) · {adopcion.unidades} unidad(es)
                           </p>
-                          <p className="mt-1 text-xs font-semibold text-gray-600">
-                            {adopcion.pedido_id ? `Pedido: ${estados[adopcion.estado_pedido] || adopcion.estado_pedido}` : "Pendiente de pedido"}
-                          </p>
+                          <p className="mt-1"><SemaforoPedido pedidoId={adopcion.pedido_id} estadoPedido={adopcion.estado_pedido} /></p>
                           {grupo.adopciones.filter((otra) =>
                             otra.colegio === adopcion.colegio && otra.campania === adopcion.campania
                           ).length > 1 && (
@@ -329,7 +379,8 @@ export default function ERPPedidosPage() {
                 className={`w-full rounded-xl border px-3 py-2.5 text-left transition hover:border-red-300 ${seleccionado?.id === pedido.id ? "border-red-500 bg-red-50" : "border-gray-200 bg-white"}`}>
                 <p className="font-bold text-gray-950">{pedido.provider_name_snapshot}</p>
                 <p className="text-sm text-gray-600">{pedido.school_name_snapshot || "Compra independiente"}</p>
-                <p className="text-xs text-gray-500">{pedido.campaign_name_snapshot} · {estados[pedido.status] || pedido.status}{pedido.adoption ? ` · Adopción N.º ${pedido.adoption}` : ""} · BE-OC-{String(pedido.id).padStart(6, "0")}</p>
+                <p className="text-xs text-gray-500">{pedido.campaign_name_snapshot}{pedido.adoption ? ` · Adopción N.º ${pedido.adoption}` : ""} · BE-OC-{String(pedido.id).padStart(6, "0")}</p>
+                <p className="mt-1"><SemaforoPedido pedidoId={pedido.id} estadoPedido={pedido.status} /></p>
               </button>
             ))}
           </div>
@@ -341,7 +392,8 @@ export default function ERPPedidosPage() {
           ) : (
             <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5">
               <div>
-                <p className="text-xs font-bold uppercase text-red-700">{estados[seleccionado.status]}</p>
+                <p><SemaforoPedido pedidoId={seleccionado.id} estadoPedido={seleccionado.status} /></p>
+                <p className="text-xs font-semibold text-gray-500">{estados[seleccionado.status]}</p>
                 <h2 className="text-xl font-black text-gray-950">{seleccionado.provider_name_snapshot}</h2>
                 <p className="text-sm text-gray-600">{seleccionado.school_name_snapshot || "Pedido independiente"} · {seleccionado.campaign_name_snapshot}</p>
               </div>
@@ -413,6 +465,39 @@ export default function ERPPedidosPage() {
               {seleccionado.status === "draft" && puedeAprobar && (
                 <button type="button" disabled={procesando || cambiosPendientes.length > 0} onClick={() => operar(() => aprobarPedido(seleccionado.id), "Pedido aprobado.")}
                   className="rounded-xl bg-red-700 px-4 py-2 font-bold text-white disabled:opacity-50">Aprobar pedido</button>
+              )}
+              {seleccionado.status === "approved" && puedeEnviar && (
+                <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                  <button type="button" onClick={() => setMostrarCorreo((actual) => !actual)}
+                    aria-expanded={mostrarCorreo}
+                    className="text-sm font-bold text-gray-900 underline underline-offset-2">
+                    {mostrarCorreo ? "Ocultar correo preparado" : "Preparar correo para Outlook"}
+                  </button>
+                  {mostrarCorreo && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600">Preparamos el mensaje, pero no guardamos ni enviamos correos desde el ERP. Revisa el destinatario y adjunta manualmente el PDF.</p>
+                      <label className="block text-xs font-semibold text-gray-700">Asunto
+                        <input readOnly value={datosCorreoPedido(seleccionado).asunto}
+                          className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm" />
+                      </label>
+                      <label className="block text-xs font-semibold text-gray-700">Mensaje
+                        <textarea readOnly value={datosCorreoPedido(seleccionado).mensaje}
+                          rows={8} className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm" />
+                      </label>
+                      <button type="button"
+                        onClick={() => {
+                          const { asunto, mensaje } = datosCorreoPedido(seleccionado);
+                          window.location.href = `mailto:?${new URLSearchParams({ subject: asunto, body: mensaje }).toString()}`;
+                        }}
+                        className="rounded-lg border border-gray-800 bg-white px-3 py-2 text-sm font-bold text-gray-900 hover:bg-gray-100">
+                        Abrir en mi aplicación de correo
+                      </button>
+                      <p className="text-xs text-gray-600">
+                        Si Outlook es tu aplicación de correo predeterminada, se abrirá allí. Antes de enviar, añade el destinatario correcto y el archivo {datosCorreoPedido(seleccionado).archivo}. El envío se registrará posteriormente en el ERP.
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
               {seleccionado.status === "approved" && puedeEnviar && (
                 <form className="space-y-2" onSubmit={(event) => {
