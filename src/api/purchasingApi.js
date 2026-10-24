@@ -12,9 +12,10 @@ export async function obtenerPedido(id) {
   return data;
 }
 
-export async function generarPedidosDesdeAdopcion(adoptionId) {
+export async function generarPedidosDesdeAdopcion(adoptionId, providerId = null) {
   const { data } = await axiosClient.post(`${BASE}/generar-desde-adopcion/`, {
     adoption_id: adoptionId,
+    ...(providerId ? { provider_id: providerId } : {}),
   });
   return data;
 }
