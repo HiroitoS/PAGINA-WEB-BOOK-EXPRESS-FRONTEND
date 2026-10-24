@@ -106,7 +106,7 @@ export default function ERPPedidosPage() {
     }
   }
 
-  async function operar(callback, success) {
+  async function operar(callback, success, editorialId = null) {
     if (procesando) return;
     setProcesando(true);
     setMensaje("");
@@ -114,16 +114,21 @@ export default function ERPPedidosPage() {
     try {
       const result = await callback();
       setMensaje(success);
-      if (seleccionado?.id) {
-        const pedido = await obtenerPedido(seleccionado.id);
-        setSeleccionado(pedido);
-        setCantidades(Object.fromEntries(pedido.items.map((item) => [item.id, String(item.quantity_ordered)])));
-      } else if (Array.isArray(result) && result.length) {
-        await seleccionar(result[0].id);
+      if (Array.isArray(result) && result.length) {
+        const pedidoGenerado = result.find((pedido) => pedido.provider === editorialId) ?? result[0];
+        await seleccionar(pedidoGenerado.id);
+      } else if (seleccionado?.id) {
+        await seleccionar(seleccionado.id);
       }
       await cargar();
+      const response = await obtenerAdopcionesPorEditorial(
+        busquedaColegio.trim() ? { buscar: busquedaColegio.trim() } : {},
+      );
+      setGruposEditoriales(Array.isArray(response) ? response : response?.results ?? []);
+      return true;
     } catch (err) {
       setError(obtenerError(err));
+      return false;
     } finally {
       setProcesando(false);
     }
@@ -151,7 +156,7 @@ export default function ERPPedidosPage() {
       {pestana === "adopciones" && puedeEditar && (
         <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-base font-black text-gray-950">Adopciones confirmadas por editorial</h2>
-          <p className="text-sm text-gray-600">Selecciona un colegio. Los pedidos existentes se abren sin duplicarlos.</p>
+          <p className="text-sm text-gray-600">Revisa el total por editorial y los colegios asociados. Los pedidos se controlan individualmente por colegio.</p>
           <label className="block max-w-md space-y-1 text-sm font-semibold text-gray-700">
             Buscar colegio
             <input type="search" value={busquedaColegio}
@@ -170,12 +175,14 @@ export default function ERPPedidosPage() {
                   aria-expanded={editorialAbierta === grupo.editorial_id}
                   className="flex w-full items-center justify-between bg-gray-50 px-4 py-3 text-left font-bold text-gray-900">
                   <span>{grupo.editorial}</span>
-                  <span className="text-xs text-gray-600">{grupo.adopciones.length} adopción(es) {editorialAbierta === grupo.editorial_id ? "▲" : "▼"}</span>
+<span className="text-xs font-medium text-gray-600">
+                    {grupo.adopciones.length} colegios/adopciones · {grupo.adopciones.reduce((total, adopcion) => total + adopcion.unidades, 0)} unidades · {grupo.adopciones.filter((adopcion) => !adopcion.pedido_id).length} pendientes {editorialAbierta === grupo.editorial_id ? "▲" : "▼"}
+                  </span>
                 </button>
                 {editorialAbierta === grupo.editorial_id && (
                   <div className="divide-y divide-gray-100">
                     {grupo.adopciones.map((adopcion) => (
-                      <div key={adopcion.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+                      <div key={adopcion.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
                         <div>
                           <p className="font-semibold text-gray-900">{adopcion.colegio}</p>
                           <p className="text-xs text-gray-600">{adopcion.campania} · {adopcion.lineas} producto(s) · {adopcion.unidades} unidad(es)</p>
@@ -184,15 +191,20 @@ export default function ERPPedidosPage() {
                           </p>
                         </div>
                         <button type="button" disabled={procesando}
-                          onClick={() => {
+                          onClick={async () => {
                             if (adopcion.pedido_id) {
                               setFiltros({ status: "", provider: "", school: "", campaign: "" });
+                              await seleccionar(adopcion.pedido_id);
                               setPestana("pedidos");
-                              seleccionar(adopcion.pedido_id);
-                            } else {
-                              setFiltros({ status: "", provider: "", school: "", campaign: "" });
-                              operar(() => generarPedidosDesdeAdopcion(adopcion.id), "Pedidos generados correctamente.").then(() => setPestana("pedidos"));
+                              return;
                             }
+                            setFiltros({ status: "", provider: "", school: "", campaign: "" });
+                            const generado = await operar(
+                              () => generarPedidosDesdeAdopcion(adopcion.id),
+                              "Pedidos generados correctamente.",
+                              grupo.editorial_id,
+                            );
+                            if (generado) setPestana("pedidos");
                           }}
                           className="rounded-lg bg-red-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">
                           {adopcion.pedido_id ? "Abrir pedido" : "Generar pedido"}
@@ -309,7 +321,7 @@ export default function ERPPedidosPage() {
             </div>
           )}
         </div>
-      </div>
+      </div>}
     </section>
   );
 }
