@@ -234,7 +234,7 @@ export default function ERPPedidosPage() {
   return (
     <section className="space-y-5">
       <header className="rounded-2xl border border-gray-200 bg-white p-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Compras</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Pedidos</p>
         <h1 className="mt-1 text-2xl font-black text-gray-950">Pedidos a Editoriales</h1>
         <p className="mt-2 text-sm text-gray-600">Prepara órdenes por colegio y editorial, apruébalas y registra su envío por correo. Las recepciones se gestionan en Almacén.</p>
       </header>
