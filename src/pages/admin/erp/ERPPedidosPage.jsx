@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
-  aprobarPedido, descargarOrdenCompraPdf, generarPedidosDesdeAdopcion, modificarCantidadPedido,
+  aprobarPedido, descargarOrdenCompraPdf, generarPedidosDesdeAdopcion, guardarCantidadesPedido,
   obtenerAdopcionesPorEditorial,
   obtenerPedido, obtenerPedidos, registrarEnvioPedido,
 } from "../../../api/purchasingApi";
@@ -108,22 +108,22 @@ export default function ERPPedidosPage() {
     }
   }
 
-  async function descargarPdf() {
+  async function descargarPdf(formato = "solicitud") {
     if (!seleccionado || procesando) return;
     setProcesando(true);
     setError("");
     setMensaje("");
     try {
-      const archivo = await descargarOrdenCompraPdf(seleccionado.id);
+      const archivo = await descargarOrdenCompraPdf(seleccionado.id, formato);
       const enlace = URL.createObjectURL(new Blob([archivo], { type: "application/pdf" }));
       const descarga = document.createElement("a");
       descarga.href = enlace;
-      descarga.download = `BE-OC-${String(seleccionado.id).padStart(6, "0")}.pdf`;
+      descarga.download = `${formato === "solicitud" ? "BE-SL" : "BE-OC"}-${String(seleccionado.id).padStart(6, "0")}.pdf`;
       document.body.appendChild(descarga);
       descarga.click();
       descarga.remove();
       window.setTimeout(() => URL.revokeObjectURL(enlace), 1000);
-      setMensaje("Orden de compra descargada. Puedes enviarla manualmente a la editorial.");
+      setMensaje(formato === "solicitud" ? "Solicitud de libros descargada. Puedes enviarla manualmente a la editorial." : "Orden valorizada descargada para uso interno.");
     } catch (err) {
       setError(obtenerError(err));
     } finally {
@@ -158,6 +158,18 @@ export default function ERPPedidosPage() {
       setProcesando(false);
     }
   }
+
+  const cambiosPendientes = seleccionado?.status === "draft"
+    ? (seleccionado.items || []).filter((item) =>
+      String(cantidades[item.id] ?? item.quantity_ordered) !== String(item.quantity_ordered)
+    ).map((item) => ({
+      item_id: item.id,
+      quantity: Number(cantidades[item.id]),
+    }))
+    : [];
+  const cambiosInvalidos = cambiosPendientes.some(({ quantity }) =>
+    !Number.isSafeInteger(quantity) || quantity < 1
+  );
 
   const opcionesEditoriales = [...new Set(
     pedidos.map((pedido) => pedido.provider_name_snapshot).filter(Boolean),
@@ -214,7 +226,7 @@ export default function ERPPedidosPage() {
                   className="flex w-full items-center justify-between bg-gray-50 px-4 py-3 text-left font-bold text-gray-900">
                   <span>{grupo.editorial}</span>
 <span className="text-xs font-medium text-gray-600">
-                    {grupo.adopciones.length} colegios/adopciones · {grupo.adopciones.reduce((total, adopcion) => total + adopcion.unidades, 0)} unidades · {grupo.adopciones.filter((adopcion) => !adopcion.pedido_id).length} pendientes {editorialAbierta === grupo.editorial_id ? "▲" : "▼"}
+                    {grupo.adopciones.length} adopción(es) · {grupo.adopciones.reduce((total, adopcion) => total + adopcion.unidades, 0)} unidades · {grupo.adopciones.filter((adopcion) => !adopcion.pedido_id).length} pendientes {editorialAbierta === grupo.editorial_id ? "▲" : "▼"}
                   </span>
                 </button>
                 {editorialAbierta === grupo.editorial_id && (
@@ -223,7 +235,9 @@ export default function ERPPedidosPage() {
                       <div key={adopcion.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
                         <div>
                           <p className="font-semibold text-gray-900">{adopcion.colegio}</p>
-                          <p className="text-xs text-gray-600">{adopcion.campania} · {adopcion.lineas} producto(s) · {adopcion.unidades} unidad(es)</p>
+                          <p className="text-xs text-gray-600">
+                            Adopción N.º {adopcion.id}{adopcion.version ? ` · versión ${adopcion.version}` : ""} · {adopcion.campania} · {adopcion.lineas} producto(s) · {adopcion.unidades} unidad(es)
+                          </p>
                           <p className="mt-1 text-xs font-semibold text-gray-600">
                             {adopcion.pedido_id ? `Pedido: ${estados[adopcion.estado_pedido] || adopcion.estado_pedido}` : "Pendiente de pedido"}
                           </p>
@@ -291,14 +305,23 @@ export default function ERPPedidosPage() {
             </label>
           </div>
           <div className="space-y-2">
+            {filtros.status === "approved" && (
+              <p className="text-xs text-gray-600">Aprobado = validado por Compras, pendiente de registrar el envío a la editorial.</p>
+            )}
             {cargando && <p className="text-sm text-gray-500">Consultando pedidos…</p>}
-            {!cargando && pedidosVisibles.length === 0 && <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">No hay pedidos para estos filtros.</p>}
+            {!cargando && pedidosVisibles.length === 0 && (
+              <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                {filtros.status === "sent"
+                  ? "Todavía no hay órdenes registradas como enviadas. Descarga la solicitud de un pedido aprobado, envíala a la editorial y registra la constancia de envío."
+                  : "No hay pedidos que coincidan con los filtros seleccionados."}
+              </p>
+            )}
             {pedidosVisibles.map((pedido) => (
               <button key={pedido.id} type="button" onClick={() => seleccionar(pedido.id)}
-                className={`w-full rounded-xl border p-4 text-left transition hover:border-red-300 ${seleccionado?.id === pedido.id ? "border-red-500 bg-red-50" : "border-gray-200 bg-white"}`}>
+                className={`w-full rounded-xl border px-3 py-2.5 text-left transition hover:border-red-300 ${seleccionado?.id === pedido.id ? "border-red-500 bg-red-50" : "border-gray-200 bg-white"}`}>
                 <p className="font-bold text-gray-950">{pedido.provider_name_snapshot}</p>
                 <p className="text-sm text-gray-600">{pedido.school_name_snapshot || "Compra independiente"}</p>
-                <p className="text-xs text-gray-500">{pedido.campaign_name_snapshot} · {estados[pedido.status] || pedido.status}</p>
+                <p className="text-xs text-gray-500">{pedido.campaign_name_snapshot} · {estados[pedido.status] || pedido.status}{pedido.adoption ? ` · Adopción N.º ${pedido.adoption}` : ""} · BE-OC-{String(pedido.id).padStart(6, "0")}</p>
               </button>
             ))}
           </div>
@@ -316,7 +339,7 @@ export default function ERPPedidosPage() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-96 text-left text-sm">
-                  <thead className="border-b border-gray-200 text-gray-600"><tr><th className="py-2">Libro</th><th>Cantidad</th><th>Costo editorial</th>{seleccionado.status === "draft" && puedeEditar && <th>Guardar</th>}</tr></thead>
+                  <thead className="border-b border-gray-200 text-gray-600"><tr><th className="py-2">Libro</th><th>Cantidad</th><th>Costo editorial</th></tr></thead>
                   <tbody>
                     {seleccionado.items?.map((item) => (
                       <tr key={item.id} className="border-b border-gray-100">
@@ -333,24 +356,43 @@ export default function ERPPedidosPage() {
                           )}
                         </td>
                         <td>S/ {item.unit_supplier_cost}</td>
-                        {seleccionado.status === "draft" && puedeEditar && (
-                          <td>
-                            <button type="button"
-                              disabled={procesando || Number(cantidades[item.id] ?? item.quantity_ordered) < 1 || String(cantidades[item.id] ?? item.quantity_ordered) === String(item.quantity_ordered)}
-                              onClick={() => operar(() => modificarCantidadPedido(seleccionado.id, item.id, Number(cantidades[item.id])), "Cantidad actualizada.")}
-                              className="text-xs font-bold text-red-700 disabled:opacity-50">Guardar</button>
-                          </td>
-                        )}
+
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              {seleccionado.status === "draft" && puedeEditar && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2">
+                  <p className="text-xs text-gray-600">
+                    {cambiosPendientes.length
+                      ? `${cambiosPendientes.length} producto(s) con cambios sin guardar.`
+                      : "Las cantidades coinciden con el pedido guardado."}
+                  </p>
+                  <button type="button" disabled={procesando || !cambiosPendientes.length || cambiosInvalidos}
+                    onClick={() => operar(
+                      () => guardarCantidadesPedido(seleccionado.id, cambiosPendientes),
+                      "Cantidades guardadas correctamente.",
+                    )}
+                    className="rounded-lg bg-gray-950 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">
+                    Guardar cambios
+                  </button>
+                  {cambiosInvalidos && <p role="alert" className="w-full text-xs text-red-700">Introduce cantidades enteras mayores que cero.</p>}
+                </div>
+              )}
               {["approved", "sent", "partially_received", "received", "closed_partial"].includes(seleccionado.status) && (
-                <button type="button" disabled={procesando} onClick={descargarPdf}
-                  className="rounded-xl border border-gray-800 bg-white px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-100 disabled:opacity-50">
-                  Descargar orden aprobada (PDF)
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" disabled={procesando} onClick={() => descargarPdf("solicitud")}
+                    className="rounded-xl bg-red-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+                    Solicitud de libros (sin precios)
+                  </button>
+                  {puedeAprobar && (
+                    <button type="button" disabled={procesando} onClick={() => descargarPdf("valorizada")}
+                      className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-900 disabled:opacity-50">
+                      Orden valorizada (uso interno)
+                    </button>
+                  )}
+                </div>
               )}
               {seleccionado.status === "draft" && (
                 <p className="text-xs text-gray-500">
@@ -358,7 +400,7 @@ export default function ERPPedidosPage() {
                 </p>
               )}
               {seleccionado.status === "draft" && puedeAprobar && (
-                <button type="button" disabled={procesando} onClick={() => operar(() => aprobarPedido(seleccionado.id), "Pedido aprobado.")}
+                <button type="button" disabled={procesando || cambiosPendientes.length > 0} onClick={() => operar(() => aprobarPedido(seleccionado.id), "Pedido aprobado.")}
                   className="rounded-xl bg-red-700 px-4 py-2 font-bold text-white disabled:opacity-50">Aprobar pedido</button>
               )}
               {seleccionado.status === "approved" && puedeEnviar && (
