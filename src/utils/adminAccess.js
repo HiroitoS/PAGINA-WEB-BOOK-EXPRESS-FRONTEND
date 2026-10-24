@@ -20,6 +20,8 @@ export const CURRENT_PANEL_PERMISSIONS = [
   "inquiries.view_inquiries",
   "workspaces.use_workspace",
   "crm.view_crm",
+  "purchasing.view_purchasing",
+  "warehouse.view_receiving",
 ];
 
 export function userHasRole(user, allowedRoles = []) {
@@ -74,6 +76,14 @@ export function getDefaultAdminPath(user) {
 
   if (userHasPermission(user, ["crm.view_crm"])) {
     return "/admin/crm";
+  }
+
+  if (userHasPermission(user, ["warehouse.view_receiving"])) {
+    return "/admin/erp/almacen/recepciones";
+  }
+
+  if (userHasPermission(user, ["purchasing.view_purchasing"])) {
+    return "/admin/erp/compras/pedidos";
   }
 
   if (userHasPermission(user, ["workspaces.use_workspace"])) {
