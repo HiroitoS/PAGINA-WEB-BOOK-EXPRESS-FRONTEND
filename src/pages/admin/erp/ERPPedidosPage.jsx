@@ -40,12 +40,13 @@ export default function ERPPedidosPage() {
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const estadoFiltro = filtros.status;
 
   const cargar = useCallback(async () => {
     setCargando(true);
     setError("");
     try {
-      const params = filtros.status ? { status: filtros.status } : {};
+      const params = estadoFiltro ? { status: estadoFiltro } : {};
       const data = await obtenerPedidos(params);
       setPedidos(Array.isArray(data) ? data : data?.results ?? []);
     } catch (err) {
@@ -53,14 +54,14 @@ export default function ERPPedidosPage() {
     } finally {
       setCargando(false);
     }
-  }, [filtros]);
+  }, [estadoFiltro]);
 
   useEffect(() => {
     let ignore = false;
     async function consultar() {
       setCargando(true);
       try {
-        const params = filtros.status ? { status: filtros.status } : {};
+        const params = estadoFiltro ? { status: estadoFiltro } : {};
         const data = await obtenerPedidos(params);
         if (!ignore) {
           setPedidos(Array.isArray(data) ? data : data?.results ?? []);
@@ -74,7 +75,7 @@ export default function ERPPedidosPage() {
     }
     consultar();
     return () => { ignore = true; };
-  }, [filtros]);
+  }, [estadoFiltro]);
 
   useEffect(() => {
     if (!puedeEditar) return undefined;
