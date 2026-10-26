@@ -134,7 +134,8 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
                   <th className="min-w-48 py-2 pr-2">Libro</th>
                   <th className="px-2 text-center">Solic.</th>
                   <th className="px-2 text-center">{estado === "validated" ? "Acept. esta guía" : "Prop. aceptación"}</th>
-                  <th className="px-2 text-center">Observ. esta guía</th>
+                  <th className="px-2 text-center">Adic. guía</th>
+                  <th className="px-2 text-center">No conf.</th>
                   <th className="px-2 text-center">Acept. total</th>
                   <th className="px-2 text-center">Pendiente</th>
                 </tr>
@@ -145,6 +146,7 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
                     <td className="py-2 pr-2 font-semibold text-gray-900">{linea.producto}</td>
                     <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
                     <td className="px-2 text-center tabular-nums">{linea.aceptadas_en_guia}</td>
+                    <td className="px-2 text-center font-semibold tabular-nums text-amber-800">{linea.excedentes_en_guia ?? 0}</td>
                     <td className="px-2 text-center tabular-nums">{linea.observadas_en_guia}</td>
                     <td className="px-2 text-center tabular-nums">{linea.aceptadas_acumuladas}</td>
                     <td className={`px-2 text-center font-bold tabular-nums ${linea.pendientes ? "text-amber-800" : "text-green-800"}`}>{linea.pendientes}</td>
@@ -163,7 +165,7 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
               <div className="mt-2 overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="border-b border-gray-200 text-gray-600">
-                    <tr><th className="py-2">Fecha</th><th>Guía / documento</th><th className="text-center">Llegaron</th><th className="text-center">Aceptadas</th><th className="text-center">Observadas</th></tr>
+                    <tr><th className="py-2">Fecha</th><th>Guía / documento</th><th className="text-center">Llegaron</th><th className="text-center">Aceptadas</th><th className="text-center">Adicionales</th><th className="text-center">No conformes</th></tr>
                   </thead>
                   <tbody>
                     {pedido.entregas.map((entrega, index) => (
@@ -172,6 +174,7 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
                         <td className="pr-2">{entrega.document_number}{entrega.es_recepcion_actual ? " · Esta guía" : ""}</td>
                         <td className="text-center tabular-nums">{entrega.llegaron}</td>
                         <td className="text-center tabular-nums">{entrega.aceptadas}</td>
+                        <td className="text-center tabular-nums text-amber-800">{entrega.excedentes ?? 0}</td>
                         <td className="text-center tabular-nums">{entrega.observadas}</td>
                       </tr>
                     ))}
@@ -635,7 +638,7 @@ export default function ERPRecepcionPage() {
               <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">Marca uno o varios pedidos de la izquierda para registrar sus productos.</p>
             ) : (
               <>
-                <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-3 text-center">
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-center sm:grid-cols-4">
                   <div><p className="text-xs text-gray-600">Solicitadas</p><p className="text-lg font-black">{resumenSeleccion.solicitadas}</p></div>
                   <div><p className="text-xs text-gray-600">Aceptadas anteriormente</p><p className="text-lg font-black">{resumenSeleccion.aceptadas}</p></div>
                   <div><p className="text-xs text-gray-600">Pendientes</p><p className="text-lg font-black text-amber-800">{resumenSeleccion.pendientes}</p></div>
@@ -768,15 +771,19 @@ export default function ERPRecepcionPage() {
                           {recepcionSeleccionada.lines.reduce((suma, linea) => suma + linea.quantity_accepted, 0)}
                         </p>
                       </div>
-                      <div><p className="text-xs text-gray-600">Observadas en esta guía</p>
+                      <div><p className="text-xs text-amber-800">Adicionales conformes</p>
+                        <p className="text-lg font-black tabular-nums text-amber-800">
+                          {recepcionSeleccionada.lines.reduce((suma, linea) => suma + (linea.quantity_extra ?? 0), 0)}
+                        </p>
+                      </div>
+                      <div><p className="text-xs text-gray-600">No conformes</p>
                         <p className="text-lg font-black tabular-nums">
                           {recepcionSeleccionada.lines.reduce((suma, linea) => suma + linea.quantity_observed, 0)}
                         </p>
                       </div>
                     </div>
                     <p className="text-xs text-gray-600">
-                      El excedente conforme queda identificado por separado.
-                      Aún no registra stock ni facturas.
+                      La recepción documenta lo recibido y los adicionales; el ingreso de stock se gestionará en Inventario.
                     </p>
                   </div>
                 ) : (
