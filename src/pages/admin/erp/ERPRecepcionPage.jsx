@@ -816,7 +816,7 @@ export default function ERPRecepcionPage() {
                           {recepcionSeleccionada.lines.reduce((suma, linea) => suma + (linea.quantity_extra ?? 0), 0)}
                         </p>
                       </div>
-                      <div><p className="text-xs text-gray-600">No conformes</p>
+                      <div><p className="text-xs text-gray-600">Observados</p>
                         <p className="text-lg font-black tabular-nums">
                           {recepcionSeleccionada.lines.reduce((suma, linea) => suma + linea.quantity_observed, 0)}
                         </p>
@@ -848,27 +848,26 @@ export default function ERPRecepcionPage() {
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-80 text-left text-sm">
-                        <thead><tr className="border-b text-xs text-gray-500"><th className="py-2">Producto / pedido</th><th>Llegaron</th><th>Según guía</th><th>Observadas</th><th>Excedente</th><th>Aceptadas</th></tr></thead>
+                        <thead><tr className="border-b text-xs text-gray-500"><th className="py-2">Producto / pedido</th><th>Físico</th><th>Guía</th><th>Observados</th><th>Adicionales</th><th>Al pedido</th></tr></thead>
                         <tbody>{edicion?.lines.map((linea, index) => (
                           <tr key={linea.order_item_id} className="border-b border-gray-100">
                             <td className="py-2 pr-3 font-semibold">{linea.nombre}<span className="block text-xs font-normal text-gray-500">Pedido BE-OC-{String(linea.pedido).padStart(6, "0")}</span></td>
-                            <td><input type="number" min="1" step="1" className="w-20 rounded-lg border border-gray-300 p-2"
+                            <td><input type="number" min="1" step="1" className="w-16 rounded-lg border border-gray-300 p-2"
                               aria-label={`Llegaron ${linea.nombre}`} value={linea.quantity_arrived} disabled={!puedeCrear}
                               onChange={(event) => modificarLinea(index, "quantity_arrived", event.target.value)} /></td>
-                            <td><input type="number" min="0" step="1" className="w-20 rounded-lg border border-gray-300 p-2"
+                            <td><input type="number" min="0" step="1" className="w-16 rounded-lg border border-gray-300 p-2"
                               aria-label={`Según guía ${linea.nombre}`} value={linea.quantity_documented ?? ""} disabled={!puedeCrear}
                               onChange={(event) => modificarLinea(index, "quantity_documented", event.target.value)} /></td>
-                            <td><input type="number" min="0" step="1" className="w-20 rounded-lg border border-gray-300 p-2"
-                              aria-label={`Observadas ${linea.nombre}`} value={linea.quantity_observed} disabled={!puedeCrear}
+                            <td><input type="number" min="0" step="1" className="w-16 rounded-lg border border-gray-300 p-2"
+                              aria-label={`Observados ${linea.nombre}`} value={linea.quantity_observed} disabled={!puedeCrear}
                               onChange={(event) => modificarLinea(index, "quantity_observed", event.target.value)} /></td>
-                            <td><input type="number" min="0" step="1" className="w-20 rounded-lg border border-gray-300 p-2"
-                              aria-label={`Excedente ${linea.nombre}`} value={linea.quantity_extra ?? "0"} disabled={!puedeCrear}
-                              onChange={(event) => modificarLinea(index, "quantity_extra", event.target.value)} /></td>
+                            <td className="text-center font-semibold tabular-nums text-amber-800">{linea.quantity_extra ?? "0"}</td>
                             <td>{Number(linea.quantity_arrived) - Number(linea.quantity_observed) - Number(linea.quantity_extra ?? 0)}</td>
                           </tr>
                         ))}</tbody>
                       </table>
                     </div>
+                    <p className="text-xs text-gray-600">La guía indica lo declarado por la editorial; físico es lo contado. Observados son libros dañados o incorrectos que sí llegaron. Los adicionales se calculan automáticamente.</p>
                     <label className="block text-xs font-bold text-gray-700">Observaciones
                       <textarea className={`mt-1 ${estilosCampo}`} rows={2} value={edicion?.notes ?? ""}
                         onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, notes: event.target.value })); }} disabled={!puedeCrear} />
