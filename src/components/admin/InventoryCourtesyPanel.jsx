@@ -28,7 +28,7 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
   const [seleccion, setSeleccion] = useState(null);
   const [cantidad, setCantidad] = useState("1");
   const [destinatario, setDestinatario] = useState("");
-  const [cargo, setCargo] = useState("Director(a)");
+  const [cargo, setCargo] = useState("");
   const [cargoOtro, setCargoOtro] = useState("");
   const [nota, setNota] = useState("");
   const [clave, setClave] = useState("");
@@ -64,7 +64,7 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
     setSeleccion(entry);
     setCantidad("1");
     setDestinatario("");
-    setCargo("Director(a)");
+    setCargo("");
     setCargoOtro("");
     setNota("");
     setClave(crypto.randomUUID());
@@ -91,9 +91,13 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
       });
       setConfirmar(false);
       setSeleccion(null);
-      setMensaje(resultado.message);
-      await onRefresh();
+      setMensaje(resultado.message || "La salida se registró correctamente.");
       setActualizacion((valor) => valor + 1);
+      try {
+        await onRefresh();
+      } catch {
+        setError("La salida se registró, pero no se actualizó el resumen. Actualiza la página para ver el saldo.");
+      }
     } catch (err) {
       setConfirmar(false);
       setError(explicarError(err));
