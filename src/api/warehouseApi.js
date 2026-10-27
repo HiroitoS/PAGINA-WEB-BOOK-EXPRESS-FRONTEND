@@ -55,6 +55,11 @@ export async function consultarResumenInventario() {
   return data;
 }
 
+export async function consultarValorizacionPorEditorial() {
+  const { data } = await axiosClient.get(`${INVENTORY_BASE}/resumen-por-editorial/`);
+  return data;
+}
+
 export async function listarEntradasInventario() {
   const { data } = await axiosClient.get(`${INVENTORY_BASE}/`);
   return data;
