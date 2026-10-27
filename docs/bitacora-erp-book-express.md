@@ -1,6 +1,6 @@
 # Bitácora de continuidad — ERP Book Express
 
-Actualizada: 23/10/2026. Documento de trabajo; contrastar con GitHub antes de ejecutar.
+Actualizada: 27/10/2026. Documento de trabajo; contrastar con GitHub antes de ejecutar.
 
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
@@ -157,3 +157,24 @@ Precios 2027 se actualizarán más adelante desde listas del proveedor; no alter
 - Pruebas Django agregadas: dos entregas 80+20, cronología y saldo de la primera guía tras cerrar el pedido, excedente 110 llegado/100 aceptado/10 observado con motivo, bloqueo sin motivo, guía con varios pedidos/colegios, denegación por falta de permisos.
 - **Outlook**: `mailto:` abre el mensaje con asunto/cuerpo, pero no permite incluir un archivo adjunto de forma estándar. Mantener preparación manual + descarga PDF. Revisión humana con adjunto automático requiere integración posterior Microsoft Graph/OAuth u otro proveedor autorizado, con validación de destinatarios y trazabilidad.
 - **No ejecutado desde esta sesión:** pytest/Django tests y lint/build del repositorio local. Antes de cerrar P-06, ejecutar `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py test warehouse purchasing`, `npm run lint` y `npm run build`, además de aceptación funcional visual. Sin modificaciones de `main`, sin nuevas migraciones ni despliegue de producción.
+
+## P-07 / 27-10-2026 — Inventario y cortesías; validación en curso
+
+**Fuente de verdad del código:** backend `HiroitoS/PAGINA-WEB-BOOK-EXPRESS` y frontend `HiroitoS/PAGINA-WEB-BOOK-EXPRESS-FRONTEND`, rama `crm/gestion-colegios`. No tocar `main` ni desplegar Tecnoweb sin pruebas y aprobación.
+
+- Las recepciones validadas registran entradas de stock automáticamente, una entrada por línea de guía y sin doble contabilización. Los adicionales conformes **sí** se conservan y se incluyen en existencia física y valorización referencial, pero **no se presentan como deuda a la editorial**. Esta es la regla operativa vigente: reemplaza el criterio preliminar del apartado histórico P-06 del 24/10 que decía que los excedentes no entraban a stock.
+- Se mantiene control separado de faltantes respecto de guía, observados/no conformes y entregas parciales; los libros no conformes no están disponibles para venta. El tratamiento de reposición y devolución requiere módulo posterior.
+- Inventario permite consultar existencias, entradas históricas, costos unitarios de referencia y adicionales. Un ingreso histórico no debe reescribirse por una salida.
+- Iniciada **P-07.3: cortesías a directivos**: `StockMovement`, migración `warehouse.0008_stock_movement`, servicio transaccional `warehouse/stock_movements.py`, endpoints de entradas disponibles, cortesías y salidas en `warehouse/api_inventory.py`, y panel React `InventoryCourtesyPanel.jsx`. La salida se vincula a una entrada de mercadería de **ese mismo colegio**; no se permite stock negativo; requiere permiso `warehouse.manage_stock_courtesies`; usa clave de idempotencia y costo histórico. Las operaciones de recepción y cortesía son distintas, no se crea otra entrada física al facturar.
+- API de Inventario separada de `warehouse/api_views.py` para reducir acoplamiento y preservar rutas existentes; no atribuir por ello que el módulo completo de Almacén esté terminado.
+- En el frontend, pestañas `Existencias`, `Entradas` y `Cortesías`; búsqueda paginada de lotes disponibles por libro/colegio/guía y confirmación propia React. Falta aceptación visual y funcional de esta parte.
+- **Incidencia detectada por el usuario el 27/10:** `python manage.py test warehouse purchasing` encontró **84 pruebas, 1 error**: `test_solo_entradas_del_colegio_con_saldo_y_busqueda_paginada` fallaba con `KeyError: 'school_id'`. Causa: el payload de `InventoryEntryViewSet._item` exponía `school` pero omitía `school_id` requerido por la prueba y la pantalla de cortesías. **Corrección publicada en backend:** `warehouse/api_inventory.py`, commit `dcbcc3f7844aae3a035bfbf213f8937603d1cbc6`, agregando `"school_id": order_item.order.school_id`. Sin migración y sin relajar la prueba. **PENDIENTE:** nueva ejecución local para confirmar 84/84 verdes; no afirmar pruebas OK sin resultado del usuario.
+- Comandos backend, en Git Bash: `git pull --ff-only origin crm/gestion-colegios`, `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py test warehouse purchasing`. Migrar `warehouse` solo si hay migraciones sin aplicar y tras revisar y respaldar base local.
+- Comandos frontend en su repositorio: `git pull --ff-only origin crm/gestion-colegios`, `npm run lint`, `npm run build`. Verificar permisos, cortesía con 1 unidad, consulta de saldo, historial, reintento, colegio ajeno y regreso a Inventario.
+
+### Contraste con levantamiento funcional ERP v2 (documento de proyecto)
+
+- El documento **AS-IS** recoge deficiencias de registros en Excel/Negosy, recepción por guía, conciliación factura-guía-físico y ausencia de control de regalos/muestras (secciones **9.1**, **9.2**); cortesías y stock trazable responden a esos problemas.
+- **10.2** y **Gerencia** requieren conciliación de facturas, notas de crédito, deuda real, pagos y alertas de diferencias: solo está planteado el diseño de **P-08 Conciliación de facturas** en `docs/erp/P08_conciliacion_facturas_editoriales.md`. **NO implementado**. Almacén valida cantidad física, Administración controla factura y Cuentas por Pagar; vincular documentos sin registrar entradas dos veces.
+- Pendientes del levantamiento: inventario semanal, ubicaciones, traslados feria/consignación, controles de packs, muestras, souvenirs, ajustes con aprobación, incidencias y liquidación proveedor. No marcar como resueltos.
+- El documento es levantamiento/entrevista AS-IS: sus prácticas reflejan funcionamiento actual, no siempre especificación final. Cuando cambie una regla (ej.: excedentes conformes), anotar decisión posterior expresamente sin borrar su evidencia histórica.
