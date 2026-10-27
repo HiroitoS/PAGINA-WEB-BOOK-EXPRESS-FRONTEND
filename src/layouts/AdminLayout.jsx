@@ -187,6 +187,12 @@ const NAV_SECTIONS = [
             icon: <FaClipboardList />,
             permissions: ["warehouse.view_receiving"],
           },
+          {
+            label: "Inventario",
+            to: "/admin/erp/almacen/inventario",
+            icon: <FaBoxOpen />,
+            permissions: ["warehouse.view_receiving"],
+          },
         ],
       },
     ],
