@@ -110,7 +110,7 @@ export default function ERPInventarioPage() {
         {tarjetas.map((item) => (
           <div key={item.titulo} className="flex min-h-28 flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
             <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
-            <p className="mt-1 text-3xl font-black tabular-nums text-gray-950">{cargando ? "—" : item.valor}</p>
+            <p className="mt-1 text-3xl font-black tabular-nums text-gray-950">{cargando || error ? "—" : item.valor}</p>
             <p className="mt-1 text-xs text-gray-500">{item.ayuda}</p>
           </div>
         ))}
@@ -120,7 +120,7 @@ export default function ERPInventarioPage() {
         <div>
           <p className="text-xs font-semibold text-gray-600">Valor referencial del stock conforme disponible</p>
           <p className="mt-1 text-xl font-black tabular-nums text-gray-900">
-            {cargando ? "—" : dinero(resumen?.value_reference)}
+            {cargando || error ? "—" : dinero(resumen?.value_reference)}
           </p>
         </div>
         <p className="max-w-lg text-xs leading-5 text-gray-600">
@@ -135,7 +135,7 @@ export default function ERPInventarioPage() {
             <button type="button" role="tab" aria-selected={pestana === "movimientos"} onClick={() => cambiarFiltro("vista", "movimientos")} className={clasesPestana(pestana === "movimientos")}>Entradas</button>
             <button type="button" role="tab" aria-selected={pestana === "cortesias"} onClick={() => cambiarFiltro("vista", "cortesias")} className={clasesPestana(pestana === "cortesias")}>Cortesías</button>
           </div>
-          <span className="py-2 text-xs text-gray-500">{existencias.length} productos con entradas</span>
+          <span className="py-2 text-xs text-gray-500">{error ? "Consulta no disponible" : `${existencias.length} productos con entradas`}</span>
         </div>
 
         {pestana === "existencias" ? (
@@ -172,7 +172,7 @@ export default function ERPInventarioPage() {
                   </tr>)}
                 </tbody>
               </table>
-              {!cargando && visibles.length === 0 && <p className="p-4 text-center text-sm text-gray-500">No hay existencias para los filtros seleccionados.</p>}
+              {!cargando && !error && visibles.length === 0 && <p className="p-4 text-center text-sm text-gray-500">No hay existencias para los filtros seleccionados.</p>}
               {cargando && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias…</p>}
             </div>
             <p className="mt-3 text-xs text-gray-500">Disponible descuenta las cortesías registradas. Adicionales muestra cuántos llegaron de más originalmente, no cuántos de esos libros siguen en almacén. Ventas y traslados se incorporarán después.</p>
@@ -232,7 +232,7 @@ export default function ERPInventarioPage() {
                   </Fragment>
                 ))}</tbody>
               </table>
-              {!cargando && entradas.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Aún no hay ingresos registrados.</p>}
+              {!cargando && !error && entradas.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Aún no hay ingresos registrados.</p>}
             </div>
             <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados por Django; para consultar saldo actual y descuentos por cortesía, utiliza Existencias y Cortesías. No son importes por pagar.</p>
           </div>
