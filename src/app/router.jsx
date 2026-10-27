@@ -45,6 +45,7 @@ const WorkspaceTaskListsPage = lazy(() => import("../pages/admin/workspace/Works
 
 const ERPPedidosPage = lazy(() => import("../pages/admin/erp/ERPPedidosPage"));
 const ERPRecepcionPage = lazy(() => import("../pages/admin/erp/ERPRecepcionPage"));
+const ERPInventarioPage = lazy(() => import("../pages/admin/erp/ERPInventarioPage"));
 
 const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
@@ -206,6 +207,13 @@ const router = createBrowserRouter([
             element: protectPermission(
               renderLazyPage(ERPPedidosPage),
               ["purchasing.view_purchasing"],
+            ),
+          },
+          {
+            path: "erp/almacen/inventario",
+            element: protectPermission(
+              renderLazyPage(ERPInventarioPage),
+              ["warehouse.view_receiving"],
             ),
           },
           {
