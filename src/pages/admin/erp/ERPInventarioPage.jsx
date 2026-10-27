@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
-import { consultarExistencias, listarEntradasInventario } from "../../../api/warehouseApi";
+import { consultarExistencias, consultarResumenInventario, listarEntradasInventario } from "../../../api/warehouseApi";
 
 function mensajeError(error) {
   const data = error?.response?.data;
@@ -26,19 +26,33 @@ export default function ERPInventarioPage() {
   const puedeVerCatalogo = userHasPermission(user, ["catalog.view_catalog"]);
   const [existencias, setExistencias] = useState([]);
   const [entradas, setEntradas] = useState([]);
-  const [busqueda, setBusqueda] = useState("");
-  const [editorial, setEditorial] = useState("");
-  const [pestana, setPestana] = useState("existencias");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [detalleId, setDetalleId] = useState(null);
+  const [resumen, setResumen] = useState(null);
+  const busqueda = searchParams.get("buscar") ?? "";
+  const editorial = searchParams.get("editorial") ?? "";
+  const pestana = searchParams.get("vista") === "movimientos" ? "movimientos" : "existencias";
+  const retornoInventario = `/admin/erp/almacen/inventario${searchParams.toString() ? `?${searchParams}` : ""}`;
+
+  function cambiarFiltro(clave, valor) {
+    setSearchParams((anterior) => {
+      const siguiente = new URLSearchParams(anterior);
+      if (valor) siguiente.set(clave, valor);
+      else siguiente.delete(clave);
+      return siguiente;
+    }, { replace: true });
+  }
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
   const cargar = useCallback(async (ignorar) => {
-    const [stock, movimientos] = await Promise.all([
-      consultarExistencias(), listarEntradasInventario(),
+    const [stock, movimientos, summary] = await Promise.all([
+      consultarExistencias(), listarEntradasInventario(), consultarResumenInventario(),
     ]);
     if (ignorar()) return;
     setExistencias(stock);
     setEntradas(Array.isArray(movimientos) ? movimientos : movimientos.results ?? []);
+    setResumen(summary);
   }, []);
 
   useEffect(() => {
@@ -64,18 +78,11 @@ export default function ERPInventarioPage() {
     `${item.product} ${item.editorial}`.toLocaleLowerCase("es").includes(busqueda.trim().toLocaleLowerCase("es"))
   ), [existencias, editorial, busqueda]);
 
-  const resumen = useMemo(() => existencias.reduce((total, item) => ({
-    physical: total.physical + item.physical,
-    available: total.available + item.available,
-    nonconforming: total.nonconforming + item.nonconforming,
-    extra: total.extra + item.extra_included,
-  }), { physical: 0, available: 0, nonconforming: 0, extra: 0 }), [existencias]);
-
   const tarjetas = [
-    { titulo: "Existencia física", valor: resumen.physical, ayuda: "Incluye observados" },
-    { titulo: "Conformes ingresados", valor: resumen.available, ayuda: "Antes de salidas y reservas" },
-    { titulo: "Observados", valor: resumen.nonconforming, ayuda: "No disponibles para venta" },
-    { titulo: "Adicionales", valor: resumen.extra, ayuda: "Incluidos en conformes" },
+    { titulo: "Existencia física", valor: resumen?.physical ?? 0, ayuda: "Incluye observados" },
+    { titulo: "Conformes ingresados", valor: resumen?.conforming ?? 0, ayuda: "Antes de salidas y reservas" },
+    { titulo: "Observados", valor: resumen?.nonconforming ?? 0, ayuda: "No disponibles para venta" },
+    { titulo: "Adicionales", valor: resumen?.extra_included ?? 0, ayuda: "Incluidos en conformes" },
   ];
 
   return (
@@ -87,8 +94,8 @@ export default function ERPInventarioPage() {
           <p className="mt-1 text-sm text-gray-600">Las recepciones validadas ingresan automáticamente. Consulta existencias y movimientos.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {puedeVerCatalogo && <Link to="/admin/productos" className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Catálogo de productos</Link>}
-          <Link to="/admin/erp/almacen/recepciones" className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Ver recepciones</Link>
+          {puedeVerCatalogo && <Link to="/admin/productos" state={{ inventoryReturnTo: retornoInventario }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Catálogo de productos</Link>}
+          <Link to="/admin/erp/almacen/recepciones" state={{ inventoryReturnTo: retornoInventario }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">Ver recepciones</Link>
         </div>
       </header>
 
@@ -104,11 +111,23 @@ export default function ERPInventarioPage() {
         ))}
       </div>
 
+      <div className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div>
+          <p className="text-xs font-semibold text-gray-600">Valor referencial de unidades conformes ingresadas</p>
+          <p className="mt-1 text-xl font-black tabular-nums text-gray-900">
+            {cargando ? "—" : dinero(resumen?.value_reference)}
+          </p>
+        </div>
+        <p className="max-w-lg text-xs leading-5 text-gray-600">
+          Incluye los adicionales a favor de Book Express, valorizados con el costo de referencia de cada pedido. No representa deuda con la editorial ni saldo valorizado después de salidas.
+          {resumen?.unvalued_units > 0 && <span className="block font-bold text-amber-800">{resumen.unvalued_units} unidades sin costo registrado aún.</span>}
+        </p>
+      </div>
       <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 sm:px-4">
           <div role="tablist" aria-label="Información del inventario" className="flex gap-1">
-            <button type="button" role="tab" aria-selected={pestana === "existencias"} onClick={() => setPestana("existencias")} className={clasesPestana(pestana === "existencias")}>Existencias</button>
-            <button type="button" role="tab" aria-selected={pestana === "movimientos"} onClick={() => setPestana("movimientos")} className={clasesPestana(pestana === "movimientos")}>Movimientos</button>
+            <button type="button" role="tab" aria-selected={pestana === "existencias"} onClick={() => cambiarFiltro("vista", "")} className={clasesPestana(pestana === "existencias")}>Existencias</button>
+            <button type="button" role="tab" aria-selected={pestana === "movimientos"} onClick={() => cambiarFiltro("vista", "movimientos")} className={clasesPestana(pestana === "movimientos")}>Movimientos</button>
           </div>
           <span className="py-2 text-xs text-gray-500">{existencias.length} productos con entradas</span>
         </div>
@@ -117,9 +136,9 @@ export default function ERPInventarioPage() {
           <div role="tabpanel" className="p-3 sm:p-4">
             <div className="mb-3 flex flex-wrap gap-2">
               <input aria-label="Buscar libro o editorial" placeholder="Buscar libro o editorial…" value={busqueda}
-                onChange={(event) => setBusqueda(event.target.value)}
+                onChange={(event) => cambiarFiltro("buscar", event.target.value)}
                 className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-600 focus:outline-none" />
-              <select aria-label="Filtrar por editorial" value={editorial} onChange={(event) => setEditorial(event.target.value)}
+              <select aria-label="Filtrar por editorial" value={editorial} onChange={(event) => cambiarFiltro("editorial", event.target.value)}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm sm:w-52">
                 <option value="">Todas las editoriales</option>
                 {editoriales.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
@@ -154,7 +173,8 @@ export default function ERPInventarioPage() {
           </div>
         ) : (
           <div role="tabpanel" className="p-3 sm:p-4">
-            <h2 className="mb-3 text-sm font-bold text-gray-900">Entradas recientes</h2>
+            <h2 className="text-sm font-bold text-gray-900">Historial de movimientos de mercadería</h2>
+            <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro muestra qué producto ingresó, su guía, colegio de origen y valoración. Actualmente aparecen entradas; las salidas y traslados se incorporarán cuando sus operaciones estén habilitadas.</p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
@@ -162,25 +182,50 @@ export default function ERPInventarioPage() {
                     <th scope="col" className="p-2">Guía</th>
                     <th scope="col" className="p-2">Producto</th>
                     <th scope="col" className="p-2">Colegio</th>
-                    <th scope="col" className="p-2 text-right">Conformes</th>
-                    <th scope="col" className="p-2 text-right">Adic.</th>
-                    <th scope="col" className="p-2 text-right">Costo unit.</th>
-                    <th scope="col" className="p-2 text-right">Valor entrada</th>
+                    <th scope="col" className="p-2 text-right">Al pedido</th>
+                    <th scope="col" className="p-2 text-right">Adicionales</th>
+                    <th scope="col" className="p-2 text-right">Total conforme</th>
+                    <th scope="col" className="p-2 text-right">Valor referencial</th>
+                    <th scope="col" className="p-2 text-right">Detalle</th>
                   </tr>
                 </thead>
-                <tbody>{entradas.map((item) => <tr key={item.id} className="border-b border-gray-100 transition hover:bg-gray-50">
-                  <td className="p-2">{item.guide}</td>
-                  <td className="p-2 font-semibold">{item.product}</td>
-                  <td className="p-2">{item.school}</td>
-                  <td className="p-2 text-right tabular-nums">{item.available}</td>
-                  <td className="p-2 text-right tabular-nums">{item.extra_included}</td>
-                  <td className="p-2 text-right tabular-nums">{dinero(item.unit_cost)}</td>
-                  <td className="p-2 text-right tabular-nums">{dinero(item.entry_value)}</td>
-                </tr>)}</tbody>
+                <tbody>{entradas.map((item) => (
+                  <Fragment key={item.id}>
+                    <tr className="border-b border-gray-100 transition hover:bg-gray-50">
+                      <td className="p-2">{item.guide}</td>
+                      <td className="p-2 font-semibold">{item.product}</td>
+                      <td className="p-2">{item.school}</td>
+                      <td className="p-2 text-right tabular-nums">{item.on_order}</td>
+                      <td className="p-2 text-right tabular-nums">{item.extra_included}</td>
+                      <td className="p-2 text-right font-semibold tabular-nums">{item.available}</td>
+                      <td className="p-2 text-right tabular-nums">{dinero(item.entry_value)}</td>
+                      <td className="p-2 text-right">
+                        <button type="button" aria-expanded={detalleId === item.id}
+                          onClick={() => setDetalleId((actual) => actual === item.id ? null : item.id)}
+                          className="font-bold text-red-700 underline-offset-2 hover:underline">
+                          {detalleId === item.id ? "Ocultar" : "Ver desglose"}
+                        </button>
+                      </td>
+                    </tr>
+                    {detalleId === item.id && (
+                      <tr className="bg-gray-50">
+                        <td colSpan={8} className="p-3">
+                          <div className="grid gap-3 rounded-lg border border-gray-200 bg-white p-3 sm:grid-cols-4">
+                            <div><p className="text-gray-500">Costo unitario de referencia</p><p className="mt-1 font-bold">{dinero(item.unit_cost)}</p></div>
+                            <div><p className="text-gray-500">Pedido · {item.on_order} unidades</p><p className="mt-1 font-bold">{dinero(item.order_value_reference)}</p></div>
+                            <div><p className="text-gray-500">Adicionales · {item.extra_included} unidades</p><p className="mt-1 font-bold">{dinero(item.extra_value_reference)}</p></div>
+                            <div><p className="text-gray-500">Total conforme · {item.available} unidades</p><p className="mt-1 font-bold">{dinero(item.entry_value)}</p></div>
+                          </div>
+                          <p className="mt-2 text-gray-500">El valor de los adicionales es referencial y no genera por sí solo una obligación de pago a la editorial.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}</tbody>
               </table>
               {!cargando && entradas.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Aún no hay ingresos registrados.</p>}
             </div>
-            <p className="mt-3 text-xs text-gray-500">Valores históricos calculados por Django según el costo registrado en el pedido. No incluyen movimientos de salida.</p>
+            <p className="mt-3 text-xs text-gray-500">Valores históricos calculados por Django según el costo del pedido. Los adicionales forman parte del total conforme. No son importes por pagar ni incluyen salidas futuras.</p>
           </div>
         )}
       </section>
