@@ -43,11 +43,15 @@ export default function ERPInventarioPage() {
 
   useEffect(() => {
     let ignore = false;
-    cargar(() => ignore).catch((err) => {
+
+    // Diferir la consulta evita actualizar estado de forma síncrona
+    // durante el efecto. La bandera impide actualizar un componente desmontado.
+    Promise.resolve().then(() => cargar(() => ignore)).catch((err) => {
       if (!ignore) setError(mensajeError(err));
     }).finally(() => {
       if (!ignore) setCargando(false);
     });
+
     return () => { ignore = true; };
   }, [cargar]);
 
