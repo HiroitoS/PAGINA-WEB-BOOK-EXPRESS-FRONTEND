@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "react-router";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
@@ -191,6 +192,12 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
 
 export default function ERPRecepcionPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const rutaRetorno = location.state?.inventoryReturnTo;
+  const retornoInventario = typeof rutaRetorno === "string" &&
+    (rutaRetorno === "/admin/erp/almacen/inventario" ||
+      rutaRetorno.startsWith("/admin/erp/almacen/inventario?"))
+    ? rutaRetorno : null;
   const puedeCrear = userHasPermission(user, ["warehouse.manage_receiving"]);
   const puedeValidar = userHasPermission(user, ["warehouse.validate_receiving"]);
   const [pestana, setPestana] = useState("registro");
@@ -587,6 +594,14 @@ export default function ERPRecepcionPage() {
         <p className="mt-1 text-sm text-gray-600">
           Contrasta los pedidos enviados con los libros recibidos. Registra entregas parciales, observaciones y saldos pendientes.
         </p>
+        {retornoInventario && (
+          <div className="mt-3">
+            <Link to={retornoInventario}
+              className="inline-flex items-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-red-300 hover:text-red-700">
+              Volver a Inventario
+            </Link>
+          </div>
+        )}
       </header>
 
       <div role="tablist" aria-label="Secciones de recepción" className="flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white p-2">
