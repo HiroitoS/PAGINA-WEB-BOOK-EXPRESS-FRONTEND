@@ -50,6 +50,11 @@ export async function consultarExistencias() {
   return data;
 }
 
+export async function consultarResumenInventario() {
+  const { data } = await axiosClient.get(`${INVENTORY_BASE}/resumen/`);
+  return data;
+}
+
 export async function listarEntradasInventario() {
   const { data } = await axiosClient.get(`${INVENTORY_BASE}/`);
   return data;
