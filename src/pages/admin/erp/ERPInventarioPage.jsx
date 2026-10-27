@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import InventoryCourtesyPanel from "../../../components/admin/InventoryCourtesyPanel";
-import { consultarExistencias, consultarResumenInventario, listarEntradasInventario, listarSalidasInventario } from "../../../api/warehouseApi";
+import { consultarExistencias, consultarResumenInventario, consultarValorizacionPorEditorial, listarEntradasInventario, listarSalidasInventario } from "../../../api/warehouseApi";
 
 function mensajeError(error) {
   const data = error?.response?.data;
@@ -29,6 +29,8 @@ export default function ERPInventarioPage() {
   const [existencias, setExistencias] = useState([]);
   const [entradas, setEntradas] = useState([]);
   const [salidas, setSalidas] = useState([]);
+  const [valorPorEditorial, setValorPorEditorial] = useState([]);
+  const [errorValorizacion, setErrorValorizacion] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const [detalleId, setDetalleId] = useState(null);
   const [resumen, setResumen] = useState(null);
@@ -52,15 +54,21 @@ export default function ERPInventarioPage() {
   const [error, setError] = useState("");
 
   const cargar = useCallback(async (ignorar) => {
-    const [stock, movimientos, summary, outflows] = await Promise.all([
+    const [stock, movimientos, summary, outflows, editorialReport] = await Promise.all([
       consultarExistencias(), listarEntradasInventario(), consultarResumenInventario(),
       listarSalidasInventario(),
+      consultarValorizacionPorEditorial().then(
+        (data) => ({ data, error: "" }),
+        () => ({ data: [], error: "No se pudo cargar el desglose por editorial. Actualiza la página para reintentarlo." }),
+      ),
     ]);
     if (ignorar()) return;
     setExistencias(stock);
     setEntradas(Array.isArray(movimientos) ? movimientos : movimientos.results ?? []);
     setSalidas(Array.isArray(outflows) ? outflows : outflows.results ?? []);
     setResumen(summary);
+    setValorPorEditorial(Array.isArray(editorialReport.data) ? editorialReport.data : []);
+    setErrorValorizacion(editorialReport.error);
   }, []);
 
   useEffect(() => {
@@ -119,18 +127,33 @@ export default function ERPInventarioPage() {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3">
-        <div>
-          <p className="text-xs font-semibold text-gray-600">Valor referencial del stock conforme disponible</p>
-          <p className="mt-1 text-xl font-black tabular-nums text-gray-900">
-            {cargando || error ? "—" : dinero(resumen?.value_reference)}
-          </p>
+      <section aria-label="Valorización referencial del inventario" className="space-y-2">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { titulo: "Valor físico referencial", valor: resumen?.physical_value_reference, ayuda: "Disponibles más observados" },
+            { titulo: "Stock disponible valorizado", valor: resumen?.value_reference, ayuda: "Descontadas las cortesías" },
+            { titulo: "Mercadería observada", valor: resumen?.observed_value_reference, ayuda: "Separada del stock vendible" },
+          ].map((item) => (
+            <div key={item.titulo} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
+              <p className="mt-1 text-xl font-black tabular-nums text-gray-950">
+                {cargando || error ? "—" : dinero(item.valor)}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">{item.ayuda}</p>
+            </div>
+          ))}
         </div>
-        <p className="max-w-lg text-xs leading-5 text-gray-600">
-          Incluye los adicionales de ingreso, descontando cortesías ya registradas según el costo de referencia de cada pedido. No representa una deuda con la editorial.
-          {resumen?.unvalued_units > 0 && <span className="block font-bold text-amber-800">{resumen.unvalued_units} unidades sin costo registrado aún.</span>}
+        <p className="px-1 text-xs leading-5 text-gray-600">
+          Valorización del inventario global registrado a costo histórico referencial. Los adicionales conformes
+          ya están incluidos; no se suman nuevamente. No representa deuda con las editoriales ni separa aún
+          existencias por almacén físico.
+          {resumen?.physical_valuation_complete === false && (
+            <span className="block font-bold text-amber-800">
+              Valorización parcial: {Number(resumen.unvalued_units || 0) + Number(resumen.unvalued_observed_units || 0)} unidades sin costo histórico.
+            </span>
+          )}
         </p>
-      </div>
+      </section>
       <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 sm:px-4">
           <div role="tablist" aria-label="Información del inventario" className="flex gap-1">
@@ -142,8 +165,72 @@ export default function ERPInventarioPage() {
         </div>
 
         {pestana === "existencias" ? (
-          <div role="tabpanel" className="p-3 sm:p-4">
-            <div className="mb-3 flex flex-wrap gap-2">
+          <div role="tabpanel" className="space-y-4 p-3 sm:p-4">
+            <section aria-labelledby="valor-editoriales" className="rounded-xl border border-gray-200">
+              <div className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-200 p-3">
+                <div>
+                  <h2 id="valor-editoriales" className="text-sm font-bold text-gray-900">Valorización por editorial</h2>
+                  <p className="mt-1 text-xs text-gray-600">Existencias y costo histórico referencial por editorial. Selecciona una editorial para filtrar los libros de abajo.</p>
+                </div>
+                {editorial && (
+                  <button type="button" onClick={() => cambiarFiltro("editorial", "")}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50">
+                    Mostrar todas
+                  </button>
+                )}
+              </div>
+              {errorValorizacion && (
+                <p role="status" className="m-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">{errorValorizacion}</p>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th scope="col" className="p-2">Editorial</th>
+                      <th scope="col" className="p-2 text-right">Físico</th>
+                      <th scope="col" className="p-2 text-right">Disponible</th>
+                      <th scope="col" className="p-2 text-right">Observado</th>
+                      <th scope="col" className="p-2 text-right">Valor disponible</th>
+                      <th scope="col" className="p-2 text-right">Valor físico</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {valorPorEditorial.map((item) => (
+                      <tr key={item.editorial_id} className="border-t border-gray-100 hover:bg-gray-50">
+                        <td className="p-2">
+                          <button type="button" onClick={() => cambiarFiltro("editorial", item.editorial)}
+                            aria-pressed={editorial === item.editorial}
+                            className={editorial === item.editorial
+                              ? "font-bold text-red-700 underline underline-offset-4"
+                              : "font-semibold text-gray-900 hover:text-red-700 hover:underline"}>
+                            {item.editorial}
+                          </button>
+                        </td>
+                        <td className="p-2 text-right tabular-nums">{item.physical}</td>
+                        <td className="p-2 text-right tabular-nums">{item.available}</td>
+                        <td className="p-2 text-right tabular-nums">{item.observed}</td>
+                        <td className="p-2 text-right tabular-nums">
+                          {dinero(item.available_value_reference)}
+                          {Number(item.unvalued_available_units) > 0 && <span className="block text-amber-800">Parcial</span>}
+                        </td>
+                        <td className="p-2 text-right font-bold tabular-nums">
+                          {dinero(item.physical_value_reference)}
+                          {!item.valuation_complete && <span className="block text-amber-800">Parcial</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!cargando && !error && !errorValorizacion && valorPorEditorial.length === 0 && (
+                  <p className="p-3 text-center text-sm text-gray-500">Aún no hay mercadería valorizada por editorial.</p>
+                )}
+              </div>
+              <p className="border-t border-gray-100 p-3 text-xs text-gray-500">
+                El valor físico incluye también mercadería observada, que no está disponible para venta.
+                Los adicionales ya están incluidos en las cantidades conformes.
+              </p>
+            </section>
+            <div className="flex flex-wrap gap-2">
               <input aria-label="Buscar libro o editorial" placeholder="Buscar libro o editorial…" value={busqueda}
                 onChange={(event) => cambiarFiltro("buscar", event.target.value)}
                 className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-600 focus:outline-none" />
