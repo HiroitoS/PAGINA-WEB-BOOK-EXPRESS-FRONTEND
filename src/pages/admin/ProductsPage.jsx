@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useLocation, useSearchParams } from "react-router";
 import { motion } from "motion/react";
 import {
   FaArrowLeft,
@@ -276,7 +276,13 @@ function hasAdvancedFilters(filters) {
 
 export default function ProductsPage() {
   const { hasPermission } = useAuth();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const rutaRetorno = location.state?.inventoryReturnTo;
+  const retornoInventario = typeof rutaRetorno === "string" &&
+    (rutaRetorno === "/admin/erp/almacen/inventario" ||
+      rutaRetorno.startsWith("/admin/erp/almacen/inventario?"))
+    ? rutaRetorno : null;
   const initialFilters = getInitialFilters(searchParams);
 
   const [products, setProducts] = useState([]);
@@ -307,8 +313,9 @@ export default function ProductsPage() {
   const [error, setError] = useState("");
 
   const canManageCatalog = hasPermission(["catalog.manage_catalog"]);
-  const backPath = canManageCatalog ? "/admin/dashboard" : "/admin/workspace";
-  const backLabel = canManageCatalog ? "Volver al Dashboard" : "Volver a ToDo";
+  const backPath = retornoInventario ?? (canManageCatalog ? "/admin/dashboard" : "/admin/workspace");
+  const backLabel = retornoInventario ? "Volver a Inventario"
+    : canManageCatalog ? "Volver al Dashboard" : "Volver a ToDo";
 
   const activeYear = filters.year || DEFAULT_YEAR;
   const specialFilterInfo = getSpecialFilterInfo(
