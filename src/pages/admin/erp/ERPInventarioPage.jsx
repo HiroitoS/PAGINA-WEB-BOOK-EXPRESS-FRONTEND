@@ -2,7 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
-import { consultarExistencias, consultarResumenInventario, listarEntradasInventario } from "../../../api/warehouseApi";
+import InventoryCourtesyPanel from "../../../components/admin/InventoryCourtesyPanel";
+import { consultarExistencias, consultarResumenInventario, listarEntradasInventario, listarSalidasInventario } from "../../../api/warehouseApi";
 
 function mensajeError(error) {
   const data = error?.response?.data;
@@ -24,14 +25,16 @@ const clasesPestana = (activa) => `border-b-2 px-4 py-3 text-sm font-bold transi
 export default function ERPInventarioPage() {
   const { user } = useAuth();
   const puedeVerCatalogo = userHasPermission(user, ["catalog.view_catalog"]);
+  const puedeRegistrarCortesia = userHasPermission(user, ["warehouse.manage_stock_courtesies"]);
   const [existencias, setExistencias] = useState([]);
   const [entradas, setEntradas] = useState([]);
+  const [salidas, setSalidas] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [detalleId, setDetalleId] = useState(null);
   const [resumen, setResumen] = useState(null);
   const busqueda = searchParams.get("buscar") ?? "";
   const editorial = searchParams.get("editorial") ?? "";
-  const pestana = searchParams.get("vista") === "movimientos" ? "movimientos" : "existencias";
+  const pestana = ["movimientos", "cortesias"].includes(searchParams.get("vista")) ? searchParams.get("vista") : "existencias";
   const retornoInventario = `/admin/erp/almacen/inventario${searchParams.toString() ? `?${searchParams}` : ""}`;
 
   function cambiarFiltro(clave, valor) {
@@ -46,12 +49,14 @@ export default function ERPInventarioPage() {
   const [error, setError] = useState("");
 
   const cargar = useCallback(async (ignorar) => {
-    const [stock, movimientos, summary] = await Promise.all([
+    const [stock, movimientos, summary, outflows] = await Promise.all([
       consultarExistencias(), listarEntradasInventario(), consultarResumenInventario(),
+      listarSalidasInventario(),
     ]);
     if (ignorar()) return;
     setExistencias(stock);
     setEntradas(Array.isArray(movimientos) ? movimientos : movimientos.results ?? []);
+    setSalidas(Array.isArray(outflows) ? outflows : outflows.results ?? []);
     setResumen(summary);
   }, []);
 
@@ -80,9 +85,9 @@ export default function ERPInventarioPage() {
 
   const tarjetas = [
     { titulo: "Existencia física", valor: resumen?.physical ?? 0, ayuda: "Incluye observados" },
-    { titulo: "Conformes ingresados", valor: resumen?.conforming ?? 0, ayuda: "Antes de salidas y reservas" },
+    { titulo: "Conformes disponibles", valor: resumen?.conforming ?? 0, ayuda: "Descontadas las cortesías" },
     { titulo: "Observados", valor: resumen?.nonconforming ?? 0, ayuda: "No disponibles para venta" },
-    { titulo: "Adicionales", valor: resumen?.extra_included ?? 0, ayuda: "Incluidos en conformes" },
+    { titulo: "Adicionales recibidos", valor: resumen?.extra_included ?? 0, ayuda: "Histórico: incluidos en entradas" },
   ];
 
   return (
@@ -113,13 +118,13 @@ export default function ERPInventarioPage() {
 
       <div className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3">
         <div>
-          <p className="text-xs font-semibold text-gray-600">Valor referencial de unidades conformes ingresadas</p>
+          <p className="text-xs font-semibold text-gray-600">Valor referencial del stock conforme disponible</p>
           <p className="mt-1 text-xl font-black tabular-nums text-gray-900">
             {cargando ? "—" : dinero(resumen?.value_reference)}
           </p>
         </div>
         <p className="max-w-lg text-xs leading-5 text-gray-600">
-          Incluye los adicionales a favor de Book Express, valorizados con el costo de referencia de cada pedido. No representa deuda con la editorial ni saldo valorizado después de salidas.
+          Incluye los adicionales de ingreso, descontando cortesías ya registradas según el costo de referencia de cada pedido. No representa una deuda con la editorial.
           {resumen?.unvalued_units > 0 && <span className="block font-bold text-amber-800">{resumen.unvalued_units} unidades sin costo registrado aún.</span>}
         </p>
       </div>
@@ -127,7 +132,8 @@ export default function ERPInventarioPage() {
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 sm:px-4">
           <div role="tablist" aria-label="Información del inventario" className="flex gap-1">
             <button type="button" role="tab" aria-selected={pestana === "existencias"} onClick={() => cambiarFiltro("vista", "")} className={clasesPestana(pestana === "existencias")}>Existencias</button>
-            <button type="button" role="tab" aria-selected={pestana === "movimientos"} onClick={() => cambiarFiltro("vista", "movimientos")} className={clasesPestana(pestana === "movimientos")}>Movimientos</button>
+            <button type="button" role="tab" aria-selected={pestana === "movimientos"} onClick={() => cambiarFiltro("vista", "movimientos")} className={clasesPestana(pestana === "movimientos")}>Entradas</button>
+            <button type="button" role="tab" aria-selected={pestana === "cortesias"} onClick={() => cambiarFiltro("vista", "cortesias")} className={clasesPestana(pestana === "cortesias")}>Cortesías</button>
           </div>
           <span className="py-2 text-xs text-gray-500">{existencias.length} productos con entradas</span>
         </div>
@@ -151,7 +157,7 @@ export default function ERPInventarioPage() {
                     <th scope="col" className="p-2">Producto</th>
                     <th scope="col" className="p-2">Editorial</th>
                     <th scope="col" className="p-2 text-right">Físico</th>
-                    <th scope="col" className="p-2 text-right">Conformes</th>
+                    <th scope="col" className="p-2 text-right">Disponibles</th>
                     <th scope="col" className="p-2 text-right">Observados</th>
                     <th scope="col" className="p-2 text-right">Adicionales</th>
                   </tr>
@@ -169,12 +175,15 @@ export default function ERPInventarioPage() {
               {!cargando && visibles.length === 0 && <p className="p-4 text-center text-sm text-gray-500">No hay existencias para los filtros seleccionados.</p>}
               {cargando && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias…</p>}
             </div>
-            <p className="mt-3 text-xs text-gray-500">Los adicionales ya están incluidos en las unidades conformes. Las salidas, reservas y traslados se incorporarán cuando sus movimientos estén disponibles.</p>
+            <p className="mt-3 text-xs text-gray-500">Disponible descuenta las cortesías registradas. Adicionales muestra cuántos llegaron de más originalmente, no cuántos de esos libros siguen en almacén. Ventas y traslados se incorporarán después.</p>
           </div>
+        ) : pestana === "cortesias" ? (
+          <div role="tabpanel"><InventoryCourtesyPanel entries={entradas} outflows={salidas}
+            canManage={puedeRegistrarCortesia} onRefresh={() => cargar(() => false)} /></div>
         ) : (
           <div role="tabpanel" className="p-3 sm:p-4">
             <h2 className="text-sm font-bold text-gray-900">Historial de movimientos de mercadería</h2>
-            <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro muestra qué producto ingresó, su guía, colegio de origen y valoración. Actualmente aparecen entradas; las salidas y traslados se incorporarán cuando sus operaciones estén habilitadas.</p>
+            <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro conserva cuánto entró originalmente, su guía, colegio y valor histórico. Las cortesías y su descuento de stock se consultan en la pestaña Cortesías. Los traslados y ventas se incorporarán posteriormente.</p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
@@ -225,7 +234,7 @@ export default function ERPInventarioPage() {
               </table>
               {!cargando && entradas.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Aún no hay ingresos registrados.</p>}
             </div>
-            <p className="mt-3 text-xs text-gray-500">Valores históricos calculados por Django según el costo del pedido. Los adicionales forman parte del total conforme. No son importes por pagar ni incluyen salidas futuras.</p>
+            <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados por Django; para consultar saldo actual y descuentos por cortesía, utiliza Existencias y Cortesías. No son importes por pagar.</p>
           </div>
         )}
       </section>
