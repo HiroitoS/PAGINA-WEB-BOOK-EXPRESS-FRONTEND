@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../hooks/useAuth";
+import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
   aprobarPedido, descargarOrdenCompraPdf, generarPedidosDesdeAdopcion, guardarCantidadesPedido,
@@ -88,6 +89,7 @@ export default function ERPPedidosPage() {
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [confirmacionOperacion, setConfirmacionOperacion] = useState(null);
   const estadoFiltro = filtros.status;
 
   const cargar = useCallback(async () => {
@@ -207,6 +209,22 @@ export default function ERPPedidosPage() {
     } finally {
       setProcesando(false);
     }
+  }
+
+  async function confirmarOperacion() {
+    if (!seleccionado || procesando) return;
+    const id = seleccionado.id;
+    const accion = confirmacionOperacion;
+    if (accion === "aprobar" && puedeAprobar && seleccionado.status === "draft" && cambiosPendientes.length === 0) {
+      await operar(() => aprobarPedido(id), "Pedido aprobado.");
+    } else if (accion === "envio" && puedeEnviar && seleccionado.status === "approved" && evidencia.trim()) {
+      const registrado = await operar(
+        () => registrarEnvioPedido(id, evidencia.trim()),
+        "Orden registrada como enviada a la editorial.",
+      );
+      if (registrado) setFiltros((prev) => ({ ...prev, status: "sent" }));
+    }
+    setConfirmacionOperacion(null);
   }
 
   const cambiosPendientes = seleccionado?.status === "draft"
@@ -467,7 +485,7 @@ export default function ERPPedidosPage() {
                 </p>
               )}
               {seleccionado.status === "draft" && puedeAprobar && (
-                <button type="button" disabled={procesando || cambiosPendientes.length > 0} onClick={() => operar(() => aprobarPedido(seleccionado.id), "Pedido aprobado.")}
+                <button type="button" disabled={procesando || cambiosPendientes.length > 0} onClick={() => setConfirmacionOperacion("aprobar")}
                   className="rounded-xl bg-red-700 px-4 py-2 font-bold text-white disabled:opacity-50">Aprobar pedido</button>
               )}
               {seleccionado.status === "approved" && puedeEnviar && (
@@ -520,10 +538,7 @@ export default function ERPPedidosPage() {
               {seleccionado.status === "approved" && puedeEnviar && (
                 <form className="space-y-2" onSubmit={(event) => {
                   event.preventDefault();
-                  operar(() => registrarEnvioPedido(seleccionado.id, evidencia), "Orden registrada como enviada a la editorial.")
-                    .then((registrado) => {
-                      if (registrado) setFiltros((prev) => ({ ...prev, status: "sent" }));
-                    });
+                  if (evidencia.trim()) setConfirmacionOperacion("envio");
                 }}>
                   <label className="block text-sm font-semibold text-gray-700">Constancia de envío de la orden a la editorial (correo, fecha y destinatario)
                     <textarea required maxLength="2000" value={evidencia} onChange={(event) => setEvidencia(event.target.value)}
@@ -538,6 +553,28 @@ export default function ERPPedidosPage() {
           )}
         </div>
       </div>}
+      <ConfirmActionDialog
+        open={Boolean(confirmacionOperacion && seleccionado)}
+        eyebrow="Confirmación comercial"
+        title={confirmacionOperacion === "aprobar" ? "Aprobar pedido a editorial" : "Confirmar registro de envío"}
+        description={confirmacionOperacion === "aprobar"
+          ? "Se aprobarán las cantidades del pedido para preparar el documento formal."
+          : "Confirma esta acción solo si la solicitud ya fue enviada a la editorial. Este registro no envía correos."}
+        processing={procesando}
+        confirmLabel={confirmacionOperacion === "aprobar" ? "Aprobar pedido" : "Registrar como enviada"}
+        onCancel={() => setConfirmacionOperacion(null)}
+        onConfirm={confirmarOperacion}>
+        {seleccionado && (
+          <div className="mt-4 space-y-1 rounded-xl bg-gray-50 p-3 text-sm text-gray-700">
+            <p><strong>Editorial:</strong> {seleccionado.provider_name_snapshot}</p>
+            <p><strong>Colegio:</strong> {seleccionado.school_name_snapshot || "Pedido independiente"}</p>
+            <p><strong>Productos:</strong> {seleccionado.items?.length ?? 0}</p>
+            {confirmacionOperacion === "envio" && (
+              <p className="mt-2 whitespace-pre-wrap text-xs"><strong>Constancia:</strong> {evidencia.trim()}</p>
+            )}
+          </div>
+        )}
+      </ConfirmActionDialog>
     </section>
   );
 }
