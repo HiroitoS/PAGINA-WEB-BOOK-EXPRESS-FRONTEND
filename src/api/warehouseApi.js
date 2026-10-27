@@ -42,3 +42,20 @@ export async function consultarSaldoPedido(id) {
   });
   return data;
 }
+
+const INVENTORY_BASE = "/admin/erp/almacen/inventario";
+
+export async function consultarExistencias() {
+  const { data } = await axiosClient.get(`${INVENTORY_BASE}/existencias/`);
+  return data;
+}
+
+export async function listarEntradasInventario() {
+  const { data } = await axiosClient.get(`${INVENTORY_BASE}/`);
+  return data;
+}
+
+export async function registrarEntradaInventario(receiptId) {
+  const { data } = await axiosClient.post(`${INVENTORY_BASE}/registrar-entrada/`, { receipt_id: receiptId });
+  return data;
+}
