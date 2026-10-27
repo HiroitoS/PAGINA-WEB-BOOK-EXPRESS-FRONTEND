@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { buscarEntradasParaCortesia, registrarCortesiaInventario } from "../../api/warehouseApi";
 import ConfirmActionDialog from "./ConfirmActionDialog";
+import { CRM_POSITION_OPTIONS } from "../../utils/crmPositionOptions";
 
 function formatoCosto(valor) {
   if (valor === null || valor === undefined || valor === "") return "Sin costo registrado";
@@ -12,7 +13,7 @@ function explicarError(err) {
   if (typeof data?.detail === "string") return data.detail;
   if (Array.isArray(data?.detail)) return data.detail.join(" ");
   if (data && typeof data === "object") return Object.values(data).flat().map(String).join(" ");
-  return "No se pudo registrar la cortesía. Revisa las cantidades e intenta de nuevo.";
+  return "No se pudo completar la operación. Revisa los datos e intenta de nuevo.";
 }
 
 export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh }) {
@@ -27,7 +28,8 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
   const [seleccion, setSeleccion] = useState(null);
   const [cantidad, setCantidad] = useState("1");
   const [destinatario, setDestinatario] = useState("");
-  const [cargo, setCargo] = useState("Directora o director");
+  const [cargo, setCargo] = useState("Director(a)");
+  const [cargoOtro, setCargoOtro] = useState("");
   const [nota, setNota] = useState("");
   const [clave, setClave] = useState("");
   const [confirmar, setConfirmar] = useState(false);
@@ -39,12 +41,18 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
     let ignore = false;
     Promise.resolve().then(() => buscarEntradasParaCortesia(consulta, pagina)).then((data) => {
       if (ignore) return;
+      setError("");
       const rows = Array.isArray(data) ? data : data.results ?? [];
       setCandidatas(rows);
       setTotal(Array.isArray(data) ? rows.length : data.count ?? rows.length);
       setPaginaSiguiente(Boolean(data.next));
     }).catch((err) => {
-      if (!ignore) setError(explicarError(err));
+      if (!ignore) {
+        setCandidatas([]);
+        setTotal(0);
+        setPaginaSiguiente(false);
+        setError(explicarError(err));
+      }
     }).finally(() => {
       if (!ignore) setCargandoEntradas(false);
     });
@@ -56,13 +64,16 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
     setSeleccion(entry);
     setCantidad("1");
     setDestinatario("");
-    setCargo("Directora o director");
+    setCargo("Director(a)");
+    setCargoOtro("");
     setNota("");
     setClave(crypto.randomUUID());
     setConfirmar(false);
     setError("");
     setMensaje("");
   }
+
+  const cargoFinal = cargo === "Otro" ? cargoOtro.trim() : cargo;
 
   async function registrar() {
     if (!seleccion || procesando) return;
@@ -74,7 +85,7 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
         school_id: seleccion.school_id,
         quantity: Number(cantidad),
         recipient_name: destinatario.trim(),
-        recipient_role: cargo.trim(),
+        recipient_role: cargoFinal,
         notes: nota.trim(),
         idempotency_key: clave,
       });
@@ -104,115 +115,171 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
           </p>
         </div>
         <span className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-          {outflows.length} salidas registradas
+          {outflows.length} cortesías recientes
         </span>
       </div>
       {mensaje && <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{mensaje}</p>}
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {canManage ? (
         <>
-          <form onSubmit={(event) => {
-            event.preventDefault();
-            setError("");
-            setPagina(1);
-            setCargandoEntradas(true);
-            setConsulta(buscar.trim());
-          }} className="flex flex-wrap items-end gap-2">
-            <label className="min-w-0 flex-1 text-xs font-semibold text-gray-700">
-              Buscar mercadería de un colegio
-              <input value={buscar} onChange={(event) => setBuscar(event.target.value)}
-                placeholder="Libro, colegio o número de guía…"
-                className="mt-1 w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-red-600 focus:outline-none"/>
-            </label>
-            <button type="submit" className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50">Buscar</button>
-          </form>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
-                <tr><th className="p-2">Producto</th><th className="p-2">Colegio de origen</th>
-                  <th className="p-2">Guía</th><th className="p-2 text-right">Disponible</th>
-                  <th className="p-2 text-right">Costo unit.</th><th className="p-2 text-right">Acción</th></tr>
-              </thead>
-              <tbody>{candidatas.map((entry) => (
-                <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="p-2 font-semibold">{entry.product}</td><td className="p-2">{entry.school}</td>
-                  <td className="p-2">{entry.guide}</td>
-                  <td className="p-2 text-right font-bold tabular-nums">{entry.net_available}</td>
-                  <td className="p-2 text-right">{formatoCosto(entry.unit_cost)}</td>
-                  <td className="p-2 text-right">
-                    <button type="button" onClick={() => iniciar(entry)}
-                      className="rounded-lg border border-red-200 px-2 py-1 font-semibold text-red-700 transition hover:bg-red-50">
-                      Registrar salida
-                    </button>
-                  </td>
-                </tr>
-              ))}</tbody>
-            </table>
-            {!cargandoEntradas && candidatas.length === 0 && <p className="p-4 text-center text-sm text-gray-600">No se encontraron entradas con stock disponible y colegio identificado.</p>}
-            {cargandoEntradas && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias disponibles…</p>}
-          </div>
-          <div className="flex items-center justify-between gap-3 text-xs text-gray-600">
-            <span>{total} entradas disponibles con colegio identificado · Página {pagina}</span>
-            <div className="flex gap-2">
-              <button type="button" disabled={pagina <= 1 || cargandoEntradas}
-                onClick={() => { setCargandoEntradas(true); setPagina((n) => n - 1); }}
-                className="rounded-lg border border-gray-300 px-3 py-2 font-semibold disabled:opacity-40">Anterior</button>
-              <button type="button" disabled={!paginaSiguiente || cargandoEntradas}
-                onClick={() => { setCargandoEntradas(true); setPagina((n) => n + 1); }}
-                className="rounded-lg border border-gray-300 px-3 py-2 font-semibold disabled:opacity-40">Siguiente</button>
-            </div>
-          </div>
-          {seleccion && (
-            <form onSubmit={(event) => { event.preventDefault(); if (cantidadValida && destinatario.trim() && cargo.trim()) setConfirmar(true); }}
-              className="rounded-xl border border-gray-300 bg-gray-50 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-black text-gray-900">Registrar cortesía · {seleccion.school}</h3>
-                <button type="button" onClick={() => setSeleccion(null)}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold">Cancelar</button>
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            <section aria-labelledby="cortesia-lotes" className="min-w-0 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div>
+                  <h3 id="cortesia-lotes" className="text-sm font-black text-gray-900">1. Seleccionar mercadería</h3>
+                  <p className="mt-1 text-xs text-gray-600">Busca libros asignados al mismo colegio que recibirá la cortesía.</p>
+                </div>
+                <span className="shrink-0 rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                  {total} lotes
+                </span>
               </div>
-              <p className="mt-1 text-xs text-gray-600">{seleccion.product} · Guía {seleccion.guide} · Disponible {seleccion.net_available}</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className="text-xs font-semibold text-gray-700">Cantidad
-                  <input type="number" min="1" max={seleccion.net_available} step="1" required value={cantidad}
-                    onChange={(e) => setCantidad(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm"/>
+              <form onSubmit={(event) => {
+                event.preventDefault();
+                setError("");
+                setPagina(1);
+                setCargandoEntradas(true);
+                setConsulta(buscar.trim());
+                setActualizacion((valor) => valor + 1);
+              }} className="mb-3 flex items-end gap-2">
+                <label className="min-w-0 flex-1 text-xs font-semibold text-gray-700">
+                  Buscar libro, colegio o guía
+                  <input value={buscar} onChange={(event) => setBuscar(event.target.value)}
+                    placeholder="Nombre, colegio o número de guía"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm focus:border-red-600 focus:outline-none"/>
                 </label>
-                <label className="text-xs font-semibold text-gray-700">Nombre de quien recibe
-                  <input required maxLength={200} value={destinatario} onChange={(e) => setDestinatario(e.target.value)}
-                    placeholder="Nombre completo" className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm"/>
-                </label>
-                <label className="text-xs font-semibold text-gray-700">Cargo
-                  <input required maxLength={80} value={cargo} onChange={(e) => setCargo(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm"/>
-                </label>
-              </div>
-              <label className="mt-3 block text-xs font-semibold text-gray-700">Detalle opcional
-                <textarea rows={2} maxLength={500} value={nota} onChange={(e) => setNota(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm"/>
-              </label>
-              <div className="mt-3 flex justify-end">
-                <button type="submit" disabled={!cantidadValida || !destinatario.trim() || !cargo.trim() || procesando}
-                  className="rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 disabled:opacity-50">
-                  Revisar salida
+                <button type="submit" disabled={cargandoEntradas}
+                  className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-semibold hover:bg-gray-100 disabled:opacity-50">
+                  Buscar
                 </button>
+              </form>
+              <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+                {candidatas.map((entry) => (
+                  <button type="button" key={entry.id} onClick={() => iniciar(entry)}
+                    aria-pressed={seleccion?.id === entry.id}
+                    className={seleccion?.id === entry.id
+                      ? "w-full rounded-lg border border-red-600 bg-red-50 p-3 text-left transition-colors"
+                      : "w-full rounded-lg border border-gray-200 bg-white p-3 text-left transition-colors hover:border-gray-400 hover:bg-gray-50"}>
+                    <span className="block text-xs font-bold leading-5 text-gray-900">{entry.product}</span>
+                    <span className="mt-1 block text-xs text-gray-600">{entry.school} · Guía {entry.guide}</span>
+                    <span className="mt-2 flex flex-wrap items-center justify-between gap-1">
+                      <span className="text-xs font-bold text-gray-900">Disponible: {entry.net_available}</span>
+                      <span className="text-xs text-gray-500">Costo: {formatoCosto(entry.unit_cost)}</span>
+                    </span>
+                  </button>
+                ))}
+                {!cargandoEntradas && candidatas.length === 0 && (
+                  <p className="rounded-lg bg-gray-50 p-4 text-center text-sm text-gray-600">
+                    No se encontraron libros disponibles con colegio identificado.
+                  </p>
+                )}
+                {cargandoEntradas && (
+                  <p role="status" className="p-4 text-center text-sm text-gray-600">Buscando mercadería…</p>
+                )}
               </div>
-            </form>
-          )}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 text-xs text-gray-600">
+                <span>{total} lotes disponibles · Página {pagina}</span>
+                <div className="flex gap-2">
+                  <button type="button" disabled={pagina <= 1 || cargandoEntradas}
+                    onClick={() => { setCargandoEntradas(true); setPagina((n) => n - 1); }}
+                    className="rounded-lg border border-gray-300 px-3 py-2 font-semibold disabled:opacity-40">Anterior</button>
+                  <button type="button" disabled={!paginaSiguiente || cargandoEntradas}
+                    onClick={() => { setCargandoEntradas(true); setPagina((n) => n + 1); }}
+                    className="rounded-lg border border-gray-300 px-3 py-2 font-semibold disabled:opacity-40">Siguiente</button>
+                </div>
+              </div>
+            </section>
+            <section aria-labelledby="cortesia-formulario" className="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4 lg:sticky lg:top-4">
+              <h3 id="cortesia-formulario" className="text-sm font-black text-gray-900">2. Registrar salida por cortesía</h3>
+              {!seleccion ? (
+                <div className="mt-3 rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center">
+                  <p className="text-sm font-semibold text-gray-800">Selecciona un libro de la izquierda</p>
+                  <p className="mt-2 text-xs leading-5 text-gray-600">
+                    Aquí aparecerán la cantidad, el destinatario y la confirmación de entrega.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={(event) => {
+                  event.preventDefault();
+                  if (cantidadValida && destinatario.trim() && cargoFinal) setConfirmar(true);
+                }}>
+                  <div className="mt-3 rounded-lg border border-red-200 bg-white p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs font-black text-gray-900">{seleccion.school}</p>
+                      <button type="button" onClick={() => setSeleccion(null)}
+                        className="text-xs font-bold text-red-700 hover:underline">Cambiar libro</button>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-gray-700">{seleccion.product}</p>
+                    <p className="mt-1 text-xs text-gray-600">Guía {seleccion.guide} · {seleccion.net_available} unidades disponibles</p>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="text-xs font-semibold text-gray-700">Cantidad a entregar
+                      <input type="number" min="1" max={seleccion.net_available} step="1" required
+                        value={cantidad} onChange={(event) => setCantidad(event.target.value)}
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm" />
+                    </label>
+                    <label className="text-xs font-semibold text-gray-700">Cargo de quien recibe
+                      <select required value={cargo} onChange={(event) => {
+                        setCargo(event.target.value);
+                        setCargoOtro("");
+                      }} className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm">
+                        <option value="">Seleccionar cargo</option>
+                        {CRM_POSITION_OPTIONS.map((opcion) => (
+                          <option key={opcion} value={opcion}>{opcion}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  {cargo === "Otro" && (
+                    <label className="mt-3 block text-xs font-semibold text-gray-700">
+                      Especificar cargo
+                      <input type="text" required maxLength={80} value={cargoOtro}
+                        onChange={(event) => setCargoOtro(event.target.value)}
+                        placeholder="Cargo de quien recibe"
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm" />
+                    </label>
+                  )}
+                  <label className="mt-3 block text-xs font-semibold text-gray-700">
+                    Nombre completo de quien recibe
+                    <input required maxLength={200} value={destinatario}
+                      onChange={(event) => setDestinatario(event.target.value)}
+                      placeholder="Nombre del destinatario"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm" />
+                  </label>
+                  <label className="mt-3 block text-xs font-semibold text-gray-700">
+                    Observación (opcional)
+                    <textarea rows={2} maxLength={500} value={nota}
+                      onChange={(event) => setNota(event.target.value)}
+                      placeholder="Referencia de entrega, autorización u otro detalle"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm" />
+                  </label>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="max-w-xs text-xs leading-5 text-gray-600">Se descontará únicamente stock del colegio seleccionado.</p>
+                    <button type="submit" disabled={!cantidadValida || !destinatario.trim() || !cargoFinal || procesando}
+                      className="shrink-0 rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 disabled:opacity-50">
+                      Revisar salida
+                    </button>
+                  </div>
+                </form>
+              )}
+            </section>
+          </div>
         </>
       ) : (
         <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Puedes consultar el historial. Solo los usuarios autorizados registran cortesías.</p>
       )}
 
       <div className="border-t border-gray-200 pt-3">
-        <h3 className="text-sm font-bold text-gray-900">Historial de cortesías</h3>
+        <h3 className="text-sm font-bold text-gray-900">Salidas registradas · Cortesías</h3>
         <div className="mt-2 overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
-              <tr><th className="p-2">Producto</th><th className="p-2">Colegio</th>
+              <tr><th className="p-2">Fecha</th><th className="p-2">Guía</th><th className="p-2">Producto</th><th className="p-2">Colegio</th>
                 <th className="p-2">Destinatario</th><th className="p-2 text-right">Unid.</th>
                 <th className="p-2 text-right">Valor de referencia</th></tr>
             </thead>
             <tbody>{outflows.map((move) => <tr key={move.id} className="border-b border-gray-100">
+              <td className="p-2">{new Intl.DateTimeFormat("es-PE", { dateStyle: "short" }).format(new Date(move.created_at))}</td>
+              <td className="p-2">{move.guide}</td>
               <td className="p-2">{move.product}</td><td className="p-2">{move.school}</td>
               <td className="p-2">{move.recipient_name} · {move.recipient_role}</td>
               <td className="p-2 text-right font-bold tabular-nums">{move.quantity}</td>
@@ -233,8 +300,9 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
         onConfirm={registrar}>
         {seleccion && <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
           <p><strong>Guía de origen:</strong> {seleccion.guide}</p>
-          <p><strong>Recibe:</strong> {destinatario} · {cargo}</p>
-          <p><strong>Costo de referencia:</strong> {seleccion.unit_cost == null ? "Sin costo registrado" : formatoCosto(Number(cantidad) * Number(seleccion.unit_cost))}</p>
+          <p><strong>Recibe:</strong> {destinatario} · {cargoFinal}</p>
+          <p><strong>Costo unitario de referencia:</strong> {formatoCosto(seleccion.unit_cost)}</p>
+          <p className="mt-1 text-xs text-gray-600">El valor total se registra en el backend y aparecerá en el historial.</p>
           <p className="mt-2 text-xs text-gray-600">No registra una venta ni una deuda a la editorial.</p>
         </div>}
       </ConfirmActionDialog>
