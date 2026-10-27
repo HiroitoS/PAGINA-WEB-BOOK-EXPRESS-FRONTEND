@@ -130,9 +130,9 @@ export default function ERPInventarioPage() {
       <section aria-label="Valorización referencial del inventario" className="space-y-2">
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            { titulo: "Valor físico referencial", valor: resumen?.physical_value_reference, ayuda: "Disponibles más observados" },
-            { titulo: "Stock disponible valorizado", valor: resumen?.value_reference, ayuda: "Descontadas las cortesías" },
-            { titulo: "Mercadería observada", valor: resumen?.observed_value_reference, ayuda: "Separada del stock vendible" },
+            { titulo: "Valor físico referencial", valor: resumen?.physical_value_reference, ayuda: "Disponibles más observados", parcial: !resumen?.physical_valuation_complete },
+            { titulo: "Stock disponible valorizado", valor: resumen?.value_reference, ayuda: "Descontadas las cortesías", parcial: Number(resumen?.unvalued_units || 0) > 0 },
+            { titulo: "Mercadería observada", valor: resumen?.observed_value_reference, ayuda: "Separada del stock vendible", parcial: Number(resumen?.unvalued_observed_units || 0) > 0 },
           ].map((item) => (
             <div key={item.titulo} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
@@ -140,6 +140,9 @@ export default function ERPInventarioPage() {
                 {cargando || error ? "—" : dinero(item.valor)}
               </p>
               <p className="mt-1 text-xs text-gray-500">{item.ayuda}</p>
+              {!cargando && !error && item.parcial && (
+                <p className="mt-1 text-xs font-bold text-amber-800">Valor parcial: faltan costos unitarios</p>
+              )}
             </div>
           ))}
         </div>
@@ -190,7 +193,9 @@ export default function ERPInventarioPage() {
                       <th scope="col" className="p-2 text-right">Físico</th>
                       <th scope="col" className="p-2 text-right">Disponible</th>
                       <th scope="col" className="p-2 text-right">Observado</th>
+                      <th scope="col" className="p-2 text-right">Adic. históricos</th>
                       <th scope="col" className="p-2 text-right">Valor disponible</th>
+                      <th scope="col" className="p-2 text-right">Valor observado</th>
                       <th scope="col" className="p-2 text-right">Valor físico</th>
                     </tr>
                   </thead>
@@ -209,9 +214,14 @@ export default function ERPInventarioPage() {
                         <td className="p-2 text-right tabular-nums">{item.physical}</td>
                         <td className="p-2 text-right tabular-nums">{item.available}</td>
                         <td className="p-2 text-right tabular-nums">{item.observed}</td>
+                        <td className="p-2 text-right tabular-nums">{item.extra_received}</td>
                         <td className="p-2 text-right tabular-nums">
                           {dinero(item.available_value_reference)}
                           {Number(item.unvalued_available_units) > 0 && <span className="block text-amber-800">Parcial</span>}
+                        </td>
+                        <td className="p-2 text-right tabular-nums">
+                          {dinero(item.observed_value_reference)}
+                          {Number(item.unvalued_observed_units) > 0 && <span className="block text-amber-800">Parcial</span>}
                         </td>
                         <td className="p-2 text-right font-bold tabular-nums">
                           {dinero(item.physical_value_reference)}
