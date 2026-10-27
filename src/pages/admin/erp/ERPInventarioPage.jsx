@@ -34,7 +34,10 @@ export default function ERPInventarioPage() {
   const [resumen, setResumen] = useState(null);
   const busqueda = searchParams.get("buscar") ?? "";
   const editorial = searchParams.get("editorial") ?? "";
-  const pestana = ["movimientos", "cortesias"].includes(searchParams.get("vista")) ? searchParams.get("vista") : "existencias";
+  const vistaSolicitada = searchParams.get("vista");
+  const pestana = vistaSolicitada === "cortesias"
+    ? "salidas"
+    : ["movimientos", "salidas"].includes(vistaSolicitada) ? vistaSolicitada : "existencias";
   const retornoInventario = `/admin/erp/almacen/inventario${searchParams.toString() ? `?${searchParams}` : ""}`;
 
   function cambiarFiltro(clave, valor) {
@@ -133,7 +136,7 @@ export default function ERPInventarioPage() {
           <div role="tablist" aria-label="Información del inventario" className="flex gap-1">
             <button type="button" role="tab" aria-selected={pestana === "existencias"} onClick={() => cambiarFiltro("vista", "")} className={clasesPestana(pestana === "existencias")}>Existencias</button>
             <button type="button" role="tab" aria-selected={pestana === "movimientos"} onClick={() => cambiarFiltro("vista", "movimientos")} className={clasesPestana(pestana === "movimientos")}>Entradas</button>
-            <button type="button" role="tab" aria-selected={pestana === "cortesias"} onClick={() => cambiarFiltro("vista", "cortesias")} className={clasesPestana(pestana === "cortesias")}>Cortesías</button>
+            <button type="button" role="tab" aria-selected={pestana === "salidas"} onClick={() => cambiarFiltro("vista", "salidas")} className={clasesPestana(pestana === "salidas")}>Salidas</button>
           </div>
           <span className="py-2 text-xs text-gray-500">{error ? "Consulta no disponible" : `${existencias.length} productos con entradas`}</span>
         </div>
@@ -177,13 +180,13 @@ export default function ERPInventarioPage() {
             </div>
             <p className="mt-3 text-xs text-gray-500">Disponible descuenta las cortesías registradas. Adicionales muestra cuántos llegaron de más originalmente, no cuántos de esos libros siguen en almacén. Ventas y traslados se incorporarán después.</p>
           </div>
-        ) : pestana === "cortesias" ? (
-          <div role="tabpanel"><InventoryCourtesyPanel entries={entradas} outflows={salidas}
+        ) : pestana === "salidas" ? (
+          <div role="tabpanel"><InventoryCourtesyPanel outflows={salidas}
             canManage={puedeRegistrarCortesia} onRefresh={() => cargar(() => false)} /></div>
         ) : (
           <div role="tabpanel" className="p-3 sm:p-4">
             <h2 className="text-sm font-bold text-gray-900">Historial de movimientos de mercadería</h2>
-            <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro conserva cuánto entró originalmente, su guía, colegio y valor histórico. Las cortesías y su descuento de stock se consultan en la pestaña Cortesías. Los traslados y ventas se incorporarán posteriormente.</p>
+            <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro conserva cuánto ingresó originalmente, su guía, colegio y valor histórico. Las cortesías y su descuento de stock se consultan en Salidas; los traslados y ventas se incorporarán posteriormente.</p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
@@ -234,7 +237,7 @@ export default function ERPInventarioPage() {
               </table>
               {!cargando && !error && entradas.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Aún no hay ingresos registrados.</p>}
             </div>
-            <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados por Django; para consultar saldo actual y descuentos por cortesía, utiliza Existencias y Cortesías. No son importes por pagar.</p>
+            <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados por Django. Para el stock actual consulta Existencias; para descuentos por cortesía, Salidas. No son importes por pagar.</p>
           </div>
         )}
       </section>
