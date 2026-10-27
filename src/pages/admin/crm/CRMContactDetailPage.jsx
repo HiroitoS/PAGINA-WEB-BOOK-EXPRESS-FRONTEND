@@ -247,7 +247,7 @@ function contactToEditForm(contact) {
   const fallbackLastName =
     legacyParts.length > 1 ? legacyParts.at(-1) : "";
   const position = String(contact?.position || "").trim();
-  const knownPosition = POSITION_OPTIONS.includes(position);
+  const knownPosition = CRM_POSITION_OPTIONS.includes(position);
 
   return {
     first_name: contact?.first_name || fallbackFirstName,
