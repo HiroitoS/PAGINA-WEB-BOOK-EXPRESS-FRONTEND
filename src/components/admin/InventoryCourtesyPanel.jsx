@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { registrarCortesiaInventario } from "../../api/warehouseApi";
+import { useEffect, useState } from "react";
+import { buscarEntradasParaCortesia, registrarCortesiaInventario } from "../../api/warehouseApi";
 import ConfirmActionDialog from "./ConfirmActionDialog";
 
 function formatoCosto(valor) {
@@ -15,8 +15,15 @@ function explicarError(err) {
   return "No se pudo registrar la cortesía. Revisa las cantidades e intenta de nuevo.";
 }
 
-export default function InventoryCourtesyPanel({ entries, outflows, canManage, onRefresh }) {
+export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh }) {
   const [buscar, setBuscar] = useState("");
+  const [consulta, setConsulta] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const [candidatas, setCandidatas] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [paginaSiguiente, setPaginaSiguiente] = useState(false);
+  const [cargandoEntradas, setCargandoEntradas] = useState(true);
+  const [actualizacion, setActualizacion] = useState(0);
   const [seleccion, setSeleccion] = useState(null);
   const [cantidad, setCantidad] = useState("1");
   const [destinatario, setDestinatario] = useState("");
@@ -28,11 +35,22 @@ export default function InventoryCourtesyPanel({ entries, outflows, canManage, o
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
 
-  const elegibles = useMemo(() => entries.filter((entry) =>
-    entry.school_id && entry.net_available > 0 &&
-    `${entry.product} ${entry.school} ${entry.guide}`.toLocaleLowerCase("es")
-      .includes(buscar.trim().toLocaleLowerCase("es"))
-  ), [entries, buscar]);
+  useEffect(() => {
+    let ignore = false;
+    Promise.resolve().then(() => buscarEntradasParaCortesia(consulta, pagina)).then((data) => {
+      if (ignore) return;
+      const rows = Array.isArray(data) ? data : data.results ?? [];
+      setCandidatas(rows);
+      setTotal(Array.isArray(data) ? rows.length : data.count ?? rows.length);
+      setPaginaSiguiente(Boolean(data.next));
+    }).catch((err) => {
+      if (!ignore) setError(explicarError(err));
+    }).finally(() => {
+      if (!ignore) setCargandoEntradas(false);
+    });
+    return () => { ignore = true; };
+  }, [consulta, pagina, actualizacion]);
+
 
   function iniciar(entry) {
     setSeleccion(entry);
@@ -64,6 +82,7 @@ export default function InventoryCourtesyPanel({ entries, outflows, canManage, o
       setSeleccion(null);
       setMensaje(resultado.message);
       await onRefresh();
+      setActualizacion((valor) => valor + 1);
     } catch (err) {
       setConfirmar(false);
       setError(explicarError(err));
@@ -92,12 +111,21 @@ export default function InventoryCourtesyPanel({ entries, outflows, canManage, o
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {canManage ? (
         <>
-          <label className="block text-xs font-semibold text-gray-700">
-            Buscar mercadería de un colegio
-            <input value={buscar} onChange={(event) => setBuscar(event.target.value)}
-              placeholder="Libro, colegio o número de guía…"
-              className="mt-1 w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-red-600 focus:outline-none"/>
-          </label>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            setError("");
+            setPagina(1);
+            setCargandoEntradas(true);
+            setConsulta(buscar.trim());
+          }} className="flex flex-wrap items-end gap-2">
+            <label className="min-w-0 flex-1 text-xs font-semibold text-gray-700">
+              Buscar mercadería de un colegio
+              <input value={buscar} onChange={(event) => setBuscar(event.target.value)}
+                placeholder="Libro, colegio o número de guía…"
+                className="mt-1 w-full rounded-lg border border-gray-300 p-2 text-sm focus:border-red-600 focus:outline-none"/>
+            </label>
+            <button type="submit" className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-gray-50">Buscar</button>
+          </form>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
@@ -105,7 +133,7 @@ export default function InventoryCourtesyPanel({ entries, outflows, canManage, o
                   <th className="p-2">Guía</th><th className="p-2 text-right">Disponible</th>
                   <th className="p-2 text-right">Costo unit.</th><th className="p-2 text-right">Acción</th></tr>
               </thead>
-              <tbody>{elegibles.map((entry) => (
+              <tbody>{candidatas.map((entry) => (
                 <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="p-2 font-semibold">{entry.product}</td><td className="p-2">{entry.school}</td>
                   <td className="p-2">{entry.guide}</td>
@@ -120,7 +148,19 @@ export default function InventoryCourtesyPanel({ entries, outflows, canManage, o
                 </tr>
               ))}</tbody>
             </table>
-            {elegibles.length === 0 && <p className="p-4 text-center text-sm text-gray-600">No se encontraron entradas con stock disponible y colegio identificado.</p>}
+            {!cargandoEntradas && candidatas.length === 0 && <p className="p-4 text-center text-sm text-gray-600">No se encontraron entradas con stock disponible y colegio identificado.</p>}
+            {cargandoEntradas && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias disponibles…</p>}
+          </div>
+          <div className="flex items-center justify-between gap-3 text-xs text-gray-600">
+            <span>{total} entradas disponibles con colegio identificado · Página {pagina}</span>
+            <div className="flex gap-2">
+              <button type="button" disabled={pagina <= 1 || cargandoEntradas}
+                onClick={() => { setCargandoEntradas(true); setPagina((n) => n - 1); }}
+                className="rounded-lg border border-gray-300 px-3 py-2 font-semibold disabled:opacity-40">Anterior</button>
+              <button type="button" disabled={!paginaSiguiente || cargandoEntradas}
+                onClick={() => { setCargandoEntradas(true); setPagina((n) => n + 1); }}
+                className="rounded-lg border border-gray-300 px-3 py-2 font-semibold disabled:opacity-40">Siguiente</button>
+            </div>
           </div>
           {seleccion && (
             <form onSubmit={(event) => { event.preventDefault(); if (cantidadValida && destinatario.trim() && cargo.trim()) setConfirmar(true); }}
