@@ -70,6 +70,13 @@ export async function listarSalidasInventario() {
   return data;
 }
 
+export async function buscarEntradasParaCortesia(q = "", page = 1) {
+  const { data } = await axiosClient.get(`${INVENTORY_BASE}/entradas-disponibles/`, {
+    params: { q, page },
+  });
+  return data;
+}
+
 export async function registrarCortesiaInventario(payload) {
   const { data } = await axiosClient.post(`${INVENTORY_BASE}/cortesias/`, payload);
   return data;
