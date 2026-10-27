@@ -968,6 +968,7 @@ export default function ERPRecepcionPage() {
             <p>Al confirmar, Django registrará el ingreso en Inventario y actualizará los saldos. La recepción no podrá editarse después; no se generan facturas.</p>
           </div>
         </ConfirmActionDialog>
-      )}    </section>
+      )}
+    </section>
   );
 }
