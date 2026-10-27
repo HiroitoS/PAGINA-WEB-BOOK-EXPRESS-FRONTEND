@@ -379,7 +379,7 @@ export default function ERPRecepcionPage() {
           quantity_observed: observada,
           quantity_accepted: Math.min(llegada - observada, linea.pendientes),
           quantity_extra: Math.max(0, llegada - observada - linea.pendientes),
-          quantity_documented: Number(cantidades[linea.item_id]?.documentada ?? linea.pendientes),
+          quantity_documented: cantidades[linea.item_id]?.documentada === "" ? null : Number(cantidades[linea.item_id]?.documentada ?? linea.pendientes),
           pendientes: linea.pendientes,
           producto: linea.producto,
         };
