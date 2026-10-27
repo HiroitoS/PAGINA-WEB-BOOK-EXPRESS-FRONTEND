@@ -340,14 +340,14 @@ export default function ProductsPage() {
     setPage(1);
 
     if (type === "all") {
-      setSearchParams({}, { replace: true });
+      setSearchParams({}, { replace: true, state: location.state });
       setFilters(getEmptyFilters());
       setShowAdvancedFilters(false);
       return;
     }
 
     if (type === "active") {
-      setSearchParams({ estado: "activo" }, { replace: true });
+      setSearchParams({ estado: "activo" }, { replace: true, state: location.state });
       setFilters({
         ...getEmptyFilters(),
         isActive: "true",
@@ -357,7 +357,7 @@ export default function ProductsPage() {
     }
 
     if (type === "inactive") {
-      setSearchParams({ estado: "inactivo" }, { replace: true });
+      setSearchParams({ estado: "inactivo" }, { replace: true, state: location.state });
       setFilters({
         ...getEmptyFilters(),
         isActive: "false",
@@ -367,7 +367,7 @@ export default function ProductsPage() {
     }
 
     if (type === "withoutCover") {
-      setSearchParams({ sin_portada: "1" }, { replace: true });
+      setSearchParams({ sin_portada: "1" }, { replace: true, state: location.state });
       setFilters({
         ...getEmptyFilters(),
         sinPortada: "1",
@@ -382,7 +382,7 @@ export default function ProductsPage() {
           sin_precio: "1",
           anio: activeYear,
         },
-        { replace: true }
+        { replace: true, state: location.state }
       );
 
       setFilters({
@@ -438,7 +438,7 @@ export default function ProductsPage() {
 
   function clearFilters() {
     setPage(1);
-    setSearchParams({}, { replace: true });
+    setSearchParams({}, { replace: true, state: location.state });
     setFilters(getEmptyFilters());
     setShowAdvancedFilters(false);
   }
