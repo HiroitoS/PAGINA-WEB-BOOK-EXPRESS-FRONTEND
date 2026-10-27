@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router";
+import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
@@ -945,44 +946,28 @@ export default function ERPRecepcionPage() {
       )}
 
       {confirmacionAbierta && recepcionSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4 py-6 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-labelledby="confirmar-recepcion-titulo"
-            aria-describedby="confirmar-recepcion-descripcion"
-            onKeyDown={(event) => { if (event.key === "Escape" && !procesando) setConfirmacionAbierta(false); }}
-            className="w-full max-w-xl rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6">
-            <p className="text-xs font-bold uppercase tracking-wide text-red-700">Confirmación de almacén</p>
-            <h2 id="confirmar-recepcion-titulo" className="mt-1 text-xl font-black text-gray-950">
-              Confirmar recepción e ingreso
-            </h2>
-            <p id="confirmar-recepcion-descripcion" className="mt-2 text-sm text-gray-700">
-              Confirmarás las cantidades verificadas de <strong>{recepcionSeleccionada.provider_name}</strong>,
-              documento <strong>{recepcionSeleccionada.document_number}</strong>.
-            </p>
-            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-center sm:grid-cols-4">
-              <div><p className="text-xs text-gray-600">Llegaron</p><p className="text-lg font-black">{totalLlegado}</p></div>
-              <div><p className="text-xs text-gray-600">Al pedido</p><p className="text-lg font-black">{totalAceptado}</p></div>
-              <div><p className="text-xs text-amber-800">Adicionales</p><p className="text-lg font-black text-amber-800">{totalExtra}</p></div>
-              <div><p className="text-xs text-gray-600">Observados</p><p className="text-lg font-black">{totalObservado}</p></div>
-            </div>
-            <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-              {totalExtra > 0 && <p><strong>{totalExtra} adicionales conformes:</strong> se incorporarán al Inventario a favor de Book Express, sin duplicar unidades.</p>}
-              {totalFaltanteGuia > 0 && <p><strong>{totalFaltanteGuia} faltantes frente a guía:</strong> quedarán identificados para su seguimiento con la editorial.</p>}
-              {totalObservado > 0 && <p><strong>{totalObservado} observados:</strong> se registrarán físicamente, separados de las unidades conformes.</p>}
-              <p>Al confirmar, Django registrará el ingreso en Inventario y actualizará los saldos. La recepción no podrá editarse después; no se generan facturas.</p>
-            </div>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button type="button" autoFocus disabled={procesando}
-                onClick={() => setConfirmacionAbierta(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-800 hover:bg-gray-50 disabled:opacity-50">
-                Revisar nuevamente
-              </button>
-              <button type="button" disabled={procesando} onClick={confirmarValidacion} className={estilosBoton}>
-                {procesando ? "Validando..." : "Confirmar e ingresar"}
-              </button>
-            </div>
+        <ConfirmActionDialog open
+          eyebrow="Confirmación de almacén"
+          title="Confirmar recepción e ingreso"
+          description={<>Confirmarás las cantidades verificadas de <strong>{recepcionSeleccionada.provider_name}</strong>,
+            documento <strong>{recepcionSeleccionada.document_number}</strong>.</>}
+          processing={procesando}
+          confirmLabel="Confirmar e ingresar"
+          onCancel={() => setConfirmacionAbierta(false)}
+          onConfirm={confirmarValidacion}>
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-center sm:grid-cols-4">
+            <div><p className="text-xs text-gray-600">Llegaron</p><p className="text-lg font-black">{totalLlegado}</p></div>
+            <div><p className="text-xs text-gray-600">Al pedido</p><p className="text-lg font-black">{totalAceptado}</p></div>
+            <div><p className="text-xs text-amber-800">Adicionales</p><p className="text-lg font-black text-amber-800">{totalExtra}</p></div>
+            <div><p className="text-xs text-gray-600">Observados</p><p className="text-lg font-black">{totalObservado}</p></div>
           </div>
-        </div>
-      )}
-    </section>
+          <div className="mt-3 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+            {totalExtra > 0 && <p><strong>{totalExtra} adicionales conformes:</strong> se incorporarán al Inventario a favor de Book Express, sin duplicar unidades.</p>}
+            {totalFaltanteGuia > 0 && <p><strong>{totalFaltanteGuia} faltantes frente a guía:</strong> quedarán identificados para su seguimiento con la editorial.</p>}
+            {totalObservado > 0 && <p><strong>{totalObservado} observados:</strong> se registrarán físicamente, separados de las unidades conformes.</p>}
+            <p>Al confirmar, Django registrará el ingreso en Inventario y actualizará los saldos. La recepción no podrá editarse después; no se generan facturas.</p>
+          </div>
+        </ConfirmActionDialog>
+      )}    </section>
   );
 }
