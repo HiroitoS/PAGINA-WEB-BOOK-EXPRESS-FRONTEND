@@ -64,3 +64,13 @@ export async function registrarEntradaInventario(receiptId) {
   const { data } = await axiosClient.post(`${INVENTORY_BASE}/registrar-entrada/`, { receipt_id: receiptId });
   return data;
 }
+
+export async function listarSalidasInventario() {
+  const { data } = await axiosClient.get(`${INVENTORY_BASE}/salidas/`);
+  return data;
+}
+
+export async function registrarCortesiaInventario(payload) {
+  const { data } = await axiosClient.post(`${INVENTORY_BASE}/cortesias/`, payload);
+  return data;
+}
