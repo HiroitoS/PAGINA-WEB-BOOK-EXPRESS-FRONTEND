@@ -379,7 +379,7 @@ export default function ERPRecepcionPage() {
           quantity_observed: observada,
           quantity_accepted: Math.min(llegada - observada, linea.pendientes),
           quantity_extra: Math.max(0, llegada - observada - linea.pendientes),
-          quantity_documented: cantidades[linea.item_id]?.documentada === undefined || cantidades[linea.item_id]?.documentada === "" ? null : Number(cantidades[linea.item_id].documentada),
+          quantity_documented: Number(cantidades[linea.item_id]?.documentada ?? linea.pendientes),
           pendientes: linea.pendientes,
           producto: linea.producto,
         };
@@ -464,8 +464,15 @@ export default function ERPRecepcionPage() {
     setCambiosSinGuardar(true);
     setEdicion((actual) => ({
       ...actual,
-      lines: actual.lines.map((linea, posicion) =>
-        posicion === index ? { ...linea, [campo]: value } : linea),
+      lines: actual.lines.map((linea, posicion) => {
+        if (posicion !== index) return linea;
+        const nueva = { ...linea, [campo]: value };
+        if (campo === "quantity_arrived" || campo === "quantity_observed") {
+          const conformes = Number(nueva.quantity_arrived) - Number(nueva.quantity_observed);
+          nueva.quantity_extra = String(Math.max(0, conformes - Number(nueva.pending_before ?? 0)));
+        }
+        return nueva;
+      }),
     }));
   }
 
@@ -645,7 +652,7 @@ export default function ERPRecepcionPage() {
                   <div><p className="text-xs text-gray-600">Aceptadas anteriormente</p><p className="text-lg font-black">{resumenSeleccion.aceptadas}</p></div>
                   <div><p className="text-xs text-gray-600">Pendientes</p><p className="text-lg font-black text-amber-800">{resumenSeleccion.pendientes}</p></div>
                 </div>
-                <p className="text-xs text-gray-500">Saldo = unidades pendientes del pedido. El historial de solicitadas y aceptadas anteriormente se conserva en la conciliación. Una misma guía puede agrupar pedidos de varios colegios de la misma editorial; registra cada cantidad en el renglón del colegio correspondiente.</p>
+                <p className="text-xs text-gray-500">Guía se propone con el saldo pendiente (corrígelo según el documento real). Ingresa el conteo físico y los observados: dañados o incorrectos que sí llegaron. Los faltantes y adicionales se identificarán automáticamente. Una guía puede incluir varios colegios.</p>
                 <div key={pedidosMarcados.join("-")} className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-xs">
                   <thead className="border-b border-gray-200 text-xs text-gray-600">
@@ -654,7 +661,7 @@ export default function ERPRecepcionPage() {
                        <th className="px-1 text-center">Saldo</th>
                        <th className="px-1">Guía</th>
                        <th className="px-1">Físico</th>
-                       <th className="px-1">No conf.</th>
+                       <th className="px-1">Observados</th>
                        <th className="px-1 text-center">Adic.</th>
                        <th className="px-1 text-center">Al pedido</th>
                        <th className="px-1 text-center">Saldo final</th>
@@ -680,12 +687,12 @@ export default function ERPRecepcionPage() {
                           </td>
                           <td className="px-1 text-center font-semibold tabular-nums text-amber-800" title={`Solicitadas: ${linea.solicitadas} · Aceptadas anteriores: ${linea.aceptadas}`}>{linea.pendientes}</td>
                           <td className="px-2"><input aria-label={`Guía ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
-                            className="w-14 rounded-lg border border-gray-300 px-1.5 py-1.5 text-center tabular-nums" value={cantidades[linea.item_id]?.documentada ?? ""}
+                            className="w-14 rounded-lg border border-gray-300 px-1.5 py-1.5 text-center tabular-nums" value={cantidades[linea.item_id]?.documentada ?? String(linea.pendientes)}
                             onChange={(event) => cambiarCantidad(linea.item_id, "documentada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
                           <td className="px-2"><input aria-label={`Conteo físico ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
                             className="w-14 rounded-lg border border-gray-300 px-1.5 py-1.5 text-center tabular-nums" value={llegada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "llegada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
-                          <td className="px-2"><input aria-label={`No conformes ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
+                          <td className="px-2"><input aria-label={`Observados (dañados o incorrectos) ${linea.producto} ${linea.pedido}`} type="number" min="0" step="1"
                             className="w-14 rounded-lg border border-gray-300 px-1.5 py-1.5 text-center tabular-nums" value={observada}
                             onChange={(event) => cambiarCantidad(linea.item_id, "observada", event.target.value)} disabled={!puedeCrear || procesando} /></td>
                           <td className="px-2 text-center font-bold tabular-nums text-amber-800">{excedenteConforme}</td>
@@ -707,8 +714,7 @@ export default function ERPRecepcionPage() {
                 placeholder="Ej.: cajas deterioradas, faltantes comunicados a la editorial" disabled={!puedeCrear} />
             </label>
             <p className="text-xs text-gray-500">
-              Las unidades adicionales conformes quedan identificadas automáticamente. Las observaciones generales son opcionales.
-              Esta recepción no genera todavía movimientos de inventario.
+              Los adicionales conformes se registran a favor de Book Express. Al validar, Django actualizará los pedidos y contabilizará las entradas en Inventario una sola vez.
             </p>
             {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando || !pedidosMarcados.length}>Guardar recepción en borrador</button>}
           </form>
