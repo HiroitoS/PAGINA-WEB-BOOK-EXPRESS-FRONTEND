@@ -34,6 +34,7 @@ import CRMActivityEvidenceFields from "../../../components/admin/crm/CRMActivity
 import CRMActivityEvidenceList from "../../../components/admin/crm/CRMActivityEvidenceList";
 import CRMActivityLocationSummary from "../../../components/admin/crm/CRMActivityLocationSummary";
 import { CRM_ACTIVITY_TYPES } from "../../../utils/crmActivityTypes";
+import { CRM_POSITION_OPTIONS } from "../../../utils/crmPositionOptions";
 import {
   buildCRMActivityLocationPayload,
   uploadCRMActivityEvidenceFiles,
@@ -52,16 +53,7 @@ const ACTIVITY_FILTERS = [
   { value: "follow_up", label: "Seguimientos" },
 ];
 
-const POSITION_OPTIONS = [
-  "Director(a)",
-  "Subdirector(a)",
-  "Promotor(a)",
-  "Coordinador(a)",
-  "Administrador(a)",
-  "Docente",
-  "Secretaría",
-  "Otro",
-];
+
 
 const RELATIONSHIP_LEVELS = [
   {
@@ -904,7 +896,7 @@ export default function CRMContactDetailPage() {
                 className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
               >
                 <option value="">Seleccionar cargo</option>
-                {POSITION_OPTIONS.map((position) => (
+                {CRM_POSITION_OPTIONS.map((position) => (
                   <option key={position} value={position}>
                     {position}
                   </option>
