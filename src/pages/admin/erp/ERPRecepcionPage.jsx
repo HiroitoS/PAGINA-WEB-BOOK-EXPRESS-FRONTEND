@@ -476,6 +476,25 @@ export default function ERPRecepcionPage() {
     }));
   }
 
+  function payloadEdicion() {
+    return {
+      provider_id: edicion.provider_id,
+      document_type: edicion.document_type,
+      document_number: edicion.document_number,
+      received_on: edicion.received_on,
+      notes: edicion.notes,
+      lines: edicion.lines.map((linea) => ({
+        order_item_id: linea.order_item_id,
+        quantity_arrived: Number(linea.quantity_arrived),
+        quantity_observed: Number(linea.quantity_observed),
+        quantity_accepted: Number(linea.quantity_arrived) - Number(linea.quantity_observed) - Number(linea.quantity_extra ?? 0),
+        quantity_extra: Number(linea.quantity_extra ?? 0),
+        quantity_documented: linea.quantity_documented === "" ? null : Number(linea.quantity_documented),
+        notes: linea.notes,
+      })),
+    };
+  }
+
   async function guardarBorrador(event) {
     event.preventDefault();
     if (!edicion || !recepcionSeleccionada || procesando) return;
@@ -489,22 +508,7 @@ export default function ERPRecepcionPage() {
     setError("");
     setMensaje("");
     try {
-      await actualizarRecepcion(recepcionId, {
-        provider_id: edicion.provider_id,
-        document_type: edicion.document_type,
-        document_number: edicion.document_number,
-        received_on: edicion.received_on,
-        notes: edicion.notes,
-        lines: edicion.lines.map((linea) => ({
-          order_item_id: linea.order_item_id,
-          quantity_arrived: Number(linea.quantity_arrived),
-          quantity_observed: Number(linea.quantity_observed),
-          quantity_accepted: Number(linea.quantity_arrived) - Number(linea.quantity_observed) - Number(linea.quantity_extra ?? 0),
-          quantity_extra: Number(linea.quantity_extra ?? 0),
-          quantity_documented: linea.quantity_documented === "" ? null : Number(linea.quantity_documented),
-          notes: linea.notes,
-        })),
-      });
+      await actualizarRecepcion(recepcionId, payloadEdicion());
       setCambiosSinGuardar(false);
       setMensaje("Borrador corregido y guardado.");
       setCargando(true);
@@ -518,23 +522,50 @@ export default function ERPRecepcionPage() {
     setProcesando(true);
     setError("");
     setMensaje("");
+    let borradorActualizado = false;
     try {
-      await validarRecepcion(recepcionSeleccionada.id);
-      setMensaje("Recepción validada. Los saldos pendientes de los pedidos fueron actualizados. El stock se controlará en Inventario.");
+      if (cambiosSinGuardar) {
+        await actualizarRecepcion(recepcionSeleccionada.id, payloadEdicion());
+        borradorActualizado = true;
+      }
+      const validada = await validarRecepcion(recepcionSeleccionada.id);
+      const adicional = (validada.lines ?? []).reduce((suma, linea) => suma + Number(linea.quantity_extra ?? 0), 0);
+      setMensaje(`Recepción validada e ingresada a Inventario. ${adicional > 0 ? `${adicional} unidades adicionales conformes identificadas. ` : ""}Los saldos de los pedidos quedaron actualizados.`);
+      setCambiosSinGuardar(false);
       setEdicion(null);
       setConfirmacionAbierta(false);
       setCargando(true);
       setRevision((actual) => actual + 1);
-    } catch (err) { setError(errorLegible(err)); }
-    finally { setProcesando(false); }
+    } catch (err) {
+      setError(borradorActualizado
+        ? `Cambios guardados, pero no se pudo validar: ${errorLegible(err)}`
+        : errorLegible(err));
+      if (borradorActualizado) {
+        setCambiosSinGuardar(false);
+        setRevision((actual) => actual + 1);
+      }
+      setConfirmacionAbierta(false);
+    } finally {
+      setProcesando(false);
+    }
   }
 
   function solicitarValidacion() {
-    if (cambiosSinGuardar) {
-      setError("Guarda las correcciones de cantidades o documento antes de validar.");
+    if (!recepcionSeleccionada || recepcionSeleccionada.status !== "draft" || !edicion) return;
+    if (cambiosSinGuardar && !puedeCrear) {
+      setError("No tienes permiso para guardar cambios en esta recepción.");
       return;
     }
-    if (!recepcionSeleccionada || recepcionSeleccionada.status !== "draft") return;
+    const lineas = edicion.lines.map((linea) => ({
+      ...linea, producto: linea.nombre, pendientes: linea.pending_before,
+    }));
+    const errorLineas = validarLineas(lineas);
+    if (errorLineas) { setError(errorLineas); return; }
+    if (edicion.document_type === "guide" &&
+        edicion.lines.some((linea) => linea.quantity_documented === "" || linea.quantity_documented == null)) {
+      setError("Completa la cantidad según guía de cada producto.");
+      return;
+    }
     setError("");
     setConfirmacionAbierta(true);
   }
@@ -543,7 +574,8 @@ export default function ERPRecepcionPage() {
     sum + Number(linea.quantity_arrived), 0) ?? 0;
   const totalObservado = edicion?.lines.reduce((sum, linea) =>
     sum + Number(linea.quantity_observed), 0) ?? 0;
-  const totalAceptado = totalLlegado - totalObservado;
+  const totalExtra = edicion?.lines.reduce((sum, linea) => sum + Number(linea.quantity_extra ?? 0), 0) ?? 0;
+  const totalAceptado = totalLlegado - totalObservado - totalExtra;
 
   return (
     <section className="space-y-4">
@@ -791,7 +823,7 @@ export default function ERPRecepcionPage() {
                       </div>
                     </div>
                     <p className="text-xs text-gray-600">
-                      La recepción documenta lo recibido y los adicionales; el ingreso de stock se gestionará en Inventario.
+                      Recepción validada. Las unidades conformes y observadas quedan identificadas en Inventario; los adicionales no se suman dos veces.
                     </p>
                   </div>
                 ) : (
@@ -842,13 +874,16 @@ export default function ERPRecepcionPage() {
                         onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, notes: event.target.value })); }} disabled={!puedeCrear} />
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando}>Guardar correcciones</button>}
-                      {puedeValidar && <button type="button" onClick={solicitarValidacion} disabled={procesando || cambiosSinGuardar}
-                        className="rounded-lg border border-gray-900 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-50 disabled:opacity-50">
-                        Validar recepción
+                      {puedeValidar && <button type="button" onClick={solicitarValidacion} disabled={procesando}
+                        className={estilosBoton}>
+                        Guardar y validar recepción
+                      </button>}
+                      {puedeCrear && <button type="submit" disabled={procesando || !cambiosSinGuardar}
+                        className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-600 underline-offset-4 transition hover:text-red-700 hover:underline disabled:opacity-40">
+                        Guardar sin validar
                       </button>}
                     </div>
-                    <p className="text-xs text-gray-500">Valida únicamente después de contrastar la mercadería física y el documento. Esta acción no registra stock.</p>
+                    <p className="text-xs text-gray-500">Al confirmar, la recepción y el ingreso a Inventario se registran conjuntamente. Puedes guardar sin validar si aún no terminaste el conteo.</p>
                   </form>
                 )}
                 {recepcionSeleccionada.status === "validated" && recepcionSeleccionada.notes && (
@@ -907,14 +942,15 @@ export default function ERPRecepcionPage() {
               Confirmarás las cantidades verificadas de <strong>{recepcionSeleccionada.provider_name}</strong>,
               documento <strong>{recepcionSeleccionada.document_number}</strong>.
             </p>
-            <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-3 text-center">
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-center sm:grid-cols-4">
               <div><p className="text-xs text-gray-600">Llegaron</p><p className="text-lg font-black">{totalLlegado}</p></div>
-              <div><p className="text-xs text-gray-600">Aceptadas</p><p className="text-lg font-black">{totalAceptado}</p></div>
-              <div><p className="text-xs text-gray-600">Observadas</p><p className="text-lg font-black">{totalObservado}</p></div>
+              <div><p className="text-xs text-gray-600">Al pedido</p><p className="text-lg font-black">{totalAceptado}</p></div>
+              <div><p className="text-xs text-amber-800">Adicionales</p><p className="text-lg font-black text-amber-800">{totalExtra}</p></div>
+              <div><p className="text-xs text-gray-600">Observados</p><p className="text-lg font-black">{totalObservado}</p></div>
             </div>
             <p className="mt-3 text-sm text-amber-900">
               Después de validar, no podrás editar este documento desde la pantalla.
-              Los saldos se actualizarán, pero esto no registra stock ni facturas.
+              Al confirmar, Django actualizará los saldos e ingresará automáticamente las unidades físicas al Inventario. No se generarán facturas.
             </p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button type="button" autoFocus disabled={procesando}
