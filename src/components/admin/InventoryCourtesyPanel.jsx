@@ -194,7 +194,7 @@ export default function InventoryCourtesyPanel({ entries, outflows, canManage, o
         {seleccion && <div className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
           <p><strong>Guía de origen:</strong> {seleccion.guide}</p>
           <p><strong>Recibe:</strong> {destinatario} · {cargo}</p>
-          <p><strong>Costo de referencia:</strong> {formatoCosto(Number(cantidad) * Number(seleccion.unit_cost))}</p>
+          <p><strong>Costo de referencia:</strong> {seleccion.unit_cost == null ? "Sin costo registrado" : formatoCosto(Number(cantidad) * Number(seleccion.unit_cost))}</p>
           <p className="mt-2 text-xs text-gray-600">No registra una venta ni una deuda a la editorial.</p>
         </div>}
       </ConfirmActionDialog>
