@@ -117,7 +117,7 @@ export default function ERPInventarioPage() {
   ];
 
   return (
-    <main className="min-w-0 space-y-3 p-3 sm:p-5">
+    <main className="min-w-0 max-w-full space-y-3 overflow-x-hidden p-3 sm:p-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
@@ -133,22 +133,22 @@ export default function ERPInventarioPage() {
       <nav aria-label="Operaciones de almacén" className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-bold text-gray-900">Operaciones de almacén</h2>
-          <p className="text-xs text-gray-500">Desliza para ver más opciones en celular. Las pendientes aún no realizan operaciones.</p>
+          <p className="text-xs text-gray-500">Selecciona una operación. Las opciones pendientes todavía no realizan operaciones.</p>
         </div>
-        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
           {seccionesAlmacen.map((item) => {
             const Icono = item.icono;
             const activa = item.vista === pestana;
             const contenido = (
               <>
                 <Icono aria-hidden="true" className={activa ? "shrink-0 text-red-700" : "shrink-0 text-gray-500"} size={18} />
-                <span className="min-w-0">
-                  <span className="block text-sm font-bold">{item.nombre}</span>
-                  <span className="block text-xs font-normal text-gray-500">{item.descripcion}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-bold sm:text-sm">{item.nombre}</span>
+                  <span className="block break-words text-xs font-normal leading-4 text-gray-500">{item.descripcion}</span>
                 </span>
               </>
             );
-            const claseBase = "flex min-h-16 w-48 shrink-0 snap-start items-center gap-2 rounded-lg border p-3 text-left sm:w-full sm:gap-3";
+            const claseBase = "flex min-h-16 min-w-0 w-full items-center gap-2 rounded-lg border p-2 text-left sm:gap-3 sm:p-3";
             return item.vista ? (
               <button key={item.nombre} type="button" aria-current={activa ? "page" : undefined}
                 onClick={() => seleccionarSeccion(item.vista)}
@@ -179,15 +179,15 @@ export default function ERPInventarioPage() {
       </div>
 
       <section aria-label="Valorización referencial del inventario" className="space-y-2">
-        <div className="flex snap-x gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
           {[
             { titulo: "Valor físico referencial", valor: resumen?.physical_value_reference, ayuda: "Disponibles más observados", parcial: !resumen?.physical_valuation_complete },
             { titulo: "Stock disponible valorizado", valor: resumen?.value_reference, ayuda: "Descontadas las cortesías", parcial: Number(resumen?.unvalued_units || 0) > 0 },
             { titulo: "Mercadería observada", valor: resumen?.observed_value_reference, ayuda: "Separada del stock vendible", parcial: Number(resumen?.unvalued_observed_units || 0) > 0 },
-          ].map((item) => (
-            <div key={item.titulo} className="min-w-56 flex-1 snap-start rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:min-w-0">
+          ].map((item, indice) => (
+            <div key={item.titulo} className={`min-w-0 rounded-xl border border-gray-200 bg-white p-2.5 shadow-sm sm:p-3 ${indice === 2 ? "col-span-2 sm:col-span-1" : ""}`}>
               <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
-              <p className="mt-1 text-xl font-black tabular-nums text-gray-950">
+              <p className="mt-1 break-words text-base font-black tabular-nums text-gray-950 sm:text-xl">
                 {cargando || error ? "—" : dinero(item.valor)}
               </p>
               <p className="mt-1 text-xs text-gray-500">{item.ayuda}</p>
