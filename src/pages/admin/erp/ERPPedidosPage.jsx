@@ -253,16 +253,16 @@ export default function ERPPedidosPage() {
   );
 
   return (
-    <section className="space-y-5">
-      <header className="rounded-2xl border border-gray-200 bg-white p-5">
+    <section className="min-w-0 max-w-full space-y-4 sm:space-y-5">
+      <header className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-5">
         <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Pedidos</p>
         <h1 className="mt-1 text-2xl font-black text-gray-950">Pedidos a Editoriales</h1>
         <p className="mt-2 text-sm text-gray-600">Prepara órdenes por colegio y editorial, apruébalas y registra su envío por correo. Las recepciones se gestionan en Almacén.</p>
       </header>
 
-      <div role="tablist" aria-label="Secciones de pedidos" className="flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white p-2">
+      <div role="tablist" aria-label="Secciones de pedidos" className="grid grid-cols-2 gap-2 rounded-2xl border border-gray-200 bg-white p-2">
         <button role="tab" aria-selected={pestana === "adopciones"} type="button" onClick={() => setPestana("adopciones")}
-          className={`rounded-xl px-4 py-3 text-sm font-bold transition ${pestana === "adopciones" ? "bg-red-700 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
+          className={`min-h-11 rounded-xl px-2 py-3 text-xs font-bold transition sm:px-4 sm:text-sm ${pestana === "adopciones" ? "bg-red-700 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
           Adopciones confirmadas
         </button>
         <button role="tab" aria-selected={pestana === "pedidos"} type="button" onClick={() => setPestana("pedidos")}
@@ -410,7 +410,7 @@ export default function ERPPedidosPage() {
           {!seleccionado ? (
             <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-gray-500">Selecciona un pedido para consultar sus productos.</div>
           ) : (
-            <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-5">
+            <div className="min-w-0 space-y-4 rounded-2xl border border-gray-200 bg-white p-3 sm:p-5">
               <div>
                 <p><SemaforoPedido pedidoId={seleccionado.id} estadoPedido={seleccionado.status} /></p>
                 {seleccionado.status !== "sent" && (
