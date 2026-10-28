@@ -125,3 +125,23 @@ export async function conciliarUbicacion(id, entryIds, notes = "") {
   });
   return data;
 }
+
+
+const TRANSFERS_BASE = "/admin/erp/almacen/traslados";
+
+export async function buscarLotesParaTraslado({ sourceId, q = "", page = 1 }) {
+  const { data } = await axiosClient.get(`${TRANSFERS_BASE}/lotes/`, {
+    params: { source_id: sourceId, q, page },
+  });
+  return data;
+}
+
+export async function listarTrasladosAlmacen(page = 1) {
+  const { data } = await axiosClient.get(`${TRANSFERS_BASE}/`, { params: { page } });
+  return data;
+}
+
+export async function registrarTrasladoAlmacen(payload) {
+  const { data } = await axiosClient.post(`${TRANSFERS_BASE}/`, payload);
+  return data;
+}

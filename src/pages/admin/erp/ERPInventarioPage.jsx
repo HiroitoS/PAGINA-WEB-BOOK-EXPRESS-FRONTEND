@@ -4,6 +4,7 @@ import { FiBox, FiPackage, FiGift, FiTruck, FiCornerUpLeft, FiSliders } from "re
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import InventoryCourtesyPanel from "../../../components/admin/InventoryCourtesyPanel";
+import InventoryTransfersPanel from "../../../components/admin/InventoryTransfersPanel";
 import { consultarExistencias, consultarResumenInventario, consultarValorizacionPorEditorial, listarEntradasInventario, listarSalidasInventario } from "../../../api/warehouseApi";
 
 function mensajeError(error) {
@@ -24,7 +25,7 @@ const seccionesAlmacen = [
   { nombre: "Existencias", descripcion: "Stock disponible", icono: FiBox, vista: "existencias" },
   { nombre: "Entradas", descripcion: "Recepciones registradas", icono: FiPackage, vista: "movimientos" },
   { nombre: "Cortesías", descripcion: "Entregas sin costo", icono: FiGift, vista: "salidas" },
-  { nombre: "Traslados", descripcion: "Próximamente", icono: FiTruck },
+  { nombre: "Traslados", descripcion: "Entre ubicaciones", icono: FiTruck, vista: "traslados" },
   { nombre: "Devoluciones", descripcion: "Pendiente", icono: FiCornerUpLeft },
   { nombre: "Ajustes", descripcion: "Pendiente", icono: FiSliders },
 ];
@@ -48,7 +49,7 @@ export default function ERPInventarioPage() {
   const vistaSolicitada = searchParams.get("vista");
   const pestana = vistaSolicitada === "cortesias"
     ? "salidas"
-    : ["movimientos", "salidas"].includes(vistaSolicitada) ? vistaSolicitada : "existencias";
+    : ["movimientos", "salidas", "traslados"].includes(vistaSolicitada) ? vistaSolicitada : "existencias";
   const retornoInventario = `/admin/erp/almacen/inventario${searchParams.toString() ? `?${searchParams}` : ""}`;
 
   function cambiarFiltro(clave, valor) {
@@ -205,8 +206,7 @@ export default function ERPInventarioPage() {
         </div>
         <p className="px-1 text-xs leading-5 text-gray-600">
           Valorización del inventario global registrado a costo histórico referencial. Los adicionales conformes
-          ya están incluidos; no se suman nuevamente. No representa deuda con las editoriales ni separa aún
-          existencias por almacén físico.
+          ya están incluidos; no se suman nuevamente. No representa deuda con las editoriales. El desglose por almacén se consulta en Traslados y Ubicaciones.
           {resumen?.physical_valuation_complete === false && (
             <span className="block font-bold text-amber-800">
               Valorización parcial: {Number(resumen.unvalued_units || 0) + Number(resumen.unvalued_observed_units || 0)} unidades sin costo histórico.
@@ -217,7 +217,7 @@ export default function ERPInventarioPage() {
       <section ref={detalleRef} aria-label="Detalle de la operación seleccionada" className="scroll-mt-24 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
           <h2 className="text-sm font-bold text-gray-900">
-            {pestana === "existencias" ? "Existencias por producto" : pestana === "movimientos" ? "Entradas de mercadería" : "Cortesías a colegios"}
+            {pestana === "existencias" ? "Existencias por producto" : pestana === "movimientos" ? "Entradas de mercadería" : pestana === "traslados" ? "Traslados" : "Cortesías a colegios"}
           </h2>
           <span className="text-xs text-gray-500">{error ? "Consulta no disponible" : `${existencias.length} productos con entradas`}</span>
         </div>
@@ -282,7 +282,7 @@ export default function ERPInventarioPage() {
               <p className="p-4 text-center text-sm text-gray-500">No hay existencias para los filtros seleccionados.</p>
             )}
             {cargando && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias…</p>}
-            <p className="text-xs text-gray-500">Disponible descuenta las cortesías registradas. Los adicionales son históricos; ventas y traslados se incorporarán después.</p>
+            <p className="text-xs text-gray-500">Disponible descuenta las cortesías registradas. Los adicionales son históricos; ventas y otras salidas se incorporarán después.</p>
             <details className="rounded-xl border border-gray-200 bg-white">
               <summary className="cursor-pointer px-3 py-2.5 text-sm font-bold text-gray-900 transition hover:bg-gray-50">
                 Ver desglose por editorial ({valorPorEditorial.length})
@@ -350,13 +350,15 @@ export default function ERPInventarioPage() {
             </details>
 
           </div>
+        ) : pestana === "traslados" ? (
+          <InventoryTransfersPanel canManage={userHasPermission(user, ["warehouse.manage_stock_transfers"])} onRefresh={() => cargar(() => false)} />
         ) : pestana === "salidas" ? (
           <div><InventoryCourtesyPanel outflows={salidas}
             canManage={puedeRegistrarCortesia} onRefresh={() => cargar(() => false)} /></div>
         ) : (
           <div  className="p-3 sm:p-4">
             <h2 className="text-sm font-bold text-gray-900">Historial de movimientos de mercadería</h2>
-            <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro conserva cuánto ingresó originalmente, su guía, colegio y valor histórico. Las cortesías y su descuento de stock se consultan en Cortesías; los traslados y ventas se incorporarán posteriormente.</p>
+            <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro conserva cuánto ingresó originalmente, su guía, colegio y valor histórico. Las cortesías y su descuento de stock se consultan en Cortesías; los traslados se consultan en Traslados y las ventas se incorporarán posteriormente.</p>
             <div className="max-h-96 space-y-2 overflow-y-auto overscroll-contain sm:hidden">
               {entradas.map((item) => (
                 <article key={item.id} className="min-w-0 rounded-xl border border-gray-200 bg-white p-3">
