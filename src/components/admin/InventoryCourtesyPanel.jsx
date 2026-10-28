@@ -18,7 +18,6 @@ function explicarError(err) {
 
 export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh }) {
   const [buscar, setBuscar] = useState("");
-  const [consulta, setConsulta] = useState("");
   const [pagina, setPagina] = useState(1);
   const [candidatas, setCandidatas] = useState([]);
   const [total, setTotal] = useState(0);
@@ -39,25 +38,32 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
 
   useEffect(() => {
     let ignore = false;
-    Promise.resolve().then(() => buscarEntradasParaCortesia(consulta, pagina)).then((data) => {
-      if (ignore) return;
-      setError("");
-      const rows = Array.isArray(data) ? data : data.results ?? [];
-      setCandidatas(rows);
-      setTotal(Array.isArray(data) ? rows.length : data.count ?? rows.length);
-      setPaginaSiguiente(Boolean(data.next));
-    }).catch((err) => {
-      if (!ignore) {
-        setCandidatas([]);
-        setTotal(0);
-        setPaginaSiguiente(false);
-        setError(explicarError(err));
-      }
-    }).finally(() => {
-      if (!ignore) setCargandoEntradas(false);
-    });
-    return () => { ignore = true; };
-  }, [consulta, pagina, actualizacion]);
+    // Búsqueda automática con debounce; el servidor mantiene la paginación.
+    const timer = setTimeout(() => {
+      setCargandoEntradas(true);
+      buscarEntradasParaCortesia(buscar.trim(), pagina).then((data) => {
+        if (ignore) return;
+        setError("");
+        const rows = Array.isArray(data) ? data : data.results ?? [];
+        setCandidatas(rows);
+        setTotal(Array.isArray(data) ? rows.length : data.count ?? rows.length);
+        setPaginaSiguiente(Boolean(data.next));
+      }).catch((err) => {
+        if (!ignore) {
+          setCandidatas([]);
+          setTotal(0);
+          setPaginaSiguiente(false);
+          setError(explicarError(err));
+        }
+      }).finally(() => {
+        if (!ignore) setCargandoEntradas(false);
+      });
+    }, buscar.trim() ? 300 : 0);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [buscar, pagina, actualizacion]);
 
 
   function iniciar(entry) {
@@ -110,7 +116,7 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
     Number(cantidad) > 0 && Number(cantidad) <= Number(seleccion?.net_available ?? 0);
 
   return (
-    <div className="space-y-4 p-3 sm:p-4">
+    <div className="space-y-3 p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="text-sm font-bold text-gray-900">Salidas por cortesía a colegios</h2>
@@ -126,8 +132,8 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {canManage ? (
         <>
-          <div className="grid items-start gap-4 lg:grid-cols-2">
-            <section aria-labelledby="cortesia-lotes" className="min-w-0 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+          <div className="grid items-start gap-3 lg:grid-cols-2">
+            <section aria-labelledby="cortesia-lotes" className="min-w-0 rounded-xl border border-gray-200 bg-white p-3">
               <div className="mb-3 flex items-start justify-between gap-2">
                 <div>
                   <h3 id="cortesia-lotes" className="text-sm font-black text-gray-900">1. Seleccionar mercadería</h3>
@@ -137,35 +143,42 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
                   {total} lotes
                 </span>
               </div>
-              <form onSubmit={(event) => {
-                event.preventDefault();
-                setError("");
-                setPagina(1);
-                setCargandoEntradas(true);
-                setConsulta(buscar.trim());
-                setActualizacion((valor) => valor + 1);
-              }} className="mb-3 flex items-end gap-2">
+              <div role="search" className="mb-2 flex items-end gap-2">
                 <label className="min-w-0 flex-1 text-xs font-semibold text-gray-700">
                   Buscar libro, colegio o guía
-                  <input value={buscar} onChange={(event) => setBuscar(event.target.value)}
-                    placeholder="Nombre, colegio o número de guía"
-                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm focus:border-red-600 focus:outline-none"/>
+                  <input
+                    type="search"
+                    aria-label="Buscar libro, colegio o guía"
+                    value={buscar}
+                    onChange={(event) => {
+                      setBuscar(event.target.value);
+                      setPagina(1);
+                      setCargandoEntradas(true);
+                    }}
+                    placeholder="Escribe para filtrar automáticamente…"
+                    className="mt-1 w-full rounded-lg border border-gray-300 bg-white p-2 text-sm focus:border-red-600 focus:outline-none"
+                  />
                 </label>
-                <button type="submit" disabled={cargandoEntradas}
-                  className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm font-semibold hover:bg-gray-100 disabled:opacity-50">
-                  Buscar
-                </button>
-              </form>
-              <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
-                {candidatas.map((entry) => (
+                {buscar && (
+                  <button type="button" onClick={() => {
+                    setBuscar("");
+                    setPagina(1);
+                    setCargandoEntradas(true);
+                  }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                    Limpiar
+                  </button>
+                )}
+              </div>
+              <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1" aria-busy={cargandoEntradas}>
+                {!cargandoEntradas && candidatas.map((entry) => (
                   <button type="button" key={entry.id} onClick={() => iniciar(entry)}
                     aria-pressed={seleccion?.id === entry.id}
                     className={seleccion?.id === entry.id
-                      ? "w-full rounded-lg border border-red-600 bg-red-50 p-3 text-left transition-colors"
-                      : "w-full rounded-lg border border-gray-200 bg-white p-3 text-left transition-colors hover:border-gray-400 hover:bg-gray-50"}>
+                      ? "w-full rounded-lg border border-red-600 bg-red-50 p-2.5 text-left transition-colors"
+                      : "w-full rounded-lg border border-gray-200 bg-white p-2.5 text-left transition-colors hover:border-gray-400 hover:bg-gray-50"}>
                     <span className="block text-xs font-bold leading-5 text-gray-900">{entry.product}</span>
                     <span className="mt-1 block text-xs text-gray-600">{entry.school} · Guía {entry.guide}</span>
-                    <span className="mt-2 flex flex-wrap items-center justify-between gap-1">
+                    <span className="mt-1 flex flex-wrap items-center justify-between gap-1">
                       <span className="text-xs font-bold text-gray-900">Disponible: {entry.net_available}</span>
                       <span className="text-xs text-gray-500">Costo: {formatoCosto(entry.unit_cost)}</span>
                     </span>
@@ -180,7 +193,7 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
                   <p role="status" className="p-4 text-center text-sm text-gray-600">Buscando mercadería…</p>
                 )}
               </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 text-xs text-gray-600">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-2 text-xs text-gray-600">
                 <span>{total} lotes disponibles · Página {pagina}</span>
                 <div className="flex gap-2">
                   <button type="button" disabled={pagina <= 1 || cargandoEntradas}
@@ -192,10 +205,10 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
                 </div>
               </div>
             </section>
-            <section aria-labelledby="cortesia-formulario" className="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4 lg:sticky lg:top-4">
+            <section aria-labelledby="cortesia-formulario" className="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3 lg:sticky lg:top-4">
               <h3 id="cortesia-formulario" className="text-sm font-black text-gray-900">2. Registrar salida por cortesía</h3>
               {!seleccion ? (
-                <div className="mt-3 rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center">
+                <div className="mt-3 rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center">
                   <p className="text-sm font-semibold text-gray-800">Selecciona un libro de la izquierda</p>
                   <p className="mt-2 text-xs leading-5 text-gray-600">
                     Aquí aparecerán la cantidad, el destinatario y la confirmación de entrega.
@@ -274,7 +287,7 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
 
       <div className="border-t border-gray-200 pt-3">
         <h3 className="text-sm font-bold text-gray-900">Salidas registradas · Cortesías</h3>
-        <div className="mt-2 overflow-x-auto">
+        <div className="mt-2 max-h-64 overflow-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
               <tr><th className="p-2">Fecha</th><th className="p-2">Guía</th><th className="p-2">Producto</th><th className="p-2">Colegio</th>
