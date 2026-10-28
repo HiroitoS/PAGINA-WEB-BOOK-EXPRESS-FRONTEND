@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buscarEntradasParaCortesia, registrarCortesiaInventario } from "../../api/warehouseApi";
 import ConfirmActionDialog from "./ConfirmActionDialog";
 import { CRM_POSITION_OPTIONS } from "../../utils/crmPositionOptions";
@@ -17,6 +17,7 @@ function explicarError(err) {
 }
 
 export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh }) {
+  const formularioRef = useRef(null);
   const [buscar, setBuscar] = useState("");
   const [pagina, setPagina] = useState(1);
   const [candidatas, setCandidatas] = useState([]);
@@ -77,6 +78,10 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
     setConfirmar(false);
     setError("");
     setMensaje("");
+    // En móvil el formulario está después de la lista: acercarlo tras elegir lote.
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      requestAnimationFrame(() => formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
   }
 
   const cargoFinal = cargo === "Otro" ? cargoOtro.trim() : cargo;
@@ -128,7 +133,7 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
           {outflows.length} cortesías recientes
         </span>
       </div>
-      {mensaje && <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{mensaje}</p>}
+      {mensaje && <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-800">{mensaje}</p>}
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {canManage ? (
         <>
@@ -169,7 +174,7 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
                   </button>
                 )}
               </div>
-              <div className="max-h-72 space-y-1.5 overflow-y-auto pr-1" aria-busy={cargandoEntradas}>
+              <div className="max-h-44 space-y-1.5 overflow-y-auto overscroll-contain pr-1 sm:max-h-72" aria-busy={cargandoEntradas}>
                 {!cargandoEntradas && candidatas.map((entry) => (
                   <button type="button" key={entry.id} onClick={() => iniciar(entry)}
                     aria-pressed={seleccion?.id === entry.id}
@@ -205,7 +210,7 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
                 </div>
               </div>
             </section>
-            <section aria-labelledby="cortesia-formulario" className="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-3 lg:sticky lg:top-4">
+            <section ref={formularioRef} aria-labelledby="cortesia-formulario" className="min-w-0 scroll-mt-24 rounded-xl border border-gray-200 bg-gray-50 p-3 lg:sticky lg:top-4">
               <h3 id="cortesia-formulario" className="text-sm font-black text-gray-900">2. Registrar salida por cortesía</h3>
               {!seleccion ? (
                 <div className="mt-3 rounded-lg border border-dashed border-gray-300 bg-white p-4 text-center">
@@ -287,8 +292,8 @@ export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh 
 
       <div className="border-t border-gray-200 pt-3">
         <h3 className="text-sm font-bold text-gray-900">Salidas registradas · Cortesías</h3>
-        <div className="mt-2 max-h-64 overflow-auto">
-          <table className="w-full text-left text-xs">
+        <div className="mt-2 max-h-64 overflow-auto overscroll-contain">
+          <table className="w-full min-w-max text-left text-xs">
             <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
               <tr><th className="p-2">Fecha</th><th className="p-2">Guía</th><th className="p-2">Producto</th><th className="p-2">Colegio</th>
                 <th className="p-2">Destinatario</th><th className="p-2 text-right">Unid.</th>
