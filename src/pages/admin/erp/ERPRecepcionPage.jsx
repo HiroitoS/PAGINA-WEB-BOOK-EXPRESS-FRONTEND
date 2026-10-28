@@ -588,7 +588,7 @@ export default function ERPRecepcionPage() {
   const totalAceptado = totalLlegado - totalObservado - totalExtra;
 
   return (
-    <section className="space-y-4">
+    <section className="min-w-0 max-w-full space-y-4">
       <header className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
         <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
         <h1 className="mt-1 text-2xl font-black text-gray-950">Recepción de Mercadería</h1>
@@ -605,14 +605,14 @@ export default function ERPRecepcionPage() {
         )}
       </header>
 
-      <div role="tablist" aria-label="Secciones de recepción" className="flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white p-2">
+      <div role="tablist" aria-label="Secciones de recepción" className="grid grid-cols-2 gap-2 rounded-2xl border border-gray-200 bg-white p-2">
         {[
           ["registro", "Pedidos pendientes"],
           ["historial", "Recepciones registradas"],
         ].map(([value, label]) => (
           <button key={value} role="tab" aria-selected={pestana === value}
             type="button" onClick={() => { setPestana(value); setError(""); }}
-            className={`rounded-xl px-4 py-2.5 text-sm font-bold transition ${pestana === value ? "bg-red-700 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
+            className={`min-h-11 rounded-xl px-2 py-2.5 text-xs font-bold transition sm:px-4 sm:text-sm ${pestana === value ? "bg-red-700 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
             {label}
           </button>
         ))}
@@ -623,7 +623,7 @@ export default function ERPRecepcionPage() {
       {cargando && <p className="text-sm text-gray-600">Actualizando registros…</p>}
 
       {pestana === "registro" && (
-        <div className="grid gap-4 xl:grid-cols-4">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-4">
           <div className="space-y-3">
             <div className="grid gap-3 rounded-2xl border border-gray-200 bg-white p-4">
               <label className="text-sm font-semibold text-gray-700">Editorial
@@ -772,7 +772,7 @@ export default function ERPRecepcionPage() {
       )}
 
       {pestana === "historial" && (
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-3">
           <div className="space-y-2">
             <p className="text-xs text-gray-600">El color indica el saldo actual de los pedidos relacionados, no cómo llegó la guía original. Amarillo: pendiente · Verde: completo · Gris: borrador.</p>
             {recepciones.length === 0 && !cargando && (
