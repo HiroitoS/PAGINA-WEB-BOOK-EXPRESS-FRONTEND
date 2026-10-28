@@ -39,6 +39,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
   const [selected, setSelected] = useState(null);
   const [quantity, setQuantity] = useState("1");
   const [notes, setNotes] = useState("");
+  const [entregaConfirmada, setEntregaConfirmada] = useState(false);
   const [key, setKey] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -92,12 +93,13 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
     && Number(quantity) > 0
     && Number(quantity) <= Number(selected?.available ?? 0);
   const canSubmit = canManage && selected && validQuantity
-    && origin && destination && sourceId !== destinationId && !busy;
+    && origin && destination && sourceId !== destinationId && entregaConfirmada && !busy;
 
   function choose(item) {
     setSelected(item);
     setQuantity("1");
     setNotes("");
+    setEntregaConfirmada(false);
     setKey(crypto.randomUUID());
     setError("");
     setMessage("");
@@ -119,6 +121,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
         destination_id: Number(destinationId),
         quantity: Number(quantity),
         notes: notes.trim(),
+        entrega_confirmada: entregaConfirmada,
         idempotency_key: key,
       });
       setMessage(result.message ?? "Traslado confirmado.");
@@ -162,7 +165,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
               <select value={sourceId} onChange={(event) => {
                 setSourceId(event.target.value);
                 if (destinationId === event.target.value) setDestinationId("");
-                setSelected(null); setPage(1); setMessage(""); setError("");
+                setSelected(null); setEntregaConfirmada(false); setPage(1); setMessage(""); setError("");
               }} className={inputClase}>
                 <option value="">Selecciona el origen</option>
                 {locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -170,7 +173,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
             </label>
             <label className="text-xs font-bold text-gray-800">Almacén de destino
               <select value={destinationId} onChange={(event) => {
-                setDestinationId(event.target.value); setError(""); setMessage("");
+                setDestinationId(event.target.value); setEntregaConfirmada(false); setError(""); setMessage("");
               }} className={inputClase}>
                 <option value="">Selecciona el destino</option>
                 {locations.filter((item) => String(item.id) !== sourceId).map((item) =>
@@ -256,6 +259,13 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
                     <textarea rows="2" maxLength="500" value={notes}
                       onChange={(event) => setNotes(event.target.value)} className={inputClase}
                       placeholder="Ej.: envío a tienda para campaña escolar"/>
+                  </label>
+                  <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-gray-900">
+                    <input type="checkbox" checked={entregaConfirmada}
+                      onChange={(event) => setEntregaConfirmada(event.target.checked)}
+                      className="mt-1 size-4 shrink-0 accent-red-700"/>
+                    Confirmo que la mercadería ya fue entregada físicamente al destino.
+                    No utilices este registro para envíos todavía en tránsito.
                   </label>
                   <p className="text-xs text-gray-600">El traslado descuenta unidades del origen y suma las mismas al destino. No crea más stock.</p>
                   {!canManage && <p className="text-xs text-amber-800">Tu rol puede consultar, pero no confirmar traslados.</p>}
