@@ -357,7 +357,45 @@ export default function ERPInventarioPage() {
           <div  className="p-3 sm:p-4">
             <h2 className="text-sm font-bold text-gray-900">Historial de movimientos de mercadería</h2>
             <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro conserva cuánto ingresó originalmente, su guía, colegio y valor histórico. Las cortesías y su descuento de stock se consultan en Cortesías; los traslados y ventas se incorporarán posteriormente.</p>
-            <div className="overflow-x-auto">
+            <div className="max-h-96 space-y-2 overflow-y-auto overscroll-contain sm:hidden">
+              {entradas.map((item) => (
+                <article key={item.id} className="min-w-0 rounded-xl border border-gray-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
+                    <span className="text-xs font-semibold text-gray-600">Guía {item.guide}</span>
+                    <span className="text-xs text-gray-500">{item.school}</span>
+                  </div>
+                  <h3 className="mt-1 break-words text-sm font-bold text-gray-950">{item.product}</h3>
+                  <dl className="mt-3 grid grid-cols-2 gap-2">
+                    {[
+                      ["Al pedido", item.on_order],
+                      ["Adicionales", item.extra_included],
+                      ["Total conforme", item.available],
+                      ["Valor de entrada", dinero(item.entry_value)],
+                    ].map(([label, value]) => (
+                      <div key={label} className="min-w-0 rounded-lg bg-gray-50 px-2 py-2">
+                        <dt className="text-xs leading-4 text-gray-600">{label}</dt>
+                        <dd className="mt-1 break-words text-sm font-bold tabular-nums text-gray-950">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <button type="button" aria-expanded={detalleId === item.id}
+                    onClick={() => setDetalleId((actual) => actual === item.id ? null : item.id)}
+                    className="mt-3 min-h-11 w-full rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700">
+                    {detalleId === item.id ? "Ocultar desglose" : "Ver desglose de costos"}
+                  </button>
+                  {detalleId === item.id && (
+                    <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
+                      <p>Costo unitario: <strong>{dinero(item.unit_cost)}</strong></p>
+                      <p>Pedido: <strong>{dinero(item.order_value_reference)}</strong></p>
+                      <p>Adicionales: <strong>{dinero(item.extra_value_reference)}</strong></p>
+                      <p>Total: <strong>{dinero(item.entry_value)}</strong></p>
+                      <p className="text-gray-600">Los adicionales son referenciales; no generan por sí solos una deuda a la editorial.</p>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full min-w-max text-left text-xs">
                 <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
                   <tr>
@@ -405,8 +443,10 @@ export default function ERPInventarioPage() {
                   </Fragment>
                 ))}</tbody>
               </table>
-              {!cargando && !error && entradas.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Aún no hay ingresos registrados.</p>}
             </div>
+            {!cargando && !error && entradas.length === 0 && (
+              <p className="p-4 text-center text-sm text-gray-500">Aún no hay ingresos registrados.</p>
+            )}
             <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados por Django. Para el stock actual consulta Existencias; para descuentos por cortesía, Cortesías. No son importes por pagar.</p>
           </div>
         )}
