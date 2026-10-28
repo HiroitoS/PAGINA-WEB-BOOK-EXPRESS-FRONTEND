@@ -7,6 +7,9 @@ import WarehouseLocationsPanel from "../../../components/admin/WarehouseLocation
 export default function ERPUbicacionesPage() {
   const { user } = useAuth();
   const puedeGestionar = userHasPermission(user, ["warehouse.manage_warehouse_locations"]);
+  const puedeConciliar = puedeGestionar
+    && userHasPermission(user, ["warehouse.validate_receiving"])
+    && userHasPermission(user, ["warehouse.view_receiving"]);
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
@@ -31,11 +34,11 @@ export default function ERPUbicacionesPage() {
         </div>
       </header>
       <section className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <WarehouseLocationsPanel puedeGestionar={puedeGestionar} />
+        <WarehouseLocationsPanel puedeGestionar={puedeGestionar} puedeConciliar={puedeConciliar} />
       </section>
       <p className="px-1 text-xs leading-5 text-gray-600">
-        Esta pantalla administra lugares, no cantidades de libros. El stock seguirá global
-        hasta verificar físicamente sus ubicaciones y registrar los saldos iniciales.
+        Registrar una ubicación no mueve libros. Las nuevas recepciones se asignan al principal activo;
+        las existencias anteriores requieren conciliación física por lote. El total global no cambia.
       </p>
     </div>
   );
