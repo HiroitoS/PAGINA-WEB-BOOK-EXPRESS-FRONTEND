@@ -25,7 +25,7 @@ export default function ERPUbicacionesPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén · Administración</p>
             <h1 className="mt-1 text-2xl font-black text-gray-950">Ubicaciones</h1>
             <p className="mt-1 text-sm leading-5 text-gray-600">
-              Organiza dónde se guardan los libros: almacenes, tienda, ferias y consignaciones.
+              Registra el almacén principal y los destinos para futuros traslados: tiendas, ferias y consignaciones.
             </p>
           </div>
         </div>
