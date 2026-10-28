@@ -65,6 +65,7 @@ export default function WarehouseReconciliationPanel({ ubicaciones }) {
   }
 
   function buscar(value) {
+    setCargando(true);
     setBusqueda(value);
     setPagina(1);
     setSeleccionados([]);
@@ -93,6 +94,7 @@ export default function WarehouseReconciliationPanel({ ubicaciones }) {
       setMensaje(`${result.assigned} lote(s) conciliados. No se agregaron libros al inventario.`);
       setSeleccionados([]);
       setConfirmando(false);
+      setPagina(1);
       setCargando(true);
       setVersion((actual) => actual + 1);
     } catch (err) {
