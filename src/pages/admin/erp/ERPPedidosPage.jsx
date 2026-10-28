@@ -266,7 +266,7 @@ export default function ERPPedidosPage() {
           Adopciones confirmadas
         </button>
         <button role="tab" aria-selected={pestana === "pedidos"} type="button" onClick={() => setPestana("pedidos")}
-          className={`rounded-xl px-4 py-3 text-sm font-bold transition ${pestana === "pedidos" ? "bg-red-700 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
+          className={`min-h-11 rounded-xl px-2 py-3 text-xs font-bold transition sm:px-4 sm:text-sm ${pestana === "pedidos" ? "bg-red-700 text-white" : "text-gray-700 hover:bg-gray-100"}`}>
           Pedidos generados
         </button>
       </div>
