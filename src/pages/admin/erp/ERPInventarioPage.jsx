@@ -102,7 +102,7 @@ export default function ERPInventarioPage() {
   ];
 
   return (
-    <main className="space-y-4 p-4 sm:p-6">
+    <main className="space-y-3 p-3 sm:p-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
@@ -119,9 +119,9 @@ export default function ERPInventarioPage() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tarjetas.map((item) => (
-          <div key={item.titulo} className="flex min-h-28 flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
+          <div key={item.titulo} className="flex min-h-20 flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-2.5 text-center shadow-sm">
             <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
-            <p className="mt-1 text-3xl font-black tabular-nums text-gray-950">{cargando || error ? "—" : item.valor}</p>
+            <p className="mt-1 text-2xl font-black tabular-nums text-gray-950">{cargando || error ? "—" : item.valor}</p>
             <p className="mt-1 text-xs text-gray-500">{item.ayuda}</p>
           </div>
         ))}
@@ -134,7 +134,7 @@ export default function ERPInventarioPage() {
             { titulo: "Stock disponible valorizado", valor: resumen?.value_reference, ayuda: "Descontadas las cortesías", parcial: Number(resumen?.unvalued_units || 0) > 0 },
             { titulo: "Mercadería observada", valor: resumen?.observed_value_reference, ayuda: "Separada del stock vendible", parcial: Number(resumen?.unvalued_observed_units || 0) > 0 },
           ].map((item) => (
-            <div key={item.titulo} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div key={item.titulo} className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
               <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
               <p className="mt-1 text-xl font-black tabular-nums text-gray-950">
                 {cargando || error ? "—" : dinero(item.valor)}
@@ -169,19 +169,49 @@ export default function ERPInventarioPage() {
 
         {pestana === "existencias" ? (
           <div role="tabpanel" className="space-y-4 p-3 sm:p-4">
-            <section aria-labelledby="valor-editoriales" className="rounded-xl border border-gray-200">
-              <div className="flex flex-wrap items-start justify-between gap-2 border-b border-gray-200 p-3">
-                <div>
-                  <h2 id="valor-editoriales" className="text-sm font-bold text-gray-900">Valorización por editorial</h2>
-                  <p className="mt-1 text-xs text-gray-600">Existencias y costo histórico referencial por editorial. Selecciona una editorial para filtrar los libros de abajo.</p>
-                </div>
-                {editorial && (
-                  <button type="button" onClick={() => cambiarFiltro("editorial", "")}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50">
-                    Mostrar todas
-                  </button>
-                )}
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <input aria-label="Buscar libro o editorial" placeholder="Buscar libro o editorial…" value={busqueda}
+                onChange={(event) => cambiarFiltro("buscar", event.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-600 focus:outline-none" />
+              <select aria-label="Filtrar por editorial" value={editorial} onChange={(event) => cambiarFiltro("editorial", event.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm sm:w-52">
+                <option value="">Todas las editoriales</option>
+                {editoriales.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
+              </select>
+            </div>
+            <div className="max-h-96 overflow-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 border-b border-gray-200 bg-gray-50 text-xs text-gray-600">
+                  <tr>
+                    <th scope="col" className="p-2">Producto</th>
+                    <th scope="col" className="p-2">Editorial</th>
+                    <th scope="col" className="p-2 text-right">Físico</th>
+                    <th scope="col" className="p-2 text-right">Disponibles</th>
+                    <th scope="col" className="p-2 text-right">Observados</th>
+                    <th scope="col" className="p-2 text-right">Adicionales</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibles.map((item) => <tr key={item.product_id} className="border-b border-gray-100 transition hover:bg-gray-50">
+                    <td className="p-2 font-semibold text-gray-900">{item.product}</td>
+                    <td className="p-2 text-gray-600">{item.editorial}</td>
+                    {[item.physical, item.available, item.nonconforming, item.extra_included].map((value, indice) => (
+                      <td key={indice} className="p-2 text-right font-semibold tabular-nums">{value}</td>
+                    ))}
+                  </tr>)}
+                </tbody>
+              </table>
+              {!cargando && !error && visibles.length === 0 && <p className="p-4 text-center text-sm text-gray-500">No hay existencias para los filtros seleccionados.</p>}
+              {cargando && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias…</p>}
+            </div>
+            <p className="text-xs text-gray-500">Disponible descuenta las cortesías registradas. Los adicionales son históricos; ventas y traslados se incorporarán después.</p>
+            <details className="rounded-xl border border-gray-200 bg-white">
+              <summary className="cursor-pointer px-3 py-2.5 text-sm font-bold text-gray-900 transition hover:bg-gray-50">
+                Ver desglose por editorial ({valorPorEditorial.length})
+              </summary>
+              <p className="border-t border-gray-100 px-3 py-2 text-xs text-gray-600">
+                Selecciona una editorial para filtrar los productos de arriba.
+              </p>
               {errorValorizacion && (
                 <p role="status" className="m-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">{errorValorizacion}</p>
               )}
@@ -239,43 +269,8 @@ export default function ERPInventarioPage() {
                 El valor físico incluye también mercadería observada, que no está disponible para venta.
                 Los adicionales ya están incluidos en las cantidades conformes.
               </p>
-            </section>
-            <div className="flex flex-wrap gap-2">
-              <input aria-label="Buscar libro o editorial" placeholder="Buscar libro o editorial…" value={busqueda}
-                onChange={(event) => cambiarFiltro("buscar", event.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-600 focus:outline-none" />
-              <select aria-label="Filtrar por editorial" value={editorial} onChange={(event) => cambiarFiltro("editorial", event.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm sm:w-52">
-                <option value="">Todas las editoriales</option>
-                {editoriales.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
-              </select>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-600">
-                  <tr>
-                    <th scope="col" className="p-2">Producto</th>
-                    <th scope="col" className="p-2">Editorial</th>
-                    <th scope="col" className="p-2 text-right">Físico</th>
-                    <th scope="col" className="p-2 text-right">Disponibles</th>
-                    <th scope="col" className="p-2 text-right">Observados</th>
-                    <th scope="col" className="p-2 text-right">Adicionales</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibles.map((item) => <tr key={item.product_id} className="border-b border-gray-100 transition hover:bg-gray-50">
-                    <td className="p-2 font-semibold text-gray-900">{item.product}</td>
-                    <td className="p-2 text-gray-600">{item.editorial}</td>
-                    {[item.physical, item.available, item.nonconforming, item.extra_included].map((value, indice) => (
-                      <td key={indice} className="p-2 text-right font-semibold tabular-nums">{value}</td>
-                    ))}
-                  </tr>)}
-                </tbody>
-              </table>
-              {!cargando && !error && visibles.length === 0 && <p className="p-4 text-center text-sm text-gray-500">No hay existencias para los filtros seleccionados.</p>}
-              {cargando && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias…</p>}
-            </div>
-            <p className="mt-3 text-xs text-gray-500">Disponible descuenta las cortesías registradas. Adicionales muestra cuántos llegaron de más originalmente, no cuántos de esos libros siguen en almacén. Ventas y traslados se incorporarán después.</p>
+            </details>
+
           </div>
         ) : pestana === "salidas" ? (
           <div role="tabpanel"><InventoryCourtesyPanel outflows={salidas}
