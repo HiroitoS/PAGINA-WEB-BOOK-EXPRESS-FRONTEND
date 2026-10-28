@@ -103,3 +103,25 @@ export async function actualizarUbicacionAlmacen(id, payload) {
   const { data } = await axiosClient.patch(`${LOCATION_BASE}/${id}/`, payload);
   return data;
 }
+
+
+export async function consultarResumenUbicaciones() {
+  const { data } = await axiosClient.get(`${LOCATION_BASE}/resumen-ubicaciones/`);
+  return data;
+}
+
+export async function listarPendientesUbicacion({ q = "", page = 1 } = {}) {
+  const { data } = await axiosClient.get(`${LOCATION_BASE}/pendientes-asignacion/`, {
+    params: { q, page },
+  });
+  return data;
+}
+
+export async function conciliarUbicacion(id, entryIds, notes = "") {
+  const { data } = await axiosClient.post(`${LOCATION_BASE}/${id}/conciliar/`, {
+    entry_ids: entryIds,
+    confirmado_fisicamente: true,
+    notes,
+  });
+  return data;
+}
