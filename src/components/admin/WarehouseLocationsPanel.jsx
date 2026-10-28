@@ -4,6 +4,7 @@ import {
   crearUbicacionAlmacen,
   listarUbicacionesAlmacen,
 } from "../../api/warehouseApi";
+import WarehouseReconciliationPanel from "./WarehouseReconciliationPanel";
 
 const TIPOS = [
   { value: "main", label: "Almacén principal" },
@@ -43,7 +44,7 @@ function mensajeError(error) {
   return "No se pudo guardar la ubicación. Comprueba los datos e intenta nuevamente.";
 }
 
-export default function WarehouseLocationsPanel({ puedeGestionar }) {
+export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar = false }) {
   const [ubicaciones, setUbicaciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -311,6 +312,9 @@ export default function WarehouseLocationsPanel({ puedeGestionar }) {
             </table>
           </div>
         </>
+      )}
+      {puedeConciliar && !cargando && ubicaciones.length > 0 && (
+        <WarehouseReconciliationPanel ubicaciones={ubicaciones} />
       )}
     </div>
   );
