@@ -209,7 +209,7 @@ export default function ERPInventarioPage() {
         </div>
 
         {pestana === "existencias" ? (
-          <div role="tabpanel" className="space-y-4 p-3 sm:p-4">
+          <div className="space-y-4 p-3 sm:p-4">
             <div className="flex flex-wrap gap-2">
               <input aria-label="Buscar libro o editorial" placeholder="Buscar libro o editorial…" value={busqueda}
                 onChange={(event) => cambiarFiltro("buscar", event.target.value)}
@@ -314,10 +314,10 @@ export default function ERPInventarioPage() {
 
           </div>
         ) : pestana === "salidas" ? (
-          <div role="tabpanel"><InventoryCourtesyPanel outflows={salidas}
+          <div><InventoryCourtesyPanel outflows={salidas}
             canManage={puedeRegistrarCortesia} onRefresh={() => cargar(() => false)} /></div>
         ) : (
-          <div role="tabpanel" className="p-3 sm:p-4">
+          <div  className="p-3 sm:p-4">
             <h2 className="text-sm font-bold text-gray-900">Historial de movimientos de mercadería</h2>
             <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro conserva cuánto ingresó originalmente, su guía, colegio y valor histórico. Las cortesías y su descuento de stock se consultan en Cortesías; los traslados y ventas se incorporarán posteriormente.</p>
             <div className="overflow-x-auto">
