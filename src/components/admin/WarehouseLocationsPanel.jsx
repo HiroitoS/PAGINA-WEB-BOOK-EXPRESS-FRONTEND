@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  listarUbicacionesAlmacen,
-  crearUbicacionAlmacen,
   actualizarUbicacionAlmacen,
+  crearUbicacionAlmacen,
+  listarUbicacionesAlmacen,
 } from "../../api/warehouseApi";
 
 const TIPOS = [
@@ -17,15 +17,22 @@ const FORMULARIO_VACIO = {
   code: "", name: "", kind: "main", address: "", notes: "", is_active: true,
 };
 
+const campoClase = "mt-1 min-h-11 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-red-600 focus:outline-none disabled:bg-gray-100";
+
+function mostrarTipo(tipo) {
+  return TIPOS.find((item) => item.value === tipo)?.label ?? tipo;
+}
+
 function mensajeError(error) {
   const datos = error?.response?.data;
   if (typeof datos?.detail === "string") return datos.detail;
+  if (Array.isArray(datos?.detail)) return datos.detail.join(" ");
   if (datos && typeof datos === "object") {
     return Object.entries(datos).map(([campo, valor]) =>
       `${campo}: ${Array.isArray(valor) ? valor.join(" ") : String(valor)}`
     ).join(" ");
   }
-  return "No se pudo completar la operación. Revisa los datos e intenta de nuevo.";
+  return "No se pudo guardar la ubicación. Comprueba los datos e intenta nuevamente.";
 }
 
 export default function WarehouseLocationsPanel({ puedeGestionar }) {
@@ -34,13 +41,17 @@ export default function WarehouseLocationsPanel({ puedeGestionar }) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [formularioAbierto, setFormularioAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
+  const formRef = useRef(null);
 
   useEffect(() => {
     let ignore = false;
     Promise.resolve().then(listarUbicacionesAlmacen).then((data) => {
-      if (!ignore) setUbicaciones(Array.isArray(data) ? data : data.results ?? []);
+      if (!ignore) {
+        setUbicaciones(Array.isArray(data) ? data : data?.results ?? []);
+      }
     }).catch((err) => {
       if (!ignore) setError(mensajeError(err));
     }).finally(() => {
@@ -48,6 +59,21 @@ export default function WarehouseLocationsPanel({ puedeGestionar }) {
     });
     return () => { ignore = true; };
   }, []);
+
+  function moverAlFormulario() {
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function abrirNuevo() {
+    setFormulario(FORMULARIO_VACIO);
+    setEditandoId(null);
+    setError("");
+    setMensaje("");
+    setFormularioAbierto(true);
+    moverAlFormulario();
+  }
 
   function editar(ubicacion) {
     setEditandoId(ubicacion.id);
@@ -61,10 +87,13 @@ export default function WarehouseLocationsPanel({ puedeGestionar }) {
     });
     setError("");
     setMensaje("");
+    setFormularioAbierto(true);
+    moverAlFormulario();
   }
 
   function cancelar() {
     setFormulario(FORMULARIO_VACIO);
+    setFormularioAbierto(false);
     setEditandoId(null);
     setError("");
   }
@@ -90,11 +119,16 @@ export default function WarehouseLocationsPanel({ puedeGestionar }) {
       const guardado = editandoId !== null
         ? await actualizarUbicacionAlmacen(editandoId, payload)
         : await crearUbicacionAlmacen({ ...payload, code: formulario.code.trim() });
-      setUbicaciones((anteriores) => [...anteriores.filter((item) => item.id !== guardado.id), guardado]
-        .sort((a, b) => a.name.localeCompare(b.name, "es")));
-      setMensaje(editandoId !== null ? "Ubicación actualizada." : "Ubicación registrada.");
+      setUbicaciones((anteriores) => [
+        ...anteriores.filter((item) => item.id !== guardado.id),
+        guardado,
+      ].sort((a, b) => a.name.localeCompare(b.name, "es")));
+      setMensaje(editandoId !== null
+        ? "La ubicación se actualizó correctamente."
+        : "Ubicación registrada correctamente. No se modificaron las existencias.");
       setEditandoId(null);
       setFormulario(FORMULARIO_VACIO);
+      setFormularioAbierto(false);
     } catch (err) {
       setError(mensajeError(err));
     } finally {
@@ -103,64 +137,88 @@ export default function WarehouseLocationsPanel({ puedeGestionar }) {
   }
 
   return (
-    <div className="space-y-3 p-3 sm:p-4">
-      <div>
-        <h2 className="text-base font-black text-gray-950">Ubicaciones de almacén</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          Define los lugares donde se custodiará mercadería. Registrar una ubicación no traslada libros
-          ni asigna automáticamente el inventario histórico.
-        </p>
+    <div className="min-w-0 space-y-4 p-3 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-black text-gray-950">Lugares registrados</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Aquí administras los lugares. Las existencias se consultan en Inventario.
+          </p>
+          {!cargando && !error && (
+            <p className="mt-1 text-xs font-semibold text-gray-500">
+              {ubicaciones.length} {ubicaciones.length === 1 ? "ubicación registrada" : "ubicaciones registradas"}
+            </p>
+          )}
+        </div>
+        {puedeGestionar && !formularioAbierto && (
+          <button type="button" onClick={abrirNuevo}
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 sm:w-auto">
+            + Nueva ubicación
+          </button>
+        )}
       </div>
 
-      {mensaje && <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-800">{mensaje}</p>}
-      {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+      {mensaje && (
+        <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-800">
+          {mensaje}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          {error}
+        </p>
+      )}
 
-      {puedeGestionar && (
-        <form onSubmit={guardar} className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-gray-900">
-              {editandoId !== null ? "Editar ubicación" : "Nueva ubicación"}
-            </h3>
-            {editandoId !== null && (
-              <button type="button" onClick={cancelar} className="text-sm font-semibold text-gray-600 underline hover:text-red-700">
-                Cancelar edición
-              </button>
-            )}
+      {puedeGestionar && formularioAbierto && (
+        <form ref={formRef} onSubmit={guardar}
+          className="scroll-mt-24 space-y-4 rounded-xl border border-red-200 bg-red-50/50 p-3 sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-black text-gray-900">
+                {editandoId !== null ? "Modificar ubicación" : "Registrar ubicación"}
+              </h3>
+              <p className="mt-1 text-xs text-gray-600">
+                Registrar un lugar no mueve libros ni asigna existencias.
+              </p>
+            </div>
+            <button type="button" onClick={cancelar}
+              className="min-h-11 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700">
+              Cancelar
+            </button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <label className="text-xs font-semibold text-gray-700">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <label className="min-w-0 text-xs font-semibold text-gray-700">
               Código
               <input required maxLength={32} disabled={editandoId !== null}
+                autoComplete="off"
                 value={formulario.code} onChange={(event) => actualizarCampo("code", event.target.value)}
-                placeholder="Ej. ALM-PRINCIPAL"
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm disabled:bg-gray-100" />
+                placeholder="Ej. ALM-PRINCIPAL" className={campoClase} />
             </label>
-            <label className="text-xs font-semibold text-gray-700">
-              Nombre
-              <input required maxLength={120}
-                value={formulario.name} onChange={(event) => actualizarCampo("name", event.target.value)}
-                placeholder="Nombre del lugar"
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" />
+            <label className="min-w-0 text-xs font-semibold text-gray-700">
+              Nombre del lugar
+              <input required maxLength={120} value={formulario.name}
+                onChange={(event) => actualizarCampo("name", event.target.value)}
+                placeholder="Ej. Almacén central" className={campoClase} />
             </label>
-            <label className="text-xs font-semibold text-gray-700">
-              Tipo de ubicación
-              <select required value={formulario.kind}
+            <label className="min-w-0 text-xs font-semibold text-gray-700">
+              Tipo
+              <select value={formulario.kind}
                 onChange={(event) => actualizarCampo("kind", event.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                className={campoClase}>
                 {TIPOS.map((tipo) => <option key={tipo.value} value={tipo.value}>{tipo.label}</option>)}
               </select>
             </label>
-            <label className="text-xs font-semibold text-gray-700 sm:col-span-2">
+            <label className="min-w-0 text-xs font-semibold text-gray-700 sm:col-span-2">
               Dirección o referencia (opcional)
               <input maxLength={255} value={formulario.address}
                 onChange={(event) => actualizarCampo("address", event.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" />
+                placeholder="Referencia para ubicar el depósito" className={campoClase} />
             </label>
-            <label className="text-xs font-semibold text-gray-700">
+            <label className="min-w-0 text-xs font-semibold text-gray-700">
               Estado
               <select value={formulario.is_active ? "active" : "inactive"}
                 onChange={(event) => actualizarCampo("is_active", event.target.value === "active")}
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                className={campoClase}>
                 <option value="active">Activa</option>
                 <option value="inactive">Inactiva</option>
               </select>
@@ -170,53 +228,89 @@ export default function WarehouseLocationsPanel({ puedeGestionar }) {
             Observaciones (opcional)
             <textarea rows={2} value={formulario.notes}
               onChange={(event) => actualizarCampo("notes", event.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm" />
+              className={campoClase} />
           </label>
-          <div className="flex justify-end">
-            <button type="submit" disabled={guardando || !formulario.name.trim() || !formulario.code.trim()}
-              className="rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 disabled:opacity-50">
-              {guardando ? "Guardando…" : editandoId !== null ? "Guardar cambios" : "Registrar ubicación"}
-            </button>
-          </div>
+          <button type="submit"
+            disabled={guardando || !formulario.name.trim() || !formulario.code.trim()}
+            className="min-h-11 w-full rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+            {guardando ? "Guardando…" : editandoId !== null ? "Guardar cambios" : "Registrar ubicación"}
+          </button>
         </form>
       )}
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="w-full min-w-max text-left text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-600">
-            <tr>
-              <th scope="col" className="p-3">Código</th>
-              <th scope="col" className="p-3">Ubicación</th>
-              <th scope="col" className="p-3">Tipo</th>
-              <th scope="col" className="p-3">Estado</th>
-              {puedeGestionar && <th scope="col" className="p-3">Acción</th>}
-            </tr>
-          </thead>
-          <tbody>
+
+      {cargando && (
+        <p role="status" className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Consultando ubicaciones…</p>
+      )}
+      {!cargando && ubicaciones.length === 0 && !error && (
+        <div className="space-y-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-5 text-center">
+          <h3 className="text-sm font-bold text-gray-900">Aún no hay ubicaciones registradas</h3>
+          <p className="text-sm text-gray-600">
+            Puedes registrar el almacén principal, la tienda o los lugares que realmente utilice Book Express.
+          </p>
+          {!puedeGestionar && (
+            <p className="text-xs text-gray-500">Consulta con un administrador para configurar ubicaciones.</p>
+          )}
+        </div>
+      )}
+
+      {ubicaciones.length > 0 && (
+        <>
+          <div className="grid gap-2 sm:hidden">
             {ubicaciones.map((item) => (
-              <tr key={item.id} className="border-t border-gray-100">
-                <td className="p-3 font-semibold">{item.code}</td>
-                <td className="p-3">{item.name}</td>
-                <td className="p-3">{TIPOS.find((tipo) => tipo.value === item.kind)?.label ?? item.kind}</td>
-                <td className="p-3">{item.is_active ? "Activa" : "Inactiva"}</td>
+              <article key={item.id} className="min-w-0 space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="break-words text-sm font-bold text-gray-900">{item.name}</h3>
+                    <p className="mt-1 break-all text-xs text-gray-600">{item.code}</p>
+                  </div>
+                  <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-600">
+                    {item.is_active ? "Activa" : "Inactiva"}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600">{mostrarTipo(item.kind)}</p>
+                {item.address && <p className="break-words text-xs text-gray-600">{item.address}</p>}
                 {puedeGestionar && (
-                  <td className="p-3">
-                    <button type="button" onClick={() => editar(item)}
-                      className="font-semibold text-red-700 hover:underline">Editar</button>
-                  </td>
+                  <button type="button" onClick={() => editar(item)}
+                    className="min-h-11 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-red-700">
+                    Editar ubicación
+                  </button>
                 )}
-              </tr>
+              </article>
             ))}
-          </tbody>
-        </table>
-        {!cargando && ubicaciones.length === 0 && !error && (
-          <p className="p-4 text-center text-sm text-gray-500">No se han configurado ubicaciones.</p>
-        )}
-        {cargando && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando ubicaciones…</p>}
-      </div>
-      <p className="text-xs leading-5 text-gray-600">
-        El stock sigue siendo global hasta que se concilien y asignen los lotes a ubicaciones reales.
-        Los traslados se habilitarán después de esa conciliación.
-      </p>
+          </div>
+          <div className="hidden overflow-x-auto rounded-lg border border-gray-200 sm:block">
+            <table className="w-full min-w-max text-left text-sm">
+              <thead className="bg-gray-50 text-xs text-gray-600">
+                <tr>
+                  <th scope="col" className="p-3">Código</th>
+                  <th scope="col" className="p-3">Nombre</th>
+                  <th scope="col" className="p-3">Tipo</th>
+                  <th scope="col" className="p-3">Estado</th>
+                  {puedeGestionar && <th scope="col" className="p-3">Acción</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {ubicaciones.map((item) => (
+                  <tr key={item.id} className="border-t border-gray-100">
+                    <td className="p-3 font-semibold">{item.code}</td>
+                    <td className="p-3">{item.name}</td>
+                    <td className="p-3">{mostrarTipo(item.kind)}</td>
+                    <td className="p-3">{item.is_active ? "Activa" : "Inactiva"}</td>
+                    {puedeGestionar && (
+                      <td className="p-3">
+                        <button type="button" onClick={() => editar(item)}
+                          className="min-h-11 rounded-lg px-2 font-semibold text-red-700 hover:underline">
+                          Editar
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
