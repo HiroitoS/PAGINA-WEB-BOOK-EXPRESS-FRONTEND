@@ -161,6 +161,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
             <label className="text-xs font-bold text-gray-800">Almacén de origen
               <select value={sourceId} onChange={(event) => {
                 setSourceId(event.target.value);
+                if (destinationId === event.target.value) setDestinationId("");
                 setSelected(null); setPage(1); setMessage(""); setError("");
               }} className={inputClase}>
                 <option value="">Selecciona el origen</option>
@@ -178,6 +179,32 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
               </select>
             </label>
           </div>
+          <details className="rounded-xl border border-gray-200 bg-white p-3">
+            <summary className="cursor-pointer text-sm font-black text-gray-950">
+              Ver existencias y valor por almacén
+            </summary>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {(summary?.locations ?? []).map((loc) => (
+                <div key={loc.id} className="min-w-0 rounded-lg bg-gray-50 p-3">
+                  <p className="break-words text-sm font-bold text-gray-950">{loc.name}</p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Disponibles: <strong>{loc.available}</strong> · Observados: {loc.observed}
+                  </p>
+                  <p className="mt-1 text-sm font-black tabular-nums text-gray-900">
+                    {soles(loc.available_value_reference)}
+                  </p>
+                  {loc.unvalued_available_units > 0 && (
+                    <p className="mt-1 text-xs text-amber-800">
+                      Parcial: {loc.unvalued_available_units} unidades sin costo
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Saldos por ubicación. El total global no cambia con los traslados.
+            </p>
+          </details>
           <div className="grid items-start gap-3 lg:grid-cols-2">
             <section aria-label="Libros disponibles para traslado" className="min-w-0 rounded-xl border border-gray-200 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
