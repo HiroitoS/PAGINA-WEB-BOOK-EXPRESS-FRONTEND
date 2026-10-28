@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { FiBox, FiPackage, FiGift, FiTruck, FiCornerUpLeft, FiSliders } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth";
@@ -33,6 +33,7 @@ export default function ERPInventarioPage() {
   const { user } = useAuth();
   const puedeVerCatalogo = userHasPermission(user, ["catalog.view_catalog"]);
   const puedeRegistrarCortesia = userHasPermission(user, ["warehouse.manage_stock_courtesies"]);
+  const detalleRef = useRef(null);
   const [existencias, setExistencias] = useState([]);
   const [entradas, setEntradas] = useState([]);
   const [salidas, setSalidas] = useState([]);
@@ -57,6 +58,13 @@ export default function ERPInventarioPage() {
       return siguiente;
     }, { replace: true });
   }
+  function seleccionarSeccion(vista) {
+    cambiarFiltro("vista", vista === "existencias" ? "" : vista);
+    if (window.matchMedia("(max-width: 639px)").matches) {
+      requestAnimationFrame(() => detalleRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  }
+
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
@@ -143,7 +151,7 @@ export default function ERPInventarioPage() {
             const claseBase = "flex min-h-16 w-48 shrink-0 snap-start items-center gap-2 rounded-lg border p-3 text-left sm:w-full sm:gap-3";
             return item.vista ? (
               <button key={item.nombre} type="button" aria-current={activa ? "page" : undefined}
-                onClick={() => cambiarFiltro("vista", item.vista === "existencias" ? "" : item.vista)}
+                onClick={() => seleccionarSeccion(item.vista)}
                 className={`${claseBase} transition-colors ${activa
                   ? "border-red-600 bg-red-50 text-gray-950"
                   : "border-gray-200 bg-gray-50 text-gray-900 hover:border-red-300 hover:bg-white"}`}>
@@ -200,7 +208,7 @@ export default function ERPInventarioPage() {
           )}
         </p>
       </section>
-      <section aria-label="Detalle de la operación seleccionada" className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <section ref={detalleRef} aria-label="Detalle de la operación seleccionada" className="scroll-mt-24 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
           <h2 className="text-sm font-bold text-gray-900">
             {pestana === "existencias" ? "Existencias por producto" : pestana === "movimientos" ? "Entradas de mercadería" : "Cortesías a colegios"}
