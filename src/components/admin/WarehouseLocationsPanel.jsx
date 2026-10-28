@@ -76,7 +76,11 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   }
 
   function abrirNuevo() {
-    setFormulario(FORMULARIO_VACIO);
+    const existePrincipal = ubicaciones.some((item) => item.kind === "main" && item.is_active);
+    setFormulario({
+      ...FORMULARIO_VACIO,
+      kind: existePrincipal ? "store" : "main",
+    });
     setEditandoId(null);
     setError("");
     setMensaje("");
