@@ -234,7 +234,28 @@ export default function ERPInventarioPage() {
                 {editoriales.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
               </select>
             </div>
-            <div className="max-h-96 overflow-auto overscroll-contain">
+            <div className="max-h-96 space-y-2 overflow-y-auto overscroll-contain sm:hidden">
+              {visibles.map((item) => (
+                <article key={item.product_id} className="min-w-0 rounded-lg border border-gray-200 bg-white p-3">
+                  <h3 className="break-words text-sm font-bold text-gray-950">{item.product}</h3>
+                  <p className="mt-1 text-xs text-gray-600">{item.editorial}</p>
+                  <dl className="mt-3 grid grid-cols-2 gap-2">
+                    {[
+                      ["Existencia física", item.physical],
+                      ["Disponibles", item.available],
+                      ["Observados", item.nonconforming],
+                      ["Adicionales incluidos", item.extra_included],
+                    ].map(([label, cantidad]) => (
+                      <div key={label} className="min-w-0 rounded-lg bg-gray-50 px-2 py-2">
+                        <dt className="text-xs leading-4 text-gray-600">{label}</dt>
+                        <dd className="mt-1 text-base font-black tabular-nums text-gray-950">{cantidad}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </article>
+              ))}
+            </div>
+            <div className="hidden max-h-96 overflow-auto overscroll-contain sm:block">
               <table className="w-full min-w-max text-left text-sm">
                 <thead className="sticky top-0 border-b border-gray-200 bg-gray-50 text-xs text-gray-600">
                   <tr>
@@ -256,9 +277,11 @@ export default function ERPInventarioPage() {
                   </tr>)}
                 </tbody>
               </table>
-              {!cargando && !error && visibles.length === 0 && <p className="p-4 text-center text-sm text-gray-500">No hay existencias para los filtros seleccionados.</p>}
-              {cargando && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias…</p>}
             </div>
+            {!cargando && !error && visibles.length === 0 && (
+              <p className="p-4 text-center text-sm text-gray-500">No hay existencias para los filtros seleccionados.</p>
+            )}
+            {cargando && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias…</p>}
             <p className="text-xs text-gray-500">Disponible descuenta las cortesías registradas. Los adicionales son históricos; ventas y traslados se incorporarán después.</p>
             <details className="rounded-xl border border-gray-200 bg-white">
               <summary className="cursor-pointer px-3 py-2.5 text-sm font-bold text-gray-900 transition hover:bg-gray-50">
