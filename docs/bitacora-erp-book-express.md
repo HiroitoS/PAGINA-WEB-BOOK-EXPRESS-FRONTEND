@@ -295,3 +295,30 @@ Precios 2027 se actualizarán más adelante desde listas del proveedor; no alter
 - **Sin merge a `main` ni publicación en Tecnoweb** hasta que esas verificaciones y el flujo funcional terminen correctamente.
 
 **Siguiente paso P-08.1b**: diseño y pruebas de conciliación de los lotes de recepción con ubicaciones reales, con total global invariable, auditoría, idempotencia y bloqueo de sobreasignaciones antes de habilitar traslados entre Principal, Tienda, Feria y Consignación.
+
+
+## P-08.1b — 27/10/2026 · Ubicación inicial por lote y conciliación histórica (desarrollo)
+
+**Decisión arquitectónica**: registrar el `WarehouseLocation` Principal no significa que todo el stock anterior esté físicamente allí. Los 415 libros mostrados en el entorno de pruebas son saldos globales de `StockEntry` menos cortesías; no se deben migrar por defecto a Principal. La asignación inicial se hace por lote de guía/colegio, comprobando la ubicación real. Un lote solo puede asignarse íntegramente a un sitio durante esta fase; si está dividido físicamente entre almacenes, requiere la siguiente etapa de conciliación por partidas y traslados.
+
+**Backend, rama `crm/gestion-colegios`**:
+- Nuevo modelo `StockEntryLocation` en `warehouse/models.py` y migración `0010_stock_entry_location.py`. Es una relación 1:1 entre lote de `StockEntry` y ubicación inicial, con origen `receipt` o `reconciliation`, cantidades netas al asignar, responsable, notas y fechas. No modifica las cantidades históricas ni crea nuevas entradas. La migración NO asigna stock existente.
+- `warehouse/location_assignment.py` incorpora: selección automática del único Principal activo al crear nuevas entradas de recepción; las entradas históricas siguen pendientes; si no hay Principal la operación queda sin ubicación, y si hay más de uno la validación se bloquea por ambigüedad. La conciliación es explícita, transaccional y protegida por bloqueo de lotes; si ya fue conciliado al mismo destino, reintentar no duplica asignaciones; se impide cambiar a otro sitio sin un flujo posterior de traslado.
+- En `warehouse/inventory.py`, `asignar_nueva_entrada` solo se ejecuta cuando una recepción validada crea su `StockEntry` por primera vez; un reintento no reasigna stock histórico.
+- `warehouse/api_locations.py`: `GET /api/admin/erp/almacen/ubicaciones/pendientes-asignacion/` (consulta paginada por libro, editorial, guía o colegio), `GET /api/admin/erp/almacen/ubicaciones/resumen-ubicaciones/` (conformes/observados por ubicación y sin asignar) y `POST /api/admin/erp/almacen/ubicaciones/<id>/conciliar/` (lista de IDs, confirmación de verificación física). El registro de conciliación requiere `warehouse.manage_warehouse_locations` y `warehouse.validate_receiving`; la lectura adicional de stock exige `warehouse.view_receiving`.
+- Se previene crear un segundo Principal activo mediante el serializer. Los lugares secundarios se pueden crear sin añadir mercadería.
+- Se añadieron pruebas `warehouse/test_location_assignment.py` y una regresión en `warehouse/test_locations.py` para asignación automática, conciliación neta tras cortesía, intento de duplicar, cambio de ubicación indebido, permiso de usuario y Principales duplicados.
+- **Limitación intencional**: en esta entrega no existe movimiento entre depósitos ni fraccionamiento físico de un lote durante la conciliación. La ubicación inicial identifica la custodia de todo su saldo neto; un traslado parcial requerirá movimientos adicionales (P-08.2). No es correcto copiar la cantidad histórica recibida sin descontar cortesías.
+
+**Frontend**:
+- `src/components/admin/WarehouseReconciliationPanel.jsx` bajo la pantalla administrativa de Ubicaciones, plegado por defecto. Presenta cifras **sin ubicación**, lotes por guía/colegio/producto y la selección explícita de lugar físico; hay paginación, búsqueda, confirmación React y control de permisos. No se selecciona automáticamente todo el inventario. Los lotes físicamente divididos deben esperar un proceso posterior.
+- El formulario de nuevas ubicaciones ahora recomienda `Tienda` cuando ya existe un `Principal` activo.
+- `src/api/warehouseApi.js` agrega llamadas de resumen/pendientes/conciliación. `ERPUbicacionesPage.jsx` controla acceso a la conciliación y distingue configuración de saldos.
+
+**Validación pendiente en equipo local (GitHub no ejecuta tests)**:
+1. Respaldar base de datos **local de pruebas** antes de aplicar migraciones. Ejecutar `python manage.py migrate warehouse`, verificar `0010` en `showmigrations` y pasar `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py test warehouse.test_locations warehouse.test_location_assignment` y `python manage.py test warehouse purchasing`.
+2. Frontend: `npm run lint` y `npm run build`; revisar 360, 390, 440 y 768 px, las listas plegables, la confirmación y el regreso a Inventario.
+3. Confirmar Principal único; crear recepción ficticia adicional y verificar que figura en su ubicación. Comprobar que los lotes previos siguen sin ubicación y que luego de conciliarlos con verificación física se reducen los pendientes y **no varían el total global ni su valorización**. Probar reintento e imposibilidad de asignar un mismo lote a dos lugares. Un libro dividido entre Principal y Tienda NO se debe conciliar en esta fase.
+4. No fusionar a `main` ni desplegar a Tecnoweb hasta finalizar migraciones y flujo E2E.
+
+**Próximo P-08.2**: saldos por ubicación respaldados por movimientos de traslado/recepción con origen y destino, validación de cantidades disponibles, estados de envío/recepción y diferencias, valorización por almacén, stock temporal de ferias y conciliación de consignaciones. Este alcance NO está implementado.
