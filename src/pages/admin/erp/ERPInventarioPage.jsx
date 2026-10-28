@@ -4,6 +4,7 @@ import { FiBox, FiPackage, FiGift, FiTruck, FiCornerUpLeft, FiSliders } from "re
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import InventoryCourtesyPanel from "../../../components/admin/InventoryCourtesyPanel";
+import WarehouseLocationsPanel from "../../../components/admin/WarehouseLocationsPanel";
 import { consultarExistencias, consultarResumenInventario, consultarValorizacionPorEditorial, listarEntradasInventario, listarSalidasInventario } from "../../../api/warehouseApi";
 
 function mensajeError(error) {
@@ -33,6 +34,8 @@ export default function ERPInventarioPage() {
   const { user } = useAuth();
   const puedeVerCatalogo = userHasPermission(user, ["catalog.view_catalog"]);
   const puedeRegistrarCortesia = userHasPermission(user, ["warehouse.manage_stock_courtesies"]);
+  const puedeVerUbicaciones = userHasPermission(user, ["warehouse.view_warehouse_locations"]);
+  const puedeGestionarUbicaciones = userHasPermission(user, ["warehouse.manage_warehouse_locations"]);
   const detalleRef = useRef(null);
   const [existencias, setExistencias] = useState([]);
   const [entradas, setEntradas] = useState([]);
@@ -47,7 +50,9 @@ export default function ERPInventarioPage() {
   const vistaSolicitada = searchParams.get("vista");
   const pestana = vistaSolicitada === "cortesias"
     ? "salidas"
-    : ["movimientos", "salidas"].includes(vistaSolicitada) ? vistaSolicitada : "existencias";
+    : vistaSolicitada === "ubicaciones" && puedeVerUbicaciones
+      ? "ubicaciones"
+      : ["movimientos", "salidas"].includes(vistaSolicitada) ? vistaSolicitada : "existencias";
   const retornoInventario = `/admin/erp/almacen/inventario${searchParams.toString() ? `?${searchParams}` : ""}`;
 
   function cambiarFiltro(clave, valor) {
@@ -125,6 +130,11 @@ export default function ERPInventarioPage() {
           <p className="mt-1 text-sm text-gray-600">Las recepciones validadas ingresan automáticamente. Consulta existencias y movimientos.</p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          {puedeVerUbicaciones && <button type="button" onClick={() => seleccionarSeccion(pestana === "ubicaciones" ? "existencias" : "ubicaciones")}
+            aria-pressed={pestana === "ubicaciones"}
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-xs font-semibold text-red-800 transition hover:bg-red-100 sm:text-sm">
+            {pestana === "ubicaciones" ? "Volver a existencias" : "Configurar ubicaciones"}
+          </button>}
           {puedeVerCatalogo && <Link to="/admin/productos" state={{ inventoryReturnTo: retornoInventario }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-semibold text-gray-700 transition hover:bg-gray-50 sm:text-sm">Catálogo de productos</Link>}
           <Link to="/admin/erp/almacen/recepciones" state={{ inventoryReturnTo: retornoInventario }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-semibold text-gray-700 transition hover:bg-gray-50 sm:text-sm">Ver recepciones</Link>
         </div>
@@ -211,12 +221,14 @@ export default function ERPInventarioPage() {
       <section ref={detalleRef} aria-label="Detalle de la operación seleccionada" className="scroll-mt-24 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
           <h2 className="text-sm font-bold text-gray-900">
-            {pestana === "existencias" ? "Existencias por producto" : pestana === "movimientos" ? "Entradas de mercadería" : "Cortesías a colegios"}
+            {pestana === "existencias" ? "Existencias por producto" : pestana === "movimientos" ? "Entradas de mercadería" : pestana === "ubicaciones" ? "Ubicaciones físicas" : "Cortesías a colegios"}
           </h2>
-          <span className="text-xs text-gray-500">{error ? "Consulta no disponible" : `${existencias.length} productos con entradas`}</span>
+          {pestana !== "ubicaciones" && <span className="text-xs text-gray-500">{error ? "Consulta no disponible" : `${existencias.length} productos con entradas`}</span>}
         </div>
 
-        {pestana === "existencias" ? (
+        {pestana === "ubicaciones" ? (
+          <WarehouseLocationsPanel puedeGestionar={puedeGestionarUbicaciones} />
+        ) : pestana === "existencias" ? (
           <div className="space-y-4 p-3 sm:p-4">
             <div className="flex flex-wrap gap-2">
               <input aria-label="Buscar libro o editorial" placeholder="Buscar libro o editorial…" value={busqueda}
