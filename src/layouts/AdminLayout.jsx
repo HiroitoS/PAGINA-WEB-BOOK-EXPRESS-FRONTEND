@@ -14,6 +14,7 @@ import {
   FaComments,
   FaFileExcel,
   FaLayerGroup,
+  FaMapMarkerAlt,
   FaSchool,
   FaStar,
   FaSun,
@@ -166,7 +167,7 @@ const NAV_SECTIONS = [
     type: "group",
     label: "ERP",
     icon: <FaBoxOpen />,
-    permissions: ["purchasing.view_purchasing", "warehouse.view_receiving"],
+    permissions: ["purchasing.view_purchasing", "warehouse.view_receiving", "warehouse.view_warehouse_locations"],
     children: [
       {
         label: "Pedidos a Editoriales",
@@ -179,7 +180,7 @@ const NAV_SECTIONS = [
         label: "Almacén",
         icon: <FaBoxOpen />,
         basePath: "/admin/erp/almacen/",
-        permissions: ["warehouse.view_receiving"],
+        permissions: ["warehouse.view_receiving", "warehouse.view_warehouse_locations"],
         children: [
           {
             label: "Recepción de mercadería",
@@ -192,6 +193,12 @@ const NAV_SECTIONS = [
             to: "/admin/erp/almacen/inventario",
             icon: <FaBoxOpen />,
             permissions: ["warehouse.view_receiving"],
+          },
+          {
+            label: "Ubicaciones",
+            to: "/admin/erp/almacen/ubicaciones",
+            icon: <FaMapMarkerAlt />,
+            permissions: ["warehouse.view_warehouse_locations"],
           },
         ],
       },
@@ -531,7 +538,7 @@ export default function AdminLayout() {
         </div>
       ) : null}
 
-      <div className="lg:pl-72">
+      <div className="min-w-0 lg:pl-72">
         <header className="sticky top-0 z-30 border-b border-gray-200 bg-white px-3 py-2.5 shadow-sm sm:px-4 lg:px-6 lg:py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -576,7 +583,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className="px-3 py-4 sm:px-4 sm:py-5 lg:p-6">
+        <main className="min-w-0 max-w-full px-3 py-4 sm:px-4 sm:py-5 lg:p-6">
           <Outlet />
         </main>
       </div>
