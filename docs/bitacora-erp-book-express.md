@@ -271,3 +271,27 @@ Precios 2027 se actualizarán más adelante desde listas del proveedor; no alter
 5. **Sin publicación**: no fusionar `main` ni desplegar a Tecnoweb antes de validar los recorridos funcionales y los resultados de pruebas.
 
 **Regla de diseño a replicar gradualmente**: móvil 320–440 px con controles táctiles ~44 px, navegación de máximo dos columnas para operaciones compactas, listas como tarjetas con datos principales, formularios de una columna, filtros de ancho completo y tablas complejas con scroll interno en lugar de desbordar el documento. Tablet/desktop pueden usar estructuras más densas. Preservar permisos y estados del backend, sin acciones que parezcan activas cuando no lo están.
+
+
+## P-08.1a · cierre UX de Ubicaciones — 27/10/2026
+
+**Decisión comercial y funcional**
+- El encargado no debe crear ni memorizar códigos internos para dar de alta el almacén principal, tienda, feria, consignación u otro depósito. Solo registra nombre, tipo y datos opcionales del lugar.
+- Las ubicaciones se administran en **ERP → Almacén → Ubicaciones**, separadas de Inventario. Son destinos o custodias para los futuros traslados; **crearlas no mueve mercadería, no cambia 415 unidades de prueba ni valoriza por ubicación**. Hasta completar conciliación de P-08.1b, el stock continúa siendo global.
+- La pantalla móvil y escritorio muestran lista de lugares y formulario bajo demanda, etiquetas sencillas y ayuda contextual por tipo. Al crear se presume estado **Activa**; se puede editar y desactivar después. Los códigos dejan de ser una obligación del usuario o una columna visible.
+
+**Backend (rama `crm/gestion-colegios`)**
+- `warehouse/api_locations.py`: `WarehouseLocationSerializer` marca `code` solo lectura. La API `POST /api/admin/erp/almacen/ubicaciones/` genera `UBI-<24 caracteres hexadecimales>` mediante UUID; el índice UNIQUE existente evita colisiones y la escritura atómica reintenta ante coincidencia, sin ocultar otros errores de integridad. No hay migraciones nuevas ni cambios en `WarehouseLocation` o `StockEntry`. Se conservan identificadores históricos y se rechaza la modificación de código en PATCH.
+- `warehouse/test_locations.py`: tests adaptados a alta sin código, códigos únicos incluso con nombre repetido, imposibilidad de editar identificadores, recuperación frente a colisión simulada, tipo no permitido, permisos, no eliminación y conservación de stock.
+- Se conservan las APIs, roles y permisos de consulta/gestión. No se habilitan traslados, ajustes ni devoluciones.
+
+**Frontend (rama `crm/gestion-colegios`)**
+- `src/components/admin/WarehouseLocationsPanel.jsx`: elimina campo de código y su validación; POST solo envía datos funcionales; una breve descripción cambia según Principal/Tienda/Feria/Consignación/Otro. Estado visible al editar, no en el alta; una ubicación nueva comienza activa. Se elimina la referencia técnica de las tarjetas y tabla; el identificador sigue disponible en API para trazabilidad interna. Se evita el estado vacío detrás del formulario cuando se está creando.
+- `src/pages/admin/erp/ERPUbicacionesPage.jsx`: encabezado explica que se configuran destinos para movimientos futuros.
+
+**Pruebas exigidas antes de declarar listo**
+- En `bookexpress_backend`: `git pull --ff-only origin crm/gestion-colegios`, `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py test warehouse.test_locations`, `python manage.py test warehouse purchasing`.
+- En `bookexpress_frontend`: mismo pull, `npm run lint`, `npm run build`; entrar a `/admin/erp/almacen/ubicaciones` en ancho 360/390/440 px y en escritorio; crear con nombre/tipo y sin código, editar, desactivar, confirmar que el stock global se mantiene. Las pruebas no se ejecutan desde el conector GitHub y requieren resultado local.
+- **Sin merge a `main` ni publicación en Tecnoweb** hasta que esas verificaciones y el flujo funcional terminen correctamente.
+
+**Siguiente paso P-08.1b**: diseño y pruebas de conciliación de los lotes de recepción con ubicaciones reales, con total global invariable, auditoría, idempotencia y bloqueo de sobreasignaciones antes de habilitar traslados entre Principal, Tienda, Feria y Consignación.
