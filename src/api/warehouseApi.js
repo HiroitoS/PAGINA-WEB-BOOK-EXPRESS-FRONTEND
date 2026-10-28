@@ -86,3 +86,20 @@ export async function registrarCortesiaInventario(payload) {
   const { data } = await axiosClient.post(`${INVENTORY_BASE}/cortesias/`, payload);
   return data;
 }
+
+const LOCATION_BASE = "/admin/erp/almacen/ubicaciones";
+
+export async function listarUbicacionesAlmacen() {
+  const { data } = await axiosClient.get(`${LOCATION_BASE}/`);
+  return data;
+}
+
+export async function crearUbicacionAlmacen(payload) {
+  const { data } = await axiosClient.post(`${LOCATION_BASE}/`, payload);
+  return data;
+}
+
+export async function actualizarUbicacionAlmacen(id, payload) {
+  const { data } = await axiosClient.patch(`${LOCATION_BASE}/${id}/`, payload);
+  return data;
+}
