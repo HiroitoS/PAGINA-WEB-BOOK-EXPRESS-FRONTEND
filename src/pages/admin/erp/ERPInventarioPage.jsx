@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { FiBox, FiPackage, FiGift, FiTruck, FiCornerUpLeft, FiSliders } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import InventoryCourtesyPanel from "../../../components/admin/InventoryCourtesyPanel";
@@ -18,9 +19,15 @@ function dinero(valor) {
   return new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(Number(valor));
 }
 
-const clasesPestana = (activa) => `border-b-2 px-4 py-3 text-sm font-bold transition-colors ${
-  activa ? "border-red-700 text-red-700" : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900"
-}`;
+// Módulos futuros visibles como información, nunca como acciones sin API.
+const seccionesAlmacen = [
+  { nombre: "Existencias", descripcion: "Stock disponible", icono: FiBox, vista: "existencias" },
+  { nombre: "Entradas", descripcion: "Recepciones registradas", icono: FiPackage, vista: "movimientos" },
+  { nombre: "Cortesías", descripcion: "Entregas sin costo", icono: FiGift, vista: "salidas" },
+  { nombre: "Traslados", descripcion: "P-08 · En preparación", icono: FiTruck },
+  { nombre: "Devoluciones", descripcion: "Pendiente", icono: FiCornerUpLeft },
+  { nombre: "Ajustes", descripcion: "Pendiente", icono: FiSliders },
+];
 
 export default function ERPInventarioPage() {
   const { user } = useAuth();
@@ -157,14 +164,48 @@ export default function ERPInventarioPage() {
           )}
         </p>
       </section>
-      <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 sm:px-4">
-          <div role="tablist" aria-label="Información del inventario" className="flex gap-1">
-            <button type="button" role="tab" aria-selected={pestana === "existencias"} onClick={() => cambiarFiltro("vista", "")} className={clasesPestana(pestana === "existencias")}>Existencias</button>
-            <button type="button" role="tab" aria-selected={pestana === "movimientos"} onClick={() => cambiarFiltro("vista", "movimientos")} className={clasesPestana(pestana === "movimientos")}>Entradas</button>
-            <button type="button" role="tab" aria-selected={pestana === "salidas"} onClick={() => cambiarFiltro("vista", "salidas")} className={clasesPestana(pestana === "salidas")}>Salidas</button>
-          </div>
-          <span className="py-2 text-xs text-gray-500">{error ? "Consulta no disponible" : `${existencias.length} productos con entradas`}</span>
+      <nav aria-label="Operaciones de almacén" className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-bold text-gray-900">Operaciones de almacén</h2>
+          <p className="text-xs text-gray-500">Las opciones pendientes se activarán cuando sus flujos estén implementados.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+          {seccionesAlmacen.map((item) => {
+            const Icono = item.icono;
+            const activa = item.vista === pestana;
+            const contenido = (
+              <>
+                <Icono aria-hidden="true" className={activa ? "shrink-0 text-red-700" : "shrink-0 text-gray-500"} size={18} />
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold">{item.nombre}</span>
+                  <span className="block text-xs font-normal text-gray-500">{item.descripcion}</span>
+                </span>
+              </>
+            );
+            const claseBase = "flex min-h-16 w-full items-center gap-3 rounded-lg border p-3 text-left";
+            return item.vista ? (
+              <button key={item.nombre} type="button" aria-current={activa ? "page" : undefined}
+                onClick={() => cambiarFiltro("vista", item.vista === "existencias" ? "" : item.vista)}
+                className={`${claseBase} transition-colors ${activa
+                  ? "border-red-600 bg-red-50 text-gray-950"
+                  : "border-gray-200 bg-gray-50 text-gray-900 hover:border-red-300 hover:bg-white"}`}>
+                {contenido}
+              </button>
+            ) : (
+              <div key={item.nombre} aria-disabled="true"
+                className={`${claseBase} cursor-not-allowed border-gray-100 bg-gray-50 text-gray-500 opacity-70`}>
+                {contenido}
+              </div>
+            );
+          })}
+        </div>
+      </nav>
+      <section aria-label="Detalle de la operación seleccionada" className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
+          <h2 className="text-sm font-bold text-gray-900">
+            {pestana === "existencias" ? "Existencias por producto" : pestana === "movimientos" ? "Entradas de mercadería" : "Cortesías a colegios"}
+          </h2>
+          <span className="text-xs text-gray-500">{error ? "Consulta no disponible" : `${existencias.length} productos con entradas`}</span>
         </div>
 
         {pestana === "existencias" ? (
@@ -278,7 +319,7 @@ export default function ERPInventarioPage() {
         ) : (
           <div role="tabpanel" className="p-3 sm:p-4">
             <h2 className="text-sm font-bold text-gray-900">Historial de movimientos de mercadería</h2>
-            <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro conserva cuánto ingresó originalmente, su guía, colegio y valor histórico. Las cortesías y su descuento de stock se consultan en Salidas; los traslados y ventas se incorporarán posteriormente.</p>
+            <p className="mb-3 mt-1 text-xs text-gray-600">Cada registro conserva cuánto ingresó originalmente, su guía, colegio y valor histórico. Las cortesías y su descuento de stock se consultan en Cortesías; los traslados y ventas se incorporarán posteriormente.</p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-gray-200 bg-gray-50 text-gray-600">
@@ -329,7 +370,7 @@ export default function ERPInventarioPage() {
               </table>
               {!cargando && !error && entradas.length === 0 && <p className="p-4 text-center text-sm text-gray-500">Aún no hay ingresos registrados.</p>}
             </div>
-            <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados por Django. Para el stock actual consulta Existencias; para descuentos por cortesía, Salidas. No son importes por pagar.</p>
+            <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados por Django. Para el stock actual consulta Existencias; para descuentos por cortesía, Cortesías. No son importes por pagar.</p>
           </div>
         )}
       </section>
