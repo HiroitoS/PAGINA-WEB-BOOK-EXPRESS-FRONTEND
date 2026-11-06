@@ -15,12 +15,12 @@ import {
 } from "react-icons/fa";
 import {
   createAdminProduct,
-  getAdminAreas,
-  getAdminGrades,
-  getAdminLevels,
-  getAdminProductTypes,
-  getAdminProviders,
-  getAdminSeries,
+  getAllAdminAreas,
+  getAllAdminGrades,
+  getAllAdminLevels,
+  getAllAdminProductTypes,
+  getAllAdminProviders,
+  getAllAdminSeries,
 } from "../../api/adminApi";
 import { getDisplayName, getResults } from "../../utils/formatters";
 
@@ -220,12 +220,12 @@ export default function ProductCreatePage() {
           seriesData,
           productTypesData,
         ] = await Promise.all([
-          getAdminProviders(),
-          getAdminLevels(),
-          getAdminGrades(),
-          getAdminAreas(),
-          getAdminSeries(),
-          getAdminProductTypes(),
+          getAllAdminProviders(),
+          getAllAdminLevels(),
+          getAllAdminGrades(),
+          getAllAdminAreas(),
+          getAllAdminSeries(),
+          getAllAdminProductTypes(),
         ]);
 
         if (!ignore) {

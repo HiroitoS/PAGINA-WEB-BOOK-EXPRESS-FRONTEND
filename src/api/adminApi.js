@@ -197,6 +197,26 @@ export async function getAdminProductTypes(params = {}) {
   return response.data;
 }
 
+// Los selectores de producto necesitan todas las opciones, no solo la
+// primera página (DRF devuelve 20 elementos por defecto).
+export const getAllAdminProviders = (params = {}) =>
+  collectPaginatedResults(getAdminProviders, params);
+
+export const getAllAdminLevels = (params = {}) =>
+  collectPaginatedResults(getAdminLevels, params);
+
+export const getAllAdminGrades = (params = {}) =>
+  collectPaginatedResults(getAdminGrades, params);
+
+export const getAllAdminAreas = (params = {}) =>
+  collectPaginatedResults(getAdminAreas, params);
+
+export const getAllAdminSeries = (params = {}) =>
+  collectPaginatedResults(getAdminSeries, params);
+
+export const getAllAdminProductTypes = (params = {}) =>
+  collectPaginatedResults(getAdminProductTypes, params);
+
 export async function getAdminPrices(params = {}) {
   const response = await axiosClient.get("/admin/prices/", {
     params,
