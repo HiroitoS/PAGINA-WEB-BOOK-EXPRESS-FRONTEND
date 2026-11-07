@@ -145,3 +145,15 @@ export async function registrarTrasladoAlmacen(payload) {
   const { data } = await axiosClient.post(`${TRANSFERS_BASE}/`, payload);
   return data;
 }
+
+export async function consultarLotesDeGuia({ receiptId, sourceId }) {
+  const { data } = await axiosClient.get(`${TRANSFERS_BASE}/guia/`, {
+    params: { receipt_id: receiptId, source_id: sourceId },
+  });
+  return data;
+}
+
+export async function registrarTrasladoPorGuia(payload) {
+  const { data } = await axiosClient.post(`${TRANSFERS_BASE}/por-guia/`, payload);
+  return data;
+}
