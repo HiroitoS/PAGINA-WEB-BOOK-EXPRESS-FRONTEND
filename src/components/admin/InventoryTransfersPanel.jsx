@@ -123,6 +123,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
 
   function choose(item) {
     guideRequestRef.current += 1;
+    setLoadingGuide(false);
     setGuide(null);
     setGuideQuantities({});
     setSelected(item);
@@ -145,6 +146,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
     setSelected(null);
     setGuide(null);
     setGuideQuantities({});
+    setNotes("");
     setEntregaConfirmada(false);
     setError("");
     setMessage("");
@@ -195,6 +197,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
       setGuide(null);
       setGuideQuantities({});
       setEntregaConfirmada(false);
+      setPage(1);
       setRefresh((prev) => prev + 1);
       try {
         await onRefresh();
@@ -234,6 +237,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
                 setSourceId(event.target.value);
                 if (destinationId === event.target.value) setDestinationId("");
                 guideRequestRef.current += 1;
+                setLoadingGuide(false);
                 setSelected(null); setGuide(null); setGuideQuantities({});
                 setEntregaConfirmada(false); setPage(1); setMessage(""); setError("");
               }} className={inputClase}>
