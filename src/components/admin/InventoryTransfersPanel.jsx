@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   listarUbicacionesAlmacen, consultarResumenUbicaciones,
   buscarLotesParaTraslado, listarTrasladosAlmacen, registrarTrasladoAlmacen,
+  consultarLotesDeGuia, registrarTrasladoPorGuia,
 } from "../../api/warehouseApi";
 import ConfirmActionDialog from "./ConfirmActionDialog";
 
@@ -24,6 +25,7 @@ const inputClase = "mt-1 min-h-11 w-full min-w-0 rounded-lg border border-gray-3
 
 export default function InventoryTransfersPanel({ canManage, onRefresh }) {
   const formRef = useRef(null);
+  const guideRequestRef = useRef(0);
   const [locations, setLocations] = useState([]);
   const [summary, setSummary] = useState(null);
   const [sourceId, setSourceId] = useState("");
@@ -37,6 +39,9 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [guide, setGuide] = useState(null);
+  const [guideQuantities, setGuideQuantities] = useState({});
+  const [loadingGuide, setLoadingGuide] = useState(false);
   const [quantity, setQuantity] = useState("1");
   const [notes, setNotes] = useState("");
   const [entregaConfirmada, setEntregaConfirmada] = useState(false);
@@ -92,10 +97,34 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
   const validQuantity = Number.isSafeInteger(Number(quantity))
     && Number(quantity) > 0
     && Number(quantity) <= Number(selected?.available ?? 0);
-  const canSubmit = canManage && selected && validQuantity
-    && origin && destination && sourceId !== destinationId && entregaConfirmada && !busy;
+  const guideRows = guide?.results ?? [];
+  const guideInputsValid = guideRows.every((item) => {
+    const value = guideQuantities[item.id];
+    return value !== "" && Number.isSafeInteger(Number(value))
+      && Number(value) >= 0 && Number(value) <= item.available;
+  });
+  const guideSelectedRows = guideRows.filter((item) => Number(guideQuantities[item.id]) > 0);
+  const guideUnits = guideSelectedRows.reduce(
+    (total, item) => total + Number(guideQuantities[item.id]), 0,
+  );
+  const guideValue = guideSelectedRows.reduce(
+    (total, item) => total + Number(guideQuantities[item.id]) * Number(item.unit_cost || 0), 0,
+  );
+  const guideMatches = q.trim().length >= 2
+    ? lots.filter((item, index, items) => (
+      item.receipt_id
+      && String(item.guide).toLowerCase().includes(q.trim().toLowerCase())
+      && items.findIndex((other) => other.receipt_id === item.receipt_id) === index
+    ))
+    : [];
+  const canSubmit = canManage && origin && destination
+    && sourceId !== destinationId && entregaConfirmada && !busy
+    && (guide ? guideInputsValid && guideSelectedRows.length > 0 : selected && validQuantity);
 
   function choose(item) {
+    guideRequestRef.current += 1;
+    setGuide(null);
+    setGuideQuantities({});
     setSelected(item);
     setQuantity("1");
     setNotes("");
@@ -110,23 +139,62 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
     }
   }
 
+  async function chooseGuide(item) {
+    const requestNumber = ++guideRequestRef.current;
+    setLoadingGuide(true);
+    setSelected(null);
+    setGuide(null);
+    setGuideQuantities({});
+    setEntregaConfirmada(false);
+    setError("");
+    setMessage("");
+    try {
+      const result = await consultarLotesDeGuia({ receiptId: item.receipt_id, sourceId });
+      if (requestNumber !== guideRequestRef.current) return;
+      if (!result.results?.length) {
+        setError("Esta guía no tiene unidades disponibles en el almacén de origen.");
+        return;
+      }
+      setGuide(result);
+      setGuideQuantities(Object.fromEntries(result.results.map((line) => [line.id, String(line.available)])));
+      setKey(crypto.randomUUID());
+      if (window.matchMedia("(max-width: 1023px)").matches) {
+        requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      }
+    } catch (err) {
+      if (requestNumber === guideRequestRef.current) setError(explicarError(err));
+    } finally {
+      if (requestNumber === guideRequestRef.current) setLoadingGuide(false);
+    }
+  }
+
   async function confirmTransfer() {
     if (!canSubmit) return;
     setBusy(true);
     setError("");
     try {
-      const result = await registrarTrasladoAlmacen({
-        stock_entry_id: selected.id,
-        source_id: Number(sourceId),
-        destination_id: Number(destinationId),
-        quantity: Number(quantity),
-        notes: notes.trim(),
-        entrega_confirmada: entregaConfirmada,
+      const common = {
+        source_id: Number(sourceId), destination_id: Number(destinationId),
+        notes: notes.trim(), entrega_confirmada: entregaConfirmada,
         idempotency_key: key,
-      });
+      };
+      const result = guide
+        ? await registrarTrasladoPorGuia({
+          ...common,
+          receipt_id: guide.receipt_id,
+          items: guideSelectedRows.map((item) => ({
+            stock_entry_id: item.id, quantity: Number(guideQuantities[item.id]),
+          })),
+        })
+        : await registrarTrasladoAlmacen({
+          ...common, stock_entry_id: selected.id, quantity: Number(quantity),
+        });
       setMessage(result.message ?? "Traslado confirmado.");
       setConfirming(false);
       setSelected(null);
+      setGuide(null);
+      setGuideQuantities({});
+      setEntregaConfirmada(false);
       setRefresh((prev) => prev + 1);
       try {
         await onRefresh();
@@ -165,7 +233,9 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
               <select value={sourceId} onChange={(event) => {
                 setSourceId(event.target.value);
                 if (destinationId === event.target.value) setDestinationId("");
-                setSelected(null); setEntregaConfirmada(false); setPage(1); setMessage(""); setError("");
+                guideRequestRef.current += 1;
+                setSelected(null); setGuide(null); setGuideQuantities({});
+                setEntregaConfirmada(false); setPage(1); setMessage(""); setError("");
               }} className={inputClase}>
                 <option value="">Selecciona el origen</option>
                 {locations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -219,6 +289,22 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
                   setQ(event.target.value); setPage(1); setSelected(null);
                 }} placeholder="Filtrar automáticamente…" className={inputClase}/>
               </label>
+              {guideMatches.length > 0 && (
+                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <p className="text-xs font-bold text-red-900">Guías encontradas · traslado rápido</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {guideMatches.map((item) => (
+                      <button key={item.receipt_id} type="button" disabled={loadingGuide}
+                        onClick={() => chooseGuide(item)}
+                        className="min-h-10 rounded-lg bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50">
+                        Seleccionar guía {item.guide} completa
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-700">Se incluirán todos los lotes disponibles de la guía, aunque estén en otras páginas. Puedes reducir cantidades antes de confirmar.</p>
+                </div>
+              )}
+              {loadingGuide && <p role="status" className="mt-2 text-xs text-gray-600">Cargando todos los libros de la guía…</p>}
               <div className="mt-3 max-h-72 space-y-2 overflow-y-auto overscroll-contain">
                 {lots.map((entry) => (
                   <button type="button" key={entry.id} onClick={() => choose(entry)}
@@ -244,7 +330,62 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
             </section>
             <section ref={formRef} aria-label="Confirmar traslado" className="min-w-0 scroll-mt-24 rounded-xl border border-gray-200 p-3">
               <h4 className="text-sm font-black text-gray-900">2. Registrar traslado</h4>
-              {selected ? (
+              {guide ? (
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                    <p className="text-sm font-black text-gray-950">Guía {guide.guide}</p>
+                    <p className="mt-1 text-xs text-gray-700">{guide.editorial} · {guideRows.length} lotes disponibles</p>
+                    <p className="mt-1 text-xs font-bold text-gray-950">{guideSelectedRows.length} lotes seleccionados · {guideUnits} unidades</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setGuideQuantities(
+                      Object.fromEntries(guideRows.map((line) => [line.id, String(line.available)]))
+                    )} className="min-h-10 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-900">
+                      Toda la guía
+                    </button>
+                    <button type="button" onClick={() => setGuideQuantities(
+                      Object.fromEntries(guideRows.map((line) => [line.id, "0"]))
+                    )} className="min-h-10 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-900">
+                      Limpiar selección
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-600">Para ferias o consignaciones, deja las cantidades completas. Para tiendas, ingresa solamente las unidades que realmente se entregaron; 0 excluye el lote.</p>
+                  <div className="max-h-72 space-y-2 overflow-y-auto">
+                    {guideRows.map((line) => (
+                      <label key={line.id} className="block rounded-lg border border-gray-200 p-3">
+                        <span className="block break-words text-xs font-bold text-gray-950">{line.product}</span>
+                        <span className="block text-xs text-gray-600">{line.school} · Disponibles: {line.available}</span>
+                        <span className="mt-2 block text-xs font-semibold text-gray-800">Unidades a trasladar
+                          <input type="number" min="0" max={line.available} step="1"
+                            value={guideQuantities[line.id] ?? "0"}
+                            onChange={(event) => {
+                              setGuideQuantities((current) => ({ ...current, [line.id]: event.target.value }));
+                              setEntregaConfirmada(false);
+                            }} className={inputClase}/>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  {!guideInputsValid && <p role="alert" className="text-xs font-bold text-red-700">Revisa las cantidades: deben ser enteros entre 0 y las existencias disponibles.</p>}
+                  <label className="block text-xs font-semibold text-gray-800">Observación (opcional)
+                    <textarea rows="2" maxLength="500" value={notes}
+                      onChange={(event) => setNotes(event.target.value)} className={inputClase}
+                      placeholder="Ej.: libros entregados para la feria escolar"/>
+                  </label>
+                  <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-gray-900">
+                    <input type="checkbox" checked={entregaConfirmada}
+                      onChange={(event) => setEntregaConfirmada(event.target.checked)}
+                      className="mt-1 size-4 shrink-0 accent-red-700"/>
+                    Confirmo que todas las unidades seleccionadas ya fueron entregadas físicamente al almacén de destino.
+                  </label>
+                  <p className="text-xs text-gray-600">Una sola confirmación mueve todos los lotes seleccionados; si alguno no tiene saldo, no se registra ninguno. El inventario global no cambia.</p>
+                  {!canManage && <p className="text-xs text-amber-800">Tu rol no puede confirmar traslados.</p>}
+                  <button type="button" disabled={!canSubmit} onClick={() => setConfirming(true)}
+                    className="min-h-11 w-full rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">
+                    Revisar traslado de {guideUnits} unidades
+                  </button>
+                </div>
+              ) : selected ? (
                 <div className="mt-3 space-y-3">
                   <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                     <p className="break-words text-sm font-bold text-gray-900">{selected.product}</p>
@@ -276,7 +417,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
                 </div>
               ) : (
                 <p className="mt-3 rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-600">
-                  Selecciona un libro del almacén de origen para registrar su traslado.
+                  Busca una guía para seleccionar todos sus libros, o elige un lote para un traslado individual.
                 </p>
               )}
             </section>
@@ -299,14 +440,16 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
       )}
       <ConfirmActionDialog open={confirming} eyebrow="Confirmación de almacén"
         title="Confirmar traslado entre ubicaciones"
-        description={`Se trasladarán ${quantity} unidades de ${selected?.product ?? ""}. Esta operación quedará registrada y no podrá editarse.`}
+        description={guide
+          ? `Se trasladarán ${guideUnits} unidades de ${guideSelectedRows.length} lotes de la guía ${guide.guide}. Se confirmará toda la operación en bloque.`
+          : `Se trasladarán ${quantity} unidades de ${selected?.product ?? ""}. Esta operación quedará registrada y no podrá editarse.`}
         confirmLabel="Confirmar traslado" processing={busy}
         onCancel={() => { if (!busy) setConfirming(false); }}
         onConfirm={confirmTransfer}>
         <div className="mt-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-900">
           <p><strong>Origen:</strong> {origin?.name ?? "Sin definir"}</p>
           <p><strong>Destino:</strong> {destination?.name ?? "Sin definir"}</p>
-          <p><strong>Valor de referencia:</strong> {selected?.unit_cost ? soles(Number(quantity) * Number(selected.unit_cost)) : "Por definir"}</p>
+          <p><strong>Valor de referencia:</strong> {guide ? (guideSelectedRows.some((item) => item.unit_cost == null) ? "Parcial / con costo pendiente" : soles(guideValue)) : (selected?.unit_cost ? soles(Number(quantity) * Number(selected.unit_cost)) : "Por definir")}</p>
           <p className="mt-2 text-xs text-gray-600">No se registra venta ni factura y el inventario global no cambia.</p>
         </div>
       </ConfirmActionDialog>
