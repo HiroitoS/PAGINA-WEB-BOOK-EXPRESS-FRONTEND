@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { warehouseErrorMessage } from "../../../utils/warehouseErrorMessage";
 import { Link, useSearchParams } from "react-router";
 import { FiArrowLeft, FiArrowRight, FiClock, FiSearch } from "react-icons/fi";
 import { listarTrasladosAlmacen, listarUbicacionesAlmacen } from "../../../api/warehouseApi";
@@ -11,16 +12,6 @@ function fechaLegible(value) {
   return !value || Number.isNaN(date.getTime())
     ? "Fecha no disponible"
     : date.toLocaleString("es-PE", { dateStyle: "medium", timeStyle: "short" });
-}
-
-function errorLegible(error) {
-  const status = error?.response?.status;
-  if (!error?.response) return "No pudimos conectarnos. Revisa tu conexión y vuelve a intentarlo.";
-  if (status === 403) return "No tienes autorización para consultar los traslados.";
-  const detail = error.response.data?.detail;
-  return typeof detail === "string"
-    ? detail
-    : "No pudimos cargar el historial. Comprueba los filtros e inténtalo nuevamente.";
 }
 
 function labelAlmacen(list, id) {
@@ -76,7 +67,7 @@ export default function ERPHistorialTrasladosPage() {
         })
         .catch((err) => {
           if (!ignore) {
-            setError(errorLegible(err));
+            setError(warehouseErrorMessage(err, "No pudimos cargar el historial. Comprueba los filtros e inténtalo nuevamente."));
             setData({ results: [], count: 0, pages: 1 });
           }
         })
