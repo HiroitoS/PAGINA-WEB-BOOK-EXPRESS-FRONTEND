@@ -136,8 +136,14 @@ export async function buscarLotesParaTraslado({ sourceId, q = "", page = 1 }) {
   return data;
 }
 
-export async function listarTrasladosAlmacen(page = 1) {
-  const { data } = await axiosClient.get(`${TRANSFERS_BASE}/`, { params: { page } });
+export async function listarTrasladosAlmacen(page = 1, filters = {}) {
+  const params = { page };
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      params[key] = value;
+    }
+  }
+  const { data } = await axiosClient.get(`${TRANSFERS_BASE}/`, { params });
   return data;
 }
 
