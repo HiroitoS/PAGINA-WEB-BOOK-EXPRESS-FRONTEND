@@ -201,6 +201,12 @@ const NAV_SECTIONS = [
             permissions: ["warehouse.view_receiving"],
           },
           {
+            label: "Historial de traslados",
+            to: "/admin/erp/almacen/historial-traslados",
+            icon: <FaClipboardList />,
+            permissions: ["warehouse.view_receiving"],
+          },
+          {
             label: "Cortesías",
             to: "/admin/erp/almacen/cortesias",
             icon: <FaStar />,
