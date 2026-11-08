@@ -30,6 +30,11 @@ export default function ERPUbicacionesPage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            {puedeVerTraslados && (
+              <Link to="/admin/erp/almacen/stock-por-almacen" className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-gray-300 px-3 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700 sm:flex-none">
+                <FiMapPin aria-hidden="true" /> Ver stock por almacén
+              </Link>
+            )}
             <Link to="/admin/erp/almacen/inventario"
               className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700 sm:flex-none">
               <FiArrowLeft aria-hidden="true" /> Inventario
