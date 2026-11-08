@@ -138,6 +138,13 @@ export default function TodoTaskDetailDrawer({
               ) : null}
 
               <section className="rounded-2xl border border-gray-200 bg-white px-4">
+                {task.crm_school_name ? (
+                  <InfoRow
+                    icon={<FaUsers />}
+                    label="Colegio"
+                    value={task.crm_school_name}
+                  />
+                ) : null}
                 <InfoRow
                   icon={<FaCalendarAlt />}
                   label="Fecha límite"

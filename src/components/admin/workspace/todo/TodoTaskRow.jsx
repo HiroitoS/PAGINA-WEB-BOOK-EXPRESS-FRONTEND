@@ -64,6 +64,11 @@ export default function TodoTaskRow({
         >
           {task.title}
         </span>
+        {task.crm_school_name ? (
+          <span className="mt-1 block truncate text-xs font-semibold text-red-700">
+            Colegio: {task.crm_school_name}
+          </span>
+        ) : null}
 
         <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
           <span className="inline-flex items-center gap-1">
