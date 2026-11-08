@@ -56,6 +56,24 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 
 **Comprobaciones pendientes:** ejecución completa de frontend después del último commit, `git pull` en backend/frontend, pruebas manuales con recepciones y movimientos reales en base de prueba, UI de 360/390/430/768/1440 px, verificación de permisos y orden. Cero cambios en `crm/gestion-colegios`, `main` o Tecnoweb.
 
+## 08/11/2026 — UX Almacén: navegación compacta, espacios, mobile-first, lenguaje claro [IMPLEMENTADO EN RAMA]
+
+**Solicitud:** simplificar el submenú, evitar pantallas demasiado largas, textos principales centrados y mensajes de error técnicos. Mantener procesos y rutas que funcionan, proteger permisos y mejorar su presentación para demo ante jefatura.
+
+**Decisiones e implementación:**
+- **Submenú de Almacén reducido a 3 accesos:** *Recepción de mercadería*, *Inventario*, *Movimientos*. Las URLs existentes de Ubicaciones, Traslados, Cortesías y su Historial se **mantienen**; no se fusionan reglas de negocio ni se modifican APIs.
+- **Movimientos agrupa** Traslados / Cortesías / Historial mediante componente reutilizable `src/components/admin/WarehouseMovementTabs.jsx`: pestañas visibles, enlaces reales, estado activo, desplazamiento horizontal si el celular es estrecho y objetivos táctiles mínimos de 44px. En las páginas se conserva acceso de retorno.
+- **Inventario:** accesos rápidos agrupados en *Por almacén / Movimientos / Ubicaciones* más pestañas internas de *Existencias / Entradas*; métricas alineadas a la **izquierda**, descripciones más cortas y enlaces más compactos. No se eliminan cantidades, valorización ni datos históricos.
+- **Ubicaciones:** cuando ya hay principal y destinos activos, reemplaza dos tarjetas y la explicación extensa por una franja de estado corta; el enlace *Ver existencias* aparece solo con permiso de inventario. Si aún falta configuración, se muestran instrucciones directas. Se preservan administración y conciliación.
+- **Traslados:** solo se muestran 4 movimientos recientes en el panel de trabajo, con enlace al **historial paginado completo**. Estados vacíos breves y alineados a la izquierda, sin múltiples bloques de scroll innecesarios.
+- **Mensajes y alertas:** nuevo `src/utils/warehouseErrorMessage.js` con lenguaje de usuario, explicación por sesión/permisos/conexión, validaciones españolas conocidas y protección contra respuestas internas (SQL, trazas, JSON, rutas, etc.). Integrado en Traslados, Cortesías, Ubicaciones, Recepciones, Historial y Conciliación. Pruebas unitarias `tests/warehouseErrorMessage.test.js`.
+- **Conciliación inicial:** diálogo limitado a la altura del dispositivo, con scroll accesible y botones completos en móvil.
+- **Diseño:** evitar centrar KPI, métricas y mensajes sin motivo; mantener texto alineado a la izquierda, botones con altura táctil apropiada, filas compactas y espacios coherentes con marca Book Express. **Mobile-first** pendiente de revisión visual manual real en 360/390/430/768/1024/1440 px.
+
+**Archivos modificados:** `src/layouts/AdminLayout.jsx`, `src/pages/admin/erp/ERPInventarioPage.jsx`, `ERPTrasladosPage.jsx`, `ERPCortesiasPage.jsx`, `ERPHistorialTrasladosPage.jsx`, `ERPUbicacionesPage.jsx`, `ERPStockPorAlmacenPage.jsx`, `ERPRecepcionPage.jsx`, `src/components/admin/InventoryTransfersPanel.jsx`, `InventoryCourtesyPanel.jsx`, `WarehouseLocationsPanel.jsx`, `WarehouseReconciliationPanel.jsx` y dos archivos nuevos (pestañas y mensajes) más test.
+
+**Verificación:** comprobar CI del commit final, `npm run lint`, `npm run build`, `node --test tests/*.test.js`; navegador responsive y recorridos de cada ruta protegida, formularios y permisos. **No se ha desplegado**, no se ha fusionado a `crm/gestion-colegios` ni `main`; el backend se mantiene intacto en este ciclo UX. No confundir mejora de interfaz con cierre de flujos pendientes de despacho, packs y devoluciones.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
