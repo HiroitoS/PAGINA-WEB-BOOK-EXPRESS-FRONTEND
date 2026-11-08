@@ -4,7 +4,7 @@ import { FiClock, FiGift, FiTruck } from "react-icons/fi";
 const tabs = [
   { label: "Traslados", to: "/admin/erp/almacen/traslados", icon: FiTruck },
   { label: "Cortesías", to: "/admin/erp/almacen/cortesias", icon: FiGift },
-  { label: "Historial", to: "/admin/erp/almacen/historial-traslados", icon: FiClock },
+  { label: "Historial de traslados", to: "/admin/erp/almacen/historial-traslados", icon: FiClock },
 ];
 
 export default function WarehouseMovementTabs() {
