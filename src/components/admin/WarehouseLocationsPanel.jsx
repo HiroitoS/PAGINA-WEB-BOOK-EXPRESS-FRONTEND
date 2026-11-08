@@ -51,7 +51,7 @@ function mensajeError(error) {
   return "No pudimos completar la operación. Comprueba los datos e inténtalo nuevamente.";
 }
 
-export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar = false }) {
+export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar = false, puedeVerInventario = false }) {
   const [ubicaciones, setUbicaciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -187,10 +187,12 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
               <FiCheckCircle className="mt-0.5 shrink-0 text-gray-700" aria-hidden="true" />
               <p><span className="font-bold text-gray-950">Ubicaciones listas.</span> Almacén principal y {destinosActivos} {destinosActivos === 1 ? "destino activo" : "destinos activos"} registrados.</p>
             </div>
-            <Link to="/admin/erp/almacen/stock-por-almacen"
-              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-2 text-sm font-bold text-red-700 hover:bg-red-50">
-              Ver existencias <FiArrowRight aria-hidden="true" />
-            </Link>
+            {puedeVerInventario && (
+              <Link to="/admin/erp/almacen/stock-por-almacen"
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-2 text-sm font-bold text-red-700 hover:bg-red-50">
+                Ver existencias <FiArrowRight aria-hidden="true" />
+              </Link>
+            )}
           </div>
         ) : (
           <section aria-label="Configuración de ubicaciones" className="rounded-xl border border-gray-200 bg-gray-50 p-3">
