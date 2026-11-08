@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { warehouseErrorMessage as errorLegible } from "../../../utils/warehouseErrorMessage";
 import { Link, useLocation } from "react-router";
 import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog";
 import { useAuth } from "../../../hooks/useAuth";
@@ -40,16 +41,6 @@ function nombreEvento(accion) {
     updated: "Borrador corregido",
     validated: "Recepción validada",
   }[accion] || "Acción registrada";
-}
-
-function errorLegible(error) {
-  const data = error?.response?.data;
-  if (typeof data?.detail === "string") return data.detail;
-  if (Array.isArray(data?.detail)) return data.detail.join(" ");
-  if (data && typeof data === "object") {
-    return Object.values(data).flat().map(String).join(" ");
-  }
-  return "No se pudo completar la operación. Revisa los datos e inténtalo nuevamente.";
 }
 
 function normalizarListado(response) {
