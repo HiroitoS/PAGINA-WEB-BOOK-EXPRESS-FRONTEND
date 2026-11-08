@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { FiGift, FiArrowLeft } from "react-icons/fi";
 import InventoryCourtesyPanel from "../../../components/admin/InventoryCourtesyPanel";
+import WarehouseMovementTabs from "../../../components/admin/WarehouseMovementTabs";
 import { listarSalidasInventario } from "../../../api/warehouseApi";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
@@ -42,8 +43,7 @@ export default function ERPCortesiasPage() {
             <div className="min-w-0">
               <h1 className="text-2xl font-black tracking-tight text-gray-950">Cortesías y muestras entregadas</h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
-                Registra las entregas sin costo a colegios y conserva el responsable,
-                la guía y la cantidad entregada.
+                Registra las entregas sin costo, sus destinatarios y las cantidades.
               </p>
             </div>
           </div>
@@ -53,6 +53,7 @@ export default function ERPCortesiasPage() {
           </Link>
         </div>
       </header>
+      <WarehouseMovementTabs />
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
       <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         {loading ? (
