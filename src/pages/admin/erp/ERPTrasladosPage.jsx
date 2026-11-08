@@ -8,6 +8,7 @@ import { userHasPermission } from "../../../utils/adminAccess";
 export default function ERPTrasladosPage() {
   const { user } = useAuth();
   const canManage = userHasPermission(user, ["warehouse.manage_stock_transfers"]);
+  const canViewLocations = userHasPermission(user, ["warehouse.view_warehouse_locations"]);
 
   return (
     <main className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
@@ -33,7 +34,7 @@ export default function ERPTrasladosPage() {
       </header>
       <WarehouseMovementTabs />
       <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <InventoryTransfersPanel canManage={canManage} />
+        <InventoryTransfersPanel canManage={canManage} canViewLocations={canViewLocations} />
       </section>
     </main>
   );
