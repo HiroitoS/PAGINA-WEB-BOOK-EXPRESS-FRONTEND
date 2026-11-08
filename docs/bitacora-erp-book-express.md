@@ -9,6 +9,30 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 - Django REST Framework + PostgreSQL / React + Vite + Tailwind; arquitectura monolito modular.
 - Proteger datos de CRM y permisos; tests específicos por bloque, tests integrales antes del merge.
 
+## 08/11/2026 — Revisión de pantallas de Almacén y fuentes funcionales (P-08.5)
+
+**Evidencia del entorno local:** el usuario registró cuatro ubicaciones (principal, tienda, feria y consignación). En capturas, conciliación inicial presenta 0 lotes pendientes y Inventario/Traslados siguen sin existencias. Alta de ubicaciones ≠ creación de stock. No inventar saldos ni mover mercancía automáticamente.
+
+**Diferenciar conceptos del ERP:**
+- **Ubicaciones**: maestro de lugares físicos donde se custodian libros. No registra movimiento de mercancía.
+- **Conciliación inicial**: herramienta excepcional para lotes históricos recibidos ANTES de usar ubicaciones y físicamente verificados. Con cero lotes por conciliar, no se ejecuta nada ni genera stock.
+- **Recepciones**: cuando una guía real es validada, genera entradas al inventario asociadas al pedido de compra y, si hay principal activo, asigna la ubicación inicial.
+- **Inventario**: cantidades globales y existencias por producto, además del nuevo acceso **Stock por almacén** (consulta de saldos por lugar y lotes conformes disponibles, sin escrituras); las cantidades observadas figuran en el resumen, no entre lotes trasladables.
+- **Traslados**: operaciones directas confirmadas físicamente que descuentan del origen y suman al destino; saldo total sin cambios. No representan etapas de preparación, despacho, tránsito y entrega futura.
+- **Cortesías**: entregas sin costo. Sigue pendiente extender el control a salidas desde almacenes receptores sin romper el saldo por ubicación.
+- **Packs**: problema relevante NO implementado. Deben representar una agrupación logística por colegio/adopción con libros componentes y trazabilidad de armado, traslado, apertura/devolución; **no generar inventario duplicado** ni inventar SKU de pack. Separar de inventario de componentes y no publicar 'pack colegio' en catálogo público.
+
+**Fuentes internas aportadas por el usuario, 08/11:** `MOF ALMACEN.docx` y `MACROPROCESO ALMACEN BOOK EXPRESS.docx`. Los repositorios GitHub de backend y frontend son **públicos**: NO subir originales ni copiar datos operativos sensibles a GitHub sin aprobación explícita. Se entregó paquete ZIP para colocarlos en la raíz local `BookExpress/` (carpeta contenedora, fuera de ambos repos). Este apunte es referencia de continuidad, NO reemplaza documentos originales.
+- MOF: jefe de Logística (supervisa y autoriza ajustes), asistente de recepción/documentación, coordinador de inventario, personal de almacén.
+- Macroproceso: gestión de adopciones, recepción, almacenamiento físico, preparación de pedidos, despacho por tienda/feria/consignación, control de inventario, dañados/faltantes y archivo documental. El manual establece controles documentales y conteo, no únicamente movimientos de stock.
+- El MOF define atención de requerimientos internos en temporada alta hasta 48 h, baja hasta 24 h; verificar con gerencia si continúa vigente antes de automatizar alertas.
+- Una ubicación genérica de "Feria" o "Consignación" no identifica múltiples ferias/colegios concurrentes; el futuro proceso de despacho debe vincular destino, responsable, campaña/modalidad y documentos concretos. No crear ubicaciones adicionales sin caso físico real.
+
+**Código P-08.5 en rama `feature/erp-p08-traslados-por-guia`:**
+- Nueva vista de solo lectura `src/pages/admin/erp/ERPStockPorAlmacenPage.jsx`, ruta `/admin/erp/almacen/stock-por-almacen`, enlazada desde Inventario y Ubicaciones. Reutiliza APIs ya existentes `resumen-ubicaciones/` y `traslados/lotes/`, con selector de almacén, buscador, paginación, cantidades disponibles, observadas y valor referencial. Sin migraciones nuevas.
+- Pendiente de comprobación: CI de frontend, pruebas manuales con ingresos reales o datos de prueba aislados, y contraste del saldo antes/después de trasladar sin alterar el global.
+- No desplegar ni fusionar a `crm/gestion-colegios` / `main` hasta validar. No mezclar la rama separada de corrección de CRM.
+
 ## Actualización 08/11/2026 — P-08.4: separación visual de Almacén y configuración inicial (en revisión)
 
 **Entorno y ramas:** backend y frontend de prueba deben usar `feature/erp-p08-traslados-por-guia`. `crm/gestion-colegios` es la base de integración; `main` queda reservado para producción, sin merges ni despliegue automático. La corrección paralela de colegios en tareas/calendario sigue separada en `fix/crm-colegio-en-todo-calendario` (NO fusionarla implícitamente con P-08).
