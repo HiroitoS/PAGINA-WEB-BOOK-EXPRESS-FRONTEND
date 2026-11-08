@@ -2,6 +2,24 @@
 
 Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ejecutar.
 
+
+## 08/11/2026 — Propuesta UX para reducir módulos visibles de Almacén [PENDIENTE DE APROBACIÓN]
+
+**Observación de usuario:** el submenú Almacén presenta demasiadas entradas independientes (Recepción, Inventario, Traslados, Historial, Cortesías, Ubicaciones). La intención es agrupar funciones relacionadas y simplificar navegación en escritorio y celular, sin mezclar entidades o reglas de negocio.
+
+**Recomendación conceptual, NO implementada todavía:** mantener menú compacto:
+1. **Recepción de mercadería:** pedidos por recibir, borradores, validación, incidentes e historial de recepciones como pestañas internas.
+2. **Inventario:** existencias generales, stock por almacén y administración de ubicaciones como pestañas/acciones contextuales; posteriormente conteo de existencias según permisos.
+3. **Movimientos:** traslados, cortesías/muestras y **historial completo** como pestañas internas (sin ocultar ni perder acceso directo por URL), posteriormente retornos/devoluciones cuando existan endpoints reales.
+4. **Preparación y despachos:** mostrar SOLO cuando funcione; requerimientos internos, picking y **armado/recepción de packs** en un mismo flujo, seguido de despacho y recepción en destino, con historial de envíos contextual.
+5. **Control logístico:** incorporar cuando exista funcionalidad: incidencias, conteos, ajustes autorizados, reportes y auditoría. Podría ubicarse dentro de Inventario/Movimientos si al probarlo resulta más fácil.
+
+**Distinción de dominio clave:** «Pedidos a Editoriales» (compra al proveedor) no se debe fusionar automáticamente con «Preparación de pedidos / Packs» (separación y empaque de mercadería para distribución). Comparten productos y demanda, pero tienen propietarios del proceso, estados y movimientos distintos. **Agrupar visualmente no es mezclar servicios, permisos ni tablas**.
+
+**UX:** navegación principal corta, pestañas visibles por permiso, encabezados compactos, acciones contextuales; en móvil, pestañas desplazables o selector compacto sin menús anidados interminables; historial accesible desde su proceso y desde una consulta transversal. Cada evento confirmado conserva autor, fecha, producto, cantidades, documento y origen/destino. No crear enlaces a acciones futuras inexistentes.
+
+**Siguiente paso:** aprobar la agrupación con el usuario, luego refactorizar rutas/menú sin romper URLs ni APIs y pasar pruebas lint/build, navegador móvil y flujos end-to-end. La decisión es una **propuesta por validar**, no un cambio ya incorporado al frontend. Mantener rama `feature/erp-p08-traslados-por-guia`; no integrar `main` ni desplegar.
+
 ## 08/11/2026 — Revisión visual: regreso a Inventario y mapa hasta devoluciones
 
 **Solicitud del usuario:** en la captura de `/admin/erp/almacen/stock-por-almacen` se comprueba la nueva vista con cero existencias. En Traslados faltaba un acceso directo de regreso a Inventario; Cortesías tenía "Ver inventario" pero no un regreso claramente reconocible. Ubicaciones sí ofrece retorno. Se pide mapa de cierre del flujo de recepciones, reparto, retornos y devoluciones, con MOF y Macroproceso ya colocados por el usuario en carpeta raíz **local**.
