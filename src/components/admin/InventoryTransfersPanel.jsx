@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router";
+import { FiArrowRight, FiMapPin } from "react-icons/fi";
 import {
   listarUbicacionesAlmacen, consultarResumenUbicaciones,
   buscarLotesParaTraslado, listarTrasladosAlmacen, registrarTrasladoAlmacen,
@@ -23,7 +25,7 @@ function soles(value) {
 
 const inputClase = "mt-1 min-h-11 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-600 focus:outline-none";
 
-export default function InventoryTransfersPanel({ canManage, onRefresh }) {
+export default function InventoryTransfersPanel({ canManage, canViewLocations = false, onRefresh }) {
   const formRef = useRef(null);
   const guideRequestRef = useRef(0);
   const [locations, setLocations] = useState([]);
@@ -200,7 +202,7 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
       setPage(1);
       setRefresh((prev) => prev + 1);
       try {
-        await onRefresh();
+        if (onRefresh) await onRefresh();
       } catch {
         setError("El traslado quedó guardado, pero el resumen no se actualizó. Actualiza la página.");
       }
@@ -229,7 +231,23 @@ export default function InventoryTransfersPanel({ canManage, onRefresh }) {
           confirma su ubicación física desde la sección Ubicaciones.
         </p>
       )}
-      {loading ? <p className="text-sm text-gray-600">Consultando almacenes…</p> : (
+      {loading ? <p role="status" className="text-sm text-gray-600">Consultando almacenes…</p> : locations.length < 2 ? (
+        <section className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-5 text-center sm:p-8">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-xl bg-white text-gray-800"><FiMapPin size={22} aria-hidden="true" /></span>
+          <h4 className="mt-3 text-base font-black text-gray-950">Prepara los almacenes antes de trasladar</h4>
+          <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-600">
+            Necesitas al menos un almacén de origen y un destino activos. Registra solo lugares reales y
+            verifica la ubicación física de la mercadería antes de confirmar un traslado.
+          </p>
+          {canViewLocations ? (
+            <Link to="/admin/erp/almacen/ubicaciones" className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800 sm:w-auto">
+              Configurar ubicaciones <FiArrowRight aria-hidden="true" />
+            </Link>
+          ) : (
+            <p className="mt-3 text-sm font-semibold text-gray-700">Solicita al administrador que configure las ubicaciones.</p>
+          )}
+        </section>
+      ) : (
         <>
           <div className="grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
             <label className="text-xs font-bold text-gray-800">Almacén de origen
