@@ -23,6 +23,13 @@ function soles(value) {
   }).format(Number(value));
 }
 
+function fechaHora(value) {
+  const fecha = new Date(value);
+  return !value || Number.isNaN(fecha.getTime())
+    ? "Fecha no disponible"
+    : fecha.toLocaleString("es-PE", { dateStyle: "short", timeStyle: "short" });
+}
+
 const inputClase = "mt-1 min-h-11 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-600 focus:outline-none";
 
 export default function InventoryTransfersPanel({ canManage, canViewLocations = false, onRefresh }) {
@@ -457,9 +464,17 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
               {history.length === 0 && <p className="text-xs text-gray-500">Aún no hay traslados registrados.</p>}
               {history.map((item) => (
                 <div key={item.id} className="rounded-lg border border-gray-200 p-3 text-xs">
-                  <p className="break-words font-bold text-gray-950">{item.product}</p>
+                  <p className="font-black text-gray-950">{item.operation_reference || `Movimiento N.º ${item.id}`} · {fechaHora(item.created_at)}</p>
+                  <p className="mt-1 break-words font-bold text-gray-950">{item.product}</p>
                   <p className="mt-1 text-gray-700">{item.source} → {item.destination} · {item.quantity} unidades</p>
                   <p className="mt-1 text-gray-600">Guía {item.guide} · {item.school} · {soles(item.value_reference)}</p>
+                  <p className="mt-1 text-gray-600">Registrado por: {item.created_by_name || "Usuario del sistema"}</p>
+                  {item.batch_id && (
+                    <Link to={`/admin/erp/almacen/historial-traslados?batch_id=${item.batch_id}`}
+                      className="mt-2 inline-flex min-h-10 items-center gap-1 font-bold text-red-700 hover:underline">
+                      Ver libros de esta guía <FiArrowRight aria-hidden="true" />
+                    </Link>
+                  )}
                 </div>
               ))}
             </div>
