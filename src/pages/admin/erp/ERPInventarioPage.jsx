@@ -1,16 +1,14 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
-import { FiBox, FiPackage, FiTruck, FiGift, FiMapPin } from "react-icons/fi";
+import { FiBox, FiPackage, FiTruck, FiMapPin } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import { consultarExistencias, consultarResumenInventario, consultarValorizacionPorEditorial, listarEntradasInventario } from "../../../api/warehouseApi";
 
 function mensajeError(error) {
-  const data = error?.response?.data;
-  if (typeof data?.detail === "string") return data.detail;
-  if (Array.isArray(data?.detail)) return data.detail.join(" ");
-  if (data && typeof data === "object") return Object.values(data).flat().map(String).join(" ");
-  return "No se pudo consultar el inventario. Intenta actualizar la página.";
+  if (!error?.response) return "No pudimos conectarnos. Revisa tu conexión y vuelve a intentarlo.";
+  if (error.response.status === 403) return "No tienes autorización para consultar el inventario.";
+  return "No pudimos consultar las existencias. Actualiza la página para intentarlo nuevamente.";
 }
 
 function dinero(valor) {
@@ -24,10 +22,9 @@ const seccionesAlmacen = [
 ];
 
 const accesosAlmacen = [
-  { nombre: "Stock por almacén", descripcion: "Libros disponibles por lugar", icono: FiBox, ruta: "/admin/erp/almacen/stock-por-almacen" },
-  { nombre: "Traslados", descripcion: "Entre ubicaciones", icono: FiTruck, ruta: "/admin/erp/almacen/traslados" },
-  { nombre: "Cortesías", descripcion: "Entregas sin costo", icono: FiGift, ruta: "/admin/erp/almacen/cortesias" },
-  { nombre: "Ubicaciones", descripcion: "Almacenes y destinos", icono: FiMapPin, ruta: "/admin/erp/almacen/ubicaciones", permiso: "warehouse.view_warehouse_locations" },
+  { nombre: "Por almacén", descripcion: "Libros por lugar", icono: FiBox, ruta: "/admin/erp/almacen/stock-por-almacen" },
+  { nombre: "Movimientos", descripcion: "Traslados e historial", icono: FiTruck, ruta: "/admin/erp/almacen/traslados" },
+  { nombre: "Ubicaciones", descripcion: "Administrar lugares", icono: FiMapPin, ruta: "/admin/erp/almacen/ubicaciones", permiso: "warehouse.view_warehouse_locations" },
 ];
 
 export default function ERPInventarioPage() {
@@ -129,16 +126,16 @@ export default function ERPInventarioPage() {
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-gray-950">Inventario</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">Consulta cantidades y valorización de mercadería. Los ingresos, traslados y cortesías se registran en sus secciones correspondientes.</p>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">Consulta las cantidades disponibles, entradas y valor referencial de tus libros.</p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-          {puedeVerCatalogo && <Link to="/admin/productos" state={{ inventoryReturnTo: retornoInventario }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-semibold text-gray-700 transition hover:bg-gray-50 sm:text-sm">Catálogo de productos</Link>}
-          <Link to="/admin/erp/almacen/recepciones" state={{ inventoryReturnTo: retornoInventario }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-semibold text-gray-700 transition hover:bg-gray-50 sm:text-sm">Ver recepciones</Link>
+          {puedeVerCatalogo && <Link to="/admin/productos" state={{ inventoryReturnTo: retornoInventario }} className="inline-flex min-h-11 items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 sm:text-sm">Catálogo de productos</Link>}
+          <Link to="/admin/erp/almacen/recepciones" state={{ inventoryReturnTo: retornoInventario }} className="inline-flex min-h-11 items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 sm:text-sm">Ver recepciones</Link>
         </div>
       </header>
 
-      <nav aria-label="Consultas y operaciones de almacén" className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
-        <h2 className="mb-3 text-sm font-black text-gray-950">Consultar</h2>
+      <nav aria-label="Consultas y operaciones de almacén" className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+        <h2 className="mb-2 text-sm font-black text-gray-950">Consultar</h2>
         <div className="grid grid-cols-2 gap-2">
           {seccionesAlmacen.map((item) => {
             const Icon = item.icono;
@@ -146,7 +143,7 @@ export default function ERPInventarioPage() {
             return (
               <button key={item.vista} type="button" onClick={() => seleccionarSeccion(item.vista)}
                 aria-pressed={selected}
-                className={`flex min-h-14 items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${selected ? "border-red-700 bg-red-50 text-red-800" : "border-gray-200 bg-gray-50 text-gray-800 hover:border-red-300"}`}>
+                className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${selected ? "border-red-700 bg-red-50 text-red-800" : "border-gray-200 bg-gray-50 text-gray-800 hover:border-red-300"}`}>
                 <Icon size={18} aria-hidden="true" className="shrink-0" />
                 <span className="min-w-0">
                   <span className="block text-sm font-bold">{item.nombre}</span>
@@ -156,13 +153,13 @@ export default function ERPInventarioPage() {
             );
           })}
         </div>
-        <h2 className="mb-3 mt-4 text-sm font-black text-gray-950">Operaciones</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <h2 className="mb-2 mt-3 text-sm font-black text-gray-950">Ir a</h2>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {accesosAlmacen.filter((item) => !item.permiso || userHasPermission(user, [item.permiso])).map((item) => {
             const Icon = item.icono;
             return (
               <Link key={item.ruta} to={item.ruta}
-                className="flex min-h-14 items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left transition hover:border-red-300 hover:bg-red-50">
+                className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left transition hover:border-red-300 hover:bg-red-50">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-700">
                   <Icon size={18} aria-hidden="true" />
                 </span>
@@ -179,7 +176,7 @@ export default function ERPInventarioPage() {
 
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         {tarjetas.map((item) => (
-          <div key={item.titulo} className="flex min-h-20 flex-col items-center justify-center rounded-xl border border-gray-200 bg-white p-2.5 text-center shadow-sm">
+          <div key={item.titulo} className="flex min-h-20 min-w-0 flex-col items-start justify-center rounded-xl border border-gray-200 bg-white p-3 text-left shadow-sm">
             <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
             <p className="mt-1 text-2xl font-black tabular-nums text-gray-950">{cargando || error ? "—" : item.valor}</p>
             <p className="mt-1 text-xs text-gray-500">{item.ayuda}</p>
@@ -188,13 +185,13 @@ export default function ERPInventarioPage() {
       </div>
 
       <section aria-label="Valorización referencial del inventario" className="space-y-2">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {[
             { titulo: "Valor físico referencial", valor: resumen?.physical_value_reference, ayuda: "Disponibles más observados", parcial: !resumen?.physical_valuation_complete },
             { titulo: "Stock disponible valorizado", valor: resumen?.value_reference, ayuda: "Descontadas las cortesías", parcial: Number(resumen?.unvalued_units || 0) > 0 },
             { titulo: "Mercadería observada", valor: resumen?.observed_value_reference, ayuda: "Separada del stock vendible", parcial: Number(resumen?.unvalued_observed_units || 0) > 0 },
-          ].map((item, indice) => (
-            <div key={item.titulo} className={`min-w-0 rounded-xl border border-gray-200 bg-white p-2.5 shadow-sm sm:p-3 ${indice === 2 ? "col-span-2 sm:col-span-1" : ""}`}>
+          ].map((item) => (
+            <div key={item.titulo} className="min-w-0 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
               <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
               <p className="mt-1 break-words text-base font-black tabular-nums text-gray-950 sm:text-xl">
                 {cargando || error ? "—" : dinero(item.valor)}
@@ -207,8 +204,7 @@ export default function ERPInventarioPage() {
           ))}
         </div>
         <p className="px-1 text-xs leading-5 text-gray-600">
-          Valorización del inventario global registrado a costo histórico referencial. Los adicionales conformes
-          ya están incluidos; no se suman nuevamente. No representa deuda con las editoriales. El desglose por almacén se consulta en Traslados y Ubicaciones.
+          Valores referenciales según los costos registrados. Consulta las cantidades por lugar en «Por almacén».
           {resumen?.physical_valuation_complete === false && (
             <span className="block font-bold text-amber-800">
               Valorización parcial: {Number(resumen.unvalued_units || 0) + Number(resumen.unvalued_observed_units || 0)} unidades sin costo histórico.
