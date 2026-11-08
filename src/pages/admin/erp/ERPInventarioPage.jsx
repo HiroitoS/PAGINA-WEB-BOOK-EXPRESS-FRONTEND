@@ -1,11 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
-import { FiBox, FiPackage, FiGift, FiTruck, FiCornerUpLeft, FiSliders } from "react-icons/fi";
+import { FiBox, FiPackage, FiTruck, FiGift, FiMapPin } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
-import InventoryCourtesyPanel from "../../../components/admin/InventoryCourtesyPanel";
-import InventoryTransfersPanel from "../../../components/admin/InventoryTransfersPanel";
-import { consultarExistencias, consultarResumenInventario, consultarValorizacionPorEditorial, listarEntradasInventario, listarSalidasInventario } from "../../../api/warehouseApi";
+import { consultarExistencias, consultarResumenInventario, consultarValorizacionPorEditorial, listarEntradasInventario } from "../../../api/warehouseApi";
 
 function mensajeError(error) {
   const data = error?.response?.data;
@@ -20,25 +18,24 @@ function dinero(valor) {
   return new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(Number(valor));
 }
 
-// Módulos futuros visibles como información, nunca como acciones sin API.
 const seccionesAlmacen = [
-  { nombre: "Existencias", descripcion: "Stock disponible", icono: FiBox, vista: "existencias" },
-  { nombre: "Entradas", descripcion: "Recepciones registradas", icono: FiPackage, vista: "movimientos" },
-  { nombre: "Cortesías", descripcion: "Entregas sin costo", icono: FiGift, vista: "salidas" },
-  { nombre: "Traslados", descripcion: "Entre ubicaciones", icono: FiTruck, vista: "traslados" },
-  { nombre: "Devoluciones", descripcion: "Pendiente", icono: FiCornerUpLeft },
-  { nombre: "Ajustes", descripcion: "Pendiente", icono: FiSliders },
+  { nombre: "Existencias", descripcion: "Stock por producto", icono: FiBox, vista: "existencias" },
+  { nombre: "Entradas", descripcion: "Historial de ingresos", icono: FiPackage, vista: "movimientos" },
+];
+
+const accesosAlmacen = [
+  { nombre: "Traslados", descripcion: "Entre ubicaciones", icono: FiTruck, ruta: "/admin/erp/almacen/traslados" },
+  { nombre: "Cortesías", descripcion: "Entregas sin costo", icono: FiGift, ruta: "/admin/erp/almacen/cortesias" },
+  { nombre: "Ubicaciones", descripcion: "Almacenes y destinos", icono: FiMapPin, ruta: "/admin/erp/almacen/ubicaciones", permiso: "warehouse.view_warehouse_locations" },
 ];
 
 export default function ERPInventarioPage() {
   const { user } = useAuth();
   const puedeVerCatalogo = userHasPermission(user, ["catalog.view_catalog"]);
-  const puedeRegistrarCortesia = userHasPermission(user, ["warehouse.manage_stock_courtesies"]);
   const puedeVerUbicaciones = userHasPermission(user, ["warehouse.view_warehouse_locations"]);
   const detalleRef = useRef(null);
   const [existencias, setExistencias] = useState([]);
   const [entradas, setEntradas] = useState([]);
-  const [salidas, setSalidas] = useState([]);
   const [valorPorEditorial, setValorPorEditorial] = useState([]);
   const [errorValorizacion, setErrorValorizacion] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -47,9 +44,7 @@ export default function ERPInventarioPage() {
   const busqueda = searchParams.get("buscar") ?? "";
   const editorial = searchParams.get("editorial") ?? "";
   const vistaSolicitada = searchParams.get("vista");
-  const pestana = vistaSolicitada === "cortesias"
-    ? "salidas"
-    : ["movimientos", "salidas", "traslados"].includes(vistaSolicitada) ? vistaSolicitada : "existencias";
+  const pestana = vistaSolicitada === "movimientos" ? "movimientos" : "existencias";
   const retornoInventario = `/admin/erp/almacen/inventario${searchParams.toString() ? `?${searchParams}` : ""}`;
 
   function cambiarFiltro(clave, valor) {
@@ -71,9 +66,8 @@ export default function ERPInventarioPage() {
   const [error, setError] = useState("");
 
   const cargar = useCallback(async (ignorar) => {
-    const [stock, movimientos, summary, outflows, editorialReport] = await Promise.all([
+    const [stock, movimientos, summary, editorialReport] = await Promise.all([
       consultarExistencias(), listarEntradasInventario(), consultarResumenInventario(),
-      listarSalidasInventario(),
       consultarValorizacionPorEditorial().then(
         (data) => ({ data, error: "" }),
         () => ({ data: [], error: "No se pudo cargar el desglose por editorial. Actualiza la página para reintentarlo." }),
@@ -82,7 +76,6 @@ export default function ERPInventarioPage() {
     if (ignorar()) return;
     setExistencias(stock);
     setEntradas(Array.isArray(movimientos) ? movimientos : movimientos.results ?? []);
-    setSalidas(Array.isArray(outflows) ? outflows : outflows.results ?? []);
     setResumen(summary);
     setValorPorEditorial(Array.isArray(editorialReport.data) ? editorialReport.data : []);
     setErrorValorizacion(editorialReport.error);
@@ -122,14 +115,20 @@ export default function ERPInventarioPage() {
   if (vistaSolicitada === "ubicaciones" && puedeVerUbicaciones) {
     return <Navigate to="/admin/erp/almacen/ubicaciones" replace />;
   }
+  if (vistaSolicitada === "traslados") {
+    return <Navigate to="/admin/erp/almacen/traslados" replace />;
+  }
+  if (["cortesias", "salidas"].includes(vistaSolicitada)) {
+    return <Navigate to="/admin/erp/almacen/cortesias" replace />;
+  }
 
   return (
-    <main className="min-w-0 max-w-full space-y-3 overflow-x-hidden p-3 sm:p-5">
+    <main className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
-          <h1 className="mt-1 text-2xl font-black text-gray-950">Inventario</h1>
-          <p className="mt-1 text-sm text-gray-600">Las recepciones validadas ingresan automáticamente. Consulta existencias y movimientos.</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-gray-950">Inventario</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">Consulta cantidades y valorización de mercadería. Los ingresos, traslados y cortesías se registran en sus secciones correspondientes.</p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           {puedeVerCatalogo && <Link to="/admin/productos" state={{ inventoryReturnTo: retornoInventario }} className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-semibold text-gray-700 transition hover:bg-gray-50 sm:text-sm">Catálogo de productos</Link>}
@@ -137,38 +136,40 @@ export default function ERPInventarioPage() {
         </div>
       </header>
 
-      <nav aria-label="Operaciones de almacén" className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-gray-900">Operaciones de almacén</h2>
-          <p className="text-xs text-gray-500">Selecciona una operación. Las opciones pendientes todavía no realizan operaciones.</p>
-        </div>
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+      <nav aria-label="Consultas y operaciones de almacén" className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
+        <h2 className="mb-3 text-sm font-black text-gray-950">Consultar</h2>
+        <div className="grid grid-cols-2 gap-2">
           {seccionesAlmacen.map((item) => {
-            const Icono = item.icono;
-            const activa = item.vista === pestana;
-            const contenido = (
-              <>
-                <Icono aria-hidden="true" className={activa ? "shrink-0 text-red-700" : "shrink-0 text-gray-500"} size={18} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-bold sm:text-sm">{item.nombre}</span>
-                  <span className="block break-words text-xs font-normal leading-4 text-gray-500">{item.descripcion}</span>
+            const Icon = item.icono;
+            const selected = pestana === item.vista;
+            return (
+              <button key={item.vista} type="button" onClick={() => seleccionarSeccion(item.vista)}
+                aria-pressed={selected}
+                className={`flex min-h-14 items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${selected ? "border-red-700 bg-red-50 text-red-800" : "border-gray-200 bg-gray-50 text-gray-800 hover:border-red-300"}`}>
+                <Icon size={18} aria-hidden="true" className="shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold">{item.nombre}</span>
+                  <span className="hidden text-xs font-normal text-gray-600 sm:block">{item.descripcion}</span>
                 </span>
-              </>
-            );
-            const claseBase = "flex min-h-16 min-w-0 w-full items-center gap-2 rounded-lg border p-2 text-left sm:gap-3 sm:p-3";
-            return item.vista ? (
-              <button key={item.nombre} type="button" aria-current={activa ? "page" : undefined}
-                onClick={() => seleccionarSeccion(item.vista)}
-                className={`${claseBase} transition-colors ${activa
-                  ? "border-red-600 bg-red-50 text-gray-950"
-                  : "border-gray-200 bg-gray-50 text-gray-900 hover:border-red-300 hover:bg-white"}`}>
-                {contenido}
               </button>
-            ) : (
-              <div key={item.nombre} aria-disabled="true"
-                className={`${claseBase} cursor-not-allowed border-gray-100 bg-gray-50 text-gray-500 opacity-70`}>
-                {contenido}
-              </div>
+            );
+          })}
+        </div>
+        <h2 className="mb-3 mt-4 text-sm font-black text-gray-950">Operaciones</h2>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {accesosAlmacen.filter((item) => !item.permiso || userHasPermission(user, [item.permiso])).map((item) => {
+            const Icon = item.icono;
+            return (
+              <Link key={item.ruta} to={item.ruta}
+                className="flex min-h-14 items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left transition hover:border-red-300 hover:bg-red-50">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-700">
+                  <Icon size={18} aria-hidden="true" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-gray-950">{item.nombre}</span>
+                  <span className="block text-xs text-gray-600">{item.descripcion}</span>
+                </span>
+              </Link>
             );
           })}
         </div>
@@ -217,7 +218,7 @@ export default function ERPInventarioPage() {
       <section ref={detalleRef} aria-label="Detalle de la operación seleccionada" className="scroll-mt-24 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
           <h2 className="text-sm font-bold text-gray-900">
-            {pestana === "existencias" ? "Existencias por producto" : pestana === "movimientos" ? "Entradas de mercadería" : pestana === "traslados" ? "Traslados" : "Cortesías a colegios"}
+            {pestana === "existencias" ? "Existencias por producto" : "Entradas de mercadería"}
           </h2>
           <span className="text-xs text-gray-500">{error ? "Consulta no disponible" : `${existencias.length} productos con entradas`}</span>
         </div>
@@ -350,11 +351,6 @@ export default function ERPInventarioPage() {
             </details>
 
           </div>
-        ) : pestana === "traslados" ? (
-          <InventoryTransfersPanel canManage={userHasPermission(user, ["warehouse.manage_stock_transfers"])} onRefresh={() => cargar(() => false)} />
-        ) : pestana === "salidas" ? (
-          <div><InventoryCourtesyPanel outflows={salidas}
-            canManage={puedeRegistrarCortesia} onRefresh={() => cargar(() => false)} /></div>
         ) : (
           <div  className="p-3 sm:p-4">
             <h2 className="text-sm font-bold text-gray-900">Historial de movimientos de mercadería</h2>
