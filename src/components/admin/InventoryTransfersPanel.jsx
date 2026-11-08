@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { warehouseErrorMessage as explicarError } from "../../utils/warehouseErrorMessage";
 import { Link } from "react-router";
 import { FiArrowRight, FiMapPin } from "react-icons/fi";
 import {
@@ -7,14 +8,6 @@ import {
   consultarLotesDeGuia, registrarTrasladoPorGuia,
 } from "../../api/warehouseApi";
 import ConfirmActionDialog from "./ConfirmActionDialog";
-
-function explicarError(err) {
-  const data = err?.response?.data;
-  if (typeof data?.detail === "string") return data.detail;
-  if (Array.isArray(data?.detail)) return data.detail.join(" ");
-  if (data && typeof data === "object") return Object.values(data).flat().map(String).join(" ");
-  return "No se pudo completar el traslado. Revisa los datos y vuelve a intentarlo.";
-}
 
 function soles(value) {
   if (value === null || value === undefined || value === "") return "Costo por definir";
