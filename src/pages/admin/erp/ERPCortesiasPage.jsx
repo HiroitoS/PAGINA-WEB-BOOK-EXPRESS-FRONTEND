@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
-import { FiGift, FiArrowRight } from "react-icons/fi";
+import { FiGift, FiArrowLeft } from "react-icons/fi";
 import InventoryCourtesyPanel from "../../../components/admin/InventoryCourtesyPanel";
 import { listarSalidasInventario } from "../../../api/warehouseApi";
 import { useAuth } from "../../../hooks/useAuth";
@@ -48,8 +48,8 @@ export default function ERPCortesiasPage() {
             </div>
           </div>
           <Link to="/admin/erp/almacen/inventario"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-300 px-4 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700">
-            Ver inventario <FiArrowRight aria-hidden="true" />
+            className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700 sm:w-auto">
+            <FiArrowLeft aria-hidden="true" /> Volver a inventario
           </Link>
         </div>
       </header>
