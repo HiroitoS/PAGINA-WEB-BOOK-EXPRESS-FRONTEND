@@ -181,41 +181,32 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
       </div>
 
       {!cargando && !error && (
-        <section aria-label="Preparación de almacenes" className="rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-gray-600">Configuración inicial</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <div className={`flex items-start gap-3 rounded-xl border bg-white p-3 ${principalActivo ? "border-gray-200" : "border-red-200"}`}>
-              <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${principalActivo ? "bg-gray-100 text-gray-700" : "bg-red-50 text-red-700"}`}>
-                {principalActivo ? <FiCheckCircle aria-hidden="true" /> : <FiMapPin aria-hidden="true" />}
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-950">1. Almacén principal</p>
-                <p className="mt-1 text-xs leading-5 text-gray-600">{principalActivo
-                  ? "Ya existe un almacén principal activo."
-                  : "Registra el lugar real donde Book Express recibe y custodia los libros."}</p>
-              </div>
+        listoParaTrasladar ? (
+          <div role="status" className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-2 text-sm text-gray-700">
+              <FiCheckCircle className="mt-0.5 shrink-0 text-gray-700" aria-hidden="true" />
+              <p><span className="font-bold text-gray-950">Ubicaciones listas.</span> Almacén principal y {destinosActivos} {destinosActivos === 1 ? "destino activo" : "destinos activos"} registrados.</p>
             </div>
-            <div className={`flex items-start gap-3 rounded-xl border bg-white p-3 ${destinosActivos ? "border-gray-200" : "border-red-200"}`}>
-              <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${destinosActivos ? "bg-gray-100 text-gray-700" : "bg-red-50 text-red-700"}`}>
-                {destinosActivos ? <FiCheckCircle aria-hidden="true" /> : <FiMapPin aria-hidden="true" />}
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-950">2. Destino de traslado</p>
-                <p className="mt-1 text-xs leading-5 text-gray-600">{destinosActivos
-                  ? `${destinosActivos} ${destinosActivos === 1 ? "destino activo" : "destinos activos"} para traslados.`
-                  : "Agrega un destino físico real, como una tienda. No crees ubicaciones de prueba en producción."}</p>
-              </div>
-            </div>
+            <Link to="/admin/erp/almacen/stock-por-almacen"
+              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-2 text-sm font-bold text-red-700 hover:bg-red-50">
+              Ver existencias <FiArrowRight aria-hidden="true" />
+            </Link>
           </div>
-          {listoParaTrasladar ? (
-            <div className="mt-3 flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-gray-700">Los lugares están preparados. Para mover libros, primero confirma dónde se encuentran físicamente sus existencias.</p>
-              <Link to="/admin/erp/almacen/traslados" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-gray-950 px-4 text-sm font-bold text-white transition hover:bg-gray-800">
-                Ir a traslados <FiArrowRight aria-hidden="true" />
-              </Link>
+        ) : (
+          <section aria-label="Configuración de ubicaciones" className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <h3 className="text-sm font-black text-gray-950">Antes de registrar traslados</h3>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <p className="flex items-start gap-2 rounded-lg bg-white p-3 text-sm leading-5 text-gray-700">
+                <FiMapPin className="mt-0.5 shrink-0 text-red-700" aria-hidden="true" />
+                {principalActivo ? "Almacén principal listo." : "Registra el almacén principal donde se reciben los libros."}
+              </p>
+              <p className="flex items-start gap-2 rounded-lg bg-white p-3 text-sm leading-5 text-gray-700">
+                <FiMapPin className="mt-0.5 shrink-0 text-red-700" aria-hidden="true" />
+                {destinosActivos ? "Destino de traslado listo." : "Agrega un destino físico real, como la tienda."}
+              </p>
             </div>
-          ) : null}
-        </section>
+          </section>
+        )
       )}
 
       {mensaje && (
