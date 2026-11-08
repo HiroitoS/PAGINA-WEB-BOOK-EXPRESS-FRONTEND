@@ -49,7 +49,7 @@ export default function ERPUbicacionesPage() {
         </div>
       </header>
       <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <WarehouseLocationsPanel puedeGestionar={puedeGestionar} puedeConciliar={puedeConciliar} />
+        <WarehouseLocationsPanel puedeGestionar={puedeGestionar} puedeConciliar={puedeConciliar} puedeVerInventario={puedeVerTraslados} />
       </section>
       <p className="rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-600 sm:px-4">
         Registrar una ubicación no mueve libros ni modifica el stock global. Las recepciones nuevas
