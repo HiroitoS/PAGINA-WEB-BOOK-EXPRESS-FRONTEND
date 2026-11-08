@@ -1,13 +1,13 @@
 import { Link } from "react-router";
-import { FiArrowLeft, FiArrowRight, FiClock, FiMapPin, FiTruck } from "react-icons/fi";
+import { FiArrowLeft, FiTruck } from "react-icons/fi";
 import InventoryTransfersPanel from "../../../components/admin/InventoryTransfersPanel";
+import WarehouseMovementTabs from "../../../components/admin/WarehouseMovementTabs";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 
 export default function ERPTrasladosPage() {
   const { user } = useAuth();
   const canManage = userHasPermission(user, ["warehouse.manage_stock_transfers"]);
-  const canViewLocations = userHasPermission(user, ["warehouse.view_warehouse_locations"]);
 
   return (
     <main className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
@@ -21,31 +21,19 @@ export default function ERPTrasladosPage() {
             <div className="min-w-0">
               <h1 className="text-2xl font-black tracking-tight text-gray-950">Traslados de mercadería</h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
-                Mueve libros entre almacenes y puntos de venta sin duplicar existencias.
-                Registra el traslado únicamente cuando la entrega física se haya confirmado.
+                Registra cambios de ubicación cuando los libros ya hayan sido recibidos en el destino.
               </p>
             </div>
           </div>
-          <nav aria-label="Navegación de almacén" className="flex w-full flex-wrap gap-2 sm:w-auto">
-            <Link to="/admin/erp/almacen/inventario"
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700 sm:flex-none">
-              <FiArrowLeft aria-hidden="true" /> Volver a inventario
-            </Link>
-            <Link to="/admin/erp/almacen/historial-traslados"
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700 sm:flex-none">
-              <FiClock aria-hidden="true" /> Ver historial
-            </Link>
-            {canViewLocations && (
-              <Link to="/admin/erp/almacen/ubicaciones"
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700 sm:flex-none">
-                <FiMapPin aria-hidden="true" /> Ubicaciones <FiArrowRight aria-hidden="true" />
-              </Link>
-            )}
-          </nav>
+          <Link to="/admin/erp/almacen/inventario"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700 sm:w-auto">
+            <FiArrowLeft aria-hidden="true" /> Volver a inventario
+          </Link>
         </div>
       </header>
+      <WarehouseMovementTabs />
       <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <InventoryTransfersPanel canManage={canManage} canViewLocations={canViewLocations} />
+        <InventoryTransfersPanel canManage={canManage} />
       </section>
     </main>
   );
