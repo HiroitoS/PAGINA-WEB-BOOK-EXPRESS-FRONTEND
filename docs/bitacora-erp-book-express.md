@@ -1,6 +1,6 @@
 # Bitácora de continuidad — ERP Book Express
 
-Actualizada: 27/10/2026. Documento de trabajo; contrastar con GitHub antes de ejecutar.
+Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ejecutar.
 
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
@@ -8,6 +8,42 @@ Actualizada: 27/10/2026. Documento de trabajo; contrastar con GitHub antes de ej
 - Commits y explicaciones en español; evitar nuevos módulos sin análisis de modelos y APIs existentes.
 - Django REST Framework + PostgreSQL / React + Vite + Tailwind; arquitectura monolito modular.
 - Proteger datos de CRM y permisos; tests específicos por bloque, tests integrales antes del merge.
+
+## Actualización 08/11/2026 — P-08.4: separación visual de Almacén y configuración inicial (en revisión)
+
+**Entorno y ramas:** backend y frontend de prueba deben usar `feature/erp-p08-traslados-por-guia`. `crm/gestion-colegios` es la base de integración; `main` queda reservado para producción, sin merges ni despliegue automático. La corrección paralela de colegios en tareas/calendario sigue separada en `fix/crm-colegio-en-todo-calendario` (NO fusionarla implícitamente con P-08).
+
+**Diagnóstico operativo:**
+- Las capturas de la instancia local devolvieron `GET /api/admin/erp/almacen/ubicaciones/` con HTTP 200 y 2 bytes, compatible con `[]`, y un historial de traslados sin registros. Es indicio de ubicaciones vacías en esa instancia, **no prueba** de que se hayan perdido datos ni de que Git guarde datos por rama. Confirmar conexión y tablas PostgreSQL antes de actuar.
+- Backend existente: solo puede existir un `WarehouseLocation` principal activo. Su identificador se genera en servidor. La recepción validada nueva se asigna al principal activo; lotes anteriores requieren conciliación de ubicación **con comprobación física**. Registrar una ubicación no crea ni mueve inventario.
+- Un traslado P-08.3 sigue siendo **directo y confirmado físicamente**: no modela despacho en tránsito, recepción pendiente, consignación completa ni venta. Operación por guía con 1–200 lotes, cantidades por lote, idempotencia y control transaccional. No usar con mercadería aún en camino.
+- No crear almacenes ficticios por software. El responsable debe confirmar nombre y uso físico reales de los depósitos de Book Express, registrar al menos el principal y un destino cuando correspondan.
+
+**Decisión UX/UI / mobile-first:**
+- Inventario se concentra en **Existencias** y **Entradas**, incluyendo cantidades y valorización. **Traslados** y **Cortesías** tienen pantallas propias; **Ubicaciones** conserva administración y conciliación. No mostrar accesos operativos a Devoluciones/Ajustes hasta implementar sus reglas. No duplicar tablas de stock ni tocar endpoints.
+- Navegación ERP → Almacén: Recepción, Inventario, Traslados, Cortesías, Ubicaciones, cada una protegida por los permisos ya utilizados. URLs legadas `inventario?vista=traslados|cortesias|salidas|ubicaciones` redirigen a las rutas nuevas.
+- Ubicaciones explica pasos 1 (almacén principal) y 2 (destino real), facilita alta/edición y muestra estado vacío con acción real según permisos. Traslados muestra un estado vacío con navegación real cuando hay menos de 2 ubicaciones activas. En ambos casos, mensajes simples y sin jerga de implementación.
+- Cabeceras compactas, distribución de tarjetas adaptable, acciones de al menos 44px, filas/cards móviles, confirmación con scroll vertical y botones cómodos en pantallas pequeñas. Rojo para acciones principales; verde no utilizado como elemento decorativo.
+- No rediseñar todo el CRM en esta rama: las mejoras compartidas serán incrementales y verificables.
+
+**Código frontend comprometido en la rama de P-08:**
+- Nuevas páginas: `src/pages/admin/erp/ERPTrasladosPage.jsx` y `ERPCortesiasPage.jsx`.
+- Rutas: `src/app/router.jsx`; menú: `src/layouts/AdminLayout.jsx`.
+- Inventario: `src/pages/admin/erp/ERPInventarioPage.jsx` (consulta y accesos separados).
+- Ubicaciones: `src/pages/admin/erp/ERPUbicacionesPage.jsx` y `src/components/admin/WarehouseLocationsPanel.jsx`.
+- Traslados: `src/components/admin/InventoryTransfersPanel.jsx` (estado vacío y `onRefresh` opcional).
+- Confirmaciones: `src/components/admin/ConfirmActionDialog.jsx` (altura móvil y botones).
+- Workflows GitHub Actions backend/frontend habilitados para PR hacia `crm/gestion-colegios`; se corrige el valor inválido de `retention-days` en frontend.
+
+**Pruebas y pendientes de aprobación:**
+1. GitHub Actions de frontend (lint, tests, build): última ejecución de P-08.4 verificada satisfactoria tras cambios frontend. Revisar el estado del backend en su ejecución específica.
+2. En la computadora del usuario: `git status`, `git fetch origin`, `git switch feature/erp-p08-traslados-por-guia`, `git pull --ff-only` por **cada repositorio**, sin perder cambios locales.
+3. `npm run lint`, `npm run build`; `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py migrate`, `python manage.py test warehouse purchasing`.
+4. Verificar ubicaciones reales (no crear datos ficticios): registrar principal, registrar destino cuando exista; inspeccionar conciliación según permisos; comprobar que la creación no aumenta el stock.
+5. Realizar traslado por guía con cantidades parciales y completas cuando exista stock real conciliado; comprobar origen −N, destino +N, global constante, no doble movimiento; probar recarga, mensajes, historial y roles.
+6. Pruebas visuales a 360/390/430/768/1024/1440 px, teclado abierto, tablas, menús, diálogos; completar revisión manual responsive y accesibilidad.
+7. Pendiente funcional: búsqueda de guías con más de 25 resultados paginados (la selección *de una guía hallada* carga sus lotes completos, pero el descubrimiento se hace por página). Definir búsqueda directa del documento si resulta necesario, antes de cerrar.
+8. No fusionar a `crm/gestion-colegios` ni a `main`; no desplegar Tecnoweb sin autorización explícita y respaldo de datos.
 
 ## Backend
 Repositorio: HiroitoS/PAGINA-WEB-BOOK-EXPRESS; rama de trabajo crm/gestion-colegios.
