@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { FiArrowLeft, FiArrowRight, FiMapPin, FiTruck } from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight, FiClock, FiMapPin, FiTruck } from "react-icons/fi";
 import InventoryTransfersPanel from "../../../components/admin/InventoryTransfersPanel";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
@@ -30,6 +30,10 @@ export default function ERPTrasladosPage() {
             <Link to="/admin/erp/almacen/inventario"
               className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700 sm:flex-none">
               <FiArrowLeft aria-hidden="true" /> Volver a inventario
+            </Link>
+            <Link to="/admin/erp/almacen/historial-traslados"
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 text-sm font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700 sm:flex-none">
+              <FiClock aria-hidden="true" /> Ver historial
             </Link>
             {canViewLocations && (
               <Link to="/admin/erp/almacen/ubicaciones"
