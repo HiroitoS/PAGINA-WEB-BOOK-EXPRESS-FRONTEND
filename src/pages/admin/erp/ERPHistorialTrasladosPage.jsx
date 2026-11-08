@@ -178,7 +178,7 @@ export default function ERPHistorialTrasladosPage() {
         {loadingHistory ? (
           <p role="status" className="py-8 text-center text-sm text-gray-600">Consultando historial…</p>
         ) : data.results.length === 0 ? (
-          <p className="my-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-600">
+          <p className="my-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-left text-sm text-gray-600">
             {error ? "No fue posible mostrar los registros." : "No hay traslados para estos filtros. Cuando confirmes una entrega, aparecerá aquí."}
           </p>
         ) : (
