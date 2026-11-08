@@ -16,6 +16,28 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 
 **Pendientes para cerrar:** `git pull` del frontend de la rama `feature/erp-p08-traslados-por-guia`, pruebas de enlaces manuales, `npm run lint`, `npm run build`, pantalla 360/390/430/768/1440 px. Verificar ejecutoria CI más reciente. No desplegar ni integrar ramas sin aprobación explícita.
 
+## 08/11/2026 — P-08.6: trazabilidad e historial completo de traslados, mejoras logísticas
+
+**Nueva necesidad confirmada:** el usuario quiere ver el historial de **cada traslado** y, cuando implementemos despacho, también **de cada envío**, con información de qué se envió, hacia dónde, cuándo y quién intervino. Es requisito esencial para presentar el sistema a jefatura. El histórico de recepción ya tiene eventos, pero **despacho/retorno aún no existen**.
+
+**Implementación backend en rama existente** `feature/erp-p08-traslados-por-guia`:
+- `warehouse/api_transfers.py`: listado paginado con filtros validados `q`, `source_id`, `destination_id`, `batch_id`, `date_from`, `date_to`; respuesta incorpora `operation_reference` BE-TG-* (guía) / BE-TI-* (individual), `operation_type`, editorial, código, recepción, autor visible y fecha/hora. Preserva contrato anterior y `select_related`.
+- `warehouse/test_transfers.py`: casos nuevos de filtros por código/colegio/guía, cantidades, límites, permiso denegado, identidades por guía y comprobación de historial. GitHub Actions Django/PostgreSQL **aprobó** commit b62c08a (tests incluidos).
+- Sin nuevas migraciones ni borrado de movimientos. Historial de traslados confirmados; **NO equivale al futuro historial de despachos en tránsito**.
+
+**Implementación frontend:**
+- Nuevo `src/pages/admin/erp/ERPHistorialTrasladosPage.jsx`, ruta `/admin/erp/almacen/historial-traslados` protegida, acceso desde menú y Traslados, filtros, 25 movimientos por página, detalle por guía `batch_id`, fecha/hora, origen-destino, usuario, colegio y observación; móvil con tarjetas.
+- `src/api/warehouseApi.js` acepta filtros sin modificar llamadas anteriores.
+- `InventoryTransfersPanel.jsx`: "Traslados recientes" diferencia primeros 25 del historial completo; muestra referencia, fecha, responsable y acceso por guía.
+- Corregido texto engañoso: ferias/consignaciones **no exigen** trasladar toda la guía; solo unidades realmente entregadas al destino.
+- Primera ejecución de CI detectó una regla de hooks `react-hooks/set-state-in-effect` en nueva pantalla; corregida moviendo setState a callback asíncrono; la siguiente ejecución de GitHub Actions frontend aprobó lint/tests/build. Registrar si hubo errores posteriores a esta actualización.
+
+**Diagnóstico y decisiones:** MOF y Macroproceso describen ocho procesos con responsables y flujogramas, pero no un sistema de estados completo de despachos, packs y devoluciones. Se evita presentar como implementadas reglas inexistentes. Documento de jefatura: `docs/erp/P11_propuesta_mejora_procesos_logisticos.md`, con 13 mejoras propuestas, control del historial, fases y criterios de demo; guarda originales fuente solo en raíz local, fuera de repositorios públicos.
+
+**Siguiente implementación real (NO hecha):** requerimientos de mercadería → preparación/picking/pack → despacho con estados y eventos inmutables → recepción en destino → devolución por tipo e inspección → conteo y ajustes autorizados. No usar traslado directo como sustituto de despacho ni crear stock con packs. Requiere validación de reglas documentales, roles y tests de no duplicación antes de escribir nuevos movimientos.
+
+**Comprobaciones pendientes:** ejecución completa de frontend después del último commit, `git pull` en backend/frontend, pruebas manuales con recepciones y movimientos reales en base de prueba, UI de 360/390/430/768/1440 px, verificación de permisos y orden. Cero cambios en `crm/gestion-colegios`, `main` o Tecnoweb.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
