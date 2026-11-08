@@ -445,8 +445,14 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
             </section>
           </div>
           <section className="rounded-xl border border-gray-200 p-3">
-            <h4 className="text-sm font-black text-gray-900">Traslados confirmados</h4>
-            <p className="mt-1 text-xs text-gray-600">Historial inalterable de los últimos movimientos.</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-black text-gray-900">Traslados recientes</h4>
+              <Link to="/admin/erp/almacen/historial-traslados"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-800 hover:border-red-300 hover:text-red-700">
+                Consultar historial completo <FiArrowRight aria-hidden="true" />
+              </Link>
+            </div>
+            <p className="mt-1 text-xs text-gray-600">Aquí se muestran únicamente los primeros 25 movimientos. Consulta todas las páginas en Historial.</p>
             <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
               {history.length === 0 && <p className="text-xs text-gray-500">Aún no hay traslados registrados.</p>}
               {history.map((item) => (
