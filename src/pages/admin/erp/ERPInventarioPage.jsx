@@ -24,6 +24,7 @@ const seccionesAlmacen = [
 ];
 
 const accesosAlmacen = [
+  { nombre: "Stock por almacén", descripcion: "Libros disponibles por lugar", icono: FiBox, ruta: "/admin/erp/almacen/stock-por-almacen" },
   { nombre: "Traslados", descripcion: "Entre ubicaciones", icono: FiTruck, ruta: "/admin/erp/almacen/traslados" },
   { nombre: "Cortesías", descripcion: "Entregas sin costo", icono: FiGift, ruta: "/admin/erp/almacen/cortesias" },
   { nombre: "Ubicaciones", descripcion: "Almacenes y destinos", icono: FiMapPin, ruta: "/admin/erp/almacen/ubicaciones", permiso: "warehouse.view_warehouse_locations" },
@@ -156,7 +157,7 @@ export default function ERPInventarioPage() {
           })}
         </div>
         <h2 className="mb-3 mt-4 text-sm font-black text-gray-950">Operaciones</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {accesosAlmacen.filter((item) => !item.permiso || userHasPermission(user, [item.permiso])).map((item) => {
             const Icon = item.icono;
             return (
