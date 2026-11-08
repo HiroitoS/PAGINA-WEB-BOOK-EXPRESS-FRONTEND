@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router";
+import { FiArrowRight, FiCheckCircle, FiMapPin } from "react-icons/fi";
 import {
   actualizarUbicacionAlmacen,
   crearUbicacionAlmacen,
@@ -33,15 +35,20 @@ function mostrarTipo(tipo) {
 }
 
 function mensajeError(error) {
-  const datos = error?.response?.data;
+  const status = error?.response?.status;
+  if (!error?.response) return "No pudimos conectarnos. Comprueba tu conexión e inténtalo nuevamente.";
+  if (status === 403) return "No tienes autorización para modificar ubicaciones. Solicita apoyo a un administrador.";
+  const datos = error.response.data;
   if (typeof datos?.detail === "string") return datos.detail;
   if (Array.isArray(datos?.detail)) return datos.detail.join(" ");
   if (datos && typeof datos === "object") {
+    const campos = { name: "Nombre", kind: "Tipo de ubicación", address: "Dirección",
+      notes: "Observaciones", is_active: "Estado", non_field_errors: "Revisa los datos" };
     return Object.entries(datos).map(([campo, valor]) =>
-      `${campo}: ${Array.isArray(valor) ? valor.join(" ") : String(valor)}`
+      `${campos[campo] || "Revisa el formulario"}: ${Array.isArray(valor) ? valor.join(" ") : String(valor)}`
     ).join(" ");
   }
-  return "No se pudo guardar la ubicación. Comprueba los datos e intenta nuevamente.";
+  return "No pudimos completar la operación. Comprueba los datos e inténtalo nuevamente.";
 }
 
 export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar = false }) {
@@ -54,6 +61,9 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   const [editandoId, setEditandoId] = useState(null);
   const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
   const formRef = useRef(null);
+  const principalActivo = ubicaciones.some((item) => item.kind === "main" && item.is_active);
+  const destinosActivos = ubicaciones.filter((item) => item.kind !== "main" && item.is_active).length;
+  const listoParaTrasladar = principalActivo && destinosActivos > 0;
 
   useEffect(() => {
     let ignore = false;
@@ -170,6 +180,44 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         )}
       </div>
 
+      {!cargando && !error && (
+        <section aria-label="Preparación de almacenes" className="rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-600">Configuración inicial</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className={`flex items-start gap-3 rounded-xl border bg-white p-3 ${principalActivo ? "border-gray-200" : "border-red-200"}`}>
+              <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${principalActivo ? "bg-gray-100 text-gray-700" : "bg-red-50 text-red-700"}`}>
+                {principalActivo ? <FiCheckCircle aria-hidden="true" /> : <FiMapPin aria-hidden="true" />}
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-950">1. Almacén principal</p>
+                <p className="mt-1 text-xs leading-5 text-gray-600">{principalActivo
+                  ? "Ya existe un almacén principal activo."
+                  : "Registra el lugar real donde Book Express recibe y custodia los libros."}</p>
+              </div>
+            </div>
+            <div className={`flex items-start gap-3 rounded-xl border bg-white p-3 ${destinosActivos ? "border-gray-200" : "border-red-200"}`}>
+              <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${destinosActivos ? "bg-gray-100 text-gray-700" : "bg-red-50 text-red-700"}`}>
+                {destinosActivos ? <FiCheckCircle aria-hidden="true" /> : <FiMapPin aria-hidden="true" />}
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-950">2. Destino de traslado</p>
+                <p className="mt-1 text-xs leading-5 text-gray-600">{destinosActivos
+                  ? `${destinosActivos} ${destinosActivos === 1 ? "destino activo" : "destinos activos"} para traslados.`
+                  : "Agrega un destino físico real, como una tienda. No crees ubicaciones de prueba en producción."}</p>
+              </div>
+            </div>
+          </div>
+          {listoParaTrasladar ? (
+            <div className="mt-3 flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-gray-700">Los lugares están preparados. Para mover libros, primero confirma dónde se encuentran físicamente sus existencias.</p>
+              <Link to="/admin/erp/almacen/traslados" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-gray-950 px-4 text-sm font-bold text-white transition hover:bg-gray-800">
+                Ir a traslados <FiArrowRight aria-hidden="true" />
+              </Link>
+            </div>
+          ) : null}
+        </section>
+      )}
+
       {mensaje && (
         <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-800">
           {mensaje}
@@ -251,13 +299,19 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         <p role="status" className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Consultando ubicaciones…</p>
       )}
       {!cargando && ubicaciones.length === 0 && !error && !formularioAbierto && (
-        <div className="space-y-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-5 text-center">
-          <h3 className="text-sm font-bold text-gray-900">Aún no hay ubicaciones registradas</h3>
-          <p className="text-sm text-gray-600">
-            Empieza registrando el almacén principal. Después podrás agregar tiendas, ferias y lugares de consignación.
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-center sm:p-8">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-xl bg-gray-100 text-gray-700"><FiMapPin aria-hidden="true" size={22} /></span>
+          <h3 className="mt-3 text-base font-black text-gray-950">Empieza con tu almacén principal</h3>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-600">
+            Aún no hay ubicaciones registradas. Primero identifica dónde se reciben los libros;
+            después podrás configurar los lugares donde realmente se trasladan.
           </p>
-          {!puedeGestionar && (
-            <p className="text-xs text-gray-500">Consulta con un administrador para configurar ubicaciones.</p>
+          {puedeGestionar ? (
+            <button type="button" onClick={abrirNuevo} className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-red-700 px-5 text-sm font-bold text-white hover:bg-red-800 sm:w-auto">
+              Registrar almacén principal
+            </button>
+          ) : (
+            <p className="mt-3 text-sm text-gray-600">Solicita al administrador que configure el almacén principal.</p>
           )}
         </div>
       )}
