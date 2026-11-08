@@ -41,7 +41,7 @@ export default function ERPCortesiasPage() {
               <FiGift aria-hidden="true" size={20} />
             </span>
             <div className="min-w-0">
-              <h1 className="text-2xl font-black tracking-tight text-gray-950">Cortesías y muestras entregadas</h1>
+              <h1 className="text-2xl font-black tracking-tight text-gray-950">Cortesías</h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
                 Registra las entregas sin costo, sus destinatarios y las cantidades.
               </p>
