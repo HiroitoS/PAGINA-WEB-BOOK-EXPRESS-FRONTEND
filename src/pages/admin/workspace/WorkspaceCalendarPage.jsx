@@ -77,6 +77,7 @@ import {
   getCalendarType,
   calendarItemIsClosed,
   buildFullCalendarEvents,
+  getCalendarDisplayTitle,
 } from "../../../utils/calendarItems";
 
 const INITIAL_EVENT_FORM = {
@@ -1947,7 +1948,7 @@ function MobileActivityCard({ item, onSelectItem }) {
         </span>
       </div>
 
-      <h4 className="mt-2 line-clamp-2 text-sm font-black text-gray-950">{item.title}</h4>
+      <h4 className="mt-2 line-clamp-2 text-sm font-black text-gray-950">{getCalendarDisplayTitle(item)}</h4>
 
       <div className="mt-2 grid gap-1.5 text-xs font-bold text-gray-500">
         <span className="inline-flex items-center gap-2">
@@ -2017,7 +2018,7 @@ function AgendaPanel({ items, onSelectItem }) {
                   </span>
                 </div>
 
-                <p className="mt-2 line-clamp-2 text-sm font-black text-gray-950">{item.title}</p>
+                <p className="mt-2 line-clamp-2 text-sm font-black text-gray-950">{getCalendarDisplayTitle(item)}</p>
 
                 <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-gray-500">
                   {item.group_name ? (
@@ -2374,7 +2375,7 @@ function CalendarDetailPanel({
                 <p className="text-xs font-black uppercase tracking-wide">
                   {getCalendarTypeLabel(type)}
                 </p>
-                <h3 className="mt-2 text-base font-black">{item.title}</h3>
+                <h3 className="mt-2 text-base font-black">{getCalendarDisplayTitle(item)}</h3>
               </div>
 
               <span
