@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { FiArrowLeft, FiArrowRight, FiClock, FiSearch } from "react-icons/fi";
 import { listarTrasladosAlmacen, listarUbicacionesAlmacen } from "../../../api/warehouseApi";
+import WarehouseMovementTabs from "../../../components/admin/WarehouseMovementTabs";
 
 const campo = "min-h-11 w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-red-600 focus:outline-none";
 
@@ -110,8 +111,7 @@ export default function ERPHistorialTrasladosPage() {
             <div className="min-w-0">
               <h1 className="text-2xl font-black tracking-tight text-gray-950">Historial de traslados</h1>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
-                Consulta quién registró cada traslado, cuándo ocurrió, qué libros se movieron,
-                en qué cantidad y entre qué lugares. Los registros confirmados no se pueden editar ni eliminar.
+                Revisa cada movimiento confirmado: fecha, responsable, libros, cantidades y destino.
               </p>
             </div>
           </div>
@@ -122,6 +122,7 @@ export default function ERPHistorialTrasladosPage() {
         </div>
       </header>
 
+      <WarehouseMovementTabs />
       <section className="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex items-center gap-2">
           <FiSearch aria-hidden="true" className="text-gray-600" />
