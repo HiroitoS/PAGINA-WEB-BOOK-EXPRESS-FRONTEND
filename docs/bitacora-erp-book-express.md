@@ -2,6 +2,20 @@
 
 Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ejecutar.
 
+## 08/11/2026 — Revisión visual: regreso a Inventario y mapa hasta devoluciones
+
+**Solicitud del usuario:** en la captura de `/admin/erp/almacen/stock-por-almacen` se comprueba la nueva vista con cero existencias. En Traslados faltaba un acceso directo de regreso a Inventario; Cortesías tenía "Ver inventario" pero no un regreso claramente reconocible. Ubicaciones sí ofrece retorno. Se pide mapa de cierre del flujo de recepciones, reparto, retornos y devoluciones, con MOF y Macroproceso ya colocados por el usuario en carpeta raíz **local**.
+
+**Cambios de código hechos EN LA MISMA rama P-08 (sin main):**
+- `src/pages/admin/erp/ERPTrasladosPage.jsx`: botón `← Volver a inventario`, siempre visible, junto a Ubicaciones cuando el permiso lo permite, diseño adaptable para celular.
+- `src/pages/admin/erp/ERPCortesiasPage.jsx`: reemplazado "Ver inventario →" por `← Volver a inventario`, enlace directo y espacio táctil móvil.
+- Nuevo documento `docs/erp/P09_mapa_cierre_flujo_almacen.md`: flujo integral y prioridades F0-F5; diferencia funciones actuales de pendientes; conserva packs, despachos, consignaciones, ferias, devolución, incidencias, conteos y archivo. No implica implementación de esos módulos.
+- Se evita inventar un botón de "Devolución" sin backend real. La próxima fase es **prueba E2E controlada** del camino existente y diseño del requerimiento/preparación/despacho.
+
+**Fundamento funcional:** el Macroproceso documenta gestión comercial, recepción, almacenamiento, preparación, despacho, control de inventario, dañados/faltantes y archivo. El MOF asigna supervisión/aprobación al Jefe de Logística y operación a asistentes/coordinador/personal de almacén; estos cargos no representan aún un mapeo RBAC aprobado. Políticas exactas de devoluciones y packs se proponen para validación, no constan íntegramente en esos documentos.
+
+**Pendientes para cerrar:** `git pull` del frontend de la rama `feature/erp-p08-traslados-por-guia`, pruebas de enlaces manuales, `npm run lint`, `npm run build`, pantalla 360/390/430/768/1440 px. Verificar ejecutoria CI más reciente. No desplegar ni integrar ramas sin aprobación explícita.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
