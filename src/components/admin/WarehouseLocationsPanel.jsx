@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { warehouseErrorMessage as mensajeError } from "../../utils/warehouseErrorMessage";
 import { Link } from "react-router";
 import { FiArrowRight, FiCheckCircle, FiMapPin } from "react-icons/fi";
 import {
@@ -32,23 +33,6 @@ const campoClase = "mt-1 min-h-11 w-full min-w-0 rounded-lg border border-gray-3
 
 function mostrarTipo(tipo) {
   return TIPOS.find((item) => item.value === tipo)?.label ?? tipo;
-}
-
-function mensajeError(error) {
-  const status = error?.response?.status;
-  if (!error?.response) return "No pudimos conectarnos. Comprueba tu conexión e inténtalo nuevamente.";
-  if (status === 403) return "No tienes autorización para modificar ubicaciones. Solicita apoyo a un administrador.";
-  const datos = error.response.data;
-  if (typeof datos?.detail === "string") return datos.detail;
-  if (Array.isArray(datos?.detail)) return datos.detail.join(" ");
-  if (datos && typeof datos === "object") {
-    const campos = { name: "Nombre", kind: "Tipo de ubicación", address: "Dirección",
-      notes: "Observaciones", is_active: "Estado", non_field_errors: "Revisa los datos" };
-    return Object.entries(datos).map(([campo, valor]) =>
-      `${campos[campo] || "Revisa el formulario"}: ${Array.isArray(valor) ? valor.join(" ") : String(valor)}`
-    ).join(" ");
-  }
-  return "No pudimos completar la operación. Comprueba los datos e inténtalo nuevamente.";
 }
 
 export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar = false, puedeVerInventario = false }) {
