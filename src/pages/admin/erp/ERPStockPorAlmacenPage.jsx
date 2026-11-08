@@ -163,7 +163,7 @@ export default function ERPStockPorAlmacenPage() {
             {consultando ? (
               <p role="status" className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">Consultando libros…</p>
             ) : datos.results.length === 0 ? (
-              <p className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-5 text-center text-sm text-gray-600">
+              <p className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-left text-sm text-gray-600">
                 {busqueda ? "No encontramos libros con esta búsqueda." : "Este almacén todavía no tiene libros disponibles. Los ingresos aparecen después de validar una recepción."}
               </p>
             ) : (
