@@ -217,7 +217,7 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
   return (
     <div className="space-y-4 p-3 sm:p-4">
       <div>
-        <h3 className="text-base font-black text-gray-950">Traslados entre almacenes</h3>
+        <h3 className="text-base font-black text-gray-950">Registrar traslado</h3>
         <p className="mt-1 text-xs leading-5 text-gray-600">
           Traslada libros conformes sin crear una venta ni modificar el total de Book Express.
           Se conserva el colegio, la guía y el costo histórico de cada lote.
@@ -338,7 +338,7 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
                     <span className="mt-1 block text-xs font-bold text-gray-900">Disponible: {entry.available} unidades · {soles(entry.unit_cost)} c/u</span>
                   </button>
                 ))}
-                {lots.length === 0 && <p className="py-5 text-center text-xs text-gray-500">No hay lotes trasladables con estos filtros.</p>}
+                {lots.length === 0 && <p className="py-4 text-left text-sm text-gray-600">No encontramos libros disponibles para este traslado.</p>}
               </div>
               <div className="mt-3 flex items-center justify-between gap-2 text-xs text-gray-500">
                 <span>Página {page} de {pages}</span>
@@ -438,7 +438,7 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
                   </button>
                 </div>
               ) : (
-                <p className="mt-3 rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-600">
+                <p className="mt-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-left text-sm text-gray-600">
                   Busca una guía para seleccionar todos sus libros, o elige un lote para un traslado individual.
                 </p>
               )}
@@ -452,10 +452,10 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
                 Consultar historial completo <FiArrowRight aria-hidden="true" />
               </Link>
             </div>
-            <p className="mt-1 text-xs text-gray-600">Aquí se muestran únicamente los primeros 25 movimientos. Consulta todas las páginas en Historial.</p>
-            <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+            <p className="mt-1 text-xs text-gray-600">Últimos movimientos. Consulta el registro completo en Historial.</p>
+            <div className="mt-3 space-y-2">
               {history.length === 0 && <p className="text-xs text-gray-500">Aún no hay traslados registrados.</p>}
-              {history.map((item) => (
+              {history.slice(0, 4).map((item) => (
                 <div key={item.id} className="rounded-lg border border-gray-200 p-3 text-xs">
                   <p className="font-black text-gray-950">{item.operation_reference || `Movimiento N.º ${item.id}`} · {fechaHora(item.created_at)}</p>
                   <p className="mt-1 break-words font-bold text-gray-950">{item.product}</p>
