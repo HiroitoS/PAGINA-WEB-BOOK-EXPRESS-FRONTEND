@@ -1,20 +1,10 @@
 import { useEffect, useState } from "react";
+import { warehouseErrorMessage as errorLegible } from "../../utils/warehouseErrorMessage";
 import {
   conciliarUbicacion,
   consultarResumenUbicaciones,
   listarPendientesUbicacion,
 } from "../../api/warehouseApi";
-
-function errorLegible(error) {
-  const data = error?.response?.data;
-  if (typeof data?.detail === "string") return data.detail;
-  if (Array.isArray(data)) return data.join(" ");
-  if (Array.isArray(data?.non_field_errors)) return data.non_field_errors.join(" ");
-  if (data && typeof data === "object") {
-    return Object.values(data).flat().map(String).join(" ");
-  }
-  return "No fue posible completar la operación. Vuelve a intentarlo.";
-}
 
 function numero(value) {
   return Number(value || 0).toLocaleString("es-PE");
@@ -246,8 +236,8 @@ export default function WarehouseReconciliationPanel({ ubicaciones }) {
 
           {confirmando && (
             <div role="dialog" aria-modal="true" aria-labelledby="confirmar-ubicacion"
-              className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4">
-              <div className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-5 shadow-xl">
+              className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-3 sm:p-5">
+              <div className="max-h-dvh w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl bg-white p-4 shadow-xl sm:p-5">
                 <h3 id="confirmar-ubicacion" className="text-lg font-black text-gray-950">
                   Confirmar ubicación física
                 </h3>
@@ -256,14 +246,14 @@ export default function WarehouseReconciliationPanel({ ubicaciones }) {
                   Confirma únicamente si verificaste físicamente sus cantidades.
                   Esta acción deja registro del responsable y no se puede reasignar desde esta pantalla.
                 </p>
-                <div className="flex flex-wrap justify-end gap-2">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   <button type="button" disabled={guardando}
                     onClick={() => setConfirmando(false)}
-                    className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm font-semibold">
+                    className="min-h-11 w-full rounded-lg border border-gray-300 px-4 text-sm font-semibold sm:w-auto">
                     Revisar nuevamente
                   </button>
                   <button type="button" disabled={guardando} onClick={guardar}
-                    className="min-h-11 rounded-lg bg-red-700 px-4 text-sm font-bold text-white disabled:opacity-50">
+                    className="min-h-11 w-full rounded-lg bg-red-700 px-4 text-sm font-bold text-white disabled:opacity-50 sm:w-auto">
                     {guardando ? "Registrando…" : "Confirmar lotes verificados"}
                   </button>
                 </div>
