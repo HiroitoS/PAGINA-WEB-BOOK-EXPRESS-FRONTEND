@@ -45,22 +45,22 @@ export default function ConfirmActionDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4 py-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-3 backdrop-blur-sm sm:p-6">
       <div role="dialog" aria-modal="true" aria-labelledby={titleId}
         aria-describedby={descriptionId}
         onKeyDown={controlarTeclado}
-        className="w-full max-w-xl rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl sm:p-6">
+        className="max-h-dvh w-full max-w-xl overflow-y-auto rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl sm:p-6">
         <p className="text-xs font-bold uppercase tracking-wide text-red-700">{eyebrow}</p>
         <h2 id={titleId} className="mt-1 text-xl font-black text-gray-950">{title}</h2>
         <p id={descriptionId} className="mt-2 text-sm text-gray-700">{description}</p>
         {children}
-        <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" autoFocus disabled={processing} onClick={onCancel}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-800 transition hover:bg-gray-50 disabled:opacity-50">
+            className="min-h-11 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-800 transition hover:bg-gray-50 disabled:opacity-50 sm:w-auto">
             {cancelLabel}
           </button>
           <button type="button" disabled={processing} onClick={onConfirm}
-            className="rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
+            className="min-h-11 w-full rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
             {processing ? "Procesando…" : confirmLabel}
           </button>
         </div>
