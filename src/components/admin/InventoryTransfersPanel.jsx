@@ -371,7 +371,7 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
                       Limpiar selección
                     </button>
                   </div>
-                  <p className="text-xs text-gray-600">Para ferias o consignaciones, deja las cantidades completas. Para tiendas, ingresa solamente las unidades que realmente se entregaron; 0 excluye el lote.</p>
+                  <p className="text-xs text-gray-600">Indica únicamente las unidades realmente recibidas en el destino, ya sea tienda, feria o consignación. Si un lote no se trasladó, coloca 0.</p>
                   <div className="max-h-72 space-y-2 overflow-y-auto">
                     {guideRows.map((line) => (
                       <label key={line.id} className="block rounded-lg border border-gray-200 p-3">
