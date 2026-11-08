@@ -54,8 +54,8 @@ export default function ERPHistorialTrasladosPage() {
 
   useEffect(() => {
     let ignore = false;
-    setLoadingHistory(true);
     const timer = setTimeout(() => {
+      setLoadingHistory(true);
       listarTrasladosAlmacen(page, {
         q: filters.q.trim(),
         source_id: filters.sourceId,
