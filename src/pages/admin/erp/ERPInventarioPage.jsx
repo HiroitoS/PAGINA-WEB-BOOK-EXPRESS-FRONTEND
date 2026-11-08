@@ -277,9 +277,9 @@ export default function ERPInventarioPage() {
               </table>
             </div>
             {!cargando && !error && visibles.length === 0 && (
-              <p className="p-4 text-center text-sm text-gray-500">No hay existencias para los filtros seleccionados.</p>
+              <p className="p-4 text-left text-sm text-gray-600">No hay existencias para los filtros seleccionados.</p>
             )}
-            {cargando && <p role="status" className="p-4 text-center text-sm text-gray-500">Consultando existencias…</p>}
+            {cargando && <p role="status" className="p-4 text-left text-sm text-gray-600">Consultando existencias…</p>}
             <p className="text-xs text-gray-500">Disponible descuenta las cortesías registradas. Los adicionales son históricos; ventas y otras salidas se incorporarán después.</p>
             <details className="rounded-xl border border-gray-200 bg-white">
               <summary className="cursor-pointer px-3 py-2.5 text-sm font-bold text-gray-900 transition hover:bg-gray-50">
@@ -440,7 +440,7 @@ export default function ERPInventarioPage() {
               </table>
             </div>
             {!cargando && !error && entradas.length === 0 && (
-              <p className="p-4 text-center text-sm text-gray-500">Aún no hay ingresos registrados.</p>
+              <p className="p-4 text-left text-sm text-gray-600">Aún no hay ingresos registrados.</p>
             )}
             <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados por Django. Para el stock actual consulta Existencias; para descuentos por cortesía, Cortesías. No son importes por pagar.</p>
           </div>
