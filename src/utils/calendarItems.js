@@ -21,13 +21,18 @@ export function calendarItemIsClosed(item) {
   return item.status === "completed" || item.status === "cancelled";
 }
 
+export function getCalendarDisplayTitle(item) {
+  const school = String(item.crm_school_name || "").trim();
+  return school ? `${school} · ${item.title}` : item.title;
+}
+
 export function buildFullCalendarEvents(items) {
   return items.map((item) => {
     const type = getCalendarType(item);
 
     return {
       id: `${item.type || type}-${item.id}`,
-      title: item.title,
+      title: getCalendarDisplayTitle(item),
       start: getCalendarItemDate(item),
       end: getCalendarItemEndDate(item) || undefined,
       display: "block",
