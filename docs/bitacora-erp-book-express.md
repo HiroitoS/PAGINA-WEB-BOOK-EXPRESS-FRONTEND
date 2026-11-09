@@ -134,6 +134,19 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 
 **Pendientes:** verificar último CI backend, tests `crm.tests.test_demo_seed`, ejecutar clon y pruebas manuales; comprobar productos importados con precios numéricos activos 2027 y clasificaciones nivel/grado. Se mantiene la rama `feature/erp-p08-traslados-por-guia`, sin merge ni despliegue a Tecnoweb.
 
+## 09/11/2026 — Prueba de entorno DEMO: bloqueos PostgreSQL y pipeline [DIAGNÓSTICO]
+
+**Evidencia de la máquina del usuario:** `python manage.py preparar_demo_erp --year 2027` en `bookexpress_db` mostró **578 colegios activos, 1557 productos y 1557 productos con PVP numérico 2027**, pero finalizó con «Falta configurar el pipeline comercial predeterminado y su etapa inicial». Son datos presentes, pero falta el dato maestro `Pipeline` y `PipelineStage` (no es un fallo de importación). No ejecutar `sync_crm_pipeline` en `bookexpress_db` sin revisión: el comando cambia el default y normaliza etapas existentes.
+
+**Clonado de PostgreSQL:** `CREATE DATABASE bookexpress_demo_db WITH TEMPLATE bookexpress_db OWNER bookexpress_user;` devolvió SQLSTATE 55006 (hay **1 sesión abierta usando bookexpress_db**). La captura muestra pestaña Query Tool conectada a `bookexpress_db` en pgAdmin. Cerrar ese Query Tool y servidores Django, verificar desde Query Tool conectado a `postgres` que `pg_stat_activity` no tiene conexiones al origen; volver a ejecutar `CREATE DATABASE` fuera de transacción. El error posterior «no existe bookexpress_demo_db» es consecuencia del clonado fallido, no del comando demo.
+
+**Pasos tras copiar exitosamente (solo DEMO):**
+1. `DB_NAME=bookexpress_demo_db python manage.py sync_crm_pipeline` (sincronizar exclusivamente en clon; puede modificar estado/etapas de demo).
+2. `DB_NAME=bookexpress_demo_db python manage.py preparar_demo_erp --year 2027` (lectura).
+3. `DB_NAME=bookexpress_demo_db python manage.py preparar_demo_erp --year 2027 --crear` (crea colegio marcado prueba, oportunidad, proyección y cotización borrador).
+4. `DB_NAME=bookexpress_demo_db python manage.py runserver`, abrir frontend, seguir flujo.
+**Nunca** ejecutar `--crear` con `bookexpress_db` ni tratar las adopciones/pedidos simulados como operaciones reales. El original queda intacto.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
