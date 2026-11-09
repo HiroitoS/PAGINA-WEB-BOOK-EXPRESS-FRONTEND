@@ -75,6 +75,36 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 
 **Verificación:** comprobar CI del commit final, `npm run lint`, `npm run build`, `node --test tests/*.test.js`; navegador responsive y recorridos de cada ruta protegida, formularios y permisos. **No se ha desplegado**, no se ha fusionado a `crm/gestion-colegios` ni `main`; el backend se mantiene intacto en este ciclo UX. No confundir mejora de interfaz con cierre de flujos pendientes de despacho, packs y devoluciones.
 
+## 08/11/2026 — P-09.1: primera entrega real de Solicitudes internas [EN REVISIÓN]
+
+**Motivo comercial:** el Macroproceso de Almacén exige atender requerimientos de tienda/feria/consignación antes de seleccionar, contar, empacar y despachar los libros. Se mantiene la arquitectura **Pedidos a Editoriales = Compras**, mientras que **Solicitudes internas = operación logística de distribución**. El MOF asigna preparación al personal de almacén y supervisión a Logística; el mapeo de cargos a permisos del sistema aún debe validarse con jefatura.
+
+**Implementado — backend Django:**
+- Nuevas entidades `InternalStockRequest` (origen, destino, responsable, operación, fecha requerida, estado, autor), `InternalStockRequestItem` (libro, cantidad, nombre/código congelados) y `InternalStockRequestEvent` (actor, fecha, transición, motivo) en `warehouse/models.py`.
+- Migración **0013_internal_stock_request.py** crea tablas de solicitudes, líneas y eventos. **No modifica tablas de stock existentes ni crea entradas/salidas**.
+- Nueva API privada `warehouse/api_internal_requests.py` con lista paginada, detalle, búsqueda de libros activos sin precios, ubicaciones activas de solo lectura, alta de solicitud, aprobación, rechazo con motivo, anulación de pendientes; operaciones por usuario/permiso.
+- Creación idempotente mediante clave UUID y huella del contenido; envío repetido con mismo contenido devuelve registro existente y no duplica líneas ni eventos. Transiciones protegidas por transacción y `select_for_update`.
+- Estados `submitted / approved / rejected / cancelled`. **Aprobar NO reserva ni descuenta stock**, y no significa que esté despachado ni recibido.
+- Roles de Almacén reciben lectura y registro de solicitudes mediante `sync_bookexpress_roles`, **NO aprobación**. Permiso de aprobación separado `warehouse.approve_internal_stock_requests` para responsable designado mediante Panel.
+- Tests `warehouse/test_internal_requests.py`: permisos, transiciones, duplicados, validaciones, lectura paginada, historial y stock sin cambios.
+
+**Implementado — frontend React:**
+- Página real `src/pages/admin/erp/ERPSolicitudesMercaderiaPage.jsx`, ruta `/admin/erp/almacen/solicitudes`; enlace nuevo **Solicitudes internas** en menú compacto de Almacén, según permiso.
+- Formulario mobile-first para origen, destino, responsable, feria/colegio de operación, fecha, notas, búsqueda de libros y cantidades; lista y detalle con historial; decisiones de aprobar/rechazar/anular con confirmación.
+- API `src/api/warehouseApi.js` y actualización de permisos `src/utils/adminAccess.js`; mensajes breves de validación `warehouseErrorMessage.js`. No se muestran botones de picking, despacho o packs sin implementación.
+- Prepara test visual de 360/390/430/768/1440 px, estados sin datos y errores de conexión.
+
+**Pendientes críticos antes de jefatura:**
+1. Confirmar que GitHub Actions de **ambos repositorios** pasa en el **último commit**, incluyendo migraciones, lint y tests. No marcar como completado hasta verificar.
+2. Ejecutar `git pull` en backend y frontend en rama `feature/erp-p08-traslados-por-guia` sin perder modificaciones locales; `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py migrate`, `python manage.py test warehouse.test_internal_requests`, `npm run lint`, `npm run build`.
+3. Prueba funcional de solicitud para Tienda, Feria y Consignación con productos activos y permisos; comprobar stock global igual antes/después y respuesta idempotente en reintento.
+4. Validar la experiencia en celular y redacción final; revisar política de aprobación, jefatura de Logística y rangos de tiempo del MOF antes de crear avisos.
+5. Implementar posteriormente **P-09.2 Reservas y preparación/picking**, **P-09.3 Packs**, **P-09.4 Despachos/envíos**, **P-09.5 Devoluciones**. Mantener los módulos de Compras y Almacén separados, aunque estén enlazados.
+
+**Documento operativo específico:** `docs/erp/P12_solicitudes_internas_inicio_preparacion.md`. Las fuentes MOF/Macroproceso originales permanecen en la raíz local privada, sin subir a GitHub.
+
+**Integración/despliegue:** ningún merge a `crm/gestion-colegios` o `main`; nada a Tecnoweb. Las PR existentes siguen en revisión.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
