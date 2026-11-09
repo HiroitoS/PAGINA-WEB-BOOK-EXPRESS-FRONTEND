@@ -175,6 +175,26 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 
 **Prueba manual posterior a `git pull`:** CRM → Campañas → comprobar 2027 existente y activa (no crear otra), revisar pipeline predeterminado ya creado; ingresar a colegio 382, F5, crear oportunidad. Para próxima campaña 2028: Registrar (planificación) → cerrar campaña anterior (cuando corresponda) → activar 2028 → usar CRM. Probar con usuario sin permiso: solo lectura/acción no disponible.
 
+## 09/11/2026 — Generación automática de datos CRM de prueba en la MISMA base local [CAMBIO IMPLEMENTADO]
+
+**Decisión operativa del usuario:** no crear `bookexpress_demo_db` ni operar una segunda base; trabajar sobre `bookexpress_db` local de desarrollo, que ya cuenta con colegios, productos y PVP 2027 importados, campaña escolar 2027 activa y pipeline inicial. Se necesita comprobar el circuito CRM → cotización → adopción → pedidos → recepciones → almacén.
+
+**Solución:** se adaptó `crm/management/commands/preparar_demo_erp.py` para aceptar `--crear --local`, **solo** si `DEBUG=True`, motor PostgreSQL, `DB_NAME=bookexpress_db` y `DB_HOST` es localhost/127.0.0.1/::1. El modo anterior de base `bookexpress_demo_*` sigue disponible sin `--local`; sigue bloqueado en producción normal. Sin `--crear`, el comando solo inspecciona datos.
+
+**Importante corrección de dominio:** antes el seed creaba segunda campaña activa `BE-DEMO-2027`, lo que podía inutilizar la ficha de colegios que requiere una única campaña escolar activa. Ahora **reutiliza** la `SCHOOL-2027` activa existente; si no es única, aborta sin escribir. No duplica campañas, ni altera colegios maestros importados.
+
+**Objetos creados al autorizar:** colegio totalmente separado con nombre **[PRUEBA ERP] Colegio de demostración 2027** y código BE interno de demostración; contacto ficticio; servicio educativo, oportunidad [PRUEBA ERP], proyección con productos/cantidades importados, **cotización en borrador**. No crea adopción, firma, pedido, movimiento de stock ni recepción. Operación transaccional; segundo intento con misma combinación de año/colegio no duplica. La cotización real y descuentos se revisan manualmente en la interfaz.
+
+**Comandos previstos desde backend local:**
+- `python manage.py preparar_demo_erp --year 2027` (vista previa).
+- `python manage.py preparar_demo_erp --year 2027 --crear --local` (escritura local explícita).
+- Opcionales `--school-id N --product-id N --quantity 10` para elegir escenario.
+- `python manage.py test crm.tests.test_demo_seed` (tests en BD temporal).
+
+**Riesgo documentado:** al estar en la misma base, las operaciones de prueba aparecerán en el CRM y podrían influir en reportes; deben mantenerse claramente rotuladas y **NO** tratarse como negocio real. No mezclar con operaciones reales de colegios; no crear comprobantes SUNAT ni enviar notificaciones a contactos reales. Respaldar el PostgreSQL local antes de generar datos. Limpieza futura será controlada para no borrar dependencias. No ejecutar comandos demo en Tecnoweb.
+
+**Próximos pasos:** comprobar CI final y prueba local; abrir el colegio [PRUEBA ERP] en CRM y continuar desde la cotización en borrador mediante flujo real hasta adopción, compras y almacén. El comando no inventa decisiones pedagógicas ni descuentos de proveedor. Mantener rama `feature/erp-p08-traslados-por-guia`, sin merge/despliegue.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
