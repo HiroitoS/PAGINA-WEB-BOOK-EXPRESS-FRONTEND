@@ -157,6 +157,24 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 
 **Siguiente:** probar UNA oportunidad/cotización para un colegio de prueba, con libros importados y precios reales; generar adopción y documentos de compras únicamente como simulación rotulada. No correr `preparar_demo_erp --crear` en `bookexpress_db`: tiene una protección explícita. Cualquier cambio al comando para permitir datos de prueba en base local debe incluir marca evidente y limpieza controlada, además de pruebas.
 
+## 09/11/2026 — CRM: campañas gestionables desde la aplicación (sin terminal anual) [IMPLEMENTADO EN RAMA]
+
+**Problema reportado:** en desarrollo y Tecnoweb fue necesario ejecutar `sync_crm_campaign` en consola para registrar la campaña escolar 2027. En colegio se muestra «No existe una campaña escolar activa». Al vender/licenciar el sistema esto no es aceptable como operación recurrente para el cliente.
+
+**Causa técnica confirmada en código:** `crm/api/views.py` expone `CampaignViewSet(viewsets.ReadOnlyModelViewSet)` (GET solamente); no había frontend de mantenimiento de campañas. La importación de colegios y productos no las crea; pipeline es una configuración de etapas separada, generalmente inicializada solo al instalar, NO cada año.
+
+**Mejora de producto implementada (solo rama `feature/erp-p08-traslados-por-guia`):**
+- Backend: `crm/api/serializers.py` incluye serializers de alta y edición; `CampaignViewSet` permite `GET/POST/PATCH` con permiso `crm.manage_campaigns`, niega eliminación y cambios de año/tipo tras creación; valida año, fecha final, duplicados por tipo/año, y **una sola campaña escolar activa**. El código de la campaña se genera siempre en servidor. No crea automáticamente una campaña al llegar enero, pues requeriría aprobación y permitiría duplicados silenciosos.
+- Inicialización de pipeline: `POST /api/admin/crm/pipelines/configurar-inicial/` con `crm.manage_campaigns`, **solo cuando no exista NINGÚN pipeline**; reutiliza el comando de configuración, pero bloquea un segundo intento o si ya hay pipeline (no modifica oportunidades/etapas existentes).
+- Frontend: nueva pantalla `src/pages/admin/crm/CRMCampaignsPage.jsx` en `/admin/crm/campanas`, acceso desde menú CRM → Campañas visible únicamente a quien tiene permiso. Administrador crea campaña 2027 como planificación y la activa; puede cerrar la anterior conservando el historial. Estado y pantalla de pipeline con acción inicial solo si no hay etapas configuradas. Diseño responsive, controles táctiles, mensajes de negocio.
+- Ficha de colegio `CRMSchoolDetailPage.jsx`: en ausencia de campaña única activa ofrece **Gestionar campañas** si autorizado; para asesor muestra «Solicita al administrador que configure la campaña escolar». Un asesor no recibe acciones técnicas.
+- Tests backend: `crm/tests/test_campaign_management_api.py` cubren CRUD limitado, año inmutable, permisos, activación exclusiva, fechas, configuración inicial sin sobrescribir pipeline existente. Sin migraciones ni cambios en valores/relaciones de campañas ya creadas. La campaña 2027 que el usuario creó anteriormente se conserva.
+- UX: NO agregar gestor de pipeline completo en V1; configuración inicial solo cuando no existe pipeline; si ya existe alguno mal configurado, requiere revisión responsable (no sobrescribirlo automáticamente).
+- Riesgo de negocio: cerrar 2026 no borra sus oportunidades, pero impide nuevas oportunidades en ella. Evaluar política de transición anual y permitir campaña seleccionada explícitamente en la ficha si se requiere mantener múltiples campañas abiertas. Actual CRM espera exactamente una campaña escolar activa si no se especifica.
+- Estado: código comprometido en rama de desarrollo, **pendiente verificación completa CI + pruebas manuales**. No fusionar `crm/gestion-colegios` ni `main`, no subir a Tecnoweb sin autorización y respaldo.
+
+**Prueba manual posterior a `git pull`:** CRM → Campañas → comprobar 2027 existente y activa (no crear otra), revisar pipeline predeterminado ya creado; ingresar a colegio 382, F5, crear oportunidad. Para próxima campaña 2028: Registrar (planificación) → cerrar campaña anterior (cuando corresponda) → activar 2028 → usar CRM. Probar con usuario sin permiso: solo lectura/acción no disponible.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
