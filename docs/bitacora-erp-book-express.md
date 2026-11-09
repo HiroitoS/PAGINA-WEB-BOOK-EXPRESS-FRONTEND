@@ -105,6 +105,18 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 
 **Integración/despliegue:** ningún merge a `crm/gestion-colegios` o `main`; nada a Tecnoweb. Las PR existentes siguen en revisión.
 
+## 09/11/2026 — Diagnóstico importación de colegios: vista previa sin colegios listos
+
+**Caso observado:** el usuario intenta importar el archivo local `BE - LISTADO DE LEADS 2027(2).xlsx` en CRM → Colegios → Importar. La vista previa devuelve «No hay colegios listos para importar», sin explicación clara en el primer pliegue de pantalla. El Excel se inspeccionó directamente: hoja `Instituciones`, encabezados compatibles, **1,165 filas**, niveles Inicial - Jardín (442), Inicial - Cuna Jardín (39), Primaria (419), Secundaria (265), **54 registros sin cantidad de alumnos**, 537 códigos de institución distintos; estos datos son del archivo, no de registros importados. **No cambiar el año de población solo por el nombre «Leads 2027»; confirmar procedencia del censo.**
+
+**Hipótesis a verificar primero en el PostgreSQL local:** los niveles educativos del catálogo `catalog.Level` están vacíos o inactivos tras un arranque sin datos maestros. El importador `crm/services/school_imports.py` exige un nivel activo cuyo nombre/slug corresponda a Inicial, Primaria o Secundaria; si no existe, genera «No se reconoce el nivel» por cada fila y ninguna institución queda lista. No afirmar confirmación hasta consultar `Level.objects.values_list('name','slug','is_active')` y/o revisar detalles de vista previa.
+
+**Solución operativa sin alterar importador:** Gestión web → Clasificaciones → Niveles; crear/activar **Inicial**, **Primaria**, **Secundaria** si faltan; verificar antes de importar. Regenerar vista previa y revisar nuevos, actualizaciones, advertencias y conflictos. Confirmar importación **solo después** de revisar resultado. No ejecutar importación en producción ni duplicar datos. La ausencia de alumnos es advertencia y no debería bloquear.
+
+**Corrección UX aplicada (solo frontend, misma rama):** `src/pages/admin/crm/CRMSchoolImportsPage.jsx` ahora identifica el error «No se reconoce el nivel» en la vista previa, muestra instrucción clara y enlace real a `/admin/clasificaciones`. Otros casos sin colegios listos remiten a resultados de validación, evitando mensaje genérico. Pendiente comprobación CI lint/build en commit final y validación manual en navegador. Backend y reglas de importación **sin cambios**.
+
+**Contexto ERP:** cargar colegios es útil para CRM/adopciones y pedidos a editoriales, pero las solicitudes internas P-09.1 no requieren colegios cargados (por ahora destinatario se registra como texto). **No inventar adopciones ni ingresos en producción** para probar almacén.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
