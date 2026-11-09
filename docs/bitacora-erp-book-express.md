@@ -147,6 +147,16 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 4. `DB_NAME=bookexpress_demo_db python manage.py runserver`, abrir frontend, seguir flujo.
 **Nunca** ejecutar `--crear` con `bookexpress_db` ni tratar las adopciones/pedidos simulados como operaciones reales. El original queda intacto.
 
+## 09/11/2026 — Simplificación de datos para prueba CRM→ERP en base local
+
+**Decisión del usuario:** no crear un segundo PostgreSQL ni clonar `bookexpress_db` para las pruebas; la base actual ya tiene 578 colegios y 1,557 productos con PVP 2027. Priorizar pasos cortos, seguros y verificables. No crear adopciones, ventas ni recepciones ficticias como operaciones reales sin identificarlas claramente.
+
+**Bloqueo detectado en ficha de colegio:** «No existe una campaña escolar activa para crear una oportunidad». Los Excel de colegios y catálogo **no crean campañas ni pipelines**; son maestros separados. Código revisado: `crm/management/commands/sync_crm_campaign.py` acepta `--year 2027 --campaign-type school --status active`, creando/actualizando solo esa campaña; `crm/management/commands/sync_crm_pipeline.py` configura pipeline y etapas, pero altera el pipeline por defecto y puede reordenar etapas, por eso hay que inspeccionar si ya existen oportunidades antes de ejecutarlo en la base habitual.
+
+**Paso inmediato:** en `bookexpress_backend`, ejecutar `python manage.py sync_crm_campaign --year 2027 --campaign-type school --status active`, actualizar la ficha del colegio y comprobar si permite crear oportunidad. Si falta pipeline, ejecutar primero `python manage.py shell -c "from crm.models import Pipeline, Opportunity; print(list(Pipeline.objects.values_list('code','is_active','is_default'))); print('Oportunidades:', Opportunity.objects.count())"`. **Si no hay oportunidades/pipeline real**, sincronizar con `python manage.py sync_crm_pipeline`; si hay, revisar antes para conservar relaciones.
+
+**Siguiente:** probar UNA oportunidad/cotización para un colegio de prueba, con libros importados y precios reales; generar adopción y documentos de compras únicamente como simulación rotulada. No correr `preparar_demo_erp --crear` en `bookexpress_db`: tiene una protección explícita. Cualquier cambio al comando para permitir datos de prueba en base local debe incluir marca evidente y limpieza controlada, además de pruebas.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
