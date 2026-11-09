@@ -56,10 +56,12 @@ export default function ERPSolicitudesMercaderiaPage() {
   const [search, setSearch] = useState("");
   const [matches, setMatches] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const [processing, setProcessing] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
   const [decisionNote, setDecisionNote] = useState("");
+  const [decisionError, setDecisionError] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -107,10 +109,16 @@ export default function ERPSolicitudesMercaderiaPage() {
       setSearching(true);
       buscarLibrosParaSolicitud(search.trim())
         .then((items) => {
-          if (!ignore) setMatches(Array.isArray(items) ? items : []);
+          if (!ignore) {
+            setMatches(Array.isArray(items) ? items : []);
+            setSearchError("");
+          }
         })
         .catch(() => {
-          if (!ignore) setMatches([]);
+          if (!ignore) {
+            setMatches([]);
+            setSearchError("No pudimos buscar libros. Revisa tu conexión e inténtalo nuevamente.");
+          }
         })
         .finally(() => { if (!ignore) setSearching(false); });
     }, 300);
@@ -127,6 +135,7 @@ export default function ERPSolicitudesMercaderiaPage() {
       : [...current, { product_id: product.id, name: product.name, code: product.code, quantity: "1" }]);
     setSearch("");
     setMatches([]);
+    setSearchError("");
   }
 
   function updateQuantity(productId, quantity) {
@@ -142,6 +151,7 @@ export default function ERPSolicitudesMercaderiaPage() {
     setSelected([]);
     setSearch("");
     setMatches([]);
+    setSearchError("");
     setFormOpen(false);
     setRequestKey(crypto.randomUUID());
   }
@@ -191,6 +201,11 @@ export default function ERPSolicitudesMercaderiaPage() {
 
   async function resolveRequest() {
     if (!confirmation || processing) return;
+    if (confirmation.action === "rechazar" && decisionNote.trim().length < 5) {
+      setDecisionError("Indica al menos cinco caracteres para explicar el rechazo.");
+      return;
+    }
+    setDecisionError("");
     setProcessing(true);
     setError("");
     setMessage("");
@@ -248,6 +263,12 @@ export default function ERPSolicitudesMercaderiaPage() {
           </div>
           {formOpen && (
             <form onSubmit={saveRequest} className="space-y-4 border-t border-gray-200 p-4">
+              {locations.length < 2 && !loadingOptions && !errorOptions && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                  Registra al menos dos ubicaciones activas antes de solicitar un traslado.
+                </p>
+              )}
+              {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
               {errorOptions && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{errorOptions}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="text-sm font-semibold text-gray-800">Almacén de origen
@@ -288,13 +309,14 @@ export default function ERPSolicitudesMercaderiaPage() {
                 <div className="relative mt-2">
                   <FiSearch aria-hidden="true" className="absolute left-3 top-3.5 text-gray-500" />
                   <input id="buscar-libros-solicitud" type="search" value={search}
-                    onChange={(e) => { setSearch(e.target.value); setMatches([]); }}
+                    onChange={(e) => { setSearch(e.target.value); setMatches([]); setSearchError(""); }}
                     placeholder="Busca por nombre, código o editorial"
                     className={`${inputClass} mt-0 pl-10`} />
                 </div>
                 {search.trim().length >= 2 && (
                   <div className="mt-2 space-y-1 rounded-xl border border-gray-200 bg-gray-50 p-2">
-                    {searching ? <p className="p-2 text-sm text-gray-600">Buscando libros…</p>
+                    {searchError ? <p role="alert" className="p-2 text-sm text-red-800">{searchError}</p>
+                      : searching ? <p className="p-2 text-sm text-gray-600">Buscando libros…</p>
                       : matches.length === 0 ? <p className="p-2 text-sm text-gray-600">No encontramos libros con esta búsqueda.</p>
                         : matches.map((product) => (
                           <button key={product.id} type="button" onClick={() => addProduct(product)}
@@ -332,7 +354,7 @@ export default function ERPSolicitudesMercaderiaPage() {
               </div>
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button type="button" onClick={resetForm} className="min-h-11 rounded-xl border border-gray-300 px-4 text-sm font-bold text-gray-700">Cancelar</button>
-                <button type="submit" disabled={processing || !selected.length || loadingOptions || !form.source_id}
+                <button type="submit" disabled={processing || !selected.length || loadingOptions || locations.length < 2 || !form.source_id || !form.destination_id}
                   className="min-h-11 rounded-xl bg-red-700 px-4 text-sm font-bold text-white disabled:opacity-50">
                   {processing ? "Registrando…" : "Enviar para aprobación"}
                 </button>
@@ -440,14 +462,15 @@ export default function ERPSolicitudesMercaderiaPage() {
             : "Se anulará la solicitud pendiente sin afectar inventario."}
         confirmLabel={confirmation?.action === "aprobar" ? "Aprobar solicitud"
           : confirmation?.action === "rechazar" ? "Rechazar solicitud" : "Anular solicitud"}
-        onCancel={() => { setConfirmation(null); setDecisionNote(""); }}
+        onCancel={() => { setConfirmation(null); setDecisionNote(""); setDecisionError(""); }}
         onConfirm={resolveRequest}>
         {confirmation?.action === "rechazar" && (
           <label className="mt-4 block text-sm font-bold text-gray-700">Motivo
             <textarea value={decisionNote} maxLength={500} rows={3} required
-              onChange={(e) => setDecisionNote(e.target.value)}
+              onChange={(e) => { setDecisionNote(e.target.value); setDecisionError(""); }}
               className="mt-2 w-full rounded-lg border border-gray-300 p-3 text-sm"
               placeholder="Explica brevemente por qué no se aprueba" />
+            {decisionError && <span role="alert" className="mt-1 block text-xs font-semibold text-red-700">{decisionError}</span>}
           </label>
         )}
       </ConfirmActionDialog>
