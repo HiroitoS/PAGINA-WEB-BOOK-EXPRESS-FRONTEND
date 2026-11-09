@@ -45,6 +45,7 @@ const WorkspaceTaskListsPage = lazy(() => import("../pages/admin/workspace/Works
 
 const ERPPedidosPage = lazy(() => import("../pages/admin/erp/ERPPedidosPage"));
 const ERPRecepcionPage = lazy(() => import("../pages/admin/erp/ERPRecepcionPage"));
+const ERPSolicitudesMercaderiaPage = lazy(() => import("../pages/admin/erp/ERPSolicitudesMercaderiaPage"));
 const ERPInventarioPage = lazy(() => import("../pages/admin/erp/ERPInventarioPage"));
 const ERPStockPorAlmacenPage = lazy(() => import("../pages/admin/erp/ERPStockPorAlmacenPage"));
 const ERPTrasladosPage = lazy(() => import("../pages/admin/erp/ERPTrasladosPage"));
@@ -251,6 +252,13 @@ const router = createBrowserRouter([
             element: protectPermission(
               renderLazyPage(ERPUbicacionesPage),
               ["warehouse.view_warehouse_locations"],
+            ),
+          },
+          {
+            path: "erp/almacen/solicitudes",
+            element: protectPermission(
+              renderLazyPage(ERPSolicitudesMercaderiaPage),
+              ["warehouse.view_internal_stock_requests"],
             ),
           },
           {
