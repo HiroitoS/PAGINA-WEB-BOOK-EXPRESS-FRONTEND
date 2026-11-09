@@ -163,3 +163,36 @@ export async function registrarTrasladoPorGuia(payload) {
   const { data } = await axiosClient.post(`${TRANSFERS_BASE}/por-guia/`, payload);
   return data;
 }
+
+
+const INTERNAL_REQUEST_BASE = "/admin/erp/almacen/solicitudes-internas";
+
+export async function listarSolicitudesMercaderia(page = 1, status = "") {
+  const { data } = await axiosClient.get(`${INTERNAL_REQUEST_BASE}/`, {
+    params: { page, ...(status ? { status } : {}) },
+  });
+  return data;
+}
+
+export async function buscarLibrosParaSolicitud(q) {
+  const { data } = await axiosClient.get(`${INTERNAL_REQUEST_BASE}/productos/`, {
+    params: { q },
+  });
+  return data;
+}
+
+export async function crearSolicitudMercaderia(payload) {
+  const { data } = await axiosClient.post(`${INTERNAL_REQUEST_BASE}/`, payload);
+  return data;
+}
+
+export async function resolverSolicitudMercaderia(id, action, note = "") {
+  if (!["aprobar", "rechazar", "anular"].includes(action)) {
+    throw new Error("Acción de solicitud no válida.");
+  }
+  const { data } = await axiosClient.post(
+    `${INTERNAL_REQUEST_BASE}/${id}/${action}/`,
+    { note },
+  );
+  return data;
+}
