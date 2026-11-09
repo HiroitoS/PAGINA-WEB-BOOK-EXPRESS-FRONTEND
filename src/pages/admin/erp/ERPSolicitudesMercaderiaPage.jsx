@@ -51,6 +51,7 @@ export default function ERPSolicitudesMercaderiaPage() {
   const [message, setMessage] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState("");
   const [matches, setMatches] = useState([]);
@@ -142,6 +143,7 @@ export default function ERPSolicitudesMercaderiaPage() {
     setSearch("");
     setMatches([]);
     setFormOpen(false);
+    setRequestKey(crypto.randomUUID());
   }
 
   function refresh() {
@@ -169,12 +171,14 @@ export default function ERPSolicitudesMercaderiaPage() {
     try {
       await crearSolicitudMercaderia({
         ...form,
+        idempotency_key: requestKey,
         source_id: Number(form.source_id),
         destination_id: Number(form.destination_id),
         needed_on: form.needed_on || null,
         items: lines,
       });
       resetForm();
+      setRequestKey(crypto.randomUUID());
       setMessage("Solicitud registrada. Está pendiente de aprobación y todavía no cambia las existencias.");
       setPage(1);
       refresh();
