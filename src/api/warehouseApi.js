@@ -174,6 +174,11 @@ export async function listarSolicitudesMercaderia(page = 1, status = "") {
   return data;
 }
 
+export async function listarUbicacionesParaSolicitud() {
+  const { data } = await axiosClient.get(`${INTERNAL_REQUEST_BASE}/ubicaciones/`);
+  return data;
+}
+
 export async function buscarLibrosParaSolicitud(q) {
   const { data } = await axiosClient.get(`${INTERNAL_REQUEST_BASE}/productos/`, {
     params: { q },
