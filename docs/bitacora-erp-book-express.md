@@ -117,6 +117,23 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 
 **Contexto ERP:** cargar colegios es útil para CRM/adopciones y pedidos a editoriales, pero las solicitudes internas P-09.1 no requieren colegios cargados (por ahora destinatario se registra como texto). **No inventar adopciones ni ingresos en producción** para probar almacén.
 
+## 09/11/2026 — Plan de pruebas con colegios y productos realmente cargados [PREPARADO]
+
+**Situación:** ya existen colegios y productos cargados en PostgreSQL local `bookexpress_db`; el usuario necesita verificar el recorrido real CRM → cotización → adopción → pedidos por editorial → recepción parcial → inventario/traslados. **No existen por importación automática** oportunidades, cotizaciones, adopciones, pedidos o stock. No generar adopciones ficticias en la BD de trabajo como si fueran ventas reales.
+
+**Implementación conservadora en backend:** comando `crm/management/commands/preparar_demo_erp.py` y pruebas `crm/tests/test_demo_seed.py`. La orden **sin `--crear` es de solo lectura** y muestra los totales reales de colegios, libros, precios del año y selecciona candidato con nivel/grado y PVP. `--crear` sólo está autorizado cuando **DEBUG=True** y el nombre de la base comienza con `bookexpress_demo_`: usa los productos, precios y nombre de colegio importados, pero crea colegio separado marcado **[PRUEBA ERP]**, contacto ficticio, campaña de prueba, oportunidad y proyección vía servicios del dominio y cotización **en borrador**, sin inventar un descuento editorial real, firma, aceptación, adopción, pedido, guía ni movimientos de stock. Idempotencia por `book_express_code`; sin duplicar escenario.
+
+**Ejecución prevista** (Git Bash, backend; NO ejecutar los comandos de `--crear` con `bookexpress_db`):
+1. `python manage.py preparar_demo_erp --year 2027` → revisar disponibilidad de datos reales en BD local, sin escrituras.
+2. Detener servidores, efectuar respaldo/clon local `bookexpress_db` → `bookexpress_demo_db` mediante pgAdmin/pg_dump+pg_restore; verificar que **DB_NAME=bookexpress_demo_db**.
+3. `DB_NAME=bookexpress_demo_db python manage.py preparar_demo_erp --year 2027` (vista previa).
+4. `DB_NAME=bookexpress_demo_db python manage.py preparar_demo_erp --year 2027 --crear` (ejecución sólo en clon), con IDs explícitos opcionales `--school-id`, `--product-id`.
+5. `DB_NAME=bookexpress_demo_db python manage.py runserver`: navegar CRM y continuar decisiones de cotización/descuento editorial, envío, aceptación y adopción **solo simulada** mediante UI, generar pedidos con servicios existentes y simular recepción parcial utilizando documentos rotulados DEMO; ejecutar luego validación de stock, traslado e historial.
+
+**Justificación:** PVP por campaña debe venir de `ProductPrice` realmente importado; no colocar valores arbitrarios. Costos y descuentos editoriales requieren validación del responsable. No se firma ninguna adopción automáticamente. El demo no interfiere en reportes reales ni en PostgreSQL de producción. La demostración para jefatura debe indicarse **simulada**.
+
+**Pendientes:** verificar último CI backend, tests `crm.tests.test_demo_seed`, ejecutar clon y pruebas manuales; comprobar productos importados con precios numéricos activos 2027 y clasificaciones nivel/grado. Se mantiene la rama `feature/erp-p08-traslados-por-guia`, sin merge ni despliegue a Tecnoweb.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
