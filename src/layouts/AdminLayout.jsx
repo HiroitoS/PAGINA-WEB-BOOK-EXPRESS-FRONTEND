@@ -247,6 +247,12 @@ const NAV_SECTIONS = [
         permissions: ["crm.assign_schools"],
       },
       {
+        label: "Campañas",
+        to: "/admin/crm/campanas",
+        icon: <FaCalendarAlt />,
+        permissions: ["crm.manage_campaigns"],
+      },
+      {
         label: "Oportunidades",
         to: "/admin/crm/oportunidades",
         icon: <FaBullseye />,
