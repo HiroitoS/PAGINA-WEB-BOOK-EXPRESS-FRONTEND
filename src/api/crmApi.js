@@ -527,6 +527,27 @@ export async function getCRMCampaigns(params = {}) {
   return normalizeList(response.data);
 }
 
+export async function createCRMCampaign(payload) {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/campaigns/`, payload,
+  );
+  return response.data;
+}
+
+export async function updateCRMCampaign(id, payload) {
+  const response = await axiosClient.patch(
+    `${CRM_ADMIN_BASE}/campaigns/${id}/`, payload,
+  );
+  return response.data;
+}
+
+export async function setupInitialCRMPipeline() {
+  const response = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/pipelines/configurar-inicial/`, {},
+  );
+  return response.data;
+}
+
 export async function getCRMPipelines(params = {}) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/pipelines/`,
