@@ -591,14 +591,12 @@ export default function ERPRecepcionPage() {
         <p className="mt-1 text-sm text-gray-600">
           Contrasta los pedidos enviados con los libros recibidos. Registra entregas parciales, observaciones y saldos pendientes.
         </p>
-        {retornoInventario && (
-          <div className="mt-3">
-            <Link to={retornoInventario}
-              className="inline-flex items-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-red-300 hover:text-red-700">
-              Volver a Inventario
-            </Link>
-          </div>
-        )}
+        <div className="mt-3">
+          <Link to={retornoInventario || "/admin/erp/almacen/inventario"}
+            className="inline-flex min-h-11 items-center rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-800 transition hover:border-red-300 hover:text-red-700">
+            {retornoInventario ? "Volver a Inventario" : "Ver inventario"}
+          </Link>
+        </div>
       </header>
 
       <div role="tablist" aria-label="Secciones de recepción" className="grid grid-cols-2 gap-2 rounded-2xl border border-gray-200 bg-white p-2">
