@@ -219,6 +219,24 @@ Actualizada: 08/11/2026. Documento de trabajo; contrastar con GitHub antes de ej
 
 **Pruebas inmediatas.** Actualizar ambas ramas feature/erp-p08-traslados-por-guia y ejecutar tests warehouse.tests warehouse.test_transfers warehouse.test_locations, lint y build. En Inventario verificar 10 unidades y S/720 total más costo promedio S/72 c/u. En Por almacén verificar Principal 2 unidades / S/144 y Feria 8 unidades / S/576. Probar celular 360/390/430 px. Confirmar CI de último commit antes de main/Tecnoweb.
 
+## 11/11/2026 — Diseño acordado para análisis: inventario global, por editorial y colegio, valorización y cierre logístico [PROPUESTA; NO PROGRAMADO]
+
+**Documentos contrastados:** MOF ALMACEN, Macroproceso Almacén (8 procesos) y Levantamiento Funcional ERP v2 (secciones 9 y 10). El MOF exige stock por editorial y cliente, conteos semanales, registro de daños, evidencias de entrega y archivo. El levantamiento agrega packs termosellados, muestras, ferias, consignaciones, devoluciones, valorización e información para conciliar proveedores. Se separa lo indicado en documentos de las propuestas técnicas siguientes.
+
+**Decisión de menú propuesta (sin nuevos módulos independientes):** 1) Recepción (recepción parcial, diferencias, observados, documentos); 2) Inventario (global consolidado, por almacén, por editorial, colegio/adopción, costos unitarios y valor total, conteos y ajustes con aprobación, configuración de ubicaciones); 3) Movimientos (requerimiento/preparación, despacho con evidencia, transferencias entre almacenes, retorno y devolución, cortesías/muestras, packs y trazabilidad, historial). Los informes son vistas/filtros y exportaciones de Inventario, NO un cuarto módulo logístico. El flujo de entrega termina en recepción confirmada del destino; el flujo de devolución a proveedor termina al aceptar la devolución, con conciliación documental separada.
+
+**Regla de stock global:** toda unidad debe estar contabilizada una sola vez; traslado principal→feria no suma ni resta unidades de Book Express. Conciliar global contra suma por ubicaciones/estados, separando disponible, reservado, en tránsito, observado, retorno pendiente y mercadería ajena cuando aplique. La valorización se calcula por lotes con costo histórico, no solo multiplicando por el último costo ni haciendo promedio simple. El costo por unidad de un producto agregado puede mostrarse como promedio ponderado, con alerta de lotes sin costo.
+
+**Reporte por editorial y colegio:** tabla por editorial, libro/código, colegio/adopción vinculada, ubicación, estado, lote/guía, cantidades recibidas, disponibles, reservadas, trasladadas, vendidas (futuro módulo Ventas), por devolver, devueltas, costo histórico c/u y valor disponible. Agrupar por colegio solo si existe vínculo verificable; stock libre/sin colegio se distingue, no se adjudica por inferencia. Consignación/ferias deben identificar operación/destino particular, no mezclar todos los colegios en un único depósito lógico.
+
+**Reglas financieras:** Valor de inventario (unidades físicas × costo histórico) ≠ deuda editorial. Por pagar debe cruzar facturas, abonos, ventas, devoluciones y notas de crédito desde Administración/Finanzas. Diferenciar proyectado para devolver, preparado, enviado y recibido/aceptado por proveedor. Un valor de posible devolución es informativo y solo disminuye deuda cuando existe la conciliación correspondiente.
+
+**Packs:** pack físico tiene identificador/composición por editorial, colegio y adopción; cada libro mantiene su código, costo y trazabilidad; no duplicar stock de componentes al contar packs. Apertura requiere autorización del proveedor según levantamiento y evidencia; manejar pack incompleto para devolución.
+
+**Solicitud interna:** requerimiento sí aparece en MOF, pero no presupone un aprobador genérico. Propuesta: generar preparación desde adopción de consignación/feria o requerimiento excepcional de tienda, aprobar solo excepciones definidas, asignar responsable real, pasar a preparación y despacho dentro de Movimientos. El módulo técnico aislado Solicitudes internas permanece sin promoverse como proceso listo.
+
+**Estado y orden sugerido:** recepción, stock global, ubicaciones y traslado ya tienen implementación parcial/probada; faltan consolidación de reportes por colegio/editorial con exportación, preparaciones/reservas, tránsito/entrega firmada, retornos, devoluciones a editorial, packs/muestras, conteo/ajustes, conciliación con Ventas/Finanzas. Priorizar (1) stock consolidado reconciliado por ubicación y reportes, (2) preparación→despacho→recepción destino, (3) retornos y devoluciones, (4) packs/muestras y conteos. **Todo esto es análisis, no se declara implementado**. Seguir en rama feature/erp-p08-traslados-por-guia; sin merge ni deploy.
+
 ## Reglas de trabajo
 - GitHub es fuente de código; el usuario hace pull y prueba en VS Code.
 - No editar main ni publicar a producción sin revisión y aprobación.
