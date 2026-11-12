@@ -1,5 +1,25 @@
 # Bitácora de continuidad — ERP Book Express
 
+
+## 11/11/2026 — Primer circuito pedido–recepción–factura de editorial [IMPLEMENTADO EN RAMA; PRUEBA LOCAL PENDIENTE]
+
+**Origen:** definición del usuario de que Almacén registra la guía, cantidades y estado de la mercadería, mientras que Administración registra la factura económica sobre el MISMO pedido (sin duplicar productos ni existencias), con posibilidad de corrección documentada.
+
+**Entrega en backend GitHub:**
+- Modelos `purchasing.SupplierInvoice`, `SupplierInvoiceLine` y `SupplierInvoiceEvent`: documento de editorial, líneas relacionadas con `PurchaseOrderItem`, costos facturados y costo esperado congelado, actor y historial de antes/después de correcciones. Migración `purchasing/migrations/0002_supplier_invoices.py` agrega tablas nuevas, no altera movimientos físicos ni valores existentes.
+- `purchasing/api_supplier_invoices.py` y `purchasing/urls.py`: `GET/POST /api/admin/erp/compras/facturas-editoriales/`, `GET /{id}/`, `PATCH /{id}/` para corregir íntegramente borrador con **motivo obligatorio**, `GET /pedidos-disponibles/?provider=N` para seleccionar ítems de pedidos existentes. Una factura puede recoger líneas de varios pedidos de la misma editorial. Se impiden documentos duplicados por editorial con número normalizado (DB).
+- Respuesta de factura compara por ítem cantidades **solicitadas**, **recibidas conformes (solo recepciones validadas)**, **facturadas en este documento**, **facturadas en otras facturas**, **costos esperados** y **costo registrado en factura**; marca diferencias que deben revisarse, incluso si factura llega antes que la mercadería. Nunca infiere pagos ni impuestos: `total_document` se captura tal como está en el comprobante; es preliminar y puede contener IGV, otros descuentos o conceptos que necesitan conciliación.
+- Permisos nuevos `purchasing.view_supplier_invoices` y `purchasing.manage_supplier_invoices` en `accounts/permission_registry.py`, para acceso restringido de Administración. **No se agregaron automáticamente al rol Almacén**.
+- Pruebas `purchasing/test_supplier_invoices.py`: duplicación impedida, combinación de dos pedidos, discrepancias, usuario sin permiso, corrección auditada, referencias a recepciones validadas y **ausencia de entradas de inventario por facturación**. Se corrigió un error inicial de test (subclase que heredaba pruebas de compras no aplicables); comprobar CI final.
+
+**Entrega frontend:** `src/api/purchasingApi.js`, `src/components/admin/SupplierInvoicePanel.jsx`, integración en `src/pages/admin/erp/ERPPedidosPage.jsx` sin nuevo módulo de navegación. Al seleccionar un pedido aprobado/enviado, un administrador autorizado ve «Facturas y conciliación» y puede registrar factura con número, fecha, total, líneas prellenadas del pedido, cantidades/costos editables y agregar otro pedido de la misma editorial, consultar diferencias y corregir borradores con motivo. Adaptado a celular. Los usuarios de almacén sin permiso **no ven** esta sección.
+
+**Límites y pendientes críticos:** Las facturas nuevas quedan **pendientes de conciliación**; NO se contabilizan CxP, notas de crédito, pagos, IGV, ajustes históricos de stock ni declaraciones/validaciones ante SUNAT. Correcciones económicas registradas no alteran silenciosamente el precio histórico de lotes existentes. La conciliación final documental/fiscal y aprobación de diferencias exigen etapa posterior con reglas y responsables de Finanzas.
+
+**Pruebas operativas una vez CI aprobado:** actualizar en la misma rama en backend/frontend (sin merge a main), `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py migrate`, `python manage.py test purchasing.test_supplier_invoices`, `npm run lint`, `npm run build`. En el pedido Santillana DEMO crear `F001-PRUEBA-001` con línea de 10 ejemplares/costo esperado; luego registrar versión con costo diferente y observar advertencia; corregir borrador anotando motivo; verificar auditoría y **10 libros en Inventario sin cambios**. No introducir facturas ficticias sin rótulo visible en producción.
+
+**Branch:** `feature/erp-p08-traslados-por-guia` en ambos repositorios. No se tocó main/Tecnoweb.
+
 ## 11/11/2026 — Definición pendiente: operaciones por feria, retorno a editorial, factura versus recepción [ANÁLISIS; SIN CAMBIOS FUNCIONALES]
 
 - **Almacén Feria no implica necesariamente un almacén físico nuevo por colegio.** Se propone `Ubicación física` + `Operación de feria/consignación` como subinventario lógico identificable (colegio, adopción cuando corresponda, responsable, fechas, destino, comprobantes, lotes). Cada unidad debe pertenecer a una ubicación y una sola asignación operativa vigente para evitar doble conteo. Venta en feria puede ser a padres, no automáticamente al colegio; salida hacia feria no es venta.
