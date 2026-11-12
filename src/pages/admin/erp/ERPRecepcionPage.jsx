@@ -287,6 +287,11 @@ export default function ERPRecepcionPage() {
       colegio: pedido.colegio,
     })));
 
+  const pedidoDePruebaSeleccionado = pedidos.some(
+    (pedido) => pedidosMarcados.includes(pedido.id) &&
+      pedido.colegio?.startsWith("[PRUEBA ERP]"),
+  );
+
   const resumenSeleccion = pedidos
     .filter((pedido) => pedidosMarcados.includes(pedido.id))
     .reduce((suma, pedido) => {
@@ -664,6 +669,14 @@ export default function ERPRecepcionPage() {
               <h2 className="font-black text-gray-950">Registrar entrega física</h2>
               <p className="mt-1 text-sm text-gray-600">Selecciona pedidos de una misma editorial. Una guía puede corresponder a varios colegios.</p>
             </div>
+            {pedidoDePruebaSeleccionado && (
+              <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
+                <strong>Pedido de demostración.</strong> Usa «Otro documento» y una referencia
+                interna como «PRUEBA-REC-001» si estás simulando la entrega. No registres una
+                guía oficial inexistente. Al validar, las cantidades ingresarán al inventario
+                de esta base de datos y quedarán identificadas como una operación de prueba.
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="text-xs font-bold text-gray-700">Documento recibido
                 <select className={`mt-1 ${estilosCampo}`} value={documento.document_type}
@@ -688,13 +701,66 @@ export default function ERPRecepcionPage() {
               <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">Marca uno o varios pedidos de la izquierda para registrar sus productos.</p>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-center sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-left sm:grid-cols-3">
                   <div><p className="text-xs text-gray-600">Solicitadas</p><p className="text-lg font-black">{resumenSeleccion.solicitadas}</p></div>
                   <div><p className="text-xs text-gray-600">Aceptadas anteriormente</p><p className="text-lg font-black">{resumenSeleccion.aceptadas}</p></div>
                   <div><p className="text-xs text-gray-600">Pendientes</p><p className="text-lg font-black text-amber-800">{resumenSeleccion.pendientes}</p></div>
                 </div>
-                <p className="text-xs text-gray-500">Guía se propone con el saldo pendiente (corrígelo según el documento real). Ingresa el conteo físico y los observados: dañados o incorrectos que sí llegaron. Los faltantes y adicionales se identificarán automáticamente. Una guía puede incluir varios colegios.</p>
-                <div key={pedidosMarcados.join("-")} className="overflow-x-auto">
+                <p className="text-sm leading-6 text-gray-600">
+                  Indica cuántos libros señala el documento y cuántos llegaron realmente.
+                  Si llegan menos de los solicitados, el saldo seguirá pendiente.
+                  Separa los libros dañados o incorrectos en «Observados».
+                </p>
+                <div className="space-y-3 lg:hidden">
+                  {lineasPreparadas.map((linea) => {
+                    const llegada = cantidades[linea.item_id]?.llegada ?? "";
+                    const observada = cantidades[linea.item_id]?.observada ?? "0";
+                    const conformes = llegada === "" ? 0 : Math.max(0, Number(llegada) - Number(observada));
+                    const alPedido = Math.min(conformes, linea.pendientes);
+                    const adicionales = Math.max(0, conformes - linea.pendientes);
+                    return (
+                      <article key={linea.item_id} className="rounded-xl border border-gray-200 p-3">
+                        <p className="break-words text-sm font-bold text-gray-950">{linea.producto}</p>
+                        <p className="mt-1 break-words text-xs text-gray-600">{linea.colegio} · {linea.pedido}</p>
+                        <p className="mt-2 text-sm font-semibold text-gray-800">Pendientes: {linea.pendientes} unidades</p>
+                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <label className="text-xs font-semibold text-gray-700">
+                            Según documento
+                            <input type="number" min="0" step="1" inputMode="numeric"
+                              value={cantidades[linea.item_id]?.documentada ?? String(linea.pendientes)}
+                              onChange={(event) => cambiarCantidad(linea.item_id, "documentada", event.target.value)}
+                              disabled={!puedeCrear || procesando}
+                              className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 px-3 text-sm" />
+                          </label>
+                          <label className="text-xs font-semibold text-gray-700">
+                            Cantidad recibida
+                            <input type="number" min="0" step="1" inputMode="numeric"
+                              value={llegada}
+                              onChange={(event) => cambiarCantidad(linea.item_id, "llegada", event.target.value)}
+                              disabled={!puedeCrear || procesando}
+                              className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 px-3 text-sm" />
+                          </label>
+                          <label className="text-xs font-semibold text-gray-700">
+                            Observados
+                            <input type="number" min="0" step="1" inputMode="numeric"
+                              value={observada}
+                              onChange={(event) => cambiarCantidad(linea.item_id, "observada", event.target.value)}
+                              disabled={!puedeCrear || procesando}
+                              className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 px-3 text-sm" />
+                          </label>
+                        </div>
+                        {llegada !== "" && (
+                          <p className="mt-3 text-xs leading-5 text-gray-700">
+                            Al pedido: <strong>{alPedido}</strong> ·
+                            Pendientes después de esta entrega: <strong>{Math.max(0, linea.pendientes - alPedido)}</strong>
+                            {adicionales > 0 && <> · Adicionales: <strong>{adicionales}</strong></>}
+                          </p>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+                <div key={pedidosMarcados.join("-")} className="hidden overflow-x-auto lg:block">
                 <table className="w-full min-w-[760px] text-left text-xs">
                   <thead className="border-b border-gray-200 text-xs text-gray-600">
                     <tr>
@@ -755,7 +821,8 @@ export default function ERPRecepcionPage() {
                 placeholder="Ej.: cajas deterioradas, faltantes comunicados a la editorial" disabled={!puedeCrear} />
             </label>
             <p className="text-xs text-gray-500">
-              Los adicionales conformes se registran a favor de Book Express. Al validar, Django actualizará los pedidos y contabilizará las entradas en Inventario una sola vez.
+              Al validar una recepción, se actualizarán las cantidades pendientes y el inventario.
+              Los libros adicionales conformes se registrarán por separado, sin duplicar unidades.
             </p>
             {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando || !pedidosMarcados.length}>Guardar recepción en borrador</button>}
           </form>
@@ -809,7 +876,7 @@ export default function ERPRecepcionPage() {
                     <p className="text-sm text-gray-700">
                       <strong>Documento:</strong> {recepcionSeleccionada.document_number}
                     </p>
-                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-3 text-center">
+                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-left sm:grid-cols-3">
                       <div><p className="text-xs text-gray-600">Llegaron en esta guía</p>
                         <p className="text-lg font-black tabular-nums">
                           {recepcionSeleccionada.lines.reduce((suma, linea) => suma + linea.quantity_arrived, 0)}
@@ -946,7 +1013,7 @@ export default function ERPRecepcionPage() {
           confirmLabel="Confirmar e ingresar"
           onCancel={() => setConfirmacionAbierta(false)}
           onConfirm={confirmarValidacion}>
-          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-center sm:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-left sm:grid-cols-4">
             <div><p className="text-xs text-gray-600">Llegaron</p><p className="text-lg font-black">{totalLlegado}</p></div>
             <div><p className="text-xs text-gray-600">Al pedido</p><p className="text-lg font-black">{totalAceptado}</p></div>
             <div><p className="text-xs text-amber-800">Adicionales</p><p className="text-lg font-black text-amber-800">{totalExtra}</p></div>
@@ -956,7 +1023,7 @@ export default function ERPRecepcionPage() {
             {totalExtra > 0 && <p><strong>{totalExtra} adicionales conformes:</strong> se incorporarán al Inventario a favor de Book Express, sin duplicar unidades.</p>}
             {totalFaltanteGuia > 0 && <p><strong>{totalFaltanteGuia} faltantes frente a guía:</strong> quedarán identificados para su seguimiento con la editorial.</p>}
             {totalObservado > 0 && <p><strong>{totalObservado} observados:</strong> se registrarán físicamente, separados de las unidades conformes.</p>}
-            <p>Al confirmar, Django registrará el ingreso en Inventario y actualizará los saldos. La recepción no podrá editarse después; no se generan facturas.</p>
+            <p>Al confirmar, los libros recibidos se registrarán en Inventario y se actualizarán los saldos pendientes. La recepción quedará cerrada para edición; este proceso no emite facturas.</p>
           </div>
         </ConfirmActionDialog>
       )}
