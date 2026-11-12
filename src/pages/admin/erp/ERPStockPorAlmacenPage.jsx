@@ -159,6 +159,7 @@ export default function ERPStockPorAlmacenPage() {
             <p className="mt-1 text-xs leading-5 text-gray-600">
               El detalle muestra únicamente libros conformes disponibles, agrupados por lote de recepción.
               Las unidades observadas se incluyen solo en el resumen.
+              El costo histórico corresponde a la recepción de ese lote; no equivale a la deuda pendiente con la editorial.
             </p>
             {consultando ? (
               <p role="status" className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">Consultando libros…</p>
@@ -175,13 +176,21 @@ export default function ERPStockPorAlmacenPage() {
                       <p className="mt-1 text-xs text-gray-600">{item.editorial} · Guía {item.guide}</p>
                       <p className="mt-1 text-xs text-gray-600">Colegio: {item.school || "No especificado"}</p>
                       <p className="mt-2 text-sm font-bold text-gray-950">Disponibles: {item.available}</p>
+                      <dl className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-2 text-xs">
+                        <div><dt className="text-gray-600">Costo histórico c/u</dt>
+                          <dd className="mt-1 font-bold text-gray-950">{formatoDinero(item.unit_cost)}</dd>
+                        </div>
+                        <div><dt className="text-gray-600">Valor disponible</dt>
+                          <dd className="mt-1 font-bold text-gray-950">{formatoDinero(item.value_reference)}</dd>
+                        </div>
+                      </dl>
                     </article>
                   ))}
                 </div>
                 <div className="mt-3 hidden overflow-x-auto rounded-xl border border-gray-200 md:block">
                   <table className="w-full min-w-max text-left text-sm">
                     <thead className="bg-gray-50 text-xs text-gray-600">
-                      <tr><th className="p-3">Libro</th><th className="p-3">Editorial</th><th className="p-3">Guía</th><th className="p-3">Colegio</th><th className="p-3 text-right">Disponible</th></tr>
+                      <tr><th className="p-3">Libro</th><th className="p-3">Editorial</th><th className="p-3">Guía</th><th className="p-3">Colegio</th><th className="p-3 text-right">Disponible</th><th className="p-3 text-right">Costo histórico c/u</th><th className="p-3 text-right">Valor disponible</th></tr>
                     </thead>
                     <tbody>{datos.results.map((item) => (
                       <tr key={item.id} className="border-t border-gray-100">
@@ -190,6 +199,8 @@ export default function ERPStockPorAlmacenPage() {
                         <td className="p-3">{item.guide}</td>
                         <td className="p-3">{item.school || "—"}</td>
                         <td className="p-3 text-right font-black tabular-nums">{item.available}</td>
+                        <td className="p-3 text-right tabular-nums">{formatoDinero(item.unit_cost)}</td>
+                        <td className="p-3 text-right font-bold tabular-nums">{formatoDinero(item.value_reference)}</td>
                       </tr>
                     ))}</tbody>
                   </table>
