@@ -250,6 +250,19 @@ export default function ERPInventarioPage() {
                       </div>
                     ))}
                   </dl>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 text-xs">
+                    <span className="text-gray-700">
+                      Costo promedio: <strong className="text-gray-950">{dinero(item.unit_cost_average_reference)}</strong>
+                    </span>
+                    <span className="text-gray-700">
+                      Valor disponible: <strong className="text-gray-950">{dinero(item.value_reference)}</strong>
+                    </span>
+                  </div>
+                  {Number(item.unvalued_units ?? 0) > 0 && (
+                    <p className="mt-1 text-xs text-amber-800">
+                      Valorización pendiente: faltan costos de {item.unvalued_units} unidades.
+                    </p>
+                  )}
                 </article>
               ))}
             </div>
@@ -263,6 +276,8 @@ export default function ERPInventarioPage() {
                     <th scope="col" className="p-2 text-right">Disponibles</th>
                     <th scope="col" className="p-2 text-right">Observados</th>
                     <th scope="col" className="p-2 text-right">Adicionales</th>
+                    <th scope="col" className="p-2 text-right">Costo prom. c/u</th>
+                    <th scope="col" className="p-2 text-right">Valor disponible</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -272,6 +287,15 @@ export default function ERPInventarioPage() {
                     {[item.physical, item.available, item.nonconforming, item.extra_included].map((value, indice) => (
                       <td key={indice} className="p-2 text-right font-semibold tabular-nums">{value}</td>
                     ))}
+                    <td className="p-2 text-right font-semibold tabular-nums">
+                      {dinero(item.unit_cost_average_reference)}
+                    </td>
+                    <td className="p-2 text-right font-bold tabular-nums">
+                      {dinero(item.value_reference)}
+                      {Number(item.unvalued_units ?? 0) > 0 && (
+                        <span className="block text-xs font-normal text-amber-800">Costo incompleto</span>
+                      )}
+                    </td>
                   </tr>)}
                 </tbody>
               </table>
@@ -280,6 +304,11 @@ export default function ERPInventarioPage() {
               <p className="p-4 text-left text-sm text-gray-600">No hay existencias para los filtros seleccionados.</p>
             )}
             {cargando && <p role="status" className="p-4 text-left text-sm text-gray-600">Consultando existencias…</p>}
+            <p className="text-xs leading-5 text-gray-600">
+              Costo promedio c/u = valor disponible ÷ unidades disponibles, calculado con los costos de cada lote.
+              Si falta un costo, se muestra «Por definir». Este valor de inventario no es el saldo a pagar a la editorial:
+              ese importe se conciliará con facturas, devoluciones y pagos.
+            </p>
             <p className="text-xs text-gray-500">Disponible descuenta las cortesías registradas. Los adicionales son históricos; ventas y otras salidas se incorporarán después.</p>
             <details className="rounded-xl border border-gray-200 bg-white">
               <summary className="cursor-pointer px-3 py-2.5 text-sm font-bold text-gray-900 transition hover:bg-gray-50">
@@ -442,7 +471,7 @@ export default function ERPInventarioPage() {
             {!cargando && !error && entradas.length === 0 && (
               <p className="p-4 text-left text-sm text-gray-600">Aún no hay ingresos registrados.</p>
             )}
-            <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados por Django. Para el stock actual consulta Existencias; para descuentos por cortesía, Cortesías. No son importes por pagar.</p>
+            <p className="mt-3 text-xs text-gray-500">Valores históricos de entrada calculados a partir de recepciones validadas. Para el stock actual consulta Existencias. Los valores mostrados no son importes por pagar.</p>
           </div>
         )}
       </section>
