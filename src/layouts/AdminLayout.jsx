@@ -200,12 +200,6 @@ const NAV_SECTIONS = [
             icon: <FaMapMarkerAlt />,
             permissions: ["warehouse.view_receiving"],
           },
-          {
-            label: "Solicitudes internas",
-            to: "/admin/erp/almacen/solicitudes",
-            icon: <FaClipboardList />,
-            permissions: ["warehouse.view_internal_stock_requests"],
-          },
         ],
       },
     ],
