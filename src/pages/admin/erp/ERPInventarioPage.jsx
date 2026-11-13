@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
-import { FiBox, FiPackage, FiTruck, FiMapPin } from "react-icons/fi";
+import { FiBox, FiPackage, FiTruck, FiMapPin, FiChevronDown, FiInfo } from "react-icons/fi";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useAuth } from "../../../hooks/useAuth";
 import InventoryConsolidatedPanel from "../../../components/admin/InventoryConsolidatedPanel";
 import { userHasPermission } from "../../../utils/adminAccess";
@@ -34,6 +35,8 @@ export default function ERPInventarioPage() {
   const puedeVerCatalogo = userHasPermission(user, ["catalog.view_catalog"]);
   const puedeVerUbicaciones = userHasPermission(user, ["warehouse.view_warehouse_locations"]);
   const detalleRef = useRef(null);
+  const [mostrarValorizacion, setMostrarValorizacion] = useState(false);
+  const reducirMovimiento = useReducedMotion();
   const [existencias, setExistencias] = useState([]);
   const [entradas, setEntradas] = useState([]);
   const [valorPorEditorial, setValorPorEditorial] = useState([]);
@@ -104,11 +107,36 @@ export default function ERPInventarioPage() {
     `${item.product} ${item.editorial}`.toLocaleLowerCase("es").includes(busqueda.trim().toLocaleLowerCase("es"))
   ), [existencias, editorial, busqueda]);
 
-  const tarjetas = [
+  const indicadores = [
     { titulo: "Existencia física", valor: resumen?.physical ?? 0, ayuda: "Incluye observados" },
-    { titulo: "Conformes disponibles", valor: resumen?.conforming ?? 0, ayuda: "Descontadas las cortesías" },
-    { titulo: "Observados", valor: resumen?.nonconforming ?? 0, ayuda: "No disponibles para venta" },
-    { titulo: "Adicionales recibidos", valor: resumen?.extra_included ?? 0, ayuda: "Histórico: incluidos en entradas" },
+    { titulo: "Disponibles", valor: resumen?.conforming ?? 0, ayuda: "Para venta o traslado" },
+    { titulo: "Observados", valor: resumen?.nonconforming ?? 0, ayuda: "Separados del disponible" },
+    {
+      titulo: "Valor disponible",
+      valor: dinero(resumen?.value_reference),
+      ayuda: Number(resumen?.unvalued_units || 0) > 0 ? "Faltan costos por registrar" : "Costo histórico referencial",
+      parcial: Number(resumen?.unvalued_units || 0) > 0,
+    },
+  ];
+  const desgloseValorizacion = [
+    {
+      titulo: "Valor físico referencial",
+      valor: resumen?.physical_value_reference,
+      ayuda: "Disponibles más observados",
+      parcial: !resumen?.physical_valuation_complete,
+    },
+    {
+      titulo: "Mercadería observada",
+      valor: resumen?.observed_value_reference,
+      ayuda: "No disponible para venta",
+      parcial: Number(resumen?.unvalued_observed_units || 0) > 0,
+    },
+    {
+      titulo: "Adicionales recibidos",
+      valor: resumen?.extra_included ?? 0,
+      ayuda: "Ya incluidos en existencias",
+      cantidad: true,
+    },
   ];
 
   // Compatibilidad con los enlaces de la vista antigua.
@@ -123,7 +151,7 @@ export default function ERPInventarioPage() {
   }
 
   return (
-    <main className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
+    <main className="mx-auto w-full min-w-0 max-w-6xl space-y-3">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
@@ -136,84 +164,104 @@ export default function ERPInventarioPage() {
         </div>
       </header>
 
-      <nav aria-label="Consultas y operaciones de almacén" className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-        <h2 className="mb-2 text-sm font-black text-gray-950">Consultar</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {seccionesAlmacen.map((item) => {
-            const Icon = item.icono;
-            const selected = pestana === item.vista;
-            return (
-              <button key={item.vista} type="button" onClick={() => seleccionarSeccion(item.vista)}
-                aria-pressed={selected}
-                className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${selected ? "border-red-700 bg-red-50 text-red-800" : "border-gray-200 bg-gray-50 text-gray-800 hover:border-red-300"}`}>
-                <Icon size={18} aria-hidden="true" className="shrink-0" />
-                <span className="min-w-0">
-                  <span className="block text-sm font-bold">{item.nombre}</span>
-                  <span className="hidden text-xs font-normal text-gray-600 sm:block">{item.descripcion}</span>
-                </span>
-              </button>
-            );
-          })}
+      <section aria-label="Panel de control del inventario"
+        className="space-y-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <h2 className="text-sm font-black text-gray-950">Consultar inventario</h2>
+          <nav aria-label="Vistas de inventario" className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 p-1 lg:w-auto">
+            {seccionesAlmacen.map((item) => {
+              const Icon = item.icono;
+              const selected = pestana === item.vista;
+              return (
+                <button key={item.vista} type="button" onClick={() => seleccionarSeccion(item.vista)}
+                  aria-pressed={selected}
+                  title={item.descripcion}
+                  className={`flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-bold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 sm:px-4 sm:text-sm ${selected
+                    ? "bg-white text-red-700 shadow-sm ring-1 ring-gray-200"
+                    : "text-gray-700 hover:bg-white/70 hover:text-gray-950"}`}>
+                  <Icon size={16} aria-hidden="true" className="hidden shrink-0 sm:block" />
+                  <span className="truncate">{item.nombre}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
-        <h2 className="mb-2 mt-3 text-sm font-black text-gray-950">Ir a</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {accesosAlmacen.filter((item) => !item.permiso || userHasPermission(user, [item.permiso])).map((item) => {
-            const Icon = item.icono;
-            return (
-              <Link key={item.ruta} to={item.ruta}
-                className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left transition hover:border-red-300 hover:bg-red-50">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-700">
-                  <Icon size={18} aria-hidden="true" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-bold text-gray-950">{item.nombre}</span>
-                  <span className="block text-xs text-gray-600">{item.descripcion}</span>
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-      {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-        {tarjetas.map((item) => (
-          <div key={item.titulo} className="flex min-h-20 min-w-0 flex-col items-start justify-center rounded-xl border border-gray-200 bg-white p-3 text-left shadow-sm">
-            <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
-            <p className="mt-1 text-2xl font-black tabular-nums text-gray-950">{cargando || error ? "—" : item.valor}</p>
-            <p className="mt-1 text-xs text-gray-500">{item.ayuda}</p>
-          </div>
-        ))}
-      </div>
-
-      <section aria-label="Valorización referencial del inventario" className="space-y-2">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {[
-            { titulo: "Valor físico referencial", valor: resumen?.physical_value_reference, ayuda: "Disponibles más observados", parcial: !resumen?.physical_valuation_complete },
-            { titulo: "Stock disponible valorizado", valor: resumen?.value_reference, ayuda: "Descontadas las cortesías", parcial: Number(resumen?.unvalued_units || 0) > 0 },
-            { titulo: "Mercadería observada", valor: resumen?.observed_value_reference, ayuda: "Separada del stock vendible", parcial: Number(resumen?.unvalued_observed_units || 0) > 0 },
-          ].map((item) => (
-            <div key={item.titulo} className="min-w-0 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {indicadores.map((item) => (
+            <div key={item.titulo}
+              className="min-w-0 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 transition-colors duration-150 hover:border-gray-300">
               <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
-              <p className="mt-1 break-words text-base font-black tabular-nums text-gray-950 sm:text-xl">
-                {cargando || error ? "—" : dinero(item.valor)}
+              <p className="mt-1 break-words text-xl font-black tabular-nums leading-tight text-gray-950">
+                {cargando || error ? "—" : item.valor}
               </p>
-              <p className="mt-1 text-xs text-gray-500">{item.ayuda}</p>
-              {!cargando && !error && item.parcial && (
-                <p className="mt-1 text-xs font-bold text-amber-800">Valor parcial: faltan costos unitarios</p>
-              )}
+              <p className={`mt-1 text-xs leading-4 ${item.parcial ? "font-bold text-amber-800" : "text-gray-500"}`}>
+                {item.ayuda}
+              </p>
             </div>
           ))}
         </div>
-        <p className="px-1 text-xs leading-5 text-gray-600">
-          Valores referenciales según los costos registrados. Consulta las cantidades por lugar en «Por almacén».
-          {resumen?.physical_valuation_complete === false && (
-            <span className="block font-bold text-amber-800">
-              Valorización parcial: {Number(resumen.unvalued_units || 0) + Number(resumen.unvalued_observed_units || 0)} unidades sin costo histórico.
-            </span>
+
+        <div className="flex flex-col gap-2 border-t border-gray-100 pt-2 sm:flex-row sm:items-center sm:justify-between">
+          <nav aria-label="Accesos de almacén" className="flex min-w-0 flex-wrap gap-1.5">
+            {accesosAlmacen.filter((item) => !item.permiso || userHasPermission(user, [item.permiso])).map((item) => {
+              const Icon = item.icono;
+              return (
+                <Link key={item.ruta} to={item.ruta} title={item.descripcion}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700 transition-colors duration-150 hover:border-red-300 hover:bg-red-50 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-red-600">
+                  <Icon size={15} aria-hidden="true" />
+                  {item.nombre}
+                </Link>
+              );
+            })}
+          </nav>
+          <button type="button" aria-expanded={mostrarValorizacion}
+            aria-controls="desglose-valorizacion-inventario"
+            onClick={() => setMostrarValorizacion((actual) => !actual)}
+            className="inline-flex min-h-10 items-center justify-between gap-2 rounded-lg px-2 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50 hover:text-red-700 sm:justify-center">
+            <FiInfo size={15} aria-hidden="true" />
+            {mostrarValorizacion ? "Ocultar detalle" : "Ver detalle de valorización"}
+            <FiChevronDown aria-hidden="true"
+              className={`transition-transform duration-150 ${mostrarValorizacion ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+
+        <AnimatePresence initial={false}>
+          {mostrarValorizacion && (
+            <motion.div id="desglose-valorizacion-inventario"
+              initial={reducirMovimiento ? false : { height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={reducirMovimiento ? undefined : { height: 0, opacity: 0 }}
+              transition={{ duration: reducirMovimiento ? 0 : 0.18, ease: "easeOut" }}
+              className="overflow-hidden">
+              <div className="grid gap-2 border-t border-gray-100 pt-3 sm:grid-cols-3">
+                {desgloseValorizacion.map((item) => (
+                  <div key={item.titulo} className="min-w-0 rounded-lg bg-gray-50 p-3">
+                    <p className="text-xs font-semibold text-gray-600">{item.titulo}</p>
+                    <p className="mt-1 text-base font-black tabular-nums text-gray-950">
+                      {cargando || error ? "—" : item.cantidad ? item.valor : dinero(item.valor)}
+                    </p>
+                    <p className={`mt-1 text-xs ${item.parcial && !cargando ? "font-semibold text-amber-800" : "text-gray-500"}`}>
+                      {item.parcial && !cargando ? "Valorización parcial · " : ""}{item.ayuda}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-xs leading-5 text-gray-600">
+                El valor se basa en el costo histórico de cada lote, no en el precio de venta ni en el saldo a pagar
+                a las editoriales. Los traslados solo cambian la ubicación de los libros.
+              </p>
+            </motion.div>
           )}
-        </p>
+        </AnimatePresence>
+
+        {error && (
+          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {error}
+          </p>
+        )}
       </section>
+
       {pestana === "consolidado" ? (
         <div ref={detalleRef} className="scroll-mt-24">
           <InventoryConsolidatedPanel />
