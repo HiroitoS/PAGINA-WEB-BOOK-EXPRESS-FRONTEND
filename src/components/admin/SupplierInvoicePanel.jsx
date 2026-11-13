@@ -43,6 +43,13 @@ function toLine(item, orderId) {
   };
 }
 
+function importeConCentimos(value, maxEnteros) {
+  const texto = String(value ?? "").trim();
+  if (!/^\\d+(?:\\.\\d{1,2})?$/.test(texto)) return false;
+  const [enteros] = texto.split(".");
+  return (enteros.replace(/^0+/, "").length || 1) <= maxEnteros;
+}
+
 function money(value) {
   const number = Number(value);
   return Number.isFinite(number)
@@ -154,6 +161,14 @@ export default function SupplierInvoicePanel({ pedido, puedeAdministrar }) {
     if (saving) return;
     if (!lines.length) {
       setError("Selecciona al menos un libro del pedido.");
+      return;
+    }
+    if (!importeConCentimos(form.total_document, 12)) {
+      setError("El importe total de la factura debe ser positivo o cero y admitir como máximo 2 decimales, por ejemplo 720.50.");
+      return;
+    }
+    if (lines.some((item) => !importeConCentimos(item.unit_cost_billed, 10))) {
+      setError("El costo por libro admite como máximo 2 decimales, por ejemplo 72.50.");
       return;
     }
     if (lines.some((item) =>
@@ -320,15 +335,15 @@ export default function SupplierInvoicePanel({ pedido, puedeAdministrar }) {
             </label>
             <label className="text-xs font-bold text-gray-800">
               Total de la factura (S/)
-              <input type="number" min="0" step="0.01" required inputMode="decimal"
+              <input type="number" min="0" step="any" required inputMode="decimal"
                 className={fieldClass} value={form.total_document}
                 onChange={(event) => changeForm("total_document", event.target.value)}
                 placeholder="Importe total del comprobante" />
             </label>
           </div>
           <p className="text-xs leading-5 text-gray-600">
-            Copia el importe total tal como aparece en la factura. Los impuestos o descuentos
-            generales aún no se calculan automáticamente; las diferencias quedan para revisión.
+            Copia el importe total tal como aparece en la factura, con hasta 2 decimales.
+            Los impuestos o descuentos generales aún no se calculan automáticamente; las diferencias quedan para revisión.
           </p>
 
           {otherOptions.length > 0 && (
@@ -377,7 +392,7 @@ export default function SupplierInvoicePanel({ pedido, puedeAdministrar }) {
                   </label>
                   <label className="text-xs font-bold text-gray-800">
                     Costo facturado por unidad (S/)
-                    <input type="number" min="0" step="0.01" required inputMode="decimal"
+                    <input type="number" min="0" step="any" required inputMode="decimal"
                       value={line.unit_cost_billed} className={fieldClass}
                       onChange={(event) => changeLine(line.order_item_id, "unit_cost_billed", event.target.value)} />
                   </label>
