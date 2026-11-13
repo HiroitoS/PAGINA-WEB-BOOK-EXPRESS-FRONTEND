@@ -50,6 +50,13 @@ export async function consultarExistencias() {
   return data;
 }
 
+export async function consultarInventarioConsolidado(params = {}) {
+  const { data } = await axiosClient.get(`${INVENTORY_BASE}/consolidado/`, {
+    params,
+  });
+  return data;
+}
+
 export async function consultarResumenInventario() {
   const { data } = await axiosClient.get(`${INVENTORY_BASE}/resumen/`);
   return data;
