@@ -415,8 +415,13 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
                     <p className="mt-1 text-xs font-semibold">Disponibles en origen: {selected.available}</p>
                   </div>
                   <label className="block text-xs font-semibold text-gray-800">Cantidad a trasladar
-                    <input type="number" min="1" max={selected.available} step="1" value={quantity}
+                    <input type="number" min="1" max={selected.available} step="1" inputMode="numeric" value={quantity}
                       onChange={(event) => setQuantity(event.target.value)} className={inputClase}/>
+                    {quantity !== "" && !validQuantity && (
+                      <span role="alert" className="mt-1 block text-xs font-semibold leading-5 text-red-700">
+                        Ingresa una cantidad entera, sin decimales, entre 1 y {selected.available}.
+                      </span>
+                    )}
                   </label>
                   <label className="block text-xs font-semibold text-gray-800">Referencia u observación (opcional)
                     <textarea rows="2" maxLength="500" value={notes}
