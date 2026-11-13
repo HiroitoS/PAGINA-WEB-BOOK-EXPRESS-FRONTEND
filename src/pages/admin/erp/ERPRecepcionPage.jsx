@@ -79,6 +79,11 @@ function validarLineas(lineas) {
   for (const linea of lineas) {
     const llegada = Number(linea.quantity_arrived);
     const observada = Number(linea.quantity_observed);
+    const documentada = linea.quantity_documented;
+    if (documentada !== null && documentada !== undefined && documentada !== ""
+      && (!Number.isSafeInteger(Number(documentada)) || Number(documentada) < 0)) {
+      return `La cantidad indicada en la guía para ${linea.producto} debe ser un número entero, sin decimales.`;
+    }
     if (!Number.isSafeInteger(llegada) || llegada < 1
       || !Number.isSafeInteger(observada) || observada < 0 || observada > llegada) {
       return "Las cantidades deben ser enteras y la observada no puede exceder la llegada.";
@@ -706,6 +711,7 @@ export default function ERPRecepcionPage() {
                 </div>
                 <p className="text-sm leading-6 text-gray-600">
                   Indica cuántos libros señala el documento y cuántos llegaron realmente.
+                  Las cantidades de libros son siempre unidades enteras, sin decimales.
                   Si llegan menos de los solicitados, el saldo seguirá pendiente.
                   Separa los libros dañados o incorrectos en «Observados».
                 </p>
