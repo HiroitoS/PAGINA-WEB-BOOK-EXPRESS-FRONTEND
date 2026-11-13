@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router";
-import { FiBox, FiPackage, FiTruck, FiMapPin, FiChevronDown, FiInfo } from "react-icons/fi";
+import { FiBox, FiPackage, FiMapPin, FiChevronDown, FiInfo } from "react-icons/fi";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useAuth } from "../../../hooks/useAuth";
 import InventoryConsolidatedPanel from "../../../components/admin/InventoryConsolidatedPanel";
@@ -19,20 +19,13 @@ function dinero(valor) {
 }
 
 const seccionesAlmacen = [
-  { nombre: "Existencias", descripcion: "Stock por producto", icono: FiBox, vista: "existencias" },
-  { nombre: "Entradas", descripcion: "Historial de ingresos", icono: FiPackage, vista: "movimientos" },
+  { nombre: "Existencias", descripcion: "Libros y cantidades", icono: FiBox, vista: "existencias" },
+  { nombre: "Entradas", descripcion: "Historial de ingresos", icono: FiPackage, vista: "entradas" },
   { nombre: "Consolidado", descripcion: "Editorial, colegio y almacén", icono: FiBox, vista: "consolidado" },
-];
-
-const accesosAlmacen = [
-  { nombre: "Por almacén", descripcion: "Libros por lugar", icono: FiBox, ruta: "/admin/erp/almacen/stock-por-almacen" },
-  { nombre: "Movimientos", descripcion: "Traslados e historial", icono: FiTruck, ruta: "/admin/erp/almacen/traslados" },
-  { nombre: "Ubicaciones", descripcion: "Administrar lugares", icono: FiMapPin, ruta: "/admin/erp/almacen/ubicaciones", permiso: "warehouse.view_warehouse_locations" },
 ];
 
 export default function ERPInventarioPage() {
   const { user } = useAuth();
-  const puedeVerCatalogo = userHasPermission(user, ["catalog.view_catalog"]);
   const puedeVerUbicaciones = userHasPermission(user, ["warehouse.view_warehouse_locations"]);
   const detalleRef = useRef(null);
   const [mostrarValorizacion, setMostrarValorizacion] = useState(false);
@@ -47,8 +40,9 @@ export default function ERPInventarioPage() {
   const busqueda = searchParams.get("buscar") ?? "";
   const editorial = searchParams.get("editorial") ?? "";
   const vistaSolicitada = searchParams.get("vista");
-  const pestana = ["movimientos", "consolidado"].includes(vistaSolicitada) ? vistaSolicitada : "existencias";
-  const retornoInventario = `/admin/erp/almacen/inventario${searchParams.toString() ? `?${searchParams}` : ""}`;
+  // Enlaces antiguos con ?vista=movimientos muestran el historial de entradas.
+  const pestana = vistaSolicitada === "movimientos" ? "entradas"
+    : ["entradas", "consolidado"].includes(vistaSolicitada) ? vistaSolicitada : "existencias";
 
   function cambiarFiltro(clave, valor) {
     setSearchParams((anterior) => {
@@ -156,12 +150,15 @@ export default function ERPInventarioPage() {
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-gray-950">Inventario</h1>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">Consulta las cantidades disponibles, entradas y valor referencial de tus libros.</p>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">Controla las existencias, ingresos y costos de tus libros.</p>
         </div>
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-          {puedeVerCatalogo && <Link to="/admin/productos" state={{ inventoryReturnTo: retornoInventario }} className="inline-flex min-h-11 items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 sm:text-sm">Catálogo de productos</Link>}
-          <Link to="/admin/erp/almacen/recepciones" state={{ inventoryReturnTo: retornoInventario }} className="inline-flex min-h-11 items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 sm:text-sm">Ver recepciones</Link>
-        </div>
+        {puedeVerUbicaciones && (
+          <Link to="/admin/erp/almacen/ubicaciones"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:border-red-300 hover:text-red-700">
+            <FiMapPin size={16} aria-hidden="true" />
+            Gestionar almacenes
+          </Link>
+        )}
       </header>
 
       <section aria-label="Panel de control del inventario"
@@ -202,19 +199,7 @@ export default function ERPInventarioPage() {
           ))}
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-gray-100 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <nav aria-label="Accesos de almacén" className="flex min-w-0 flex-wrap gap-1.5">
-            {accesosAlmacen.filter((item) => !item.permiso || userHasPermission(user, [item.permiso])).map((item) => {
-              const Icon = item.icono;
-              return (
-                <Link key={item.ruta} to={item.ruta} title={item.descripcion}
-                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700 transition-colors duration-150 hover:border-red-300 hover:bg-red-50 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-red-600">
-                  <Icon size={15} aria-hidden="true" />
-                  {item.nombre}
-                </Link>
-              );
-            })}
-          </nav>
+        <div className="flex justify-end border-t border-gray-100 pt-2">
           <button type="button" aria-expanded={mostrarValorizacion}
             aria-controls="desglose-valorizacion-inventario"
             onClick={() => setMostrarValorizacion((actual) => !actual)}
@@ -270,9 +255,9 @@ export default function ERPInventarioPage() {
       <section ref={detalleRef} aria-label="Detalle de la operación seleccionada" className="scroll-mt-24 overflow-hidden rounded-xl border border-gray-200 bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
           <h2 className="text-sm font-bold text-gray-900">
-            {pestana === "existencias" ? "Existencias por producto" : "Entradas de mercadería"}
+            {pestana === "existencias" ? "Existencias por producto" : "Historial de ingresos"}
           </h2>
-          <span className="text-xs text-gray-500">{error ? "Consulta no disponible" : `${existencias.length} productos con entradas`}</span>
+          <span className="text-xs text-gray-500">{error ? "Consulta no disponible" : pestana === "existencias" ? `${existencias.length} productos` : `${entradas.length} ingresos`}</span>
         </div>
 
         {pestana === "existencias" ? (
