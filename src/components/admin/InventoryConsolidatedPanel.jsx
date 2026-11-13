@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { FiAlertCircle, FiSearch } from "react-icons/fi";
+import { FiAlertCircle, FiSearch, FiRefreshCw } from "react-icons/fi";
 import { consultarInventarioConsolidado } from "../../api/warehouseApi";
 
 const GRUPOS = [
-  { value: "editorial", label: "Por editorial" },
-  { value: "colegio", label: "Por colegio de origen" },
-  { value: "almacen", label: "Por almacén" },
+  { value: "editorial", label: "Editorial", fullLabel: "Por editorial" },
+  { value: "colegio", label: "Colegio", fullLabel: "Por colegio de origen" },
+  { value: "almacen", label: "Almacén", fullLabel: "Por almacén" },
 ];
 
 function soles(value) {
@@ -34,11 +34,15 @@ export default function InventoryConsolidatedPanel() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setBusquedaAplicada(buscar.trim());
-      setPagina(1);
+      const criterio = buscar.trim();
+      if (criterio !== busquedaAplicada) {
+        setCargando(true);
+        setBusquedaAplicada(criterio);
+        setPagina(1);
+      }
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [buscar]);
+  }, [buscar, busquedaAplicada]);
 
   useEffect(() => {
     let ignore = false;
@@ -76,78 +80,80 @@ export default function InventoryConsolidatedPanel() {
     ? "Editorial" : grupo === "colegio" ? "Colegio de origen" : "Almacén";
 
   return (
-    <section className="min-w-0 space-y-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-5"
+    <section className="min-w-0 space-y-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4"
       aria-label="Inventario consolidado por ubicación y procedencia">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-base font-black text-gray-950">Inventario consolidado</h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
-            Consulta todos los almacenes juntos. Cambia la agrupación sin duplicar libros ni sumar traslados.
+          <h2 className="text-sm font-black text-gray-950 sm:text-base">Inventario consolidado</h2>
+          <p className="mt-1 text-xs leading-5 text-gray-600">
+            Todos los almacenes en una consulta, sin duplicar traslados.
           </p>
         </div>
         <button type="button" onClick={() => {
           setCargando(true);
           setVersion((v) => v + 1);
         }} disabled={cargando}
-          className="inline-flex min-h-11 items-center rounded-xl border border-gray-300 px-4 text-sm font-bold text-gray-800 hover:bg-gray-50 disabled:opacity-50">
+          className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-800 transition-colors hover:border-red-300 hover:text-red-700 disabled:opacity-50">
+          <FiRefreshCw aria-hidden="true" size={14} />
           Actualizar
         </button>
       </div>
 
-      <div aria-label="Agrupar existencias" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {GRUPOS.map((opcion) => (
-          <button key={opcion.value} type="button" aria-pressed={grupo === opcion.value}
-            onClick={() => cambiarGrupo(opcion.value)}
-            className={`min-h-11 rounded-xl border px-3 py-2 text-left text-sm font-bold transition ${grupo === opcion.value
-              ? "border-red-700 bg-red-50 text-red-800"
-              : "border-gray-200 bg-gray-50 text-gray-800 hover:border-red-300"}`}>
-            {opcion.label}
-          </button>
-        ))}
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-end">
+        <div aria-label="Agrupar existencias" className="grid min-w-0 flex-1 grid-cols-3 gap-1 rounded-xl bg-gray-100 p-1">
+          {GRUPOS.map((opcion) => (
+            <button key={opcion.value} type="button" aria-pressed={grupo === opcion.value}
+              title={opcion.fullLabel} onClick={() => cambiarGrupo(opcion.value)}
+              className={`min-h-11 min-w-0 rounded-lg px-2 text-xs font-bold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 sm:text-sm ${grupo === opcion.value
+                ? "bg-white text-red-700 shadow-sm"
+                : "text-gray-700 hover:bg-white/70 hover:text-gray-950"}`}>
+              {opcion.label}
+            </button>
+          ))}
+        </div>
+        <label className="block min-w-0 lg:w-80">
+          <span className="sr-only">Buscar libro, editorial, colegio o guía</span>
+          <span className="flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 focus-within:border-red-700">
+            <FiSearch className="shrink-0 text-gray-500" aria-hidden="true" />
+            <input type="search" value={buscar} maxLength={100}
+              onChange={(event) => setBuscar(event.target.value)}
+              placeholder="Buscar libro, editorial, colegio o guía"
+              className="min-w-0 flex-1 bg-transparent py-2 text-sm font-normal text-gray-950 outline-none" />
+          </span>
+        </label>
       </div>
-
-      <label className="block text-xs font-bold text-gray-700">
-        Buscar libro, editorial, colegio o guía
-        <span className="mt-1 flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 focus-within:border-red-700">
-          <FiSearch className="shrink-0 text-gray-500" aria-hidden="true" />
-          <input type="search" value={buscar} maxLength={100}
-            onChange={(event) => setBuscar(event.target.value)}
-            placeholder="Escribe para buscar..."
-            className="min-w-0 flex-1 bg-transparent py-2 text-sm font-normal text-gray-950 outline-none" />
-        </span>
-      </label>
 
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {cargando && <p role="status" className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Consultando existencias…</p>}
 
       {!cargando && datos && (
         <>
-          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {[
-              ["Disponibles", resumen?.disponible ?? 0],
-              ["Observados", resumen?.observado ?? 0],
-              ["Valor disponible", soles(resumen?.valor_referencial)],
-              ["Sin ubicación", resumen?.unidades_sin_ubicacion ?? 0],
-            ].map(([label, value]) => (
-              <div key={label} className="min-w-0 rounded-xl bg-gray-50 p-3">
-                <dt className="text-xs font-semibold text-gray-600">{label}</dt>
-                <dd className="mt-1 break-words text-base font-black tabular-nums text-gray-950 sm:text-lg">
-                  {value}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          {busquedaAplicada && (
+            <div aria-label="Totales de la búsqueda"
+              className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
+              <span className="font-bold text-gray-900">Esta búsqueda:</span>
+              <span>Disponibles <strong className="tabular-nums text-gray-950">{resumen?.disponible ?? 0}</strong></span>
+              <span>Observados <strong className="tabular-nums text-gray-950">{resumen?.observado ?? 0}</strong></span>
+              <span>Valor <strong className="tabular-nums text-gray-950">{soles(resumen?.valor_referencial)}</strong></span>
+            </div>
+          )}
           {Number(resumen?.unidades_sin_costo ?? 0) > 0 && (
-            <p className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+            <p className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
               <FiAlertCircle className="mt-0.5 shrink-0" aria-hidden="true" />
-              {resumen.unidades_sin_costo} unidades no tienen costo histórico. El valor total aún no se puede determinar.
+              {resumen.unidades_sin_costo} unidades sin costo registrado. La valorización está pendiente.
             </p>
           )}
-          <p className="text-xs leading-5 text-gray-600">
-            {grupo === "colegio"
-              ? "El colegio indica el origen del pedido; no significa que las unidades estén reservadas para él."
-              : "Los importes son valorizaciones de existencias, no importes pendientes de pago a editoriales."}
-          </p>
+          {Number(resumen?.unidades_sin_ubicacion ?? 0) > 0 && (
+            <p className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+              <FiAlertCircle className="mt-0.5 shrink-0" aria-hidden="true" />
+              {resumen.unidades_sin_ubicacion} unidades necesitan verificar su ubicación.
+            </p>
+          )}
+          {grupo === "colegio" && (
+            <p className="text-xs leading-5 text-gray-600">
+              El colegio identifica el origen del pedido, no una reserva exclusiva de mercadería.
+            </p>
+          )}
           {registros.length === 0 ? (
             <p className="rounded-xl border border-dashed border-gray-300 p-4 text-center text-sm text-gray-600">
               No encontramos libros para esta consulta.
