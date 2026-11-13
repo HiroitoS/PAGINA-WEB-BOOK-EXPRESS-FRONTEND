@@ -1,5 +1,21 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 12/11/2026 — Ruta confirmada: Administración registra facturas; Almacén conserva tres módulos
+
+**Situación comprobada por capturas:** el usuario registró en local una factura DEMO `PRUEBA-F001-001` del pedido Santillana/LECTOPOLIS 3, y ve la sección «Facturas y conciliación» dentro de `/admin/erp/compras/pedidos`. La sección NO está dentro de `/admin/erp/almacen/`, sino como componente de Pedidos a Editoriales; se muestra a Hiroito por su rol superusuario. El código frontend restringe visualización a `purchasing.view_supplier_invoices` y escritura a `purchasing.manage_supplier_invoices`; API también valida permisos. **Responsable funcional: Administración / Compras, nunca Personal de Almacén.** En futuro, al construir Administración/Finanzas, el formulario se ubicará allí como centro de trabajo administrativo, con vínculo contextual al pedido; reutilizar el mismo backend, no duplicar facturas.
+
+**Observación visual de conciliación:** screenshot de corrección aún muestra encabezado S/740 y costo de línea S/72×10 = S/720; puede ser un borrador no guardado o incluir otros conceptos/impuestos. No afirmar que existe diferencia contable definitiva. En prueba sin impuestos se ajusta importe total; en facturas reales desarrollar desglose de impuestos/otros conceptos y validación de conciliación antes de aprobar. Actualmente factura está en estado `draft`, no CxP contabilizada ni afectación al stock.
+
+**Ruta de desarrollo de Almacén ratificada** — evitar desvíos a Finanzas mientras se completa logística:
+1. **Base ya probada parcialmente:** Recepción (validación, parciales, observados), Inventario global/valor por lote y por almacén, traslados con historial, ubicaciones y cortesías. Caso DEMO: 10 unidades Santillana, 8 transferidas a Feria, 2 en Principal; valor global S/720, transferencia S/576. Falta verificación funcional de permisos/excepciones.
+2. **Fase A: Inventario consolidado** por editorial, producto, colegio/adopción y ubicación, separando stock libre y comprometido, costos históricos y reporte/exportación; no duplicar stock por etiqueta de colegio.
+3. **Fase B: Distribución por operación** (feria/consignación, no subalmacenes físicos obligatorios): vínculo colegio/evento/responsable/fechas/lote; preparar, reservar, despachar, en tránsito, recibido, con evidencia y auditoría. La guía/constancia se documenta, la venta es proceso separado.
+4. **Fase C: Retorno y devolución:** retorno de feria/consignación a almacén interno ≠ devolución a editorial. Propuesta de devolución, bloqueo preventivo, conteo con representante, cantidades propuestas/contadas/aceptadas/rechazadas, diferencias, despacho y recepción proveedor, sin rebajar automáticamente CxP.
+5. **Fase D: Packs y muestras** (componentes sin doble stock), conteos físicos/ajustes autorizados, reportes definitivos, pruebas E2E y mobile-first.
+6. **Conexión posterior:** Compras/Administración: descuento editorial/campaña, factura proveedor, nota de crédito, cuentas por pagar y ajustes de valoración documentados, fuera de Almacén.
+
+**Menú Almacén queda con SOLO tres accesos:** Recepción, Inventario y Movimientos. No introducir «Facturas» ni «Administración» como submódulo de Almacén. No reclamar que los procesos B-D estén implementados. Continuar en rama `feature/erp-p08-traslados-por-guia`; sin merge ni despliegue.
+
 
 ## 11/11/2026 — Primer circuito pedido–recepción–factura de editorial [IMPLEMENTADO EN RAMA; PRUEBA LOCAL PENDIENTE]
 
