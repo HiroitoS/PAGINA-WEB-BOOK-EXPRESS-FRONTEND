@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { FiAlertCircle, FiSearch, FiRefreshCw } from "react-icons/fi";
 import { consultarInventarioConsolidado } from "../../api/warehouseApi";
 
@@ -89,14 +90,22 @@ export default function InventoryConsolidatedPanel() {
             Todos los almacenes en una consulta, sin duplicar traslados.
           </p>
         </div>
-        <button type="button" onClick={() => {
-          setCargando(true);
-          setVersion((v) => v + 1);
-        }} disabled={cargando}
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-800 transition-colors hover:border-red-300 hover:text-red-700 disabled:opacity-50">
-          <FiRefreshCw aria-hidden="true" size={14} />
-          Actualizar
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {grupo === "almacen" && (
+            <Link to="/admin/erp/almacen/stock-por-almacen"
+              className="inline-flex min-h-10 items-center rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-800 transition-colors hover:border-red-300 hover:text-red-700">
+              Ver libros por almacén
+            </Link>
+          )}
+          <button type="button" onClick={() => {
+            setCargando(true);
+            setVersion((v) => v + 1);
+          }} disabled={cargando}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-800 transition-colors hover:border-red-300 hover:text-red-700 disabled:opacity-50">
+            <FiRefreshCw aria-hidden="true" size={14} />
+            Actualizar
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 lg:flex-row lg:items-end">
