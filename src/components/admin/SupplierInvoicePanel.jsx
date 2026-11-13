@@ -45,7 +45,7 @@ function toLine(item, orderId) {
 
 function importeConCentimos(value, maxEnteros) {
   const texto = String(value ?? "").trim();
-  if (!/^\\d+(?:\\.\\d{1,2})?$/.test(texto)) return false;
+  if (!/^\d+(?:\.\d{1,2})?$/.test(texto)) return false;
   const [enteros] = texto.split(".");
   return (enteros.replace(/^0+/, "").length || 1) <= maxEnteros;
 }
