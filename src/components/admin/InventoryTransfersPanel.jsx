@@ -4,7 +4,7 @@ import { Link } from "react-router";
 import { FiArrowRight, FiMapPin } from "react-icons/fi";
 import {
   listarUbicacionesAlmacen, consultarResumenUbicaciones,
-  buscarLotesParaTraslado, listarTrasladosAlmacen, registrarTrasladoAlmacen,
+  buscarLotesParaTraslado, registrarTrasladoAlmacen,
   consultarLotesDeGuia, registrarTrasladoPorGuia,
 } from "../../api/warehouseApi";
 import ConfirmActionDialog from "./ConfirmActionDialog";
@@ -14,13 +14,6 @@ function soles(value) {
   return new Intl.NumberFormat("es-PE", {
     style: "currency", currency: "PEN",
   }).format(Number(value));
-}
-
-function fechaHora(value) {
-  const fecha = new Date(value);
-  return !value || Number.isNaN(fecha.getTime())
-    ? "Fecha no disponible"
-    : fecha.toLocaleString("es-PE", { dateStyle: "short", timeStyle: "short" });
 }
 
 const inputClase = "mt-1 min-h-11 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-red-600 focus:outline-none";
@@ -37,7 +30,6 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
   const [lots, setLots] = useState([]);
   const [count, setCount] = useState(0);
   const [pages, setPages] = useState(1);
-  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -56,13 +48,12 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
   useEffect(() => {
     let ignore = false;
     Promise.all([
-      listarUbicacionesAlmacen(), consultarResumenUbicaciones(), listarTrasladosAlmacen(),
-    ]).then(([items, counts, records]) => {
+      listarUbicacionesAlmacen(), consultarResumenUbicaciones(),
+    ]).then(([items, counts]) => {
       if (ignore) return;
       const active = (Array.isArray(items) ? items : items.results ?? []).filter((item) => item.is_active);
       setLocations(active);
       setSummary(counts);
-      setHistory(records.results ?? []);
       setSourceId((previous) => previous || String(active.find((item) => item.kind === "main")?.id ?? active[0]?.id ?? ""));
       setDestinationId((previous) => previous || String(active.find((item) => item.kind !== "main")?.id ?? ""));
     }).catch((err) => {
@@ -215,13 +206,18 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
   }
 
   return (
-    <div className="space-y-4 p-3 sm:p-4">
-      <div>
-        <h3 className="text-base font-black text-gray-950">Registrar traslado</h3>
-        <p className="mt-1 text-xs leading-5 text-gray-600">
-          Traslada libros conformes sin crear una venta ni modificar el total de Book Express.
-          Se conserva el colegio, la guía y el costo histórico de cada lote.
-        </p>
+    <div className="space-y-3 p-3 sm:p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-base font-black text-gray-950">Registrar traslado</h2>
+          <p className="mt-1 text-xs leading-5 text-gray-600">
+            Confirma libros ya entregados al destino. El total del inventario no cambia.
+          </p>
+        </div>
+        <Link to="/admin/erp/almacen/historial-traslados"
+          className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-700 transition-colors hover:border-red-300 hover:text-red-700">
+          Historial completo <FiArrowRight aria-hidden="true" size={14} />
+        </Link>
       </div>
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {message && <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-900">{message}</p>}
@@ -249,7 +245,7 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
         </section>
       ) : (
         <>
-          <div className="grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
+          <div className="grid gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
             <label className="text-xs font-bold text-gray-800">Almacén de origen
               <select value={sourceId} onChange={(event) => {
                 setSourceId(event.target.value);
@@ -300,10 +296,10 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
               Saldos por ubicación. El total global no cambia con los traslados.
             </p>
           </details>
-          <div className="grid items-start gap-3 lg:grid-cols-2">
+          <div className="grid items-start gap-2 lg:grid-cols-2">
             <section aria-label="Libros disponibles para traslado" className="min-w-0 rounded-xl border border-gray-200 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <h4 className="text-sm font-black text-gray-900">1. Seleccionar mercadería</h4>
+                <h3 className="text-sm font-black text-gray-900">1. Seleccionar libros</h3>
                 <span className="text-xs text-gray-500">{count} lotes</span>
               </div>
               <label className="text-xs font-semibold text-gray-700">Buscar libro, colegio o guía
@@ -351,7 +347,7 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
               </div>
             </section>
             <section ref={formRef} aria-label="Confirmar traslado" className="min-w-0 scroll-mt-24 rounded-xl border border-gray-200 p-3">
-              <h4 className="text-sm font-black text-gray-900">2. Registrar traslado</h4>
+              <h3 className="text-sm font-black text-gray-900">2. Confirmar entrega</h3>
               {guide ? (
                 <div className="mt-3 space-y-3">
                   <div className="rounded-lg border border-red-200 bg-red-50 p-3">
@@ -449,34 +445,6 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
               )}
             </section>
           </div>
-          <section className="rounded-xl border border-gray-200 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h4 className="text-sm font-black text-gray-900">Traslados recientes</h4>
-              <Link to="/admin/erp/almacen/historial-traslados"
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-800 hover:border-red-300 hover:text-red-700">
-                Consultar historial completo <FiArrowRight aria-hidden="true" />
-              </Link>
-            </div>
-            <p className="mt-1 text-xs text-gray-600">Últimos movimientos. Consulta el registro completo en Historial.</p>
-            <div className="mt-3 space-y-2">
-              {history.length === 0 && <p className="text-xs text-gray-500">Aún no hay traslados registrados.</p>}
-              {history.slice(0, 4).map((item) => (
-                <div key={item.id} className="rounded-lg border border-gray-200 p-3 text-xs">
-                  <p className="font-black text-gray-950">{item.operation_reference || `Movimiento N.º ${item.id}`} · {fechaHora(item.created_at)}</p>
-                  <p className="mt-1 break-words font-bold text-gray-950">{item.product}</p>
-                  <p className="mt-1 text-gray-700">{item.source} → {item.destination} · {item.quantity} unidades</p>
-                  <p className="mt-1 text-gray-600">Guía {item.guide} · {item.school} · {soles(item.value_reference)}</p>
-                  <p className="mt-1 text-gray-600">Registrado por: {item.created_by_name || "Usuario del sistema"}</p>
-                  {item.batch_id && (
-                    <Link to={`/admin/erp/almacen/historial-traslados?batch_id=${item.batch_id}`}
-                      className="mt-2 inline-flex min-h-10 items-center gap-1 font-bold text-red-700 hover:underline">
-                      Ver libros de esta guía <FiArrowRight aria-hidden="true" />
-                    </Link>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
         </>
       )}
       <ConfirmActionDialog open={confirming} eyebrow="Confirmación de almacén"
