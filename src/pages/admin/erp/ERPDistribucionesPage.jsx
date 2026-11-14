@@ -48,7 +48,7 @@ function messageFromError(error) {
   if (!error?.response) return "No se pudo establecer conexión. Comprueba el servidor e inténtalo nuevamente.";
   if (error.response.status === 403) return "No tienes autorización para modificar esta distribución.";
   const data = error.response.data;
-  for (const field of ["detail", "reason", "destination_id", "scheduled_until", "adoption_id", "mode"]) {
+  for (const field of ["detail", "reason", "destination_id", "scheduled_until", "adoption_id", "mode", "buscar", "anio", "page"]) {
     const value = data?.[field];
     if (typeof value === "string" && value.length < 240) return value;
     if (Array.isArray(value) && typeof value[0] === "string") return value[0];
@@ -59,7 +59,15 @@ function messageFromError(error) {
 export default function ERPDistribucionesPage() {
   const { user } = useAuth();
   const puedeGestionar = userHasPermission(user, ["warehouse.manage_distribution_operations"]);
-  const [opciones, setOpciones] = useState({ adoptions: [], locations: [], modes: [] });
+  const [opciones, setOpciones] = useState({
+    adoptions: [], adoptions_meta: { count: 0, page: 1, pages: 1 },
+    locations: [], modes: [],
+  });
+  const [adoptionSearch, setAdoptionSearch] = useState("");
+  const [adoptionYear, setAdoptionYear] = useState("");
+  const [adoptionPage, setAdoptionPage] = useState(1);
+  const [adoptionBusy, setAdoptionBusy] = useState(false);
+  const [selectedAdoption, setSelectedAdoption] = useState(null);
   const [lista, setLista] = useState({ results: [], page: 1, pages: 1, count: 0 });
   const [page, setPage] = useState(1);
   const [version, setVersion] = useState(0);
@@ -78,11 +86,10 @@ export default function ERPDistribucionesPage() {
 
   useEffect(() => {
     let ignore = false;
-    Promise.all([listarDistribuciones(page), opcionesDistribucion()])
-      .then(([records, choices]) => {
+    listarDistribuciones(page)
+      .then((records) => {
         if (ignore) return;
         setLista(records);
-        setOpciones(choices);
         setError("");
       })
       .catch((err) => {
@@ -92,8 +99,36 @@ export default function ERPDistribucionesPage() {
     return () => { ignore = true; };
   }, [page, version]);
 
+  useEffect(() => {
+    if (!formOpen) return undefined;
+    let ignore = false;
+    const timer = window.setTimeout(() => {
+      setAdoptionBusy(true);
+      opcionesDistribucion({
+        buscar: adoptionSearch.trim(),
+        anio: adoptionYear.trim(),
+        page: adoptionPage,
+      })
+        .then((choices) => {
+          if (ignore) return;
+          setOpciones(choices);
+        })
+        .catch((err) => {
+          if (!ignore) setError(messageFromError(err));
+        })
+        .finally(() => {
+          if (!ignore) setAdoptionBusy(false);
+        });
+    }, 250);
+    return () => { ignore = true; window.clearTimeout(timer); };
+  }, [formOpen, adoptionSearch, adoptionYear, adoptionPage]);
+
   function createNew() {
     setForm(blank());
+    setSelectedAdoption(null);
+    setAdoptionSearch("");
+    setAdoptionYear("");
+    setAdoptionPage(1);
     setNonce(crypto.randomUUID());
     setEditingId(null);
     setOriginalPlan(null);
@@ -105,6 +140,15 @@ export default function ERPDistribucionesPage() {
 
   function editExisting(item) {
     setEditingId(item.id);
+    setSelectedAdoption({
+      id: item.adoption_id,
+      school: item.school,
+      campaign: "",
+      items: item.items.map((line) => ({
+        product: line.product,
+        quantity: line.quantity_planned,
+      })),
+    });
     setCancelId(null);
     const initial = {
       adoption_id: String(item.adoption_id),
@@ -137,6 +181,7 @@ export default function ERPDistribucionesPage() {
 
   function chooseAdoption(value) {
     const found = opciones.adoptions.find((item) => String(item.id) === value);
+    setSelectedAdoption(found || null);
     setForm((prev) => ({
       ...prev, adoption_id: value,
       mode: MODE_LABELS[found?.sale_mode] ? found.sale_mode : prev.mode,
@@ -234,7 +279,7 @@ export default function ERPDistribucionesPage() {
     }
   }
 
-  const seleccionada = opciones.adoptions.find((item) =>
+  const seleccionada = selectedAdoption || opciones.adoptions.find((item) =>
     String(item.id) === String(form.adoption_id));
   return (
     <main className="mx-auto w-full min-w-0 max-w-6xl space-y-3">
@@ -289,18 +334,59 @@ export default function ERPDistribucionesPage() {
                 className={buttonClass}>Cerrar</button>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="text-xs font-bold text-gray-700">
-                Adopción confirmada
-                <select required disabled={Boolean(editingId)} value={form.adoption_id}
-                  onChange={(event) => chooseAdoption(event.target.value)} className={fieldClass}>
-                  <option value="">Seleccionar adopción</option>
-                  {opciones.adoptions.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.school} · {item.campaign} · #{item.id}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="space-y-2 text-xs font-bold text-gray-700">
+                <label className="block">
+                  Buscar adopción por colegio
+                  <input type="search" maxLength={100} value={adoptionSearch}
+                    disabled={Boolean(editingId)}
+                    onChange={(event) => { setAdoptionSearch(event.target.value); setAdoptionPage(1); }}
+                    className={fieldClass} placeholder="Nombre del colegio o campaña" />
+                </label>
+                <label className="block">
+                  Año de campaña (opcional)
+                  <input type="text" inputMode="numeric" maxLength={4} value={adoptionYear}
+                    disabled={Boolean(editingId)}
+                    onChange={(event) => { setAdoptionYear(event.target.value.replace(/\\D/g, "")); setAdoptionPage(1); }}
+                    className={fieldClass} placeholder="Ej. 2027" />
+                </label>
+                <label className="block">
+                  Adopción confirmada
+                  <select required disabled={Boolean(editingId) || adoptionBusy}
+                    value={form.adoption_id}
+                    onChange={(event) => chooseAdoption(event.target.value)} className={fieldClass}>
+                    <option value="">Seleccionar adopción</option>
+                    {seleccionada && !opciones.adoptions.some((item) => item.id === seleccionada.id) && (
+                      <option value={seleccionada.id}>
+                        {seleccionada.school} · #{seleccionada.id}
+                      </option>
+                    )}
+                    {opciones.adoptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.school} · {item.campaign} · #{item.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {!editingId && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 font-normal text-gray-600">
+                    <span aria-live="polite">
+                      {adoptionBusy ? "Buscando adopciones…" : `${opciones.adoptions_meta?.count ?? 0} adopciones encontradas`}
+                    </span>
+                    <div className="flex gap-2">
+                      <button type="button" className={buttonClass}
+                        disabled={adoptionBusy || adoptionPage <= 1}
+                        onClick={() => setAdoptionPage((p) => Math.max(1, p - 1))}>
+                        Anterior
+                      </button>
+                      <button type="button" className={buttonClass}
+                        disabled={adoptionBusy || adoptionPage >= (opciones.adoptions_meta?.pages ?? 1)}
+                        onClick={() => setAdoptionPage((p) => p + 1)}>
+                        Siguiente
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <label className="text-xs font-bold text-gray-700">
                 Modalidad de entrega
                 <select required value={form.mode} onChange={(event) => field("mode", event.target.value)}
@@ -355,10 +441,13 @@ export default function ERPDistribucionesPage() {
             </div>
             {seleccionada && (
               <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs">
-                <p className="font-black text-gray-900">Libros de la adopción</p>
+                <p className="font-black text-gray-900">
+                  {editingId ? "Libros de esta planificación" : "Libros de la adopción"}
+                </p>
                 <p className="mt-1 text-gray-600">
-                  Cantidades de la adopción como referencia, todavía sin asignar ni preparar.
-                  Si divides la entrega entre varias operaciones, cada una deberá tener sus cantidades verificadas antes del despacho.
+                  {editingId
+                    ? "Estas cifras son las registradas en la planificación; no equivalen a libros reservados."
+                    : "Cantidades de referencia, todavía sin repartir entre entregas ni reservar en el inventario. Si planificas más de un destino, se deberá validar la asignación real de cada libro antes de preparar."}
                 </p>
                 <div className="mt-2 space-y-1">
                   {seleccionada.items.map((item, idx) => (
