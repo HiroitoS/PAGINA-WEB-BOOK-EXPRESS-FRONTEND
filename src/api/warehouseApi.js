@@ -208,3 +208,32 @@ export async function resolverSolicitudMercaderia(id, action, note = "") {
   );
   return data;
 }
+
+const DISTRIBUTION_BASE = "/admin/erp/almacen/operaciones-distribucion";
+
+export async function listarDistribuciones(page = 1) {
+  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/`, {
+    params: { page },
+  });
+  return data;
+}
+
+export async function opcionesDistribucion() {
+  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/opciones/`);
+  return data;
+}
+
+export async function crearDistribucion(payload) {
+  const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/`, payload);
+  return data;
+}
+
+export async function actualizarDistribucion(id, payload) {
+  const { data } = await axiosClient.patch(`${DISTRIBUTION_BASE}/${id}/`, payload);
+  return data;
+}
+
+export async function anularDistribucion(id, reason) {
+  const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/${id}/anular/`, { reason });
+  return data;
+}
