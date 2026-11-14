@@ -334,8 +334,9 @@ export default function ERPDistribucionesPage() {
                 className={buttonClass}>Cerrar</button>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2 text-xs font-bold text-gray-700">
-                <label className="block">
+              <div className="space-y-2 text-xs font-bold text-gray-700 md:col-span-2">
+                <div className="grid gap-2 md:grid-cols-3">
+                  <label className="block">
                   Buscar adopción por colegio
                   <input type="search" maxLength={100} value={adoptionSearch}
                     disabled={Boolean(editingId)}
@@ -367,6 +368,7 @@ export default function ERPDistribucionesPage() {
                     ))}
                   </select>
                 </label>
+                </div>
                 {!editingId && (
                   <div className="flex flex-wrap items-center justify-between gap-2 font-normal text-gray-600">
                     <span aria-live="polite">
