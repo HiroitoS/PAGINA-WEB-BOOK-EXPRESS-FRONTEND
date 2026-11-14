@@ -20,6 +20,17 @@ const MODE_LABELS = {
   consignment: "Consignación",
 };
 
+const STATUS = {
+  planned: {
+    name: "Por preparar",
+    styles: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+  cancelled: {
+    name: "Anulada",
+    styles: "border-red-200 bg-red-50 text-red-800",
+  },
+};
+
 function blank() {
   return {
     adoption_id: "", mode: "fair", source_id: "", destination_id: "",
@@ -229,7 +240,7 @@ export default function ERPDistribucionesPage() {
             <h2 className="text-base font-black text-gray-950">Planificación de entregas</h2>
             <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-600">
               Puedes cambiar entre Punto de venta, Feria y Consignación sin volver al CRM.
-              Esta planificación aún no mueve ni reserva mercadería.
+              Esta planificación aún no mueve ni reserva mercadería. La entrega se confirma por separado.
             </p>
           </div>
           <div className="flex gap-2">
@@ -326,7 +337,8 @@ export default function ERPDistribucionesPage() {
               <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs">
                 <p className="font-black text-gray-900">Libros de la adopción</p>
                 <p className="mt-1 text-gray-600">
-                  Cantidades previstas; la preparación física aún no está confirmada.
+                  Cantidades de la adopción como referencia, todavía sin asignar ni preparar.
+                  Si divides la entrega entre varias operaciones, cada una deberá tener sus cantidades verificadas antes del despacho.
                 </p>
                 <div className="mt-2 space-y-1">
                   {seleccionada.items.map((item, idx) => (
@@ -379,8 +391,8 @@ export default function ERPDistribucionesPage() {
                   <span className="rounded-lg bg-gray-100 px-2 py-1 text-xs font-bold text-gray-800">
                     {MODE_LABELS[item.mode] || item.mode}
                   </span>
-                  <span className="text-xs text-gray-600">
-                    {item.status === "cancelled" ? "Anulada" : "Por preparar"}
+                  <span className={`rounded-lg border px-2 py-1 text-xs font-bold ${STATUS[item.status]?.styles || "border-gray-200 bg-gray-50 text-gray-700"}`}>
+                    {STATUS[item.status]?.name || "Estado por confirmar"}
                   </span>
                 </div>
                 <h3 className="mt-2 break-words text-sm font-black text-gray-950">
@@ -402,7 +414,7 @@ export default function ERPDistribucionesPage() {
                 </button>
                 {puedeGestionar && item.status === "planned" && (
                   <button type="button" className={buttonClass} onClick={() => editExisting(item)}>
-                    Editar entrega
+                    Editar planificación
                   </button>
                 )}
               </div>
@@ -411,6 +423,10 @@ export default function ERPDistribucionesPage() {
               <div className="mt-3 space-y-3 border-t border-gray-100 pt-3 text-xs">
                 <p className="font-bold text-gray-900">
                   Modalidad acordada en CRM: {MODE_LABELS[item.original_mode] || "No indicada"}
+                </p>
+                <p className="text-gray-600">
+                  Cantidades de la adopción: referencia comercial, no libros reservados.
+                  La distribución por destino se confirmará durante la preparación.
                 </p>
                 <div className="space-y-1">
                   {item.items.map((line) => (
