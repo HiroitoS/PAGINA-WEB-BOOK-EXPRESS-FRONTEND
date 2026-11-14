@@ -20,6 +20,11 @@ const MODE_LABELS = {
   consignment: "Consignación",
 };
 
+const EDITABLE_FIELDS = [
+  "mode", "source_id", "destination_id", "operation_name",
+  "responsible_name", "scheduled_on", "scheduled_until", "notes",
+];
+
 const STATUS = {
   planned: {
     name: "Por preparar",
@@ -62,6 +67,7 @@ export default function ERPDistribucionesPage() {
   const [saving, setSaving] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [originalPlan, setOriginalPlan] = useState(null);
   const [nonce, setNonce] = useState("");
   const [form, setForm] = useState(blank());
   const [expandedId, setExpandedId] = useState(null);
@@ -90,6 +96,7 @@ export default function ERPDistribucionesPage() {
     setForm(blank());
     setNonce(crypto.randomUUID());
     setEditingId(null);
+    setOriginalPlan(null);
     setCancelId(null);
     setFormOpen(true);
     setError("");
@@ -99,7 +106,7 @@ export default function ERPDistribucionesPage() {
   function editExisting(item) {
     setEditingId(item.id);
     setCancelId(null);
-    setForm({
+    const initial = {
       adoption_id: String(item.adoption_id),
       mode: item.mode,
       source_id: String(item.source_id),
@@ -110,11 +117,19 @@ export default function ERPDistribucionesPage() {
       scheduled_until: item.scheduled_until ?? "",
       notes: item.notes ?? "",
       reason: "",
-    });
+    };
+    setForm(initial);
+    setOriginalPlan(initial);
     setFormOpen(true);
     setError("");
     setNotice("");
   }
+
+  const hasChanges = Boolean(
+    editingId && originalPlan && EDITABLE_FIELDS.some(
+      (name) => String(form[name] ?? "").trim() !== String(originalPlan[name] ?? "").trim(),
+    ),
+  );
 
   function field(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -142,6 +157,10 @@ export default function ERPDistribucionesPage() {
     }
     if (form.scheduled_on && form.scheduled_until && form.scheduled_until < form.scheduled_on) {
       setError("La fecha final debe ser igual o posterior a la inicial.");
+      return;
+    }
+    if (editingId && !hasChanges) {
+      setError("Modifica algún dato de la planificación antes de guardar.");
       return;
     }
     if (editingId && form.reason.trim().length < 8) {
@@ -181,6 +200,7 @@ export default function ERPDistribucionesPage() {
         setNotice("Distribución planificada. Los libros todavía no se han preparado ni enviado.");
       }
       setEditingId(null);
+      setOriginalPlan(null);
       setFormOpen(false);
       setLoading(true);
       setPage(1);
@@ -356,7 +376,7 @@ export default function ERPDistribucionesPage() {
                 onChange={(event) => field("notes", event.target.value)}
                 className={fieldClass} placeholder="Indicaciones para organizar la entrega" />
             </label>
-            {editingId && (
+            {editingId && hasChanges && (
               <label className="block text-xs font-bold text-gray-700">
                 Motivo del cambio
                 <textarea required minLength={8} maxLength={500} rows={2} value={form.reason}
@@ -369,7 +389,7 @@ export default function ERPDistribucionesPage() {
               <button type="button" onClick={() => setFormOpen(false)} className={buttonClass}>
                 Cancelar
               </button>
-              <button type="submit" disabled={saving}
+              <button type="submit" disabled={saving || (Boolean(editingId) && !hasChanges)}
                 className="min-h-11 rounded-xl bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-50">
                 {saving ? "Guardando…" : editingId ? "Guardar cambio" : "Guardar planificación"}
               </button>
