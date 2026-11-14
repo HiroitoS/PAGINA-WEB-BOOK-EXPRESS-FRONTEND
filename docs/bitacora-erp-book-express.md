@@ -1,5 +1,21 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 13/11/2026 — Auditoría funcional de Entregas: adopciones, estados, duplicidad de cantidades
+
+**Validación de usuario:** capturas muestran que se puede seleccionar una adopción confirmada, planificar hacia ALMACÉN TIENDA y ALMACÉN FERIA y crear dos operaciones diferentes sobre la misma adopción; pregunta si aparecerán todas las adopciones, qué pasa al guardar, qué conexión existe con inventario, y solicita semáforo para estados.
+
+**Auditoría del código actual:** `GET operaciones-distribucion/opciones/` devuelve **solo las 100 adopciones vigentes más recientes**, no todas ni buscables; es insuficiente en producción. `POST operaciones-distribucion/` copia cantidad total de cada producto desde la adopción a `DistributionOperationLine.quantity_planned`, crea operación `planned` y evento; **NO** crea reserva, traslado, preparación, venta ni despacho, y no se vincula todavía al stock del almacén. `StockTransfer` sigue siendo servicio distinto y confirma entrega física, sin FK a `DistributionOperation`. La interfaz permitió dos planes de 10 unidades para una sola adopción; **no asumir 20 unidades ni permitir despacho doble**. Es un riesgo de sobreplanificación; la separación por destino/operación y validación del total asignado debe desarrollarse **antes** de permitir aprobación o despacho. Un solo colegio puede tener varias adopciones y una adopción puede necesitar varias entregas parciales, de modo que la solución NO es prohibir siempre el duplicado por adopción.
+
+**Acción inmediata de UX implementada:** en `ERPDistribucionesPage.jsx` se muestran estado **«Por preparar» en ámbar** y **«Anulada» en rojo** (ambos disponibles realmente), se sustituye «Editar entrega» por «Editar planificación», y se aclara que las cantidades de la adopción son referenciales, no libros reservados para cada operación. **No mostrar «Aprobada» verde ficticia**; ese estado requiere flujo de autorización preparado/validado, a implementar. El estilo conserva el diseño compacto y legible.
+
+**Secuencia funcional acordada para siguiente implementación:** CRM (adopción confirmada) → Compras (pedido, envío) → Recepción (guía y conteo) → Inventario (stock global y por ubicación) → Movimientos/Entregas (planeación por feria/tienda/consignación y cantidades parciales por destino) → selección de lotes reales y comprobación de disponibilidad → preparación y verificación por responsable → aprobación física con semáforo → despacho documento y stock en tránsito → constancia de recepción → liquidación/retorno. Los cambios Feria/Tienda/Consignación **antes** de despacho ajustan el plan y conservan historial; **después** de despacho requieren adenda/reversión/traslado físicos auditados. No confundir el colegio de origen de la compra con destino logístico de venta.
+
+**Pendientes obligatorios antes de declarar Fase B completa:**
+1. Selector de adopción con búsqueda/paginación por colegio/año y asociación a pedido, sin límite oculto de 100.
+2. Asignación explícita de cantidades por producto y operación, impidiendo asignaciones simultáneas mayores que disponibilidad o cantidad adoptada según política de reservas; vincular lote/costo, garantizar idempotencia, sincronizar saldos sin doble conteo.
+3. Estados correctos por acción verificable: por preparar (ámbar), preparado por revisar (ámbar), aprobado/confirmado (verde solo tras autorización), despachado, recibido, anulado (rojo), con evidencia y permisos.
+4. Pruebas de distribución múltiple sobre misma adopción y cambios de modalidad antes/después de despacho.
+
 ## 13/11/2026 — Fase B: planificación de distribución entre tres modalidades con trazabilidad [IMPLEMENTADO; DESPACHO AÚN PENDIENTE]
 
 **Cambio solicitado:** el usuario amplía explícitamente la regla Feria↔Consignación: **Punto de venta/Librería ↔ Feria ↔ Consignación**, todas las seis conversiones posibles, incluyendo cambios repetidos, sin exigir editar la adopción confirmada desde CRM. La modalidad pactada en CRM permanece como referencia histórica; la modalidad logística vigente es independiente. Cambios después de despacho requerirán adenda/retorno/traslado real, nunca reescritura histórica.
