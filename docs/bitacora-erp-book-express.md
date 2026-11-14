@@ -1,5 +1,13 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 13/11/2026 — Motivo del cambio condicional y vínculo Entregas → Traslados
+
+**Incidencia UX validada por captura:** `Motivo del cambio` aparecía nada más abrir «Editar planificación», aun sin haber modificado ningún dato. **Corregido frontend** `src/pages/admin/erp/ERPDistribucionesPage.jsx`: conserva copia de los campos originales editables (modalidad, origen, destino, nombre, responsable, fechas y observaciones), compara contra estado actual y muestra motivo solo cuando hay un cambio. No aparece en alta; sin cambios, botón guardar desactivado y backend mantiene prohibición de guardar cambios vacíos. El motivo de al menos 8 caracteres sigue siendo obligatorio para cualquier modificación efectiva. No se añadieron endpoints ni migraciones.
+
+**Responsabilidad actual real:** `Distribución/Entregas` guarda plan basado en adopción; `Traslados` registra movimiento físico confirmado de un lote o de guía, sobre `StockTransfer`; `warehouse/api_transfers.py` y `warehouse/transfers.py` **NO aceptan ni vinculan todavía `DistributionOperation`**. Por tanto no se puede afirmar que Transferencias «toma» datos de la planificación. Actualmente el usuario selecciona manualmente origen, destino y lote, y **solo confirma el traslado cuando la entrega física ya ocurrió**. Un plan no representa reserva, una aprobación, un despacho en tránsito ni una venta.
+
+**Ruta Fase B para la conexión real:** operación de entrega → asignación parcial de cantidades por artículo a lote real → comprobar stock disponible/comprometido por operación y evitar sobreasignación de varias entregas de una misma adopción → preparación/verificación → aprobación y generación de despacho con constancia → confirmar recepción → actualizar `StockTransfer` y vincular la operación, con idempotencia y auditoría. El destino y responsable del plan podrán precargar el traslado **sin permitir** registrar doble salida ni cambiar el histórico. Para eventos con cambio de modalidad antes de salir, editar plan con motivo; después de salir, tramitar reprogramación/adenda y retorno o nuevo movimiento real. **No introducir botones simulados** mientras faltan APIs seguras.
+
 ## 13/11/2026 — Auditoría funcional de Entregas: adopciones, estados, duplicidad de cantidades
 
 **Validación de usuario:** capturas muestran que se puede seleccionar una adopción confirmada, planificar hacia ALMACÉN TIENDA y ALMACÉN FERIA y crear dos operaciones diferentes sobre la misma adopción; pregunta si aparecerán todas las adopciones, qué pasa al guardar, qué conexión existe con inventario, y solicita semáforo para estados.
