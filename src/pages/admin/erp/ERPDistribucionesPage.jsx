@@ -240,7 +240,7 @@ export default function ERPDistribucionesPage() {
             {puedeGestionar && (
               <button type="button" onClick={createNew}
                 className="min-h-10 rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition-colors hover:bg-red-800">
-                Nueva entrega
+                Planificar entrega
               </button>
             )}
           </div>
@@ -402,7 +402,7 @@ export default function ERPDistribucionesPage() {
                 </button>
                 {puedeGestionar && item.status === "planned" && (
                   <button type="button" className={buttonClass} onClick={() => editExisting(item)}>
-                    Cambiar modalidad
+                    Editar entrega
                   </button>
                 )}
               </div>
