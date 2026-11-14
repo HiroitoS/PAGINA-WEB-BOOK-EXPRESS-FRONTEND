@@ -23,6 +23,7 @@ export const CURRENT_PANEL_PERMISSIONS = [
   "purchasing.view_purchasing",
   "warehouse.view_receiving",
   "warehouse.view_warehouse_locations",
+  "warehouse.view_internal_stock_requests",
 ];
 
 export function userHasRole(user, allowedRoles = []) {
@@ -77,6 +78,10 @@ export function getDefaultAdminPath(user) {
 
   if (userHasPermission(user, ["crm.view_crm"])) {
     return "/admin/crm";
+  }
+
+  if (userHasPermission(user, ["warehouse.view_internal_stock_requests"])) {
+    return "/admin/erp/almacen/solicitudes";
   }
 
   if (userHasPermission(user, ["warehouse.view_receiving"])) {

@@ -62,3 +62,29 @@ export async function descargarOrdenCompraPdf(orderId, formato = "solicitud") {
   });
   return data;
 }
+
+const INVOICE_BASE = "/admin/erp/compras/facturas-editoriales";
+
+export async function obtenerFacturasEditoriales(provider) {
+  const { data } = await axiosClient.get(`${INVOICE_BASE}/`, {
+    params: { provider },
+  });
+  return data;
+}
+
+export async function obtenerPedidosParaFactura(provider) {
+  const { data } = await axiosClient.get(`${INVOICE_BASE}/pedidos-disponibles/`, {
+    params: { provider },
+  });
+  return data;
+}
+
+export async function registrarFacturaEditorial(payload) {
+  const { data } = await axiosClient.post(`${INVOICE_BASE}/`, payload);
+  return data;
+}
+
+export async function corregirFacturaEditorial(id, payload) {
+  const { data } = await axiosClient.patch(`${INVOICE_BASE}/${id}/`, payload);
+  return data;
+}

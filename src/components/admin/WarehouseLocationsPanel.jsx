@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { warehouseErrorMessage as mensajeError } from "../../utils/warehouseErrorMessage";
+import { Link } from "react-router";
+import { FiArrowRight, FiCheckCircle, FiMapPin } from "react-icons/fi";
 import {
   actualizarUbicacionAlmacen,
   crearUbicacionAlmacen,
@@ -32,19 +35,7 @@ function mostrarTipo(tipo) {
   return TIPOS.find((item) => item.value === tipo)?.label ?? tipo;
 }
 
-function mensajeError(error) {
-  const datos = error?.response?.data;
-  if (typeof datos?.detail === "string") return datos.detail;
-  if (Array.isArray(datos?.detail)) return datos.detail.join(" ");
-  if (datos && typeof datos === "object") {
-    return Object.entries(datos).map(([campo, valor]) =>
-      `${campo}: ${Array.isArray(valor) ? valor.join(" ") : String(valor)}`
-    ).join(" ");
-  }
-  return "No se pudo guardar la ubicación. Comprueba los datos e intenta nuevamente.";
-}
-
-export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar = false }) {
+export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar = false, puedeVerInventario = false }) {
   const [ubicaciones, setUbicaciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -54,6 +45,9 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   const [editandoId, setEditandoId] = useState(null);
   const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
   const formRef = useRef(null);
+  const principalActivo = ubicaciones.some((item) => item.kind === "main" && item.is_active);
+  const destinosActivos = ubicaciones.filter((item) => item.kind !== "main" && item.is_active).length;
+  const listoParaTrasladar = principalActivo && destinosActivos > 0;
 
   useEffect(() => {
     let ignore = false;
@@ -170,6 +164,37 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         )}
       </div>
 
+      {!cargando && !error && (
+        listoParaTrasladar ? (
+          <div role="status" className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-2 text-sm text-gray-700">
+              <FiCheckCircle className="mt-0.5 shrink-0 text-gray-700" aria-hidden="true" />
+              <p><span className="font-bold text-gray-950">Ubicaciones listas.</span> Almacén principal y {destinosActivos} {destinosActivos === 1 ? "destino activo" : "destinos activos"} registrados.</p>
+            </div>
+            {puedeVerInventario && (
+              <Link to="/admin/erp/almacen/stock-por-almacen"
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-2 text-sm font-bold text-red-700 hover:bg-red-50">
+                Ver existencias <FiArrowRight aria-hidden="true" />
+              </Link>
+            )}
+          </div>
+        ) : (
+          <section aria-label="Configuración de ubicaciones" className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <h3 className="text-sm font-black text-gray-950">Antes de registrar traslados</h3>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <p className="flex items-start gap-2 rounded-lg bg-white p-3 text-sm leading-5 text-gray-700">
+                <FiMapPin className="mt-0.5 shrink-0 text-red-700" aria-hidden="true" />
+                {principalActivo ? "Almacén principal listo." : "Registra el almacén principal donde se reciben los libros."}
+              </p>
+              <p className="flex items-start gap-2 rounded-lg bg-white p-3 text-sm leading-5 text-gray-700">
+                <FiMapPin className="mt-0.5 shrink-0 text-red-700" aria-hidden="true" />
+                {destinosActivos ? "Destino de traslado listo." : "Agrega un destino físico real, como la tienda."}
+              </p>
+            </div>
+          </section>
+        )
+      )}
+
       {mensaje && (
         <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-800">
           {mensaje}
@@ -251,13 +276,19 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         <p role="status" className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Consultando ubicaciones…</p>
       )}
       {!cargando && ubicaciones.length === 0 && !error && !formularioAbierto && (
-        <div className="space-y-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-5 text-center">
-          <h3 className="text-sm font-bold text-gray-900">Aún no hay ubicaciones registradas</h3>
-          <p className="text-sm text-gray-600">
-            Empieza registrando el almacén principal. Después podrás agregar tiendas, ferias y lugares de consignación.
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-center sm:p-8">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-xl bg-gray-100 text-gray-700"><FiMapPin aria-hidden="true" size={22} /></span>
+          <h3 className="mt-3 text-base font-black text-gray-950">Empieza con tu almacén principal</h3>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-600">
+            Aún no hay ubicaciones registradas. Primero identifica dónde se reciben los libros;
+            después podrás configurar los lugares donde realmente se trasladan.
           </p>
-          {!puedeGestionar && (
-            <p className="text-xs text-gray-500">Consulta con un administrador para configurar ubicaciones.</p>
+          {puedeGestionar ? (
+            <button type="button" onClick={abrirNuevo} className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-red-700 px-5 text-sm font-bold text-white hover:bg-red-800 sm:w-auto">
+              Registrar almacén principal
+            </button>
+          ) : (
+            <p className="mt-3 text-sm text-gray-600">Solicita al administrador que configure el almacén principal.</p>
           )}
         </div>
       )}

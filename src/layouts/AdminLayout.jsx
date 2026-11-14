@@ -180,7 +180,7 @@ const NAV_SECTIONS = [
         label: "Almacén",
         icon: <FaBoxOpen />,
         basePath: "/admin/erp/almacen/",
-        permissions: ["warehouse.view_receiving", "warehouse.view_warehouse_locations"],
+        permissions: ["warehouse.view_receiving", "warehouse.view_warehouse_locations", "warehouse.view_internal_stock_requests"],
         children: [
           {
             label: "Recepción de mercadería",
@@ -195,10 +195,10 @@ const NAV_SECTIONS = [
             permissions: ["warehouse.view_receiving"],
           },
           {
-            label: "Ubicaciones",
-            to: "/admin/erp/almacen/ubicaciones",
+            label: "Movimientos",
+            to: "/admin/erp/almacen/traslados",
             icon: <FaMapMarkerAlt />,
-            permissions: ["warehouse.view_warehouse_locations"],
+            permissions: ["warehouse.view_receiving"],
           },
         ],
       },
@@ -239,6 +239,12 @@ const NAV_SECTIONS = [
         to: "/admin/crm/equipos",
         icon: <FaUsers />,
         permissions: ["crm.assign_schools"],
+      },
+      {
+        label: "Campañas",
+        to: "/admin/crm/campanas",
+        icon: <FaCalendarAlt />,
+        permissions: ["crm.manage_campaigns"],
       },
       {
         label: "Oportunidades",

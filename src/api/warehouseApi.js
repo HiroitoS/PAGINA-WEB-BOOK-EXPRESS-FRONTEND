@@ -50,6 +50,13 @@ export async function consultarExistencias() {
   return data;
 }
 
+export async function consultarInventarioConsolidado(params = {}) {
+  const { data } = await axiosClient.get(`${INVENTORY_BASE}/consolidado/`, {
+    params,
+  });
+  return data;
+}
+
 export async function consultarResumenInventario() {
   const { data } = await axiosClient.get(`${INVENTORY_BASE}/resumen/`);
   return data;
@@ -136,12 +143,99 @@ export async function buscarLotesParaTraslado({ sourceId, q = "", page = 1 }) {
   return data;
 }
 
-export async function listarTrasladosAlmacen(page = 1) {
-  const { data } = await axiosClient.get(`${TRANSFERS_BASE}/`, { params: { page } });
+export async function listarTrasladosAlmacen(page = 1, filters = {}) {
+  const params = { page };
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      params[key] = value;
+    }
+  }
+  const { data } = await axiosClient.get(`${TRANSFERS_BASE}/`, { params });
   return data;
 }
 
 export async function registrarTrasladoAlmacen(payload) {
   const { data } = await axiosClient.post(`${TRANSFERS_BASE}/`, payload);
+  return data;
+}
+
+export async function consultarLotesDeGuia({ receiptId, sourceId }) {
+  const { data } = await axiosClient.get(`${TRANSFERS_BASE}/guia/`, {
+    params: { receipt_id: receiptId, source_id: sourceId },
+  });
+  return data;
+}
+
+export async function registrarTrasladoPorGuia(payload) {
+  const { data } = await axiosClient.post(`${TRANSFERS_BASE}/por-guia/`, payload);
+  return data;
+}
+
+
+const INTERNAL_REQUEST_BASE = "/admin/erp/almacen/solicitudes-internas";
+
+export async function listarSolicitudesMercaderia(page = 1, status = "") {
+  const { data } = await axiosClient.get(`${INTERNAL_REQUEST_BASE}/`, {
+    params: { page, ...(status ? { status } : {}) },
+  });
+  return data;
+}
+
+export async function listarUbicacionesParaSolicitud() {
+  const { data } = await axiosClient.get(`${INTERNAL_REQUEST_BASE}/ubicaciones/`);
+  return data;
+}
+
+export async function buscarLibrosParaSolicitud(q) {
+  const { data } = await axiosClient.get(`${INTERNAL_REQUEST_BASE}/productos/`, {
+    params: { q },
+  });
+  return data;
+}
+
+export async function crearSolicitudMercaderia(payload) {
+  const { data } = await axiosClient.post(`${INTERNAL_REQUEST_BASE}/`, payload);
+  return data;
+}
+
+export async function resolverSolicitudMercaderia(id, action, note = "") {
+  if (!["aprobar", "rechazar", "anular"].includes(action)) {
+    throw new Error("Acción de solicitud no válida.");
+  }
+  const { data } = await axiosClient.post(
+    `${INTERNAL_REQUEST_BASE}/${id}/${action}/`,
+    { note },
+  );
+  return data;
+}
+
+const DISTRIBUTION_BASE = "/admin/erp/almacen/operaciones-distribucion";
+
+export async function listarDistribuciones(page = 1) {
+  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/`, {
+    params: { page },
+  });
+  return data;
+}
+
+export async function opcionesDistribucion({ buscar = "", anio = "", page = 1 } = {}) {
+  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/opciones/`, {
+    params: { buscar, anio, page },
+  });
+  return data;
+}
+
+export async function crearDistribucion(payload) {
+  const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/`, payload);
+  return data;
+}
+
+export async function actualizarDistribucion(id, payload) {
+  const { data } = await axiosClient.patch(`${DISTRIBUTION_BASE}/${id}/`, payload);
+  return data;
+}
+
+export async function anularDistribucion(id, reason) {
+  const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/${id}/anular/`, { reason });
   return data;
 }
