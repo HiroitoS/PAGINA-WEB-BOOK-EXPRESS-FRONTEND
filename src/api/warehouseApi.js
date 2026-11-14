@@ -218,8 +218,10 @@ export async function listarDistribuciones(page = 1) {
   return data;
 }
 
-export async function opcionesDistribucion() {
-  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/opciones/`);
+export async function opcionesDistribucion({ buscar = "", anio = "", page = 1 } = {}) {
+  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/opciones/`, {
+    params: { buscar, anio, page },
+  });
   return data;
 }
 
