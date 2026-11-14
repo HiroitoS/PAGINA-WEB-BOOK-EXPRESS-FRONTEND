@@ -1,7 +1,8 @@
 import { NavLink } from "react-router";
-import { FiClock, FiGift, FiTruck } from "react-icons/fi";
+import { FiClock, FiGift, FiTruck, FiPackage } from "react-icons/fi";
 
 const tabs = [
+  { label: "Distribución", to: "/admin/erp/almacen/distribuciones", icon: FiPackage },
   { label: "Traslados", to: "/admin/erp/almacen/traslados", icon: FiTruck },
   { label: "Cortesías", to: "/admin/erp/almacen/cortesias", icon: FiGift },
   { label: "Historial", to: "/admin/erp/almacen/historial-traslados", icon: FiClock },
@@ -10,7 +11,7 @@ const tabs = [
 export default function WarehouseMovementTabs() {
   return (
     <nav aria-label="Opciones de movimientos"
-      className="grid min-w-0 grid-cols-3 gap-1 rounded-xl bg-gray-100 p-1">
+      className="grid min-w-0 grid-cols-4 gap-1 rounded-xl bg-gray-100 p-1">
       {tabs.map(({ label, to, icon: Icon }) => (
         <NavLink key={to} to={to} title={label}
           className={({ isActive }) =>
