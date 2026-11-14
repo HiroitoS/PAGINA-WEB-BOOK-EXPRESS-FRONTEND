@@ -2,7 +2,7 @@ import { NavLink } from "react-router";
 import { FiClock, FiGift, FiTruck, FiPackage } from "react-icons/fi";
 
 const tabs = [
-  { label: "Distribución", to: "/admin/erp/almacen/distribuciones", icon: FiPackage },
+  { label: "Entregas", to: "/admin/erp/almacen/distribuciones", icon: FiPackage },
   { label: "Traslados", to: "/admin/erp/almacen/traslados", icon: FiTruck },
   { label: "Cortesías", to: "/admin/erp/almacen/cortesias", icon: FiGift },
   { label: "Historial", to: "/admin/erp/almacen/historial-traslados", icon: FiClock },
