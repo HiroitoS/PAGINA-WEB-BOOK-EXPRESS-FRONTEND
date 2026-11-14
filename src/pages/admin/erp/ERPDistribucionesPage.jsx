@@ -106,7 +106,7 @@ export default function ERPDistribucionesPage() {
       setAdoptionBusy(true);
       opcionesDistribucion({
         buscar: adoptionSearch.trim(),
-        anio: adoptionYear.trim(),
+        anio: adoptionYear.length === 4 ? adoptionYear : "",
         page: adoptionPage,
       })
         .then((choices) => {
@@ -346,7 +346,7 @@ export default function ERPDistribucionesPage() {
                   Año de campaña (opcional)
                   <input type="text" inputMode="numeric" maxLength={4} value={adoptionYear}
                     disabled={Boolean(editingId)}
-                    onChange={(event) => { setAdoptionYear(event.target.value.replace(/\\D/g, "")); setAdoptionPage(1); }}
+                    onChange={(event) => { setAdoptionYear(event.target.value.replace(/\D/g, "")); setAdoptionPage(1); }}
                     className={fieldClass} placeholder="Ej. 2027" />
                 </label>
                 <label className="block">
