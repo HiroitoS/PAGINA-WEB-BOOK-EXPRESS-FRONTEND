@@ -1,5 +1,30 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 13/11/2026 — Movimientos compacto, cambio feria/consignación y datos DEMO usando colegios importados
+
+**Capturas verificadas:** Inventario se ve compacto, Movimientos aún tiene header extenso, tres pestañas aisladas, resumen de traslados recientes duplicando la pantalla de historial, formulario de lotes. El usuario pide reducir scroll, utilizar colegio ya importado para pruebas, y contemplar cambios de modalidad feria↔consignación sin reabrir CRM ni alterar adopciones.
+
+**Cambio frontend implementado en la rama:**
+- `ERPTrasladosPage.jsx`: cabecera reducida a «Movimientos», botón discreto a Inventario y pestañas dentro de la **misma tarjeta**.
+- `WarehouseMovementTabs.jsx`: control segmentado mobile-first «Traslados · Cortesías · Historial», blanco/rojo como Inventario, botones tocables y sin desplazamiento horizontal innecesario.
+- `InventoryTransfersPanel.jsx`: eliminado bloque «Traslados recientes» que duplicaba Historial; eliminado request de listado histórico innecesario al cargar formulario; enlace directo «Historial completo» en cabecera; formularios y espaciamientos compactados sin modificar validaciones, movimientos, confirmación física, rutas o saldos. CI frontend pasó.
+- Pendiente inspeccionar móvil de 360/390/430 px y escritorio, y confirmar filtros con colegios importados.
+
+**Flexibilidad modal (requerimiento de negocio, AÚN NO IMPLEMENTADO):** modalidad de adopción/cotización en CRM es el acuerdo comercial de partida, pero **la asignación logística por feria/consignación puede reprogramarse desde Movimientos**, sin modificar o reemplazar la adopción original. Se implementará en Fase B mediante `operación de distribución` vinculada a colegio/adopción, ubicación, responsable, evento, fechas, modalidad vigente e historial de versiones. Escenarios:
+1. Feria → Consignación antes de despachar: cambia planificación logística, conserva adopción, no mueve existencias; registrar actor/motivo/fecha.
+2. Feria → Consignación después de preparar/reservar pero antes de salir: revisar preparación, documentos, fechas y responsable; libera/reasigna reservas en transacción, sin duplicar saldos.
+3. Feria → Consignación después de entrega física: **no reescribir despacho histórico**; conservar constancia original, dejar adenda con cambio de modalidad, nuevo responsable/condiciones y confirmación según política; si cambia destino físico, registrar devolución o traslado real, nunca movimiento ficticio.
+4. Consignación → Feria y cambios repetidos: aplicar misma regla y mantener cronología de versiones e implicaciones de liquidación; nunca registrar venta automática por cambio de modalidad.
+5. Colegio cancela o pospone: anula reserva disponible sin crear venta; después del despacho requiere retorno físico comprobado. Packs se mantienen trazables por componentes.
+- **Subalmacenes** serán subinventarios **lógicos por operación** dentro de almacén físico, no nueva ubicación física obligatoria por colegio. Todavía no aparecen en UI hasta Fase B real.
+- **No se implementó aún** edición logística de modalidad; la captura actual muestra exclusivamente traslados ya recibidos.
+
+**Datos de prueba sin SQL manual peligroso:** el usuario tiene 578 colegios y 1557 productos previamente cargados en su PostgreSQL local, pero GitHub no permite consultar directamente su `bookexpress_db` en PC: no inventar IDs o cantidades actuales. Se incorpora `crm/management/commands/preparar_demo_erp_lote.py` que reutiliza `preparar_demo_erp` y negocios del CRM para crear 1–4 escenarios distintos **solo en PostgreSQL local con DEBUG=True** (`--crear --local`), con colegios/productos reales como referencia, pero generando colegios **[PRUEBA ERP]**, oportunidades, proyecciones y cotizaciones en borrador. Intenta editoriales diferentes. Es idempotente por escuela/año, transaccional, no toca escuelas reales ni genera adopciones, ventas, pedidos o stock. Adicionalmente `docs/sql/pgadmin_datos_demo_2027.sql` contiene consultas **SELECT** seguras para comprobar base, obtener IDs y ver los demos creados. **No realizar INSERT manual** en flujo CRM/compras/almacén, pues salta validaciones, auditoría, costo histórico e idempotencia.
+- Mejorado nombre de colegio demo: `[PRUEBA ERP] {colegio de referencia} · 2027`, sin alterar institución original, para distinguir escenarios.
+- Nuevas pruebas `crm/tests/test_demo_seed.py`: preview sin escrituras, bloqueo fuera de local, creación de dos escenarios de editoriales distintas, repetición idempotente; pendiente verificar ejecución CI completa del último commit backend.
+- Comandos previstos: `python manage.py preparar_demo_erp_lote --year 2027 --cantidad 3 --unidades 20` (vista previa), luego `... --crear --local` solo si usuario desea crear datos ficticios en su base local; `python manage.py test crm.tests.test_demo_seed`.
+- No tocar `main` ni Tecnoweb ni migraciones; cualquier adopción, pedido y recepción simulada posterior se confirma expresamente desde interfaces.
+
 ## 13/11/2026 — Cierre UX Inventario: evitar menú repetido, precisión numérica y subinventarios por operación [EN PRUEBA]
 
 **Situación:** el usuario validó visualmente que el diseño compacto aún repetía «Movimientos» dentro de Inventario y en el menú ERP→Almacén. También preguntó dónde aparecerían los «subalmacenes» por feria/colegio y comunicó errores de precisión numérica en producción al ingresar más de tres decimales (campo exacto no identificado).
