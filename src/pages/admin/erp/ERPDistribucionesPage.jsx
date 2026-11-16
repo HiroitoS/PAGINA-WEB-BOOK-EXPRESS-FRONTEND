@@ -223,6 +223,14 @@ export default function ERPDistribucionesPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  function clearChosenAdoption() {
+    setSelectedAdoption(null);
+    setAllocation(null);
+    setAllocationBusy(false);
+    setQuantities({});
+    setForm((prev) => ({ ...prev, adoption_id: "", operation_name: "" }));
+  }
+
   function chooseAdoption(value) {
     const found = opciones.adoptions.find((item) => String(item.id) === value);
     setSelectedAdoption(found || null);
@@ -412,14 +420,22 @@ export default function ERPDistribucionesPage() {
                   Buscar adopción por colegio
                   <input type="search" maxLength={100} value={adoptionSearch}
                     disabled={Boolean(editingId)}
-                    onChange={(event) => { setAdoptionSearch(event.target.value); setAdoptionPage(1); }}
+                    onChange={(event) => {
+                      setAdoptionSearch(event.target.value);
+                      setAdoptionPage(1);
+                      clearChosenAdoption();
+                    }}
                     className={fieldClass} placeholder="Nombre del colegio o campaña" />
                 </label>
                 <label className="block">
                   Año de campaña (opcional)
                   <input type="text" inputMode="numeric" maxLength={4} value={adoptionYear}
                     disabled={Boolean(editingId)}
-                    onChange={(event) => { setAdoptionYear(event.target.value.replace(/\D/g, "")); setAdoptionPage(1); }}
+                    onChange={(event) => {
+                      setAdoptionYear(event.target.value.replace(/\D/g, ""));
+                      setAdoptionPage(1);
+                      clearChosenAdoption();
+                    }}
                     className={fieldClass} placeholder="Ej. 2027" />
                 </label>
                 <label className="block">
@@ -444,7 +460,11 @@ export default function ERPDistribucionesPage() {
                 {!editingId && (
                   <div className="flex flex-wrap items-center justify-between gap-2 font-normal text-gray-600">
                     <span aria-live="polite">
-                      {adoptionBusy ? "Buscando adopciones…" : `${opciones.adoptions_meta?.count ?? 0} adopciones encontradas`}
+                      {adoptionBusy ? "Buscando adopciones…" : (
+                        (opciones.adoptions_meta?.count ?? 0) === 1
+                          ? "1 adopción encontrada · Selecciónala en la lista"
+                          : `${opciones.adoptions_meta?.count ?? 0} adopciones encontradas`
+                      )}
                     </span>
                     <div className="flex gap-2">
                       <button type="button" className={buttonClass}
