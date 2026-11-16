@@ -20,6 +20,23 @@ const MODE_LABELS = {
   fair: "Feria",
   consignment: "Consignación",
 };
+const MODE_INFO = {
+  point_of_sale: "Libros que se atenderán desde la tienda o librería.",
+  fair: "Libros destinados a una feria escolar programada.",
+  consignment: "Libros que quedarán en custodia para su posterior rendición.",
+};
+const MODE_LOCATION_KIND = {
+  point_of_sale: "store",
+  fair: "fair",
+  consignment: "consignment",
+};
+const LOCATION_KIND_LABEL = {
+  main: "Almacén principal",
+  store: "Tienda",
+  fair: "Feria temporal",
+  consignment: "Consignación",
+  other: "Otro depósito",
+};
 
 const EDITABLE_FIELDS = [
   "mode", "source_id", "destination_id", "operation_name",
@@ -39,7 +56,7 @@ const STATUS = {
 
 function blank() {
   return {
-    adoption_id: "", mode: "fair", source_id: "", destination_id: "",
+    adoption_id: "", mode: "", source_id: "", destination_id: "",
     operation_name: "", responsible_name: "", scheduled_on: "",
     scheduled_until: "", notes: "", reason: "",
   };
@@ -62,13 +79,14 @@ export default function ERPDistribucionesPage() {
   const puedeGestionar = userHasPermission(user, ["warehouse.manage_distribution_operations"]);
   const [opciones, setOpciones] = useState({
     adoptions: [], adoptions_meta: { count: 0, page: 1, pages: 1 },
-    locations: [], modes: [],
+    locations: [], modes: [], campaign_years: [],
   });
   const [adoptionSearch, setAdoptionSearch] = useState("");
   const [adoptionYear, setAdoptionYear] = useState("");
   const [adoptionPage, setAdoptionPage] = useState(1);
   const [adoptionBusy, setAdoptionBusy] = useState(false);
   const [selectedAdoption, setSelectedAdoption] = useState(null);
+  const [showAdoptionResults, setShowAdoptionResults] = useState(true);
   const [allocation, setAllocation] = useState(null);
   const [allocationBusy, setAllocationBusy] = useState(false);
   const [quantities, setQuantities] = useState({});
@@ -162,6 +180,8 @@ export default function ERPDistribucionesPage() {
     setAdoptionSearch("");
     setAdoptionYear("");
     setAdoptionPage(1);
+    setShowAdoptionResults(true);
+    setAdoptionBusy(true);
     setNonce(crypto.randomUUID());
     setEditingId(null);
     setOriginalPlan(null);
@@ -177,10 +197,13 @@ export default function ERPDistribucionesPage() {
     setQuantities({});
     setOriginalQuantities({});
     setEditingId(item.id);
+    setShowAdoptionResults(false);
+    setAdoptionBusy(true);
     setSelectedAdoption({
       id: item.adoption_id,
       school: item.school,
-      campaign: "",
+      campaign: item.campaign || "",
+      campaign_year: item.campaign_year ?? null,
       items: item.items.map((line) => ({
         product: line.product,
         quantity: line.quantity_planned,
@@ -225,30 +248,66 @@ export default function ERPDistribucionesPage() {
 
   function clearChosenAdoption() {
     setSelectedAdoption(null);
+    setShowAdoptionResults(true);
     setAllocation(null);
     setAllocationBusy(false);
     setQuantities({});
-    setForm((prev) => ({ ...prev, adoption_id: "", operation_name: "" }));
+    setForm((prev) => ({
+      ...prev, adoption_id: "", mode: "", destination_id: "", operation_name: "",
+    }));
+  }
+
+  function changeAdoptionFilter(name, value) {
+    if (name === "search") setAdoptionSearch(value);
+    if (name === "year") setAdoptionYear(value);
+    setAdoptionPage(1);
+    setAdoptionBusy(true);
+    clearChosenAdoption();
   }
 
   function chooseAdoption(value) {
     const found = opciones.adoptions.find((item) => String(item.id) === value);
-    setSelectedAdoption(found || null);
+    if (!found) return;
+    setSelectedAdoption(found);
+    setShowAdoptionResults(false);
     setAllocation(null);
-    setAllocationBusy(Boolean(value));
+    setAllocationBusy(true);
     setQuantities({});
-    setForm((prev) => ({
-      ...prev, adoption_id: value,
-      mode: MODE_LABELS[found?.sale_mode] ? found.sale_mode : prev.mode,
-      operation_name: found ? `Entrega · ${found.school}` : "",
-    }));
+    setForm((prev) => {
+      const mains = opciones.locations.filter((location) => location.kind === "main");
+      const origin = prev.source_id || (mains.length === 1 ? String(mains[0].id) : "");
+      const mode = MODE_LABELS[found.sale_mode] ? found.sale_mode : prev.mode;
+      const suggested = opciones.locations.filter(
+        (location) => location.kind === MODE_LOCATION_KIND[mode]
+          && String(location.id) !== origin,
+      );
+      return {
+        ...prev, adoption_id: value,
+        mode, source_id: origin,
+        destination_id: suggested.length === 1 ? String(suggested[0].id) : "",
+        operation_name: `Entrega · ${found.school}`,
+      };
+    });
+  }
+
+  function chooseMode(mode) {
+    setForm((prev) => {
+      const suggested = opciones.locations.filter(
+        (location) => location.kind === MODE_LOCATION_KIND[mode]
+          && String(location.id) !== prev.source_id,
+      );
+      return {
+        ...prev, mode,
+        destination_id: suggested.length === 1 ? String(suggested[0].id) : "",
+      };
+    });
   }
 
   async function save(event) {
     event.preventDefault();
     if (saving) return;
-    if (!form.adoption_id || !form.source_id || !form.destination_id) {
-      setError("Selecciona la adopción y los almacenes de origen y destino.");
+    if (!form.adoption_id || !form.mode || !form.source_id || !form.destination_id) {
+      setError("Selecciona la adopción, el tipo de atención y los lugares de salida y llegada.");
       return;
     }
     if (form.source_id === form.destination_id) {
@@ -361,6 +420,24 @@ export default function ERPDistribucionesPage() {
 
   const seleccionada = selectedAdoption || opciones.adoptions.find((item) =>
     String(item.id) === String(form.adoption_id));
+  const source = opciones.locations.find((place) => String(place.id) === form.source_id);
+  const destination = opciones.locations.find(
+    (place) => String(place.id) === form.destination_id,
+  );
+  const destinationMismatch = Boolean(
+    destination && form.mode && MODE_LOCATION_KIND[form.mode]
+    && destination.kind !== MODE_LOCATION_KIND[form.mode],
+  );
+  const matchingLocations = opciones.locations.filter(
+    (place) => place.kind === MODE_LOCATION_KIND[form.mode]
+      && String(place.id) !== form.source_id,
+  );
+  const otherLocations = opciones.locations.filter(
+    (place) => !matchingLocations.some((match) => match.id === place.id),
+  );
+  const totalPlanned = allocation
+    ? allocation.items.reduce((sum, line) => sum + Number(quantities[line.product_id] || 0), 0)
+    : 0;
   return (
     <main className="mx-auto w-full min-w-0 max-w-6xl space-y-3">
       <header className="space-y-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
