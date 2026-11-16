@@ -702,25 +702,23 @@ export default function UsersPage() {
                       {formatDate(user.last_login)}
                     </td>
 
-                    <td className="px-5 py-4">
-                      <div className="flex min-w-44 flex-col gap-2">
+                    <td className="px-4 py-3">
+                      <div className="grid min-w-48 grid-cols-2 gap-1.5">
                         <button
                           type="button"
                           onClick={() => openEditModal(user)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-xs font-bold text-gray-700 transition hover:bg-gray-100"
+                          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-2 text-xs font-bold text-gray-700 transition hover:bg-gray-100"
                         >
                           <FaPen className="text-xs" />
-                          Editar usuario
+                          Editar
                         </button>
-
                         <Link
                           to={`/admin/usuarios/${user.id}/permisos`}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-200 px-3 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-50"
+                          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-purple-200 px-2 text-xs font-bold text-purple-700 transition hover:bg-purple-50"
                         >
                           <FaShieldAlt className="text-xs" />
-                          Gestionar acceso
+                          Accesos
                         </Link>
-
                         <button
                           type="button"
                           onClick={() => {
@@ -728,19 +726,18 @@ export default function UsersPage() {
                             setNewPassword("");
                             setShowPassword(false);
                           }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-50"
+                          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-blue-200 px-2 text-xs font-bold text-blue-700 transition hover:bg-blue-50"
                         >
                           <FaKey className="text-xs" />
-                          Cambiar contraseña
+                          Contraseña
                         </button>
-
                         <button
                           type="button"
                           onClick={() => toggleActive(user)}
                           className={
                             user.is_active
-                              ? "rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100"
-                              : "rounded-xl bg-green-50 px-3 py-2 text-xs font-bold text-green-700 transition hover:bg-green-100"
+                              ? "min-h-9 rounded-lg bg-red-50 px-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              : "min-h-9 rounded-lg bg-green-50 px-2 text-xs font-bold text-green-700 transition hover:bg-green-100"
                           }
                         >
                           {user.is_active ? "Desactivar" : "Activar"}
