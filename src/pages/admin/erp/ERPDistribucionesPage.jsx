@@ -513,25 +513,76 @@ export default function ERPDistribucionesPage() {
                   onChange={(event) => field("scheduled_until", event.target.value)} className={fieldClass} />
               </label>
             </div>
-            {seleccionada && (
-              <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs">
-                <p className="font-black text-gray-900">
-                  {editingId ? "Libros de esta planificación" : "Libros de la adopción"}
-                </p>
-                <p className="mt-1 text-gray-600">
-                  {editingId
-                    ? "Estas cifras son las registradas en la planificación; no equivalen a libros reservados."
-                    : "Cantidades de referencia, todavía sin repartir entre entregas ni reservar en el inventario. Si planificas más de un destino, se deberá validar la asignación real de cada libro antes de preparar."}
-                </p>
-                <div className="mt-2 space-y-1">
-                  {seleccionada.items.map((item, idx) => (
-                    <p key={idx} className="flex justify-between gap-3 text-gray-800">
-                      <span className="min-w-0 break-words">{item.product}</span>
-                      <strong className="shrink-0 tabular-nums">{item.quantity}</strong>
+            {form.adoption_id && (
+              <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 text-xs">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-black text-gray-950">Cantidades para esta entrega</h4>
+                    <p className="mt-1 max-w-2xl leading-5 text-gray-600">
+                      Puedes planificar toda la adopción o solo una parte. El saldo es comercial:
+                      aún no se verifica el stock físico ni se reservan libros.
                     </p>
-                  ))}
+                  </div>
+                  {allocation && !allocationBusy && (
+                    <button type="button" className={buttonClass}
+                      onClick={() => setQuantities(Object.fromEntries(
+                        allocation.items.map((line) => [line.product_id, String(line.assignable)]),
+                      ))}>
+                      Asignar todo el saldo
+                    </button>
+                  )}
                 </div>
-              </div>
+                {(allocationBusy || !allocation || allocation.adoption_id !== Number(form.adoption_id)) ? (
+                  <p role="status" className="rounded-lg bg-gray-50 px-3 py-2 text-gray-600">
+                    Consultando cantidades de esta adopción…
+                  </p>
+                ) : (
+                  <>
+                    {allocation.items.some((line) => line.overallocated > 0) && (
+                      <p role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900">
+                        Algunas planificaciones anteriores superan las cantidades adoptadas.
+                        Revisa y corrige o anula las entregas duplicadas antes de continuar.
+                      </p>
+                    )}
+                    <div className="space-y-2">
+                      {allocation.items.map((line) => (
+                        <div key={line.product_id}
+                          className="grid min-w-0 gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3 sm:grid-cols-4 sm:items-center">
+                          <div className="min-w-0 sm:col-span-2">
+                            <p className="break-words font-bold text-gray-900">{line.product}</p>
+                            <p className="mt-1 text-gray-600">
+                              Adoptados: <strong className="tabular-nums">{line.adopted}</strong>
+                              {" · "}En otras entregas: <strong className="tabular-nums">{line.other_planned}</strong>
+                            </p>
+                            <p className="text-gray-700">
+                              Saldo para esta entrega: <strong className="tabular-nums">{line.assignable}</strong>
+                            </p>
+                          </div>
+                          <label className="block font-bold text-gray-700 sm:col-span-2 sm:ml-auto sm:w-40">
+                            Cantidad a planificar
+                            <input type="number" inputMode="numeric" step="1" min="0"
+                              max={line.assignable}
+                              value={quantities[line.product_id] ?? ""}
+                              onChange={(event) => setQuantities((prev) => ({
+                                ...prev, [line.product_id]: event.target.value,
+                              }))}
+                              className={fieldClass} />
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    {allocation.items.length === 0 && (
+                      <p className="text-gray-600">Esta adopción no tiene productos disponibles para planificar.</p>
+                    )}
+                    {seleccionada && (
+                      <p className="text-gray-500">
+                        Colegio: {seleccionada.school}. Si asignas cero a un producto,
+                        no se incluirá en esta entrega.
+                      </p>
+                    )}
+                  </>
+                )}
+              </section>
             )}
             <label className="block text-xs font-bold text-gray-700">
               Observaciones (opcional)
