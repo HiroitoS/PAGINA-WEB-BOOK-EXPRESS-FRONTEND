@@ -738,7 +738,7 @@ export default function ERPDistribucionesPage() {
               <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 text-xs">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <h4 className="font-black text-gray-950">Cantidades para esta entrega</h4>
+                    <h4 className="font-black text-gray-950">4. ¿Cuántos libros irán en esta entrega?</h4>
                     <p className="mt-1 max-w-2xl leading-5 text-gray-600">
                       Puedes planificar toda la adopción o solo una parte. El saldo es comercial:
                       aún no se verifica el stock físico ni se reservan libros.
@@ -805,12 +805,46 @@ export default function ERPDistribucionesPage() {
                 )}
               </section>
             )}
-            <label className="block text-xs font-bold text-gray-700">
-              Observaciones (opcional)
-              <textarea rows={2} maxLength={500} value={form.notes}
-                onChange={(event) => field("notes", event.target.value)}
-                className={fieldClass} placeholder="Indicaciones para organizar la entrega" />
-            </label>
+            <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+              <div>
+                <h4 className="text-sm font-black text-gray-950">5. Responsable y fechas</h4>
+                <p className="mt-1 text-xs text-gray-600">
+                  Identifica la entrega para que el equipo pueda coordinar su preparación.
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="block min-w-0 text-xs font-bold text-gray-700">
+                  Nombre de esta entrega
+                  <input required maxLength={180} value={form.operation_name}
+                    onChange={(event) => field("operation_name", event.target.value)}
+                    className={fieldClass} placeholder="Ej. Feria del colegio" />
+                </label>
+                <label className="block min-w-0 text-xs font-bold text-gray-700">
+                  Persona que recibirá los libros
+                  <input required maxLength={180} value={form.responsible_name}
+                    onChange={(event) => field("responsible_name", event.target.value)}
+                    className={fieldClass} placeholder="Nombre del encargado" />
+                </label>
+                <label className="block min-w-0 text-xs font-bold text-gray-700">
+                  Fecha prevista de entrega (opcional)
+                  <input type="date" value={form.scheduled_on}
+                    onChange={(event) => field("scheduled_on", event.target.value)}
+                    className={fieldClass} />
+                </label>
+                <label className="block min-w-0 text-xs font-bold text-gray-700">
+                  Fecha final (opcional)
+                  <input type="date" value={form.scheduled_until}
+                    onChange={(event) => field("scheduled_until", event.target.value)}
+                    className={fieldClass} />
+                </label>
+              </div>
+              <label className="block text-xs font-bold text-gray-700">
+                Observaciones (opcional)
+                <textarea rows={2} maxLength={500} value={form.notes}
+                  onChange={(event) => field("notes", event.target.value)}
+                  className={fieldClass} placeholder="Indicaciones para organizar la entrega" />
+              </label>
+            </section>
             {editingId && hasChanges && (
               <label className="block text-xs font-bold text-gray-700">
                 Motivo del cambio
@@ -820,7 +854,15 @@ export default function ERPDistribucionesPage() {
                   placeholder="Ej. El colegio cambió de Feria a Consignación" />
               </label>
             )}
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3">
+              <p className="text-xs leading-5 text-gray-700">
+                <strong className="text-gray-950">Antes de guardar:</strong>
+                {" "}{Number.isFinite(totalPlanned) ? totalPlanned : 0} libros planificados
+                {form.mode ? " · " + MODE_LABELS[form.mode] : ""}
+                {destination ? " · " + destination.name : ""}.
+                {" "}No se han reservado ni trasladado físicamente.
+              </p>
+              <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setFormOpen(false)} className={buttonClass}>
                 Cancelar
               </button>
@@ -828,6 +870,7 @@ export default function ERPDistribucionesPage() {
                 className="min-h-11 rounded-xl bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-50">
                 {saving ? "Guardando…" : editingId ? "Guardar cambio" : "Guardar planificación"}
               </button>
+              </div>
             </div>
           </form>
         )}
