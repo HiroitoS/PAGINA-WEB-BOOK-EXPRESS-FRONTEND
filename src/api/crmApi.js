@@ -598,6 +598,13 @@ export async function getCRMOpportunity(opportunityId) {
 
   return response.data;
 }
+export async function inheritCRMOpportunitySchoolAssignment(opportunityId) {
+  const { data } = await axiosClient.post(
+    `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/inherit-school-assignment/`,
+  );
+  return data;
+}
+
 export async function getCRMOpportunityProjectionBase(opportunityId) {
   const response = await axiosClient.get(
     `${CRM_ADMIN_BASE}/opportunities/${opportunityId}/projection-base/`,
