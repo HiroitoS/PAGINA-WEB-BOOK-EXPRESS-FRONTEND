@@ -896,9 +896,19 @@ export default function ERPDistribucionesPage() {
                 <h3 className="mt-2 break-words text-sm font-black text-gray-950">
                   {item.operation_name}
                 </h3>
-                <p className="mt-1 text-xs leading-5 text-gray-600">
-                  {item.school} · {item.source} → {item.destination}
+                <p className="mt-1 text-xs leading-5 text-gray-700">
+                  <strong>Colegio:</strong> {item.school}
+                  {item.campaign_year ? " · Campaña " + item.campaign_year : ""}
                 </p>
+                <p className="text-xs leading-5 text-gray-600">
+                  <strong>Salida:</strong> {item.source}
+                  {" → "}<strong>Destino:</strong> {item.destination}
+                </p>
+                {item.destination_kind && MODE_LOCATION_KIND[item.mode] !== item.destination_kind && (
+                  <p className="mt-1 text-xs font-bold text-amber-800">
+                    Revisar destino: el lugar elegido no es del tipo habitual para esta modalidad.
+                  </p>
+                )}
                 <p className="text-xs leading-5 text-gray-600">
                   Responsable: {item.responsible_name}
                   {item.scheduled_on ? ` · ${item.scheduled_on}` : ""}
@@ -923,8 +933,9 @@ export default function ERPDistribucionesPage() {
                   Modalidad acordada en CRM: {MODE_LABELS[item.original_mode] || "No indicada"}
                 </p>
                 <p className="text-gray-600">
-                  Cantidades de la adopción: referencia comercial, no libros reservados.
-                  La distribución por destino se confirmará durante la preparación.
+                  Estas cantidades corresponden a ESTA entrega planificada.
+                  No son libros reservados ni enviados: la preparación y el despacho se
+                  confirmarán posteriormente.
                 </p>
                 <div className="space-y-1">
                   {item.items.map((line) => (
