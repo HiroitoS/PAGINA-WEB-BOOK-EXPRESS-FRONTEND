@@ -274,8 +274,8 @@ export default function ERPDistribucionesPage() {
     setAllocationBusy(true);
     setQuantities({});
     setForm((prev) => {
-      const mains = opciones.locations.filter((location) => location.kind === "main");
-      const origin = prev.source_id || (mains.length === 1 ? String(mains[0].id) : "");
+      // Nunca presuponer que los libros están en Principal: revisar Inventario.
+      const origin = prev.source_id;
       const mode = MODE_LABELS[found.sale_mode] ? found.sale_mode : prev.mode;
       const suggested = opciones.locations.filter(
         (location) => location.kind === MODE_LOCATION_KIND[mode]
@@ -680,7 +680,7 @@ export default function ERPDistribucionesPage() {
                     ))}
                   </select>
                   <span className="mt-1 block font-normal leading-5 text-gray-600">
-                    Almacén donde se encuentra físicamente la mercadería.
+                    Comprueba la ubicación real en Inventario. No se selecciona automáticamente.
                   </span>
                 </label>
                 <label className="block min-w-0 text-xs font-bold text-gray-700">
