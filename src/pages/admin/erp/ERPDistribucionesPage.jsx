@@ -490,126 +490,250 @@ export default function ERPDistribucionesPage() {
               <button type="button" onClick={() => { setFormOpen(false); setError(""); }}
                 className={buttonClass}>Cerrar</button>
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2 text-xs font-bold text-gray-700 md:col-span-2">
-                <div className="grid gap-2 md:grid-cols-3">
-                  <label className="block">
-                  Buscar adopción por colegio
-                  <input type="search" maxLength={100} value={adoptionSearch}
-                    disabled={Boolean(editingId)}
-                    onChange={(event) => {
-                      setAdoptionSearch(event.target.value);
-                      setAdoptionPage(1);
-                      clearChosenAdoption();
-                    }}
-                    className={fieldClass} placeholder="Nombre del colegio o campaña" />
-                </label>
-                <label className="block">
-                  Año de campaña (opcional)
-                  <input type="text" inputMode="numeric" maxLength={4} value={adoptionYear}
-                    disabled={Boolean(editingId)}
-                    onChange={(event) => {
-                      setAdoptionYear(event.target.value.replace(/\D/g, ""));
-                      setAdoptionPage(1);
-                      clearChosenAdoption();
-                    }}
-                    className={fieldClass} placeholder="Ej. 2027" />
-                </label>
-                <label className="block">
-                  Adopción confirmada
-                  <select required disabled={Boolean(editingId) || adoptionBusy}
-                    value={form.adoption_id}
-                    onChange={(event) => chooseAdoption(event.target.value)} className={fieldClass}>
-                    <option value="">Seleccionar adopción</option>
-                    {seleccionada && !opciones.adoptions.some((item) => item.id === seleccionada.id) && (
-                      <option value={seleccionada.id}>
-                        {seleccionada.school} · #{seleccionada.id}
-                      </option>
-                    )}
-                    {opciones.adoptions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.school} · {item.campaign} · #{item.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+
+            <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+              <div>
+                <h4 className="text-sm font-black text-gray-950">1. Elegir adopción confirmada</h4>
+                <p className="mt-1 text-xs text-gray-600">
+                  Busca por colegio, campaña o número de adopción. Solo se muestran las adopciones vigentes.
+                </p>
+              </div>
+              {!editingId && (
+                <div className="grid min-w-0 gap-3 sm:grid-cols-3">
+                  <label className="block min-w-0 text-xs font-bold text-gray-700 sm:col-span-2">
+                    Buscar colegio o campaña
+                    <input type="search" maxLength={100} className={fieldClass}
+                      value={adoptionSearch}
+                      onChange={(event) => changeAdoptionFilter("search", event.target.value)}
+                      placeholder="Ej. colegio de demostración o número de adopción" />
+                  </label>
+                  <label className="block min-w-0 text-xs font-bold text-gray-700">
+                    Año de campaña
+                    <select value={adoptionYear} className={fieldClass}
+                      onChange={(event) => changeAdoptionFilter("year", event.target.value)}>
+                      <option value="">Todos los años</option>
+                      {opciones.campaign_years.map((year) => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
-                {!editingId && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 font-normal text-gray-600">
+              )}
+              {seleccionada && (
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-red-800">
+                      Adopción seleccionada
+                    </p>
+                    <p className="break-words text-sm font-bold text-gray-950">{seleccionada.school}</p>
+                    <p className="text-xs text-gray-600">
+                      {seleccionada.campaign || "Campaña"}
+                      {seleccionada.campaign_year ? " · " + seleccionada.campaign_year : ""}
+                      {" · "}Adopción #{seleccionada.id}
+                    </p>
+                  </div>
+                  {!editingId && !showAdoptionResults && (
+                    <button type="button" className={buttonClass}
+                      onClick={() => setShowAdoptionResults(true)}>
+                      Cambiar adopción
+                    </button>
+                  )}
+                </div>
+              )}
+              {!editingId && showAdoptionResults && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
                     <span aria-live="polite">
                       {adoptionBusy ? "Buscando adopciones…" : (
                         (opciones.adoptions_meta?.count ?? 0) === 1
-                          ? "1 adopción encontrada · Selecciónala en la lista"
-                          : `${opciones.adoptions_meta?.count ?? 0} adopciones encontradas`
+                          ? "1 adopción encontrada"
+                          : (opciones.adoptions_meta?.count ?? 0) + " adopciones encontradas"
                       )}
                     </span>
-                    <div className="flex gap-2">
-                      <button type="button" className={buttonClass}
-                        disabled={adoptionBusy || adoptionPage <= 1}
-                        onClick={() => setAdoptionPage((p) => Math.max(1, p - 1))}>
-                        Anterior
+                    {(adoptionSearch || adoptionYear) && (
+                      <button type="button" className="font-bold text-red-700 underline underline-offset-2"
+                        onClick={() => {
+                          setAdoptionSearch("");
+                          setAdoptionYear("");
+                          setAdoptionPage(1);
+                          setAdoptionBusy(true);
+                          clearChosenAdoption();
+                        }}>
+                        Limpiar filtros
                       </button>
-                      <button type="button" className={buttonClass}
-                        disabled={adoptionBusy || adoptionPage >= (opciones.adoptions_meta?.pages ?? 1)}
-                        onClick={() => setAdoptionPage((p) => p + 1)}>
-                        Siguiente
-                      </button>
-                    </div>
+                    )}
                   </div>
-                )}
+                  {adoptionBusy ? (
+                    <p role="status" className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                      Consultando colegios y campañas…
+                    </p>
+                  ) : opciones.adoptions.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-gray-300 p-3 text-sm text-gray-600">
+                      No se encontraron adopciones vigentes con esos filtros. Prueba con otro
+                      colegio, un año distinto o limpia los filtros.
+                    </p>
+                  ) : (
+                    <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                      {opciones.adoptions.map((item) => (
+                        <button key={item.id} type="button"
+                          aria-pressed={String(form.adoption_id) === String(item.id)}
+                          onClick={() => chooseAdoption(String(item.id))}
+                          className={"flex w-full min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-left transition-colors " + (
+                            String(form.adoption_id) === String(item.id)
+                              ? "border-red-500 bg-red-50"
+                              : "border-gray-200 bg-gray-50 hover:border-red-300 hover:bg-white"
+                          )}>
+                          <span className="min-w-0">
+                            <span className="block break-words text-sm font-bold text-gray-950">{item.school}</span>
+                            <span className="mt-1 block text-xs text-gray-600">
+                              {item.campaign} · {item.campaign_year} · Adopción #{item.id}
+                              {" · "}{item.items.length} títulos
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs font-black text-red-700">
+                            {String(form.adoption_id) === String(item.id) ? "Seleccionada" : "Elegir"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {!adoptionBusy && (opciones.adoptions_meta?.pages ?? 1) > 1 && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600">
+                      <span>
+                        Página {opciones.adoptions_meta.page} de {opciones.adoptions_meta.pages}
+                      </span>
+                      <div className="flex gap-2">
+                        <button type="button" className={buttonClass}
+                          disabled={adoptionPage <= 1}
+                          onClick={() => { setAdoptionBusy(true); setAdoptionPage((p) => p - 1); }}>
+                          Anterior
+                        </button>
+                        <button type="button" className={buttonClass}
+                          disabled={adoptionPage >= (opciones.adoptions_meta?.pages ?? 1)}
+                          onClick={() => { setAdoptionBusy(true); setAdoptionPage((p) => p + 1); }}>
+                          Siguiente
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+            <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+              <legend className="sr-only">Tipo de atención</legend>
+              <div>
+                <h4 className="text-sm font-black text-gray-950">2. ¿Para qué se preparan los libros?</h4>
+                <p className="mt-1 text-xs text-gray-600">
+                  Elige una sola modalidad para ESTA entrega. Puedes crear otra entrega de la
+                  misma adopción para una modalidad diferente, con las cantidades pendientes.
+                </p>
               </div>
-              <label className="text-xs font-bold text-gray-700">
-                Modalidad de entrega
-                <select required value={form.mode} onChange={(event) => field("mode", event.target.value)}
-                  className={fieldClass}>
-                  {Object.entries(MODE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-bold text-gray-700">
-                Almacén de origen
-                <select required value={form.source_id}
-                  onChange={(event) => field("source_id", event.target.value)} className={fieldClass}>
-                  <option value="">Seleccionar origen</option>
-                  {opciones.locations.map((location) => (
-                    <option key={location.id} value={location.id}>{location.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-bold text-gray-700">
-                Destino físico
-                <select required value={form.destination_id}
-                  onChange={(event) => field("destination_id", event.target.value)} className={fieldClass}>
-                  <option value="">Seleccionar destino</option>
-                  {opciones.locations.map((location) => (
-                    <option key={location.id} value={location.id}>{location.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs font-bold text-gray-700">
-                Nombre de la operación
-                <input required maxLength={180} value={form.operation_name}
-                  onChange={(event) => field("operation_name", event.target.value)} className={fieldClass}
-                  placeholder="Ej. Feria del Colegio Zárate" />
-              </label>
-              <label className="text-xs font-bold text-gray-700">
-                Persona que recibirá los libros
-                <input required maxLength={180} value={form.responsible_name}
-                  onChange={(event) => field("responsible_name", event.target.value)} className={fieldClass}
-                  placeholder="Nombre del encargado" />
-              </label>
-              <label className="text-xs font-bold text-gray-700">
-                Fecha prevista
-                <input type="date" value={form.scheduled_on}
-                  onChange={(event) => field("scheduled_on", event.target.value)} className={fieldClass} />
-              </label>
-              <label className="text-xs font-bold text-gray-700">
-                Fecha final (opcional)
-                <input type="date" value={form.scheduled_until}
-                  onChange={(event) => field("scheduled_until", event.target.value)} className={fieldClass} />
-              </label>
-            </div>
+              <div className="grid gap-2 md:grid-cols-3">
+                {Object.entries(MODE_LABELS).map(([mode, label]) => (
+                  <label key={mode}
+                    className={"flex min-w-0 cursor-pointer items-start gap-2 rounded-xl border p-3 transition-colors " + (
+                      form.mode === mode
+                        ? "border-red-600 bg-red-50"
+                        : "border-gray-200 bg-gray-50 hover:border-red-300"
+                    )}>
+                    <input type="radio" name="distribution_mode" value={mode} required
+                      className="mt-0.5 size-4 shrink-0 accent-red-700"
+                      checked={form.mode === mode}
+                      onChange={() => chooseMode(mode)} />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold text-gray-950">{label}</span>
+                      <span className="mt-1 block text-xs leading-5 text-gray-600">
+                        {MODE_INFO[mode]}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {seleccionada?.sale_mode && form.mode !== seleccionada.sale_mode && (
+                <p className="text-xs text-gray-600">
+                  En la adopción se acordó {MODE_LABELS[seleccionada.sale_mode]}.
+                  Puedes modificar el tipo de atención aquí sin cambiar el acuerdo del CRM.
+                </p>
+              )}
+            </fieldset>
+
+            <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+              <div>
+                <h4 className="text-sm font-black text-gray-950">3. ¿Desde dónde salen y dónde quedarán?</h4>
+                <p className="mt-1 text-xs leading-5 text-gray-600">
+                  Estos campos identifican lugares físicos, no la modalidad de atención.
+                  Elige dónde están los libros ahora y dónde se atenderán o custodiarán después.
+                  Guardar el plan no traslada mercadería.
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="block min-w-0 text-xs font-bold text-gray-700">
+                  Lugar de salida de los libros
+                  <select required value={form.source_id} className={fieldClass}
+                    onChange={(event) => field("source_id", event.target.value)}>
+                    <option value="">Elegir lugar de salida</option>
+                    {opciones.locations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name} · {LOCATION_KIND_LABEL[location.kind] || "Depósito"}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="mt-1 block font-normal leading-5 text-gray-600">
+                    Almacén donde se encuentra físicamente la mercadería.
+                  </span>
+                </label>
+                <label className="block min-w-0 text-xs font-bold text-gray-700">
+                  Lugar de llegada o atención
+                  <select required value={form.destination_id} className={fieldClass}
+                    onChange={(event) => field("destination_id", event.target.value)}>
+                    <option value="">Elegir destino</option>
+                    {matchingLocations.length > 0 && (
+                      <optgroup label="Sugeridos para esta modalidad">
+                        {matchingLocations.map((location) => (
+                          <option key={location.id} value={location.id}>
+                            {location.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="Otros lugares">
+                      {otherLocations.map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {location.name} · {LOCATION_KIND_LABEL[location.kind] || "Depósito"}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                  <span className="mt-1 block font-normal leading-5 text-gray-600">
+                    Lugar donde quedarán los libros para la atención o custodia.
+                  </span>
+                </label>
+              </div>
+              {source && destination && source.id === destination.id && (
+                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+                  El lugar de salida y el de llegada son el mismo.
+                  Selecciona otro destino para esta planificación de traslado.
+                </p>
+              )}
+              {destinationMismatch && (
+                <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                  Estás planificando {MODE_LABELS[form.mode]}, pero elegiste
+                  {" "}{destination.name} ({LOCATION_KIND_LABEL[destination.kind] || "otro lugar"}).
+                  Si esa es realmente la ubicación de atención, puedes conservarla;
+                  de lo contrario, revisa el destino antes de guardar.
+                </p>
+              )}
+              {form.mode && source && destination && (
+                <p className="rounded-lg bg-gray-950 p-3 text-xs leading-5 text-white">
+                  <strong>Resumen del recorrido:</strong> {MODE_LABELS[form.mode]}
+                  {" · "}Sale de <strong>{source.name}</strong> y se planifica hacia
+                  {" "}<strong>{destination.name}</strong>.
+                  Todavía no registra un traslado ni una venta.
+                </p>
+              )}
+            </section>
+
             {form.adoption_id && (
               <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 text-xs">
                 <div className="flex flex-wrap items-start justify-between gap-2">
