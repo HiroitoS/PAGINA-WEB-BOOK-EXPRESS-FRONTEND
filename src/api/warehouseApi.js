@@ -225,6 +225,16 @@ export async function opcionesDistribucion({ buscar = "", anio = "", page = 1 } 
   return data;
 }
 
+export async function consultarAsignacionDistribucion(adoptionId, operationId = null) {
+  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/asignacion/`, {
+    params: {
+      adoption_id: adoptionId,
+      ...(operationId ? { operation_id: operationId } : {}),
+    },
+  });
+  return data;
+}
+
 export async function crearDistribucion(payload) {
   const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/`, payload);
   return data;
