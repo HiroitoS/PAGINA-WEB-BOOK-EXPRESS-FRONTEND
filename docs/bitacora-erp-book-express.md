@@ -1,5 +1,13 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 16/11/2026 — Pedido Bruño 22 DE ABRIL enviado; siguiente prueba Recepción [COMPROBADO EN CAPTURA LOCAL]
+
+**Confirmación en UI:** Pedido Bruño `BE-OC-000003` del colegio **22 DE ABRIL**, campaña 2027, adopción 3, pasó a estado **Enviado a editorial**; la UI devuelve «Orden registrada como enviada a la editorial». Sus seis títulos suman **39 unidades** (8+8+8+5+5+5). Esto prueba el registro interno de envío, **no evidencia por sí solo la entrega real del correo**. Se está realizando una simulación en localhost, no se deben confundir registros de prueba con operaciones reales.
+
+**Decisión funcional por validar posteriormente:** «Facturas y conciliación» pertenece al dominio **Compras**, preferiblemente como submódulo **Facturas de proveedores / Conciliación** enlazado a pedidos y recepciones; no a la operación física del almacén. El formulario actual dentro del detalle de Pedidos debe revisarse visualmente más adelante; **no ocultarlo ni moverlo antes de concluir las pruebas**. La opción «Factura (referencia física)» en Recepción se refiere al documento con el que llegó mercadería y **no reemplaza** el registro administrativo/contable de factura proveedor.
+
+**Siguiente prueba guiada:** navegar a **ERP → Almacén → Recepción de mercadería → Pedidos pendientes**, filtrar Bruño y colegio 22 DE ABRIL, verificar `BE-OC-000003` y el saldo físico pendiente de 39 unidades, **sin grabar nada aún**. Después marcar este pedido, llenar guía/referencia de prueba y unidades por título, registrar **borrador**, comprobar y recién validar para ingresar stock. Prohibido crear guía SUNAT ficticia como si fuera auténtica; usar tipo «Otro documento» y referencia «PRUEBA-REC-001» en base de desarrollo, o documento real únicamente si lo hay. Registrar saldo anterior/posterior por ubicación y evitar validar doble guía.
+
 ## 16/11/2026 — Inicio de prueba integrada en Pedidos a Editoriales y observaciones UX [PENDIENTE PRUEBA MANUAL]
 
 **Captura local:** `/admin/erp/compras/pedidos`, pestaña *Adopciones confirmadas*. **Bruño:** 1 adopción, 39 unidades, colegio **22 DE ABRIL**, adopción 3 versión 1, 6 títulos, estado «sin pedido». **Santillana:** 2 adopciones, 30 unidades en total, 0 sin pedido, 1 por enviar y 1 enviado; es obligatorio desplegar este grupo e identificar los colegios antes de continuar, no concluir que las 2 están listas para recepción. Existe botón «Generar pedido» en Bruño. El usuario desea simular el camino de compra y recepción hasta inventario/traslados.
