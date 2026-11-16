@@ -666,6 +666,11 @@ export default function ERPDistribucionesPage() {
                   Elige dónde están los libros ahora y dónde se atenderán o custodiarán después.
                   Guardar el plan no traslada mercadería.
                 </p>
+                <Link to="/admin/erp/almacen/inventario?vista=consolidado"
+                  target="_blank" rel="noopener noreferrer"
+                  className="mt-2 inline-flex min-h-10 items-center text-xs font-bold text-red-700 underline underline-offset-2">
+                  Consultar existencias antes de elegir la salida
+                </Link>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="block min-w-0 text-xs font-bold text-gray-700">
