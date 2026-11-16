@@ -1,5 +1,27 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 15/11/2026 — Fase B2: asignación total o parcial por adopción, sin sobreplanificación [IMPLEMENTADA EN RAMAS; PRUEBA LOCAL PENDIENTE]
+
+**Regla comercial ratificada:** un colegio puede enviar TODA su adopción a Punto de venta, Feria o Consignación; fraccionarla entre esas modalidades es opcional. También puede planificar entregas parciales sucesivas. Las sumas de TODAS las operaciones activas de una misma adopción por artículo NO deben superar la cantidad adoptada. Anular una planificación libera ese presupuesto; NO equivale a devolver stock real.
+
+**Backend:** nuevo `warehouse/distribution_allocation.py` calcula `adopted / other_planned / current_planned / assignable / overallocated` por artículo y `warehouse/api_distribution.py` incorpora `GET .../operaciones-distribucion/asignacion/?adoption_id=<id>[&operation_id=<id>]`. `POST` ahora exige `items: [{ product_id, quantity }]` con cantidades enteras positivas; `PATCH` permite actualizar esas cantidades (incluso eliminar una línea dejando solo otros productos) con motivo mínimo 8 caracteres. `Adoption.objects.select_for_update()` dentro de transacción serializa altas, modificaciones y anulaciones de una misma adopción, evitando dos planificaciones simultáneas por encima del total. Se valida pertenencia del artículo a la adopción, duplicados, números inválidos, sobreasignación y permisos. La bitácora de evento conserva snapshots de las cantidades antes/después. No se cambian migraciones/modelos; `DistributionOperationLine.quantity_planned` sigue siendo únicamente plan, no reserva de StockEntry.
+
+**Frontend:** `ERPDistribucionesPage.jsx` muestra cada artículo adoptado con adoptados, asignados a otras entregas, saldo planificable y cantidad editable para esta entrega. Al elegir una adopción se prellena el saldo completo pendiente; el usuario puede reducirlo para asignación parcial o poner cero y omitir un artículo (al menos uno debe quedar positivo). Botón **Asignar todo el saldo** restaura el máximo comercial para esta operación. Se permite edición auditada de cantidades; la pantalla advierte cuando existen sobreplanificaciones legadas previas y no permite confirmarlas de nuevo. `warehouseApi.js` consulta el nuevo endpoint. Se limpió la selección al cambiar filtros de colegio/año para evitar asociar una adopción antigua; con un resultado, el texto pide seleccionarlo en el desplegable. La modalidad comercial original del CRM nunca cambia.
+
+**Pruebas automatizadas:** `warehouse/test_distribution.py` ampliado con tres operaciones de una adopción (ej.: 50/30/20 de un libro; 20/10/10 de otro), intento de cuarta que excede, anulación que libera cantidades, edición con motivo y snapshots, claves idempotentes, tipos inválidos y permisos. Primer commit de pruebas backend `f441f6c` aprobó CI en GitHub (ejecución 43794342186); CI del último import limpio pendiente de verificar. Primer commit completo UI `805fc39` aprobó lint/build (ejecución 43794734675); último ajuste de filtros pendiente de verificar. **Nunca afirmar prueba E2E local desde GitHub**.
+
+**Caso DEMO para verificar:** adopción de 10 LECTOPOLIS 3:
+1. En Entregas abrir **Editar planificación** de Feria (si ya está planificada con 10) y reducir a **6** con motivo; comprobar nuevo detalle e historial.
+2. Crear Entrega Punto de venta para la MISMA adopción, saldo mostrado **4**; asignar **3** y guardar; verificar los tres valores adoptado=10, otras entregas=6, nuevo saldo=4 antes de crear.
+3. Crear Consignación, saldo restante **1**; asignar 1.
+4. Probar una cuarta operación con cantidad >0; debe rechazarse. Probar modalidad libre (adopción diferente, 100% Feria o Tienda o Consignación) y confirmación de que no se mueven existencias.
+5. Anular la Consignación de prueba con motivo; debe liberar 1, dejando intacto el histórico. Probar correcciones con motivo y que el CRM conserve adopción/versión.
+6. Verificar navegadores 360/390/768/1366 px, año 2027, búsqueda/paginación y mensajes. No probar en datos reales productivos.
+
+**Para descargar y validar:** en ambos proyectos `git status`; si no hay cambios locales, `git pull --ff-only origin feature/erp-p08-traslados-por-guia`. Backend `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `python manage.py test warehouse.test_distribution` y `python manage.py test warehouse purchasing`. Frontend `npm run lint`, `npm run build`. B2 no tiene nueva migración; si el equipo está rezagado de P-08, respaldar BD de desarrollo y aplicar migraciones pendientes mediante el procedimiento previo. **Sin merge a main ni despliegue Tecnoweb**.
+
+**Límite siguiente:** B3 verificará existencias reales y lotes, reserva/preparación física (con supervisión). B4 deberá enlazar despacho, transporte, recepción y documentos a `DistributionOperation` y transferencias idempotentes; no se debe reutilizar `StockTransfer` directo antes de la recepción física.
+
 ## 13/11/2026 — Fase B1: buscador completo de adopciones para planificar entregas [IMPLEMENTADO EN RAMAS; PRUEBA LOCAL PENDIENTE]
 
 **Sentido comercial:** el selector anterior recuperaba solo las últimas 100 adopciones confirmadas, por lo que un colegio con adopción vigente podía no aparecer y quedar imposibilitado de planificar. El ERP debe encontrar adopciones reales por colegio y año sin cortes silenciosos.
