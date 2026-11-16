@@ -33,6 +33,7 @@ const AVAILABLE_ROLES = [
   "ATENCION",
   "ASESOR_COMERCIAL",
   "JEFE_COMERCIAL",
+  "ALMACEN",
 ];
 
 const EMPTY_FORM = {
@@ -88,6 +89,10 @@ function getRoleBadgeClass(role) {
     return "bg-purple-50 text-purple-700 ring-purple-100";
   }
 
+  if (role === "ALMACEN") {
+    return "bg-slate-100 text-slate-800 ring-slate-200";
+  }
+
   return "bg-gray-100 text-gray-700 ring-gray-200";
 }
 
@@ -110,6 +115,10 @@ function getRoleDescription(role) {
 
   if (role === "JEFE_COMERCIAL") {
     return "Coordina trabajo comercial, grupos y asignaciones del equipo.";
+  }
+
+  if (role === "ALMACEN") {
+    return "Controla las solicitudes de mercadería y las tareas autorizadas de almacén.";
   }
 
   return "Rol interno del sistema.";
@@ -154,7 +163,7 @@ function getInactiveUsersCount(users) {
 }
 
 function getUsersWithoutRoleCount(users) {
-  return users.filter((user) => (user.group_names || []).length === 0).length;
+  return users.filter((user) => !user.is_superuser && (user.group_names || []).length === 0).length;
 }
 
 export default function UsersPage() {
@@ -254,7 +263,7 @@ export default function UsersPage() {
   }
 
   function openCreateModal() {
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, groups: [] });
     setEditingUser(null);
     setShowFormPassword(false);
     setMessage("");
@@ -284,9 +293,10 @@ export default function UsersPage() {
   }
 
   function closeUserModal() {
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, groups: [] });
     setEditingUser(null);
     setShowFormPassword(false);
+    setError("");
     setIsUserModalOpen(false);
   }
 
@@ -303,8 +313,12 @@ export default function UsersPage() {
       return;
     }
 
-    if ((form.groups || []).length === 0) {
-      setError("Selecciona al menos un rol para el usuario.");
+    if (!editingUser && roles.length === 0) {
+      setError("No se han configurado roles para nuevas cuentas. Revisa la configuración de accesos.");
+      return;
+    }
+    if (!editingUser && (form.groups || []).length === 0) {
+      setError("Selecciona el rol principal antes de crear al usuario.");
       return;
     }
 
@@ -649,7 +663,7 @@ export default function UsersPage() {
                       <div className="flex flex-wrap gap-2">
                         {(user.group_names || []).length === 0 ? (
                           <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 ring-1 ring-gray-200">
-                            Sin rol
+                            {user.is_superuser ? "Superusuario · acceso total" : "Sin rol"}
                           </span>
                         ) : (
                           user.group_names.map((role) => (
@@ -748,6 +762,8 @@ export default function UsersPage() {
           roles={roles}
           saving={saving}
           showFormPassword={showFormPassword}
+          error={error}
+          onReloadRoles={loadData}
           onClose={closeUserModal}
           onSubmit={submitForm}
           onUpdateField={updateField}
@@ -784,6 +800,8 @@ function UserFormModal({
   roles,
   saving,
   showFormPassword,
+  error,
+  onReloadRoles,
   onClose,
   onSubmit,
   onUpdateField,
@@ -791,19 +809,23 @@ function UserFormModal({
   onToggleShowPassword,
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/65 p-2 backdrop-blur-sm sm:p-4">
       <form
         onSubmit={onSubmit}
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-form-title"
+        className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl sm:max-h-[90vh]"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-gray-100 bg-white px-5 py-4 sm:px-7">
+          <div className="min-w-0">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-red-700">
               <FaShieldAlt />
               {editingUser ? "Editar acceso" : "Nuevo acceso"}
             </div>
 
-            <h2 className="mt-2 text-2xl font-black text-gray-950">
+            <h2 id="user-form-title" className="mt-2 text-xl font-black text-gray-950 sm:text-2xl">
               {editingUser ? "Editar usuario" : "Crear usuario"}
             </h2>
 
@@ -817,13 +839,51 @@ function UserFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-gray-300 p-2 text-gray-600 transition hover:bg-gray-100"
+            disabled={saving}
+            aria-label="Cerrar formulario"
+            className="shrink-0 rounded-xl border border-gray-300 p-3 text-gray-600 transition hover:bg-gray-100 disabled:opacity-50"
           >
             <FaTimes />
           </button>
         </div>
 
-        <div className="mt-6 grid gap-5 md:grid-cols-2">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-7">
+          {error && (
+            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">
+              {error}
+            </p>
+          )}
+          {!editingUser && (
+            <section aria-label="Asignación del rol principal" className="rounded-2xl border border-red-200 bg-red-50/60 p-4">
+              <p className="text-sm font-black text-gray-950">1. Selecciona el rol principal *</p>
+              <p className="mt-1 text-xs leading-5 text-gray-600">
+                Determina los accesos iniciales de la cuenta. Puedes administrar permisos adicionales después.
+              </p>
+              {roles.length === 0 ? (
+                <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3">
+                  <p className="text-sm font-bold text-amber-900">
+                    Aún no hay roles configurados en esta instalación.
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-amber-900">
+                    Un administrador debe sincronizar los roles de Book Express para poder crear cuentas.
+                  </p>
+                  <button type="button" onClick={onReloadRoles} disabled={saving}
+                    className="mt-2 min-h-10 rounded-lg border border-amber-500 bg-white px-3 text-xs font-bold text-amber-900 hover:bg-amber-100">
+                    Volver a consultar roles
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {roles.map((role) => (
+                    <RoleOption key={role.id} role={role}
+                      checked={form.groups.includes(role.id)}
+                      onChange={() => onToggleRole(role.id)} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+          <div className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <TextField
               label="Usuario *"
@@ -898,30 +958,6 @@ function UserFormModal({
           />
         </div>
 
-        {!editingUser && (
-          <div className="mt-6">
-            <p className="mb-2 text-sm font-black text-gray-950">
-              Rol principal *
-            </p>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {roles.map((role) => (
-                <RoleOption
-                  key={role.id}
-                  role={role}
-                  checked={form.groups.includes(role.id)}
-                  onChange={() => onToggleRole(role.id)}
-                />
-              ))}
-            </div>
-
-            <p className="mt-2 text-xs leading-5 text-gray-500">
-              El rol define los permisos base. Después podrás asignar excepciones
-              desde la opción Gestionar acceso.
-            </p>
-          </div>
-        )}
-
         {editingUser && (
           <div className="mt-6 rounded-2xl border border-purple-100 bg-purple-50 p-4">
             <div className="flex gap-3">
@@ -962,7 +998,9 @@ function UserFormModal({
           </label>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-gray-200 bg-white px-5 py-3 sm:px-7 sm:py-4">
           <button
             type="button"
             onClick={onClose}
@@ -973,7 +1011,7 @@ function UserFormModal({
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || (!editingUser && (roles.length === 0 || form.groups.length === 0))}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-3 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <FaSave />
