@@ -5,6 +5,7 @@ import {
   actualizarDistribucion,
   anularDistribucion,
   crearDistribucion,
+  consultarAsignacionDistribucion,
   listarDistribuciones,
   opcionesDistribucion,
 } from "../../../api/warehouseApi";
@@ -48,7 +49,7 @@ function messageFromError(error) {
   if (!error?.response) return "No se pudo establecer conexión. Comprueba el servidor e inténtalo nuevamente.";
   if (error.response.status === 403) return "No tienes autorización para modificar esta distribución.";
   const data = error.response.data;
-  for (const field of ["detail", "reason", "destination_id", "scheduled_until", "adoption_id", "mode", "buscar", "anio", "page"]) {
+  for (const field of ["detail", "reason", "destination_id", "scheduled_until", "adoption_id", "mode", "buscar", "anio", "page", "items"]) {
     const value = data?.[field];
     if (typeof value === "string" && value.length < 240) return value;
     if (Array.isArray(value) && typeof value[0] === "string") return value[0];
@@ -68,6 +69,10 @@ export default function ERPDistribucionesPage() {
   const [adoptionPage, setAdoptionPage] = useState(1);
   const [adoptionBusy, setAdoptionBusy] = useState(false);
   const [selectedAdoption, setSelectedAdoption] = useState(null);
+  const [allocation, setAllocation] = useState(null);
+  const [allocationBusy, setAllocationBusy] = useState(false);
+  const [quantities, setQuantities] = useState({});
+  const [originalQuantities, setOriginalQuantities] = useState({});
   const [lista, setLista] = useState({ results: [], page: 1, pages: 1, count: 0 });
   const [page, setPage] = useState(1);
   const [version, setVersion] = useState(0);
@@ -123,9 +128,37 @@ export default function ERPDistribucionesPage() {
     return () => { ignore = true; window.clearTimeout(timer); };
   }, [formOpen, adoptionSearch, adoptionYear, adoptionPage]);
 
+  useEffect(() => {
+    if (!formOpen || !form.adoption_id) return undefined;
+    let ignore = false;
+    consultarAsignacionDistribucion(Number(form.adoption_id), editingId)
+      .then((summary) => {
+        if (ignore) return;
+        setAllocation(summary);
+        const values = Object.fromEntries(summary.items.map((line) => [
+          line.product_id, String(editingId ? line.current_planned : line.assignable),
+        ]));
+        setQuantities(values);
+        if (editingId) setOriginalQuantities(values);
+        setError("");
+      })
+      .catch((err) => {
+        if (!ignore) {
+          setAllocation(null);
+          setError(messageFromError(err));
+        }
+      })
+      .finally(() => { if (!ignore) setAllocationBusy(false); });
+    return () => { ignore = true; };
+  }, [formOpen, form.adoption_id, editingId, version]);
+
   function createNew() {
     setForm(blank());
     setSelectedAdoption(null);
+    setAllocation(null);
+    setAllocationBusy(false);
+    setQuantities({});
+    setOriginalQuantities({});
     setAdoptionSearch("");
     setAdoptionYear("");
     setAdoptionPage(1);
@@ -139,6 +172,10 @@ export default function ERPDistribucionesPage() {
   }
 
   function editExisting(item) {
+    setAllocation(null);
+    setAllocationBusy(true);
+    setQuantities({});
+    setOriginalQuantities({});
     setEditingId(item.id);
     setSelectedAdoption({
       id: item.adoption_id,
@@ -169,11 +206,18 @@ export default function ERPDistribucionesPage() {
     setNotice("");
   }
 
-  const hasChanges = Boolean(
+  const metadataChanged = Boolean(
     editingId && originalPlan && EDITABLE_FIELDS.some(
       (name) => String(form[name] ?? "").trim() !== String(originalPlan[name] ?? "").trim(),
     ),
   );
+  const quantitiesChanged = Boolean(
+    editingId && allocation && allocation.items.some((line) => (
+      Number(quantities[line.product_id] || 0)
+      !== Number(originalQuantities[line.product_id] || 0)
+    )),
+  );
+  const hasChanges = metadataChanged || quantitiesChanged;
 
   function field(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -182,6 +226,9 @@ export default function ERPDistribucionesPage() {
   function chooseAdoption(value) {
     const found = opciones.adoptions.find((item) => String(item.id) === value);
     setSelectedAdoption(found || null);
+    setAllocation(null);
+    setAllocationBusy(Boolean(value));
+    setQuantities({});
     setForm((prev) => ({
       ...prev, adoption_id: value,
       mode: MODE_LABELS[found?.sale_mode] ? found.sale_mode : prev.mode,
@@ -202,6 +249,28 @@ export default function ERPDistribucionesPage() {
     }
     if (form.scheduled_on && form.scheduled_until && form.scheduled_until < form.scheduled_on) {
       setError("La fecha final debe ser igual o posterior a la inicial.");
+      return;
+    }
+    if (!allocation || allocationBusy || allocation.adoption_id !== Number(form.adoption_id)) {
+      setError("Consulta las cantidades de la adopción antes de guardar.");
+      return;
+    }
+    const items = [];
+    for (const line of allocation.items) {
+      const raw = String(quantities[line.product_id] ?? "0").trim();
+      if (!/^\d+$/.test(raw)) {
+        setError("Indica unidades enteras para " + line.product + "; no se admiten decimales.");
+        return;
+      }
+      const quantity = Number(raw);
+      if (!Number.isSafeInteger(quantity) || quantity > line.assignable) {
+        setError("Para " + line.product + " puedes asignar hasta " + line.assignable + " unidades.");
+        return;
+      }
+      if (quantity > 0) items.push({ product_id: line.product_id, quantity });
+    }
+    if (!items.length) {
+      setError("Asigna al menos un libro para esta entrega.");
       return;
     }
     if (editingId && !hasChanges) {
@@ -227,8 +296,9 @@ export default function ERPDistribucionesPage() {
           scheduled_until: form.scheduled_until || null,
           notes: form.notes.trim(),
           reason: form.reason.trim(),
+          items,
         });
-        setNotice("Cambio de distribución registrado con su motivo e historial. No se movieron libros.");
+        setNotice("Planificación y cantidades actualizadas con historial. No se movieron libros.");
       } else {
         await crearDistribucion({
           idempotency_key: nonce,
@@ -241,11 +311,13 @@ export default function ERPDistribucionesPage() {
           scheduled_on: form.scheduled_on || null,
           scheduled_until: form.scheduled_until || null,
           notes: form.notes.trim(),
+          items,
         });
-        setNotice("Distribución planificada. Los libros todavía no se han preparado ni enviado.");
+        setNotice("Cantidades planificadas. Los libros todavía no se han reservado ni enviado.");
       }
       setEditingId(null);
       setOriginalPlan(null);
+      setAllocation(null);
       setFormOpen(false);
       setLoading(true);
       setPage(1);
