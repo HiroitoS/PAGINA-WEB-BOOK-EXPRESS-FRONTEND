@@ -10,6 +10,7 @@ import {
   opcionesDistribucion,
 } from "../../../api/warehouseApi";
 import WarehouseMovementTabs from "../../../components/admin/WarehouseMovementTabs";
+import DistributionPreparationPanel from "../../../components/admin/DistributionPreparationPanel";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 
@@ -47,6 +48,14 @@ const STATUS = {
   planned: {
     name: "Por preparar",
     styles: "border-amber-200 bg-amber-50 text-amber-800",
+  },
+  reserved: {
+    name: "Existencias reservadas",
+    styles: "border-blue-200 bg-blue-50 text-blue-900",
+  },
+  prepared: {
+    name: "Preparada",
+    styles: "border-green-200 bg-green-50 text-green-900",
   },
   cancelled: {
     name: "Anulada",
@@ -938,9 +947,14 @@ export default function ERPDistribucionesPage() {
                   Modalidad acordada en CRM: {MODE_LABELS[item.original_mode] || "No indicada"}
                 </p>
                 <p className="text-gray-600">
-                  Estas cantidades corresponden a ESTA entrega planificada.
-                  No son libros reservados ni enviados: la preparación y el despacho se
-                  confirmarán posteriormente.
+                  Estas cantidades corresponden a esta entrega.
+                  {item.status === "planned"
+                    ? " Aún no se han reservado ni despachado libros."
+                    : item.status === "reserved"
+                      ? " Los libros están reservados, pero no despachados."
+                      : item.status === "prepared"
+                        ? " Los libros están preparados; aún no han salido del almacén."
+                        : " Esta entrega fue anulada."}
                 </p>
                 <div className="space-y-1">
                   {item.items.map((line) => (
@@ -950,22 +964,28 @@ export default function ERPDistribucionesPage() {
                     </p>
                   ))}
                 </div>
+                <DistributionPreparationPanel operation={item} canManage={puedeGestionar}
+                  onChanged={() => setVersion((current) => current + 1)} />
                 <p className="font-black text-gray-900">Historial de cambios</p>
                 {item.events.map((event, idx) => (
                   <p key={idx} className="break-words text-gray-700">
                     {event.actor} · {event.action === "created" ? "Planificación creada"
-                      : event.action === "cancelled" ? "Planificación anulada" : "Planificación modificada"}
+                      : event.action === "cancelled" ? "Planificación anulada"
+                        : event.action === "stock_reserved" ? "Existencias reservadas"
+                          : event.action === "prepared" ? "Preparación verificada"
+                            : event.action === "transport_draft_updated" ? "Datos de traslado actualizados"
+                              : "Planificación modificada"}
                     {event.previous?.mode && event.previous.mode !== event.current?.mode
                       ? ` · ${MODE_LABELS[event.previous.mode]} → ${MODE_LABELS[event.current.mode]}`
                       : ""}
                     {event.reason ? ` · ${event.reason}` : ""}
                   </p>
                 ))}
-                {puedeGestionar && item.status === "planned" && (
+                {puedeGestionar && item.status !== "cancelled" && (
                   cancelId === item.id ? (
                     <div className="space-y-2 rounded-lg bg-gray-50 p-3">
                       <label className="block text-xs font-bold text-gray-800">
-                        ¿Por qué se anula la planificación?
+                        ¿Por qué se anula esta entrega? Las reservas se liberarán.
                         <textarea minLength={8} maxLength={500} rows={2} value={cancelReason}
                           onChange={(event) => setCancelReason(event.target.value)}
                           className={fieldClass} />
@@ -985,7 +1005,7 @@ export default function ERPDistribucionesPage() {
                     <button type="button" className={buttonClass} onClick={() => {
                       setCancelId(item.id); setCancelReason(""); setError("");
                     }}>
-                      Anular planificación
+                      Anular entrega
                     </button>
                   )
                 )}
