@@ -1202,7 +1202,7 @@ export default function ERPRecepcionPage() {
                     <div className="grid gap-3 sm:grid-cols-3">
                       <label className="text-xs font-bold text-gray-700">Documento
                         <select className={`mt-1 ${estilosCampo}`} value={edicion?.document_type ?? ""}
-                          disabled={!puedeCrear} onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_type: event.target.value })); }}>
+                          disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"} onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_type: event.target.value })); }}>
                           <option value="guide">Guía de remisión</option>
                           <option value="invoice">Factura (referencia física)</option>
                           <option value="other">Otro documento</option>
@@ -1210,11 +1210,11 @@ export default function ERPRecepcionPage() {
                       </label>
                       <label className="text-xs font-bold text-gray-700">Número
                         <input className={`mt-1 ${estilosCampo}`} value={edicion?.document_number ?? ""}
-                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_number: event.target.value })); }} disabled={!puedeCrear} />
+                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_number: event.target.value })); }} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"} />
                       </label>
                       <label className="text-xs font-bold text-gray-700">Fecha
                         <input className={`mt-1 ${estilosCampo}`} type="date" value={edicion?.received_on ?? ""}
-                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, received_on: event.target.value })); }} disabled={!puedeCrear} />
+                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, received_on: event.target.value })); }} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"} />
                       </label>
                     </div>
                     <div className="overflow-x-auto">
@@ -1224,13 +1224,13 @@ export default function ERPRecepcionPage() {
                           <tr key={linea.order_item_id} className="border-b border-gray-100">
                             <td className="py-2 pr-3 font-semibold">{linea.nombre}<span className="block text-xs font-normal text-gray-500">Pedido BE-OC-{String(linea.pedido).padStart(6, "0")}</span></td>
                             <td><input type="number" min="1" step="1" className="w-16 rounded-lg border border-gray-300 p-2"
-                              aria-label={`Llegaron ${linea.nombre}`} value={linea.quantity_arrived} disabled={!puedeCrear}
+                              aria-label={`Llegaron ${linea.nombre}`} value={linea.quantity_arrived} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"}
                               onChange={(event) => modificarLinea(index, "quantity_arrived", event.target.value)} /></td>
                             <td><input type="number" min="0" step="1" className="w-16 rounded-lg border border-gray-300 p-2"
-                              aria-label={`Según guía ${linea.nombre}`} value={linea.quantity_documented ?? ""} disabled={!puedeCrear}
+                              aria-label={`Según guía ${linea.nombre}`} value={linea.quantity_documented ?? ""} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"}
                               onChange={(event) => modificarLinea(index, "quantity_documented", event.target.value)} /></td>
                             <td><input type="number" min="0" step="1" className="w-16 rounded-lg border border-gray-300 p-2"
-                              aria-label={`Observados ${linea.nombre}`} value={linea.quantity_observed} disabled={!puedeCrear}
+                              aria-label={`Observados ${linea.nombre}`} value={linea.quantity_observed} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"}
                               onChange={(event) => modificarLinea(index, "quantity_observed", event.target.value)} /></td>
                             <td className="text-center font-semibold tabular-nums text-amber-800">{linea.quantity_extra ?? "0"}</td>
                             <td>{Number(linea.quantity_arrived) - Number(linea.quantity_observed) - Number(linea.quantity_extra ?? 0)}</td>
@@ -1241,19 +1241,25 @@ export default function ERPRecepcionPage() {
                     <p className="text-xs text-gray-600">La guía indica lo declarado por la editorial; físico es lo contado. Observados son libros dañados o incorrectos que sí llegaron. Los adicionales se calculan automáticamente.</p>
                     <label className="block text-xs font-bold text-gray-700">Observaciones
                       <textarea className={`mt-1 ${estilosCampo}`} rows={2} value={edicion?.notes ?? ""}
-                        onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, notes: event.target.value })); }} disabled={!puedeCrear} />
+                        onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, notes: event.target.value })); }} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"} />
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {puedeValidar && <button type="button" onClick={solicitarValidacion} disabled={procesando}
+                      {puedeCrear && recepcionSeleccionada.status === "draft" && (
+                        <button type="button" disabled={procesando}
+                          onClick={enviarParaAprobacion} className={estilosBoton}>
+                          Enviar a aprobación
+                        </button>
+                      )}
+                      {puedeValidar && recepcionSeleccionada.status === "submitted" && <button type="button" onClick={solicitarValidacion} disabled={procesando}
                         className={estilosBoton}>
-                        Guardar y validar recepción
+                        Aprobar recepción e ingresar a inventario
                       </button>}
-                      {puedeCrear && <button type="submit" disabled={procesando || !cambiosSinGuardar}
+                      {puedeCrear && recepcionSeleccionada.status === "draft" && <button type="submit" disabled={procesando || !cambiosSinGuardar}
                         className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-600 underline-offset-4 transition hover:text-red-700 hover:underline disabled:opacity-40">
-                        Guardar sin validar
+                        Guardar borrador
                       </button>}
                     </div>
-                    {puedeCrear && (
+                    {puedeCrear && recepcionSeleccionada.status === "draft" && (
                       <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                         {!confirmarAnulacion ? (
                           <button type="button" onClick={() => setConfirmarAnulacion(true)}
@@ -1288,8 +1294,28 @@ export default function ERPRecepcionPage() {
                         )}
                       </div>
                     )}
+                    {recepcionSeleccionada.status === "submitted" && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <p className="text-xs font-bold text-amber-900">
+                          Pendiente de aprobación. Las cantidades todavía no ingresan al inventario.
+                        </p>
+                        {puedeValidar && (
+                          <label className="mt-3 block text-xs font-bold text-gray-800">
+                            Motivo para devolver al almacenero
+                            <textarea rows={2} maxLength={500} value={motivoDevolucion}
+                              onChange={(event) => setMotivoDevolucion(event.target.value)}
+                              className={`mt-1 ${estilosCampo}`} />
+                            <button type="button" onClick={devolverParaCorreccion}
+                              disabled={procesando || motivoDevolucion.trim().length < 8}
+                              className="mt-2 min-h-10 rounded-lg border border-amber-400 bg-white px-3 text-xs font-bold text-amber-950 disabled:opacity-50">
+                              Devolver para corrección
+                            </button>
+                          </label>
+                        )}
+                      </div>
+                    )}
                     <p className="text-xs text-gray-500">
-                      Al validar se actualiza el inventario. Si el documento ya fue
+                      Al aprobar se actualiza el inventario. Si el documento ya fue
                       validado en otra recepción, anula este borrador duplicado.
                     </p>
                   </form>
@@ -1339,11 +1365,11 @@ export default function ERPRecepcionPage() {
       {confirmacionAbierta && recepcionSeleccionada && (
         <ConfirmActionDialog open
           eyebrow="Confirmación de almacén"
-          title="Confirmar recepción e ingreso"
+          title="Aprobar recepción e ingreso"
           description={<>Confirmarás las cantidades verificadas de <strong>{recepcionSeleccionada.provider_name}</strong>,
             documento <strong>{recepcionSeleccionada.document_number}</strong>.</>}
           processing={procesando}
-          confirmLabel="Confirmar e ingresar"
+          confirmLabel="Aprobar e ingresar"
           onCancel={() => setConfirmacionAbierta(false)}
           onConfirm={confirmarValidacion}>
           <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-left sm:grid-cols-4">
