@@ -36,6 +36,7 @@ const ImportsPage = lazy(() => import("../pages/admin/ImportsPage"));
 const UsersPage = lazy(() => import("../pages/admin/UsersPage"));
 const NotificationsPage = lazy(() => import("../pages/admin/NotificationsPage"));
 const UserPermissionsPage = lazy(() => import("../pages/admin/UserPermissionsPage"));
+const RolePermissionsPage = lazy(() => import("../pages/admin/RolePermissionsPage"));
 const WorkspaceTodoPage = lazy(() => import("../pages/admin/workspace/WorkspaceTodoPage"));
 const WorkspaceTasksPage = lazy(() => import("../pages/admin/workspace/WorkspaceTasksPage"));
 const WorkspaceRemindersPage = lazy(() => import("../pages/admin/workspace/WorkspaceRemindersPage"));
@@ -492,6 +493,10 @@ const router = createBrowserRouter([
           {
             path: "notificaciones",
             element: renderLazyPage(NotificationsPage),
+          },
+          {
+            path: "roles-permisos",
+            element: protectRole(renderLazyPage(RolePermissionsPage), ADMIN_ONLY_ROLES),
           },
           {
             path: "usuarios",
