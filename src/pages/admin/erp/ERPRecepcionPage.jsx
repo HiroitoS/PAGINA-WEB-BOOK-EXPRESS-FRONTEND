@@ -471,6 +471,10 @@ export default function ERPRecepcionPage() {
   async function registrarBorrador(event) {
     event.preventDefault();
     if (procesando) return;
+    if (documentoDuplicado) {
+      setError("Este documento ya figura en Recepciones registradas. Abre el registro existente para evitar duplicidades.");
+      return;
+    }
     const ordenes = pedidos.filter((pedido) => pedidosMarcados.includes(pedido.id));
     const lineas = lineasPreparadas
       .filter((linea) => String(cantidades[linea.item_id]?.llegada ?? "").trim() !== "")
@@ -790,15 +794,45 @@ export default function ERPRecepcionPage() {
 
           <form onSubmit={registrarBorrador} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 xl:col-span-3">
             <div>
-              <h2 className="font-black text-gray-950">Registrar entrega física</h2>
-              <p className="mt-1 text-sm text-gray-600">Selecciona pedidos de una misma editorial. Una guía puede corresponder a varios colegios.</p>
+              <h2 className="text-base font-black text-gray-950">Registrar entrega física</h2>
+              <p className="mt-1 text-xs text-gray-600">
+                Selecciona pedidos de la misma editorial; una guía puede incluir varios colegios.
+              </p>
             </div>
+            {borradorExistente && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="max-w-2xl text-xs leading-5 text-amber-950">
+                  <strong>Ya hay un borrador para este pedido.</strong>
+                  {" "}Si es la misma entrega, continúa ese registro.
+                  Si es una entrega distinta, utiliza otro documento.
+                </p>
+                <button type="button"
+                  onClick={() => { setPestana("historial"); abrirRecepcion(borradorExistente); }}
+                  className="min-h-10 rounded-lg border border-amber-300 bg-white px-3 text-xs font-bold text-amber-950">
+                  Continuar borrador N.º {borradorExistente.id}
+                </button>
+              </div>
+            )}
             {pedidoDePruebaSeleccionado && (
               <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
                 <strong>Pedido de demostración.</strong> Usa «Otro documento» y una referencia
                 interna como «PRUEBA-REC-001» si estás simulando la entrega. No registres una
                 guía oficial inexistente. Al validar, las cantidades ingresarán al inventario
                 de esta base de datos y quedarán identificadas como una operación de prueba.
+              </div>
+            )}
+            {documentoDuplicado && (
+              <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                <p className="text-xs font-semibold text-red-900">
+                  El documento {documento.document_number.trim()} ya existe como
+                  {" "}{documentoDuplicado.status === "validated" ? "recepción validada" : "borrador"}.
+                  No registres dos veces la misma entrega.
+                </p>
+                <button type="button"
+                  onClick={() => { setPestana("historial"); abrirRecepcion(documentoDuplicado); }}
+                  className="min-h-10 rounded-lg border border-red-300 bg-white px-3 text-xs font-bold text-red-900">
+                  Abrir registro N.º {documentoDuplicado.id}
+                </button>
               </div>
             )}
             <div className="grid gap-3 sm:grid-cols-3">
@@ -1005,7 +1039,12 @@ export default function ERPRecepcionPage() {
               Al validar una recepción, se actualizarán las cantidades pendientes y el inventario.
               Los libros adicionales conformes se registrarán por separado, sin duplicar unidades.
             </p>
-            {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando || !pedidosMarcados.length}>Guardar recepción en borrador</button>}
+            {puedeCrear && (
+                <button type="submit" className={estilosBoton}
+                  disabled={procesando || !pedidosMarcados.length || Boolean(documentoDuplicado)}>
+                  Guardar recepción en borrador
+                </button>
+              )}
           </form>
         </div>
       )}
@@ -1017,7 +1056,7 @@ export default function ERPRecepcionPage() {
             {recepciones.length === 0 && !cargando && (
               <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">Todavía no se registraron recepciones.</p>
             )}
-            {recepciones.map((recepcion) => (
+            {recepcionesActivas.map((recepcion) => (
               <button type="button" key={recepcion.id} onClick={() => abrirRecepcion(recepcion)}
                 className={`w-full rounded-xl border p-3 text-left transition hover:shadow-sm ${colorTarjetaRecepcion(recepcion)} ${recepcionId === recepcion.id ? "ring-2 ring-red-600 ring-offset-1" : ""}`}>
                 <span className="flex items-center justify-between gap-2">
@@ -1032,6 +1071,23 @@ export default function ERPRecepcionPage() {
                  </span>
               </button>
             ))}
+            {recepcionesAnuladas.length > 0 && (
+              <details className="rounded-xl border border-gray-200 bg-white p-3">
+                <summary className="cursor-pointer text-xs font-black text-gray-700">
+                  Borradores anulados ({recepcionesAnuladas.length})
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {recepcionesAnuladas.map((recepcion) => (
+                    <button key={recepcion.id} type="button"
+                      onClick={() => abrirRecepcion(recepcion)}
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2 text-left text-xs text-gray-700 hover:bg-gray-100">
+                      {recepcion.provider_name} · N.º {recepcion.id} ·
+                      {" "}{recepcion.document_number || "Sin número"}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )}
             {masRecepciones && (
               <button type="button" onClick={() => cargarMas("recepciones")} disabled={procesando}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700">
@@ -1052,7 +1108,20 @@ export default function ERPRecepcionPage() {
                   </div>
                   <EstadoRecepcion estado={recepcionSeleccionada.status} cumplimiento={recepcionSeleccionada.fulfillment_status} />
                 </div>
-                {recepcionSeleccionada.status === "validated" ? (
+                {recepcionSeleccionada.status === "cancelled" ? (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="text-sm font-black text-gray-900">Borrador anulado</p>
+                    <p className="mt-1 text-xs leading-5 text-gray-600">
+                      Se conserva su historial, pero esta recepción no ingresó
+                      mercadería al inventario.
+                    </p>
+                    <p className="mt-2 text-xs text-gray-700">
+                      Motivo: {recepcionSeleccionada.events?.find(
+                        (evento) => evento.action === "cancelled",
+                      )?.notes || "Consulta el historial."}
+                    </p>
+                  </div>
+                ) : recepcionSeleccionada.status === "validated" ? (
                   <div className="space-y-3">
                     <p className="text-sm text-gray-700">
                       <strong>Documento:</strong> {recepcionSeleccionada.document_number}
@@ -1139,7 +1208,45 @@ export default function ERPRecepcionPage() {
                         Guardar sin validar
                       </button>}
                     </div>
-                    <p className="text-xs text-gray-500">Al confirmar, la recepción y el ingreso a Inventario se registran conjuntamente. Puedes guardar sin validar si aún no terminaste el conteo.</p>
+                    {puedeCrear && (
+                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                        {!confirmarAnulacion ? (
+                          <button type="button" onClick={() => setConfirmarAnulacion(true)}
+                            className="min-h-10 text-xs font-bold text-red-800 underline underline-offset-2">
+                            Anular este borrador (sin tocar inventario)
+                          </button>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-xs font-bold text-gray-950">
+                              Anulación auditada: el registro no se eliminará.
+                            </p>
+                            <label className="block text-xs font-semibold text-gray-700">
+                              Motivo de anulación (obligatorio)
+                              <textarea maxLength={500} rows={2} className={estilosCampo}
+                                placeholder="Ej. Recepción duplicada antes de validar"
+                                value={motivoAnulacion}
+                                onChange={(event) => setMotivoAnulacion(event.target.value)} />
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              <button type="button" disabled={procesando || motivoAnulacion.trim().length < 8}
+                                onClick={anularBorradorActual}
+                                className="min-h-10 rounded-lg bg-red-700 px-3 text-xs font-black text-white disabled:opacity-50">
+                                Confirmar anulación
+                              </button>
+                              <button type="button" disabled={procesando}
+                                onClick={() => { setConfirmarAnulacion(false); setMotivoAnulacion(""); }}
+                                className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700">
+                                Volver
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      Al validar se actualiza el inventario. Si el documento ya fue
+                      validado en otra recepción, anula este borrador duplicado.
+                    </p>
                   </form>
                 )}
                 {recepcionSeleccionada.status === "validated" && recepcionSeleccionada.notes && (
