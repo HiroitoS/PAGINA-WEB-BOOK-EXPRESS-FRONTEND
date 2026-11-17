@@ -966,6 +966,12 @@ export default function ERPDistribucionesPage() {
                 </div>
                 <DistributionPreparationPanel operation={item} canManage={puedeGestionar}
                   onChanged={() => setVersion((current) => current + 1)} />
+                {item.status === "prepared" && (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                    La entrega ya fue preparada. Para cancelarla se requiere
+                    verificar físicamente el retorno de los libros antes de liberar la reserva.
+                  </p>
+                )}
                 <p className="font-black text-gray-900">Historial de cambios</p>
                 {item.events.map((event, idx) => (
                   <p key={idx} className="break-words text-gray-700">
@@ -981,7 +987,7 @@ export default function ERPDistribucionesPage() {
                     {event.reason ? ` · ${event.reason}` : ""}
                   </p>
                 ))}
-                {puedeGestionar && item.status !== "cancelled" && (
+                {puedeGestionar && ["planned", "reserved"].includes(item.status) && (
                   cancelId === item.id ? (
                     <div className="space-y-2 rounded-lg bg-gray-50 p-3">
                       <label className="block text-xs font-bold text-gray-800">
