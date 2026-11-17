@@ -1,5 +1,14 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 16/11/2026 — Prueba de borrador de recepción y ambigüedad de «Conciliación por pedido» [REVISIÓN UX PENDIENTE]
+
+**Capturas locales:** la recepción Bruño `PRUEBA-REC-BRUNO-001`, documento «Otro documento», está **En borrador**; seis líneas (8+8+8+5+5+5) proponen 39 unidades físicas, 0 observadas. En «Conciliación por pedido», pedido `BE-OC-000003` / 22 DE ABRIL muestra **Solicitadas 39, Aceptadas acumuladas 0, Por recibir 39**, historial de entregas validadas (0). Esto es **correcto**: guardar borrador no afecta pedido/stock, pero «Prop. aceptación 39» es propuesta de la guía, no confirmación.
+
+**Diagnóstico de código:** `SeguimientoPedidos` en `ERPRecepcionPage.jsx` presenta `seguimiento_recepcion` (backend `warehouse/receiving.py`), acumulando exclusivamente líneas de recepciones **validadas** y mostrando, por separado, la propuesta de la recepción actualmente abierta. No es conciliación contable ni emparejamiento con facturas del proveedor.
+
+**Recomendación profesional (no eliminar la funcionalidad):** conservar control acumulado contra pedido porque evita confusiones con entregas parciales, múltiples guías y diferencias. Renombrar el bloque a **«Seguimiento del pedido»** o **«Control de cantidades recibidas»**, con subtítulo explícito «Esta recepción está en borrador: las 39 propuestas todavía no se suman ni ingresan al inventario». Mostrar tres KPIs compactos siempre; tabla detallada plegable o visible al validar/consultar detalles. Reservar **«Conciliación de facturas»** para módulo Compras, cruzando pedido, mercadería validada y documento facturado. No mover datos ni alterar reglas contables por un cambio de etiqueta.
+
+**Próximo paso:** tomar captura/informe del inventario actual por producto antes de validar; solo después validar en BD local de desarrollo y comprobar salto **39 pendientes → 0**, existencias +39 en ubicación inicial, historial actualizado y no duplicidad ante reintento. No asumir inventario anterior cero.
 ## 16/11/2026 — Recepción de Bruño enlazada con pedido, filtro por nivel y referencia UX [PRUEBA LOCAL PENDIENTE]
 
 **Capturas de recepción:** `/admin/erp/almacen/recepciones` muestra pedido `BE-OC-000003` de Bruño para colegio **22 DE ABRIL**, con **39 solicitadas, 0 aceptadas y 39 pendientes**. Las seis líneas corresponden a tres KIT CRECIENDO (8+8+8) y tres COMUNICACIÓN KIT (5+5+5), todos asociados al mismo pedido. Al marcar el pedido se cargan automáticamente sus seis líneas; «Guía» se precarga con saldo pendiente y «Físico» permanece vacío. **Enlace Compras → Almacén aprobado visualmente; todavía NO se ha guardado ni validado una recepción.**
