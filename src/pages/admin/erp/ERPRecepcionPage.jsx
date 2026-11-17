@@ -103,90 +103,149 @@ function validarLineas(lineas) {
 }
 
 function SeguimientoPedidos({ data, cargando, error, estado }) {
-  if (cargando) return <p role="status" className="text-sm text-gray-600">Consultando entregas y saldos actualizados…</p>;
+  const [vista, setVista] = useState("resumen");
+  if (cargando) return <p role="status" className="text-sm text-gray-600">Consultando cantidades del pedido…</p>;
   if (error) return <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>;
-  if (!data) return null;
+  if (!data?.pedidos?.length) return null;
 
   return (
-    <section className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4" aria-label="Seguimiento de pedidos">
-      <div>
-        <h3 className="font-black text-gray-900">Conciliación por pedido</h3>
-        <p className="mt-1 text-xs text-gray-600">
-          Datos acumulados de recepciones validadas. Las cantidades de la guía seleccionada
-          son definitivas solo si esa recepción está validada.
-        </p>
+    <section className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4"
+      aria-label="Seguimiento del pedido">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-black text-gray-950">Seguimiento del pedido</h3>
+          <p className="mt-1 text-xs text-gray-600">
+            Compara lo solicitado con lo recibido y validado por Almacén.
+          </p>
+        </div>
+        <div role="tablist" aria-label="Vistas de seguimiento de pedidos"
+          className="inline-flex gap-1 rounded-lg bg-gray-100 p-1">
+          {[
+            ["resumen", "Resumen"],
+            ["detalle", "Ver detalle"],
+          ].map(([value, label]) => (
+            <button key={value} type="button" role="tab"
+              aria-selected={vista === value}
+              onClick={() => setVista(value)}
+              className={`min-h-9 rounded-md px-3 text-xs font-bold transition ${
+                vista === value
+                  ? "bg-gray-950 text-white shadow-sm"
+                  : "text-gray-700 hover:bg-white"
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
-      {data.pedidos.map((pedido) => (
-        <div key={pedido.pedido_id} className="space-y-3 rounded-xl border border-gray-200 bg-white p-3">
-          <div>
-            <p className="font-bold text-gray-900">{pedido.colegio}</p>
-            <p className="text-xs text-gray-500">{pedido.referencia}</p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 p-2 text-center">
-            <div><p className="text-xs text-gray-600">Solicitadas</p><p className="text-lg font-black tabular-nums">{pedido.solicitadas}</p></div>
-            <div><p className="text-xs text-gray-600">Aceptadas acumuladas</p><p className="text-lg font-black tabular-nums">{pedido.aceptadas}</p></div>
-            <div><p className="text-xs text-gray-600">Por recibir</p>
-              <p className={`text-lg font-black tabular-nums ${pedido.pendientes ? "text-amber-800" : "text-green-800"}`}>{pedido.pendientes}</p>
+      {estado === "draft" && (
+        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+          Recepción en borrador: las cantidades propuestas todavía no ingresan al
+          Inventario ni reducen el saldo pendiente. Solo se cuentan las validaciones.
+        </p>
+      )}
+      {estado === "cancelled" && (
+        <p className="mt-3 rounded-lg bg-gray-100 px-3 py-2 text-xs text-gray-700">
+          Este borrador fue anulado y no modificó las existencias.
+        </p>
+      )}
+      <div role="tabpanel" className="mt-3 space-y-3">
+        {data.pedidos.map((pedido) => (
+          <div key={pedido.pedido_id} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-bold text-gray-950">{pedido.colegio}</p>
+                <p className="text-xs text-gray-500">{pedido.referencia}</p>
+              </div>
+              <span className={`rounded-full px-2 py-1 text-xs font-bold ${
+                pedido.pendientes ? "bg-amber-100 text-amber-900" : "bg-green-100 text-green-900"
+              }`}>
+                {pedido.pendientes ? "Pendiente de completar" : "Pedido recibido"}
+              </span>
             </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-gray-200 text-gray-600">
-                <tr>
-                  <th className="min-w-48 py-2 pr-2">Libro</th>
-                  <th className="px-2 text-center">Solic.</th>
-                  <th className="px-2 text-center">{estado === "validated" ? "Acept. esta guía" : "Prop. aceptación"}</th>
-                  <th className="px-2 text-center">Adic. guía</th>
-                  <th className="px-2 text-center">No conf.</th>
-                  <th className="px-2 text-center">Acept. total</th>
-                  <th className="px-2 text-center">Pendiente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pedido.productos.map((linea) => (
-                  <tr key={linea.item_id} className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-semibold text-gray-900">{linea.producto}</td>
-                    <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
-                    <td className="px-2 text-center tabular-nums">{linea.aceptadas_en_guia}</td>
-                    <td className="px-2 text-center font-semibold tabular-nums text-amber-800">{linea.excedentes_en_guia ?? 0}</td>
-                    <td className="px-2 text-center tabular-nums">{linea.observadas_en_guia}</td>
-                    <td className="px-2 text-center tabular-nums">{linea.aceptadas_acumuladas}</td>
-                    <td className={`px-2 text-center font-bold tabular-nums ${linea.pendientes ? "text-amber-800" : "text-green-800"}`}>{linea.pendientes}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <details className="rounded-lg border border-gray-200 p-3">
-            <summary className="cursor-pointer text-sm font-bold text-gray-800">
-              Historial de entregas ({pedido.entregas.length})
-            </summary>
-            {pedido.entregas.length === 0 ? (
-              <p className="mt-2 text-xs text-gray-600">Aún no hay entregas validadas.</p>
-            ) : (
-              <div className="mt-2 overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-gray-200 text-gray-600">
-                    <tr><th className="py-2">Fecha</th><th>Guía / documento</th><th className="text-center">Llegaron</th><th className="text-center">Aceptadas</th><th className="text-center">Adicionales</th><th className="text-center">No conformes</th></tr>
-                  </thead>
-                  <tbody>
-                    {pedido.entregas.map((entrega, index) => (
-                      <tr key={entrega.receipt_id} className="border-b border-gray-100">
-                        <td className="py-2 pr-2">{index + 1}. {entrega.received_on}</td>
-                        <td className="pr-2">{entrega.document_number}{entrega.es_recepcion_actual ? " · Esta guía" : ""}</td>
-                        <td className="text-center tabular-nums">{entrega.llegaron}</td>
-                        <td className="text-center tabular-nums">{entrega.aceptadas}</td>
-                        <td className="text-center tabular-nums text-amber-800">{entrega.excedentes ?? 0}</td>
-                        <td className="text-center tabular-nums">{entrega.observadas}</td>
+            <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-white p-2 text-center">
+              <div>
+                <p className="text-xs text-gray-600">Solicitados</p>
+                <p className="text-lg font-black tabular-nums text-gray-950">{pedido.solicitadas}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600">Validados</p>
+                <p className="text-lg font-black tabular-nums text-green-800">{pedido.aceptadas}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600">Por recibir</p>
+                <p className="text-lg font-black tabular-nums text-amber-800">{pedido.pendientes}</p>
+              </div>
+            </div>
+            {vista === "detalle" && (
+              <div className="mt-3 space-y-3">
+                <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                  <table className="w-full min-w-150 text-left text-xs">
+                    <thead className="border-b border-gray-200 bg-gray-50 text-gray-700">
+                      <tr>
+                        <th className="min-w-52 px-2 py-2">Libro</th>
+                        <th className="px-2 text-center">Pedido</th>
+                        <th className="px-2 text-center">{estado === "validated" ? "Esta recepción" : "Propuesta"}</th>
+                        <th className="px-2 text-center">Extras</th>
+                        <th className="px-2 text-center">Observ.</th>
+                        <th className="px-2 text-center">Validados</th>
+                        <th className="px-2 text-center">Pendientes</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {pedido.productos.map((linea) => (
+                        <tr key={linea.item_id} className="border-b border-gray-100 last:border-0">
+                          <td className="px-2 py-2 font-semibold text-gray-900">{linea.producto}</td>
+                          <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
+                          <td className="px-2 text-center tabular-nums">{linea.aceptadas_en_guia}</td>
+                          <td className="px-2 text-center tabular-nums text-amber-800">{linea.excedentes_en_guia ?? 0}</td>
+                          <td className="px-2 text-center tabular-nums">{linea.observadas_en_guia}</td>
+                          <td className="px-2 text-center tabular-nums">{linea.aceptadas_acumuladas}</td>
+                          <td className="px-2 text-center font-bold tabular-nums">{linea.pendientes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <details className="rounded-lg border border-gray-200 bg-white p-3">
+                  <summary className="cursor-pointer text-xs font-bold text-gray-800">
+                    Historial de entregas validadas ({pedido.entregas.length})
+                  </summary>
+                  {pedido.entregas.length === 0 ? (
+                    <p className="mt-2 text-xs text-gray-600">Aún no hay entregas validadas.</p>
+                  ) : (
+                    <div className="mt-2 overflow-x-auto">
+                      <table className="w-full min-w-125 text-left text-xs">
+                        <thead className="border-b border-gray-200 text-gray-600">
+                          <tr>
+                            <th className="py-2">Fecha</th>
+                            <th>Documento</th>
+                            <th className="text-center">Llegaron</th>
+                            <th className="text-center">Validados</th>
+                            <th className="text-center">Extras</th>
+                            <th className="text-center">Observados</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pedido.entregas.map((entrega) => (
+                            <tr key={entrega.receipt_id} className="border-b border-gray-100">
+                              <td className="py-2 pr-2">{entrega.received_on}</td>
+                              <td className="pr-2">{entrega.document_number}</td>
+                              <td className="text-center tabular-nums">{entrega.llegaron}</td>
+                              <td className="text-center tabular-nums">{entrega.aceptadas}</td>
+                              <td className="text-center tabular-nums">{entrega.excedentes ?? 0}</td>
+                              <td className="text-center tabular-nums">{entrega.observadas}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </details>
               </div>
             )}
-          </details>
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
