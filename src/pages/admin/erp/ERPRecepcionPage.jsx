@@ -295,6 +295,7 @@ export default function ERPRecepcionPage() {
   const [confirmarAnulacion, setConfirmarAnulacion] = useState(false);
   const [motivoAnulacion, setMotivoAnulacion] = useState("");
   const [motivoDevolucion, setMotivoDevolucion] = useState("");
+  const [mostrarSeguimiento, setMostrarSeguimiento] = useState(false);
   const [cambiosSinGuardar, setCambiosSinGuardar] = useState(false);
   const [seguimiento, setSeguimiento] = useState(null);
   const [cargandoSeguimiento, setCargandoSeguimiento] = useState(false);
@@ -400,6 +401,26 @@ export default function ERPRecepcionPage() {
         pendientes: suma.pendientes + (totales.pendientes || 0),
       };
     }, { solicitadas: 0, aceptadas: 0, pendientes: 0 });
+
+  const pedidosSeguimiento = pedidos.filter((pedido) => pedidosMarcados.includes(pedido.id));
+  const seguimientoEditoriales = new Set(pedidosSeguimiento.map((pedido) => pedido.editorial_id));
+  const textoSeguimiento = [
+    "Estimados señores:",
+    "",
+    "Solicitamos confirmar el estado de los siguientes saldos pendientes de despacho:",
+    ...pedidosSeguimiento.flatMap((pedido) => [
+      "",
+      `Pedido ${pedido.referencia} · ${pedido.editorial} · ${pedido.colegio}`,
+      ...pedido.productos.filter((linea) => linea.pendientes > 0).map((linea) => (
+        `- ${linea.producto}: solicitado ${linea.solicitadas}, recibido validado ${linea.aceptadas}, pendiente ${linea.pendientes}.`
+      )),
+    ]),
+    "",
+    "Agradeceremos confirmar cantidades y fecha prevista de atención.",
+    "Esta consulta corresponde a saldos pendientes del pedido; no afirma faltantes frente a una guía.",
+    "",
+    "Distribuidora y Comercializadora Book Express S.A.C.",
+  ].join("\n");
 
   const recepcionSeleccionada = recepciones.find((recepcion) => recepcion.id === recepcionId);
   const recepcionesActivas = recepciones.filter((item) => item.status !== "cancelled");
@@ -829,6 +850,30 @@ export default function ERPRecepcionPage() {
                   </span>
                 </label>
               ))}
+              {pedidosSeguimiento.length > 0 && seguimientoEditoriales.size === 1 && (
+                <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+                  <button type="button" className="min-h-10 rounded-lg border border-red-300 px-3 text-xs font-bold text-red-800"
+                    onClick={() => setMostrarSeguimiento((current) => !current)}>
+                    {mostrarSeguimiento ? "Ocultar seguimiento" : "Generar seguimiento de saldos pendientes"}
+                  </button>
+                  {mostrarSeguimiento && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600">
+                        Borrador para revisar con la editorial. No constituye una reclamación por pérdida
+                        de libros ni se envía automáticamente.
+                      </p>
+                      <textarea readOnly rows={12} value={textoSeguimiento}
+                        aria-label="Texto de seguimiento de pedido" className={estilosCampo} />
+                      <button type="button" className="min-h-10 rounded-lg bg-gray-950 px-3 text-xs font-bold text-white"
+                        onClick={() => navigator.clipboard.writeText(textoSeguimiento)
+                          .then(() => setMensaje("Texto de seguimiento copiado. Verifica el destinatario antes de enviar."))
+                          .catch(() => setError("No fue posible copiar el texto. Puedes seleccionarlo manualmente."))}>
+                        Copiar seguimiento
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               {masPedidos && (
                 <button type="button" onClick={() => cargarMas("pedidos")} disabled={procesando}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50">
