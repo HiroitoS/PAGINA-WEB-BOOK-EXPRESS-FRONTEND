@@ -46,3 +46,22 @@ Referencias:
 2. Estandarizar cabeceras, filtros, semáforos y confirmaciones de Recepción, Inventario y Movimientos con componentes compartidos; evitar retocar cada pantalla con clases diferentes.
 3. Revisar Home pública con la adaptación *solo si hay foto real y optimizada*; no adoptar hero cinematográfico en ERP.
 4. Unificar sistema de tipografía, espaciados y tokens de marca. No sobreingenierizar con framework nuevo.
+
+## Auditoría incremental — 17/11/2026: Recepciones e incidencias
+
+La evaluación visual del usuario confirmó la navegación directa a la recepción N.° 6 desde la campana del administrador y del usuario ALMACEN. En Santillana T001-12358, 20 unidades contadas, 15 conformes, 5 observadas, 0 excedentes y 5 pendientes del pedido. El acordeón de evidencias indicaba **0 archivos** y quedaba escondido, por lo que la acción importante no era suficientemente visible.
+
+**Referencias técnicas consultadas (guías, no diseños para copiar):**
+- Nielsen Norman Group, *Data Tables: Four Major User Tasks*: localizar registros, comparar datos, abrir/editar y actuar deben funcionar sin exploración excesiva: https://www.nngroup.com/articles/data-tables/
+- HPE Design System, *DataTable*: usar filtros adecuados al tipo de dato y previsibles: https://design-system.hpe.design/components/datatable
+- U.S. Web Design System, *Alert*: mensajes informativos no deben comportarse como interrupciones modales; usar una acción asociada y roles ARIA adecuados: https://designsystem.digital.gov/components/alert/
+
+**Cambio UI ahora implementado:**
+1. Faja de seguimiento compacta cuando hay al menos una línea con observados o faltantes frente a la guía. No confundir saldo de pedido con faltante de guía.
+2. Indicar cuántos productos afectados aún no tienen ningún archivo asociado. Una fotografía puede servir como evidencia para varias unidades del mismo producto; no exigir una foto por cada libro.
+3. Acción «Adjuntar evidencia» abre el panel y preselecciona un producto sin respaldo.
+4. Validar 8 MB en cliente, además del límite y el tipo real verificados por backend, limpiar selector de archivo después de guardar.
+5. Plegar reporte editorial y ofrecer «Copiar reporte» después de la validación. Copiar texto NO registra envío ni sustituye evidencias; el correo automatizado permanece apagado sin la configuración corporativa explícita.
+6. Evitar tarjetas de éxito inventadas: archivo adjunto ≠ reclamación aceptada por la editorial ni ajuste de inventario.
+
+**Pruebas pendientes en navegador local:** como `Almacen1`, abrir `/admin/erp/almacen/recepciones?recepcion=6`; ver la advertencia 5 observados/sin archivo, adjuntar foto/PDF DEMO al producto LECTOPOLIS 4, descargarla en ambas sesiones; comprobar que 15 disponibles, 5 observados y 5 por recibir no cambian. Revisar el cuerpo del reporte como JEFE_ALMACEN sin enviar correos reales. Luego continuar **B3 preparación por lote**; **B4 (despacho legal y conformidad destino)** sigue pendiente y no se presenta como implementado.
