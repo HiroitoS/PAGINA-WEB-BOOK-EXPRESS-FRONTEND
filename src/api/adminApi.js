@@ -342,6 +342,18 @@ export async function getAdminRoles(params = {}) {
   return response.data;
 }
 
+export async function updateAdminRolePermissions(id, functionalPermissionIds) {
+  const response = await axiosClient.patch(`/admin/roles/${id}/permisos/`, {
+    functional_permission_ids: functionalPermissionIds,
+  });
+  return response.data;
+}
+
+export async function getAdminRolePermissionHistory(id) {
+  const response = await axiosClient.get(`/admin/roles/${id}/historial-permisos/`);
+  return response.data;
+}
+
 export async function getAdminFunctionalPermissions() {
   const response = await axiosClient.get("/admin/users/permissions/");
   return response.data;
