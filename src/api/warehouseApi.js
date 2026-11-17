@@ -26,6 +26,16 @@ export async function actualizarRecepcion(id, payload) {
   return data;
 }
 
+export async function solicitarAprobacionRecepcion(id) {
+  const { data } = await axiosClient.post(`${BASE}/${id}/solicitar-aprobacion/`, {});
+  return data;
+}
+
+export async function devolverRecepcion(id, reason) {
+  const { data } = await axiosClient.post(`${BASE}/${id}/devolver/`, { reason });
+  return data;
+}
+
 export async function validarRecepcion(id) {
   const { data } = await axiosClient.post(`${BASE}/${id}/validar/`, {});
   return data;
