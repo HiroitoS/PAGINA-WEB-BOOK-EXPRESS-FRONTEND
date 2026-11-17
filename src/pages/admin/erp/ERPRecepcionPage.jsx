@@ -64,7 +64,7 @@ function EstadoRecepcion({ estado, cumplimiento }) {
   const completo = validada && cumplimiento === "complete";
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
-      <span className={`rounded-full border px-2 py-1 text-xs font-bold ${validada ? "border-gray-300 bg-white text-gray-700" : "border-gray-200 bg-gray-100 text-gray-600"}`}>
+      <span className={`rounded-full border px-2 py-1 text-xs font-bold ${pendiente ? "border-amber-300 bg-amber-100 text-amber-950" : validada ? "border-gray-300 bg-white text-gray-700" : "border-gray-200 bg-gray-100 text-gray-600"}`}>
         {anulada ? "Anulada" : validada ? "Recepción validada"
           : pendiente ? "Pendiente de aprobación" : "En borrador"}
       </span>
