@@ -6,6 +6,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
   actualizarRecepcion,
+  anularBorradorRecepcion,
   crearRecepcion,
   consultarSeguimientoRecepcion,
   listarPedidosPorRecibir,
@@ -40,6 +41,7 @@ function nombreEvento(accion) {
     created: "Recepción registrada",
     updated: "Borrador corregido",
     validated: "Recepción validada",
+    cancelled: "Borrador anulado",
   }[accion] || "Acción registrada";
 }
 
@@ -52,11 +54,12 @@ function normalizarListado(response) {
 
 function EstadoRecepcion({ estado, cumplimiento }) {
   const validada = estado === "validated";
+  const anulada = estado === "cancelled";
   const completo = validada && cumplimiento === "complete";
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
       <span className={`rounded-full border px-2 py-1 text-xs font-bold ${validada ? "border-gray-300 bg-white text-gray-700" : "border-gray-200 bg-gray-100 text-gray-600"}`}>
-        {validada ? "Recepción validada" : "En borrador"}
+        {anulada ? "Anulada" : validada ? "Recepción validada" : "En borrador"}
       </span>
       {validada && (
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold ${completo ? "border-green-300 bg-green-100 text-green-900" : "border-amber-300 bg-amber-100 text-amber-950"}`}>
@@ -69,7 +72,8 @@ function EstadoRecepcion({ estado, cumplimiento }) {
 }
 
 function colorTarjetaRecepcion(recepcion) {
-  if (recepcion.status !== "validated") return "border-gray-200 bg-gray-50";
+  if (recepcion.status === "cancelled") return "border-gray-200 bg-gray-50";
+  if (recepcion.status !== "validated") return "border-amber-200 bg-amber-50";
   return recepcion.fulfillment_status === "complete"
     ? "border-green-300 bg-green-50" : "border-amber-300 bg-amber-50";
 }
@@ -281,6 +285,8 @@ export default function ERPRecepcionPage() {
   const [recepcionId, setRecepcionId] = useState(null);
   const [edicion, setEdicion] = useState(null);
   const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
+  const [confirmarAnulacion, setConfirmarAnulacion] = useState(false);
+  const [motivoAnulacion, setMotivoAnulacion] = useState("");
   const [cambiosSinGuardar, setCambiosSinGuardar] = useState(false);
   const [seguimiento, setSeguimiento] = useState(null);
   const [cargandoSeguimiento, setCargandoSeguimiento] = useState(false);
@@ -388,6 +394,17 @@ export default function ERPRecepcionPage() {
     }, { solicitadas: 0, aceptadas: 0, pendientes: 0 });
 
   const recepcionSeleccionada = recepciones.find((recepcion) => recepcion.id === recepcionId);
+  const recepcionesActivas = recepciones.filter((item) => item.status !== "cancelled");
+  const recepcionesAnuladas = recepciones.filter((item) => item.status === "cancelled");
+  const borradorExistente = recepcionesActivas.find((item) => item.status === "draft"
+    && item.lines.some((linea) => pedidosMarcados.includes(linea.order_id)));
+  const documentoDuplicado = recepcionesActivas.find((item) => (
+    item.provider === pedidos.find((pedido) => pedidosMarcados.includes(pedido.id))?.editorial_id
+    && item.document_type === documento.document_type
+    && documento.document_number.trim() !== ""
+    && item.document_number.trim().toLocaleUpperCase("es")
+      === documento.document_number.trim().toLocaleUpperCase("es")
+  ));
 
   function cambiarEditorial(value) {
     setEditorial(value);
@@ -522,6 +539,8 @@ export default function ERPRecepcionPage() {
   }
 
   function abrirRecepcion(recepcion) {
+    setConfirmarAnulacion(false);
+    setMotivoAnulacion("");
     setSeguimiento(null);
     setCargandoSeguimiento(true);
     setErrorSeguimiento("");
@@ -605,6 +624,28 @@ export default function ERPRecepcionPage() {
     finally { setProcesando(false); }
   }
 
+  async function anularBorradorActual() {
+    if (!puedeCrear || !recepcionSeleccionada || recepcionSeleccionada.status !== "draft"
+      || procesando || motivoAnulacion.trim().length < 8) return;
+    setProcesando(true);
+    setError("");
+    setMensaje("");
+    try {
+      await anularBorradorRecepcion(recepcionSeleccionada.id, motivoAnulacion.trim());
+      setConfirmarAnulacion(false);
+      setMotivoAnulacion("");
+      setCambiosSinGuardar(false);
+      setEdicion(null);
+      setMensaje("Borrador anulado. Se conserva su historial y no se modificó el inventario.");
+      setCargando(true);
+      setRevision((actual) => actual + 1);
+    } catch (err) {
+      setError(errorLegible(err));
+    } finally {
+      setProcesando(false);
+    }
+  }
+
   async function confirmarValidacion() {
     if (!recepcionSeleccionada || procesando || !puedeValidar || !confirmacionAbierta) return;
     setProcesando(true);
@@ -669,16 +710,17 @@ export default function ERPRecepcionPage() {
 
   return (
     <section className="min-w-0 max-w-full space-y-4">
-      <header className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+      <header className="rounded-2xl border border-gray-200 bg-white px-4 py-3 sm:px-5">
         <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
-        <h1 className="mt-1 text-2xl font-black text-gray-950">Recepción de Mercadería</h1>
+        <h1 className="mt-1 text-xl font-black text-gray-950 sm:text-2xl">Recepción de mercadería</h1>
         <p className="mt-1 text-sm text-gray-600">
           Contrasta los pedidos enviados con los libros recibidos. Registra entregas parciales, observaciones y saldos pendientes.
         </p>
-        <div className="mt-3">
+        <div className="mt-2">
           <Link to={retornoInventario || "/admin/erp/almacen/inventario"}
-            className="inline-flex min-h-11 items-center rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-800 transition hover:border-red-300 hover:text-red-700">
-            {retornoInventario ? "Volver a Inventario" : "Ver inventario"}
+            target="_blank" rel="noopener noreferrer"
+            className="inline-flex min-h-10 items-center rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700">
+            Consultar Inventario en otra pestaña
           </Link>
         </div>
       </header>
@@ -969,8 +1011,8 @@ export default function ERPRecepcionPage() {
       )}
 
       {pestana === "historial" && (
-        <div className="grid min-w-0 gap-4 xl:grid-cols-3">
-          <div className="space-y-2">
+        <div className="grid min-w-0 gap-3 xl:grid-cols-12">
+          <div className="space-y-2 xl:col-span-3">
             <p className="text-xs text-gray-600">El color indica el saldo actual de los pedidos relacionados, no cómo llegó la guía original. Amarillo: pendiente · Verde: completo · Gris: borrador.</p>
             {recepciones.length === 0 && !cargando && (
               <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">Todavía no se registraron recepciones.</p>
@@ -998,7 +1040,7 @@ export default function ERPRecepcionPage() {
             )}
           </div>
 
-          <div className="xl:col-span-2">
+          <div className="xl:col-span-9">
             {!recepcionSeleccionada ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-7 text-center text-sm text-gray-500">Selecciona una recepción para revisar sus cantidades.</div>
             ) : (
