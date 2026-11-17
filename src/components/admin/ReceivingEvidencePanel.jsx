@@ -9,6 +9,7 @@ import {
 
 const field = "mt-1 min-h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 focus:border-red-700 focus:outline-none";
 const button = "min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-300 disabled:opacity-50";
+const MAX_EVIDENCE_BYTES = 8 * 1024 * 1024;
 
 function errorText(err) {
   const detail = err?.response?.data?.detail;
@@ -21,7 +22,8 @@ function errorText(err) {
 export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) {
   const [items, setItems] = useState([]);
   const [report, setReport] = useState(null);
-  const [lineId, setLineId] = useState("");
+  const [lineId, setLineId] = useState(() => String(receipt.lines.find((line) => Number(line.quantity_observed) > 0 || (line.quantity_documented !== null && Number(line.quantity_documented) > Number(line.quantity_arrived)))?.id ?? ""));
+  const [expanded, setExpanded] = useState(false);
   const [kind, setKind] = useState("damaged");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState(null);
@@ -33,6 +35,14 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
   const [recipient, setRecipient] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [dispatchKey, setDispatchKey] = useState(() => crypto.randomUUID());
+  const observados = receipt.lines.reduce((sum, line) => sum + Number(line.quantity_observed || 0), 0);
+  const faltantesGuia = receipt.lines.reduce((sum, line) =>
+    sum + Math.max(0, Number(line.quantity_documented ?? 0) - Number(line.quantity_arrived || 0)), 0);
+  const lineasConIncidencia = receipt.lines.filter((line) =>
+    Number(line.quantity_observed) > 0 ||
+    (line.quantity_documented != null && Number(line.quantity_documented) > Number(line.quantity_arrived)));
+  const archivosPorLinea = new Set(items.map((item) => Number(item.receipt_line_id)));
+  const sinEvidencia = lineasConIncidencia.filter((line) => !archivosPorLinea.has(Number(line.id)));
 
   useEffect(() => {
     let ignore = false;
@@ -64,13 +74,40 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
       });
       setDescription("");
       setFile(null);
-      setNotice("Evidencia guardada y vinculada al libro. No se modificó el inventario.");
+      setNotice("Archivo registrado para el producto. Esta acción no modifica el inventario.");
       setVersion((v) => v + 1);
     } catch (err) {
       setError(errorText(err));
     } finally {
       setBusy(false);
     }
+  }
+
+  async function copyReport() {
+    if (!report?.validated || !report?.requires_attention) return;
+    try {
+      if (!navigator.clipboard?.writeText) {
+        setError("No es posible copiar desde este navegador. Selecciona el texto del reporte para copiarlo.");
+        return;
+      }
+      await navigator.clipboard.writeText(`Asunto: ${report.subject}\n\n${report.body}`);
+      setNotice("Reporte copiado. Si lo envías desde tu correo, verifica destinatario y adjunta las evidencias manualmente. La copia no registra un envío.");
+      setError("");
+    } catch {
+      setError("No se pudo copiar el reporte. Selecciona el texto y cópialo manualmente.");
+    }
+  }
+
+  function chooseFile(event) {
+    const candidate = event.target.files?.[0] ?? null;
+    if (candidate && candidate.size > MAX_EVIDENCE_BYTES) {
+      setFile(null);
+      setError("El archivo supera el máximo de 8 MB.");
+      event.target.value = "";
+      return;
+    }
+    setFile(candidate);
+    setError("");
   }
 
   async function download(item) {
@@ -110,7 +147,38 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
   }
 
   return (
-    <details className="rounded-xl border border-gray-200 bg-white p-3">
+    <section aria-label="Incidencias de recepción" className="space-y-2">
+      {lineasConIncidencia.length > 0 && !loading && (
+        <div role="status" className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-3 ${sinEvidencia.length
+          ? "border-amber-300 bg-amber-50 text-amber-950"
+          : "border-gray-200 bg-gray-50 text-gray-800"}`}>
+          <div className="min-w-0">
+            <p className="text-sm font-bold">
+              {sinEvidencia.length > 0
+                ? `Falta documentar ${sinEvidencia.length} producto(s) con incidencias`
+                : "Productos con incidencias documentadas"}
+            </p>
+            <p className="mt-1 text-xs leading-5">
+              {observados} unidad(es) observada(s)
+              {faltantesGuia > 0 ? ` · ${faltantesGuia} faltante(s) frente al documento` : ""}.
+              {" "}Una evidencia puede sustentar varias unidades del mismo producto; no necesitas una foto por libro.
+            </p>
+          </div>
+          {sinEvidencia.length > 0 && (
+            <button type="button" className="min-h-10 rounded-lg border border-amber-400 bg-white px-3 text-xs font-bold text-amber-950 hover:border-red-400"
+              onClick={() => {
+                setExpanded(true);
+                if (!archivosPorLinea.has(Number(lineId))) {
+                  setLineId(String(sinEvidencia[0].id));
+                }
+              }}>
+              {canUpload ? "Adjuntar evidencia" : "Consultar incidencias"}
+            </button>
+          )}
+        </div>
+      )}
+      <details open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}
+        className="rounded-xl border border-gray-200 bg-white p-3">
       <summary className="cursor-pointer text-sm font-black text-gray-950">
         Incidencias, evidencias y comunicación a la editorial
         <span className="ml-2 text-xs font-normal text-gray-500">
@@ -158,8 +226,8 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
             </label>
             <label className="block text-xs font-bold text-gray-700">
               Fotografía o PDF (máximo 8 MB)
-              <input required type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className={field}
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+              <input key={version} required type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className={field}
+                onChange={chooseFile} />
             </label>
             <button type="submit" disabled={busy || !file || !lineId || description.trim().length < 8}
               className="min-h-10 rounded-lg bg-red-700 px-4 text-xs font-bold text-white disabled:opacity-50">
@@ -185,7 +253,12 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
         ) : !loading && <p className="text-xs text-gray-600">Aún no se adjuntaron evidencias.</p>}
         {report && (
           <section className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <h4 className="text-xs font-black text-gray-950">Reporte para la editorial</h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-black text-gray-950">Reporte para la editorial</h4>
+              {report.validated && report.requires_attention && (
+                <button type="button" onClick={copyReport} className={button}>Copiar reporte</button>
+              )}
+            </div>
             <p className="text-xs leading-5 text-gray-600">
               El reporte se genera con los datos del documento, diferencias físicas y evidencias guardadas.
               Una entrega parcial del pedido no se reporta automáticamente como faltante de la guía.
@@ -218,13 +291,14 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
             ) : (
               <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
                 {report.validated
-                  ? "Reporte disponible para revisión. Para enviar correos desde la plataforma debe configurarse el correo corporativo y habilitarse el envío por el administrador."
+                  ? "Puedes copiar el reporte y revisarlo en tu correo habitual. El envío directo desde Book Express requiere configuración corporativa y autorización. Copiarlo no significa que se haya enviado."
                   : "Se trata de un borrador. El correo formal podrá enviarse después de la aprobación de jefatura."}
               </p>
             )}
           </section>
         )}
       </div>
-    </details>
+      </details>
+    </section>
   );
 }
