@@ -61,7 +61,7 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
       setLocations(active);
       setSummary(counts);
       setSourceId((previous) => previous || String(active.find((item) => item.kind === "main")?.id ?? active[0]?.id ?? ""));
-      setDestinationId((previous) => previous || String(active.find((item) => item.kind !== "main")?.id ?? ""));
+      // El destino debe elegirse explícitamente para evitar errores de entrega.
     }).catch((err) => {
       if (!ignore) setError(explicarError(err));
     }).finally(() => {
@@ -132,10 +132,12 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
   const guideValue = guideSelectedRows.reduce(
     (total, item) => total + Number(guideQuantities[item.id]) * Number(item.unit_cost || 0), 0,
   );
-  const guideMatches = q.trim().length >= 2
+  const guideMatches = (q.trim().length >= 2 || Boolean(receiptId))
     ? lots.filter((item, index, items) => (
       item.document_type === "guide" && item.receipt_id
-      && String(item.guide).toLowerCase().includes(q.trim().toLowerCase())
+      && (receiptId
+        ? String(item.receipt_id) === receiptId
+        : String(item.guide).toLowerCase().includes(q.trim().toLowerCase()))
       && items.findIndex((other) => other.receipt_id === item.receipt_id) === index
     ))
     : [];
@@ -330,13 +332,16 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
               <select value={destinationId} onChange={(event) => {
                 setDestinationId(event.target.value); setEntregaConfirmada(false); setError(""); setMessage("");
               }} className={inputClase}>
-                <option value="">Selecciona el destino</option>
+                <option value="">Selecciona el destino físico</option>
                 {locations.filter((item) => String(item.id) !== sourceId).map((item) =>
                   <option key={item.id} value={item.id}>{item.name}</option>
                 )}
               </select>
             </label>
           </div>
+          <p className="text-xs leading-5 text-gray-600">
+            Verifica dónde están los libros y elige el destino real. No se asigna un destino automáticamente.
+          </p>
           <details className="rounded-xl border border-gray-200 bg-white p-3">
             <summary className="cursor-pointer text-sm font-black text-gray-950">
               Ver existencias y valor por almacén
