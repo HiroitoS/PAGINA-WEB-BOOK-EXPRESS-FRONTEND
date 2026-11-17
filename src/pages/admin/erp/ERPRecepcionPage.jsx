@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { warehouseErrorMessage as errorLegible } from "../../../utils/warehouseErrorMessage";
 import { Link, useLocation } from "react-router";
 import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog";
+import ReceivingEvidencePanel from "../../../components/admin/ReceivingEvidencePanel";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
@@ -1325,6 +1326,9 @@ export default function ERPRecepcionPage() {
                     <strong>Observaciones:</strong> {recepcionSeleccionada.notes}
                   </p>
                 )}
+                <ReceivingEvidencePanel key={recepcionSeleccionada.id}
+                  receipt={recepcionSeleccionada} canUpload={puedeCrear}
+                  canSend={puedeValidar} />
                 <SeguimientoPedidos data={seguimiento} cargando={cargandoSeguimiento}
                   error={errorSeguimiento} estado={recepcionSeleccionada.status} />
                 <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
