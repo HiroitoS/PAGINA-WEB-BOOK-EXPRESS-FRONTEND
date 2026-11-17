@@ -369,11 +369,65 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
                 <h3 className="text-sm font-black text-gray-900">1. Seleccionar libros</h3>
                 <span className="text-xs text-gray-500">{count} lotes</span>
               </div>
-              <label className="text-xs font-semibold text-gray-700">Buscar libro, colegio o guía
-                <input type="search" value={q} onChange={(event) => {
-                  setQ(event.target.value); setPage(1); setSelected(null);
-                }} placeholder="Filtrar automáticamente…" className={inputClase}/>
-              </label>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-xs font-black text-gray-950">Filtrar existencias</h4>
+                  {(q || providerId || schoolId || receiptId) && (
+                    <button type="button" onClick={clearLotFilters}
+                      className="min-h-9 px-2 text-xs font-bold text-red-700 underline underline-offset-2">
+                      Limpiar filtros
+                    </button>
+                  )}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="block min-w-0 text-xs font-semibold text-gray-700">
+                    Editorial
+                    <select value={providerId} className={inputClase}
+                      disabled={loadingFilters}
+                      onChange={(event) => changeLotFilter("provider", event.target.value)}>
+                      <option value="">Todas</option>
+                      {filters.providers.map((provider) => (
+                        <option key={provider.id} value={provider.id}>{provider.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block min-w-0 text-xs font-semibold text-gray-700">
+                    Colegio
+                    <select value={schoolId} className={inputClase}
+                      disabled={loadingFilters}
+                      onChange={(event) => changeLotFilter("school", event.target.value)}>
+                      <option value="">Todos</option>
+                      {filters.schools.map((school) => (
+                        <option key={school.id} value={school.id}>{school.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block min-w-0 text-xs font-semibold text-gray-700 sm:col-span-2">
+                    Guía o documento recibido
+                    <select value={receiptId} className={inputClase}
+                      disabled={loadingFilters}
+                      onChange={(event) => changeLotFilter("receipt", event.target.value)}>
+                      <option value="">Todos los documentos</option>
+                      {filters.documents.map((doc) => (
+                        <option key={doc.id} value={doc.id}>
+                          {doc.type === "guide" ? "Guía" : "Documento"} ·
+                          {" "}{doc.number} · {doc.provider}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <label className="mt-2 block text-xs font-semibold text-gray-700">
+                  Buscar libro o referencia
+                  <input type="search" maxLength={100}
+                    value={q} onChange={(event) => changeLotFilter("q", event.target.value)}
+                    placeholder="Título, colegio o documento…"
+                    className={inputClase}/>
+                </label>
+                <p className="mt-2 text-xs leading-5 text-gray-600">
+                  Puedes combinar filtros. Solo se muestran unidades disponibles en el origen.
+                </p>
+              </div>
               {guideMatches.length > 0 && (
                 <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
                   <p className="text-xs font-bold text-red-900">Guías encontradas · traslado rápido</p>
@@ -386,25 +440,44 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
                       </button>
                     ))}
                   </div>
-                  <p className="mt-2 text-xs text-gray-700">Se incluirán todos los lotes disponibles de la guía, aunque estén en otras páginas. Puedes reducir cantidades antes de confirmar.</p>
+                  <p className="mt-2 text-xs text-gray-700">
+                    La selección incluye todos los lotes disponibles de esta guía, incluso
+                    los de otros colegios y páginas. Revisa y ajusta cantidades antes de confirmar.
+                  </p>
                 </div>
               )}
               {loadingGuide && <p role="status" className="mt-2 text-xs text-gray-600">Cargando todos los libros de la guía…</p>}
+              {receiptId && filters.documents.find((doc) => String(doc.id) === receiptId)?.type !== "guide" && (
+                <p className="mt-2 rounded-lg bg-blue-50 p-2 text-xs leading-5 text-blue-900">
+                  Este documento no es una guía de remisión. Puedes trasladar sus libros
+                  individualmente, seleccionando cada lote.
+                </p>
+              )}
+              {loadingLots && <p role="status" className="mt-2 text-xs font-semibold text-gray-600">
+                Actualizando resultados…
+              </p>}
               <div className="mt-3 max-h-72 space-y-2 overflow-y-auto overscroll-contain">
-                {lots.map((entry) => (
+                {!loadingLots && lots.map((entry) => (
                   <button type="button" key={entry.id} onClick={() => choose(entry)}
                     aria-pressed={selected?.id === entry.id}
                     className={`w-full min-w-0 rounded-lg border p-3 text-left transition ${selected?.id === entry.id
                       ? "border-red-600 bg-red-50" : "border-gray-200 hover:border-red-300"}`}>
                     <span className="block break-words text-sm font-bold text-gray-950">{entry.product}</span>
-                    <span className="mt-1 block text-xs text-gray-600">{entry.editorial} · {entry.school} · Guía {entry.guide}</span>
+                    <span className="mt-1 block text-xs text-gray-600">
+                      {entry.editorial} · {entry.school} ·
+                      {" "}{entry.document_type === "guide" ? "Guía" : "Documento"} {entry.guide}
+                    </span>
                     <span className="mt-1 block text-xs font-bold text-gray-900">Disponible: {entry.available} unidades · {soles(entry.unit_cost)} c/u</span>
                   </button>
                 ))}
-                {lots.length === 0 && <p className="py-4 text-left text-sm text-gray-600">No encontramos libros disponibles para este traslado.</p>}
+                {!loadingLots && lots.length === 0 && (
+                  <p className="py-4 text-left text-sm text-gray-600">
+                    No hay libros disponibles con estos filtros en el almacén elegido.
+                  </p>
+                )}
               </div>
               <div className="mt-3 flex items-center justify-between gap-2 text-xs text-gray-500">
-                <span>Página {page} de {pages}</span>
+                <span>{count} lotes · Página {page} de {pages}</span>
                 <div className="flex gap-1">
                   <button type="button" disabled={page <= 1} onClick={() => { setPage((p) => p - 1); setSelected(null); }}
                     className="min-h-10 rounded-lg border px-3 disabled:opacity-40">Anterior</button>
@@ -474,7 +547,10 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
                 <div className="mt-3 space-y-3">
                   <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                     <p className="break-words text-sm font-bold text-gray-900">{selected.product}</p>
-                    <p className="mt-1 text-xs text-gray-600">{selected.school} · Guía {selected.guide}</p>
+                    <p className="mt-1 text-xs text-gray-600">
+                      {selected.school} ·
+                      {" "}{selected.document_type === "guide" ? "Guía" : "Documento"} {selected.guide}
+                    </p>
                     <p className="mt-1 text-xs font-semibold">Disponibles en origen: {selected.available}</p>
                   </div>
                   <label className="block text-xs font-semibold text-gray-800">Cantidad a trasladar
