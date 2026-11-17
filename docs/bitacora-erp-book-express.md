@@ -1,5 +1,19 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 17/11/2026 — Recepción Santillana N.° 6: enlace probado y evidencias visibles [EN RAMA, UX LOCAL PENDIENTE]
+
+**Capturas del usuario:** al pulsar «Ver recepción» desde campana en administrador y Almacen1, ambos navegan a `/admin/erp/almacen/recepciones?recepcion=6` y seleccionan documento `T001-12358` de Santillana; la ficha muestra 20 recibidos físicamente, 15 conformes, 5 observados, 0 adicionales, y el seguimiento de pedido `[PRUEBA ERP] ANDINO · 2027` muestra solicitados 20 / validados 15 / por recibir 5. Navegación exitosa, NO prueba todavía la ubicación/valorización de todas las entradas físicas. La captura muestra `0 adjuntos` en incidencias.
+
+**Implementado después de las capturas:**
+- `src/components/admin/ReceivingEvidencePanel.jsx`: aviso contextual y compacto si hay líneas con observados o diferencias frente a guía sin ningún archivo, diferencia líneas con/sin sustento, botón para abrir y preseleccionar línea sin evidencia, aclaración de que no se necesita una foto por unidad, validación de tamaño archivo, restablece selector tras subir.
+- El reporte de editorial queda plegado, con botón «Copiar reporte» tras validación y texto explícito de que copiar NO registra correo enviado. Envío SMTP real sigue condicionado a ajustes corporativos y a la validación del documento, nunca automático.
+- Test backend nuevo `warehouse.test_supervisor_receiving`: cargar fotografía después de validar no duplica `StockEntry` ni registra un correo enviado; el reporte incorpora descripción del archivo.
+- Nuevas fuentes de diseño y criterios en `docs/UX-UI_BOOK_EXPRESS_CRITERIOS_2026.md`: NN Group cuatro tareas de tablas, HPE filtros, USWDS avisos no intrusivos.
+
+**Verificación automatizada:** frontend commit `90fe28bd` (cambio visual) pasó lint/build GitHub Actions; commit documental posterior no afecta ejecución. Backend commit `33b40b62` (nuevo test) seguía `in_progress` al consultar, **no proclamar test aprobado** hasta confirmar CI verde.
+
+**Siguiente prueba única del usuario:** actualizar frontend y backend, iniciar con Almacen1, abrir recepción N.° 6 y subir un archivo **de prueba**, foto/PDF (JPG, PNG, WEBP, PDF, hasta 8 MB) con descripción «5 ejemplares con cubiertas deterioradas — prueba interna». Verificar que queda vinculado a LECTOPOLIS 4, aparece un archivo y al abrir se descarga. Como jefatura revisar «Preparar reporte para la editorial» y el botón de copiar; **NO enviar email a editorial real**. Revisar en Inventario saldo conformes/observados y pedido 5 pendientes SIN MODIFICAR STOCK. Confirmar que no se crean nuevos movimientos por adjuntar evidencia. Luego retomar **B3 de preparación/reservas por lote**, antes de avanzar a B4 despacho/GRE/recepción de destino.
+
 ## 17/11/2026 — Navegación a recepciones, aviso a Jefatura y permisos personalizados [EN RAMA]
 
 **Prueba visual aportada por usuario:** Administrador abrió Roles y permisos; apareció un cuadro nativo del navegador `window.confirm` al guardar cambios en `JEFE_COMERCIAL` (no dar permisos de todas las áreas sin motivo). `Almacen1` creó borrador Santillana `T001-12358`, 20 físicos, 5 observados, 15 conformes, solicitó aprobación. `jefealmacen1` pudo revisar, aprobar y se generaron avisos de ingreso/diferencia; el pedido mantiene 5 pendientes. Flujo real con roles separados demostrado mediante capturas, **stock físico aún necesita revisión final de incremento una sola vez**.
