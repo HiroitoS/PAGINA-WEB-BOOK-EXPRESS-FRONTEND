@@ -1,5 +1,15 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 17/11/2026 — Refinamiento compacto y pruebas UX en la misma rama
+
+**Capturas verificadas:** `/admin/roles-permisos` y `/admin/usuarios`: se observaron siete roles (incluido `JEFE_ALMACEN`) y dos usuarios para pruebas, `Almacen1` (ALMACEN) y `jefealmacen1` (JEFE_ALMACEN). No se introdujeron datos manualmente en PostgreSQL. La solicitud es minimizar longitud de la conversación y verificar de forma guiada.
+
+**Hecho:** nuevos cambios visuales compactos en `RolePermissionsPage.jsx` y `UsersPage.jsx`. Roles horizontales en grilla, categorías de permisos (una a la vez), búsqueda, «Solo activos», contador, historial plegable y guardar al principio y al final; tarjetas de usuarios más pequeñas, filtros del listado compactos, acciones en una misma fila flexible y selector de rol compacto al crear usuarios. Se conservan los endpoints, nombres de campos, comprobaciones de permisos, alertas y las rutas existentes. Se evaluó el reel compartido: Facebook no permitió consultar directamente el contenido, por lo que se usó únicamente la descripción que el usuario transcribió. Referencias de investigación y criterios están documentados en `docs/UX-UI_BOOK_EXPRESS_CRITERIOS_2026.md`. **No aplicar hero con video en ERP**; posible explorarlo luego en Home pública con fotos reales.
+
+**Verificación:** CI frontend mostró verde para el commit `5412da480` de Roles y `5ef389d70` de Usuarios, con lint/build. Backend CI de `eae0d1e7` (permisos de rol + tests) completó correctamente. Puede haber CI nuevo para el commit documental; verificar antes de declarar cierre. No hay acceso al navegador local del usuario para confirmar el aspecto y permisos de cada sesión; validación manual obligatoria.
+
+**Siguiente prueba dentro del mismo chat:** usuario `Almacen1` inicia sesión en ventana incógnita, entra a Recepción y crea BORRADOR de una orden enviada con saldo pendiente (sin volver a registrar Bruño 39 unidades ya recibidas), luego solicita aprobación. Antes de confirmar: inventario NO cambia. En otro navegador sesión `jefealmacen1` verifica «Pendiente de aprobación», debe poder devolver con motivo o validar; al validar se crea entrada UNA sola vez, aparecen los avisos, y el almacenero no puede autovalidar. Usar colegios/pedidos DEMO si no quedan pedidos reales pendientes. Capturar pantallas sin credenciales/.env. No desplegar a main/Tecnoweb.
+
 ## 17/11/2026 — Gestión visual de roles y permisos desde Administración [EN RAMA]
 
 **Motivo:** Usuario confirmó en VS Code migraciones Almacén 0016, 0017, 0018 `OK`, `sync_bookexpress_roles` con rol `JEFE_ALMACEN` (12 permisos), `manage.py check` sin incidencias y `npm run lint` / `npm run build` satisfactorios. Solicitó que los permisos se gestionen desde el panel y no únicamente por comandos. Capturas recibidas confirman instalaciones LOCALES anteriores a este cambio.
