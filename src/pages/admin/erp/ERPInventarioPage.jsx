@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useAuth } from "../../../hooks/useAuth";
 import InventoryConsolidatedPanel from "../../../components/admin/InventoryConsolidatedPanel";
 import { userHasPermission } from "../../../utils/adminAccess";
-import { consultarExistencias, consultarResumenInventario, consultarValorizacionPorEditorial, listarEntradasInventario } from "../../../api/warehouseApi";
+import { consultarAvisosRecepcion, consultarExistencias, consultarResumenInventario, consultarValorizacionPorEditorial, listarEntradasInventario } from "../../../api/warehouseApi";
 
 function mensajeError(error) {
   if (!error?.response) return "No pudimos conectarnos. Revisa tu conexión y vuelve a intentarlo.";
@@ -37,6 +37,7 @@ export default function ERPInventarioPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [detalleId, setDetalleId] = useState(null);
   const [resumen, setResumen] = useState(null);
+  const [avisos, setAvisos] = useState({ recientes: [], pendientes_aprobacion: 0 });
   const busqueda = searchParams.get("buscar") ?? "";
   const editorial = searchParams.get("editorial") ?? "";
   const vistaSolicitada = searchParams.get("vista");
@@ -63,17 +64,19 @@ export default function ERPInventarioPage() {
   const [error, setError] = useState("");
 
   const cargar = useCallback(async (ignorar) => {
-    const [stock, movimientos, summary, editorialReport] = await Promise.all([
+    const [stock, movimientos, summary, editorialReport, recentAlerts] = await Promise.all([
       consultarExistencias(), listarEntradasInventario(), consultarResumenInventario(),
       consultarValorizacionPorEditorial().then(
         (data) => ({ data, error: "" }),
         () => ({ data: [], error: "No se pudo cargar el desglose por editorial. Actualiza la página para reintentarlo." }),
       ),
+      consultarAvisosRecepcion().catch(() => ({ recientes: [], pendientes_aprobacion: 0 })),
     ]);
     if (ignorar()) return;
     setExistencias(stock);
     setEntradas(Array.isArray(movimientos) ? movimientos : movimientos.results ?? []);
     setResumen(summary);
+    setAvisos(recentAlerts);
     setValorPorEditorial(Array.isArray(editorialReport.data) ? editorialReport.data : []);
     setErrorValorizacion(editorialReport.error);
   }, []);
@@ -160,6 +163,40 @@ export default function ERPInventarioPage() {
           </Link>
         )}
       </header>
+      {(avisos.recientes.length > 0 || avisos.pendientes_aprobacion > 0) && (
+        <section aria-label="Novedades de recepción" className="rounded-xl border border-gray-200 bg-white px-3 py-3 sm:px-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-black text-gray-950">Novedades de mercadería</h2>
+              <p className="mt-1 text-xs text-gray-600">Ingresos confirmados durante los últimos 7 días.</p>
+            </div>
+            <Link to="/admin/erp/almacen/recepciones"
+              className="inline-flex min-h-10 items-center rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-800 hover:text-red-700">
+              Ver recepciones
+            </Link>
+          </div>
+          {avisos.pendientes_aprobacion > 0 && (
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900">
+              {avisos.pendientes_aprobacion} recepción(es) esperan aprobación de jefatura.
+            </p>
+          )}
+          {avisos.recientes.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {avisos.recientes.slice(0, 4).map((item) => (
+                <div key={item.id} className="min-w-0 flex-1 basis-48 rounded-lg bg-gray-50 p-3 text-xs">
+                  <p className="font-bold text-gray-900">{item.editorial} · {item.documento}</p>
+                  <p className="mt-1 text-gray-700">{item.aceptadas} unidades ingresadas</p>
+                  {(item.observadas > 0 || item.faltantes_guia > 0) && (
+                    <p className="mt-1 font-bold text-amber-900">
+                      Diferencia: {item.observadas} observadas, {item.faltantes_guia} faltantes frente a guía.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section aria-label="Panel de control del inventario"
         className="space-y-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
