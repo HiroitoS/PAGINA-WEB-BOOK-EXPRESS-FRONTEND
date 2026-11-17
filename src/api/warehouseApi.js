@@ -143,9 +143,23 @@ export async function conciliarUbicacion(id, entryIds, notes = "") {
 
 const TRANSFERS_BASE = "/admin/erp/almacen/traslados";
 
-export async function buscarLotesParaTraslado({ sourceId, q = "", page = 1 }) {
+export async function buscarLotesParaTraslado({
+  sourceId, q = "", page = 1, providerId = "", schoolId = "", receiptId = "",
+}) {
   const { data } = await axiosClient.get(`${TRANSFERS_BASE}/lotes/`, {
-    params: { source_id: sourceId, q, page },
+    params: {
+      source_id: sourceId, q, page,
+      ...(providerId ? { provider_id: providerId } : {}),
+      ...(schoolId ? { school_id: schoolId } : {}),
+      ...(receiptId ? { receipt_id: receiptId } : {}),
+    },
+  });
+  return data;
+}
+
+export async function consultarFiltrosLotesTraslado(sourceId) {
+  const { data } = await axiosClient.get(`${TRANSFERS_BASE}/lotes-filtros/`, {
+    params: { source_id: sourceId },
   });
   return data;
 }
