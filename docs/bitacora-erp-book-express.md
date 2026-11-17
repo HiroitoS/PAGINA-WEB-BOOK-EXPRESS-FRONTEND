@@ -1,5 +1,24 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 17/11/2026 — Implementación desde revisión de Gerencia en Almacén [EN RAMA, PENDIENTE VERIFICAR LOCALMENTE]
+
+Fuente: `Requerimiento 17-11-2026.docx` adjuntado por el usuario, 2 páginas, cinco observaciones con capturas de Recepción/Inventario. Se revisó el documento completo y el código existente; no se han inventado contactos.
+
+**Hecho en rama `feature/erp-p08-traslados-por-guia` (ambos repos):**
+1. Se habilita `ReceivingEvidence` para fotos/PDF de deterioros, libros incorrectos y faltantes ligados a línea de recepción. Ficheros en almacenamiento privado fuera de MEDIA_ROOT; endpoint GET autenticado. Nuevo panel `ReceivingEvidencePanel.jsx` en detalle de recepción, categoría, archivo, descripción, descargas y generación de correo de reclamación. Informe reúne guía, producto y diferencias físicas, con todos los adjuntos hasta límites establecidos. El SMTP **no está activado**; solo envía si credenciales y bandera `ERP_WAREHOUSE_SUPPLIER_EMAIL_ENABLED=true`, con confirmación de jefe y destinatario real, auditoría e idempotencia por UUID.
+2. Nuevo rol `JEFE_ALMACEN` y separación `ALMACEN` (crear/solicitar) vs `JEFE_ALMACEN` (validar/devolver). Estado intermedio `submitted` y acción `returned`; aprobación genera stock exactamente una vez. Usuario normal no autoaprueba. Superusuario excepcional permite validación de antiguos borradores para compatibilidad. API y UI de Recepción actualizados. Requiere ejecutar `sync_bookexpress_roles` y volver a iniciar sesión.
+3. En Pedidos pendientes enviados, botón «Generar seguimiento de saldos pendientes» con cantidades reales; no afirma que el proveedor falló si solo hay entrega parcial, ni inventa envío/guía.
+4. Notificaciones: al solicitar aprobación a jefe, al validar a Almacén/Compras/asesor de adopción; avisos por diferencia. Indicador compacto `Novedades de mercadería` en Inventario para los últimos 7 días y pendientes de jefatura. Email automático opt-in SMTP `ERP_WAREHOUSE_EMAIL_ALERTS_ENABLED`, inicialmente FALSE.
+5. Filtros combinables Editorial + Colegio de origen en `InventoryConsolidatedPanel.jsx`, opciones del backend completas (no solo página), filtro aplicado en `warehouse/consolidated.py` por query SQL antes de agregación/paginación.
+
+**Migraciones:** backend `0017_receipt_supervisor_approval`, `0018_receiving_evidence` posteriores a `0016_distribution_preparation_transport_draft` B3. **Ninguna migración aplicada a base local del usuario ni a Tecnoweb desde este chat.**
+
+**Precauciones:** evidencia se adjunta después de guardar un borrador (existe ID); enviar email a proveedor solo cuando SMTP real configurado y recepción VALIDADA; el usuario tendrá que registrar correo verdadero de la editorial; guía recibida != GRE de Book Express. Aviso «pedido pendiente» ≠ faltante frente a guía; se redacta como consulta, no reclamación. No generar movimientos de inventario nuevos desde reportes, evidencia ni avisos.
+
+**Prueba por retomar:** ambas carpetas `git status` y `git pull --ff-only origin feature/erp-p08-traslados-por-guia`. Backend respaldo DB, `python manage.py migrate --plan`, `python manage.py migrate`, `python manage.py sync_bookexpress_roles`, `python manage.py test warehouse.test_supervisor_receiving warehouse.test_distribution_preparation warehouse.tests`. Frontend `npm run lint && npm run build`. Revisar CI PostgreSQL del HEAD antes de declarar finalizado. Usar dos cuentas NO superusuario: ALMACEN y JEFE_ALMACEN. Paso 1 registrar y adjuntar evidencia; 2 solicitar aprobación sin cambio de stock; 3 devolver o aprobar; 4 inventario, avisos, filtros, informe editorial; 5 solo probar correo real con SMTP de pruebas, nunca a editorial real aún. Continuar B3/B4 despacho sin tocar el histórico `BE-TI-000003`.
+
+**Documento técnico:** backend `docs/erp/REQ_2026_11_17_GERENCIA_ALMACEN.md`. Deudas: escoger responsables reales para destinatarios de email, pruebas visuales por el usuario, habilitar SMTP corporativo, B4 con emisión GRE real + conformidad destino, casos de consignación y diferencias en despacho.
+
 ## 16/11/2026 — B3 iniciado: reservas/preparación por lote y datos para GRE SUNAT [SUBIDO EN RAMA; SIN PRUEBA LOCAL]
 
 **Confirmación conceptual:** la recepción validada con guía del **proveedor** mantiene `GoodsReceipt → GoodsReceiptLine → StockEntry` y lotes/ubicaciones; no se elimina por trasladar o reservar. Las **salidas** de Book Express generan su propia documentación. La GRE recibida de editorial NO justifica automáticamente un envío posterior hecho por Book Express.
