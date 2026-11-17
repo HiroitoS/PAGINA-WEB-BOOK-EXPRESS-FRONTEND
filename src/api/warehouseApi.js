@@ -31,6 +31,13 @@ export async function validarRecepcion(id) {
   return data;
 }
 
+export async function anularBorradorRecepcion(id, reason) {
+  const { data } = await axiosClient.post(`${BASE}/${id}/anular-borrador/`, {
+    reason,
+  });
+  return data;
+}
+
 export async function consultarSeguimientoRecepcion(id) {
   const { data } = await axiosClient.get(`${BASE}/${id}/seguimiento/`);
   return data;
