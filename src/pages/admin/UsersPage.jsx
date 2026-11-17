@@ -469,30 +469,30 @@ export default function UsersPage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="rounded-3xl bg-gray-950 p-6 text-white shadow-xl shadow-gray-950/10"
+        className="rounded-xl bg-gray-950 px-4 py-4 text-white shadow-sm sm:px-5"
       >
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-black uppercase tracking-wide text-red-400">
+            <p className="text-xs font-bold uppercase tracking-wide text-red-400">
               Seguridad y accesos
             </p>
 
-            <h1 className="mt-2 text-3xl font-black">Usuarios y roles</h1>
+            <h1 className="mt-0.5 text-xl font-black sm:text-2xl">Usuarios y roles</h1>
 
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-300">
+            <p className="mt-1 max-w-xl text-xs leading-5 text-gray-300 sm:text-sm">
               Administra los accesos del panel interno de Book Express y asigna
               permisos según la función de cada usuario.
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-wrap gap-2">
             <Link to="/admin/roles-permisos"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold text-white hover:bg-white/15">
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-600 px-3 text-xs font-bold text-white hover:bg-gray-800">
               <FaShieldAlt aria-hidden="true" /> Configurar roles
             </Link>
             <Link
               to="/admin/dashboard"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/15"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-600 px-3 text-xs font-bold text-white hover:bg-gray-800"
             >
               <FaArrowLeft className="text-xs" />
               Volver al Dashboard
@@ -501,7 +501,7 @@ export default function UsersPage() {
             <button
               type="button"
               onClick={loadData}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/15"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-600 px-3 text-xs font-bold text-white hover:bg-gray-800"
             >
               <FaSyncAlt className={loading ? "animate-spin" : ""} />
               Actualizar
@@ -510,7 +510,7 @@ export default function UsersPage() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-red-800"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-red-700 px-3 text-xs font-bold text-white hover:bg-red-800"
             >
               <FaUserPlus />
               Nuevo usuario
@@ -519,7 +519,7 @@ export default function UsersPage() {
         </div>
       </motion.section>
 
-      <section className="mt-6 grid gap-4 md:grid-cols-4">
+      <section className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
         <SummaryCard
           icon={FaUsers}
           label="Usuarios"
@@ -567,8 +567,8 @@ export default function UsersPage() {
         </div>
       )}
 
-      <section className="mt-6 overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 bg-gray-50 px-5 py-4">
+      <section className="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 bg-gray-50 px-3 py-3 sm:px-4">
           <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
             <div>
               <h2 className="font-black text-gray-950">
@@ -581,7 +581,7 @@ export default function UsersPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 lg:grid-cols-5">
+          <div className="mt-3 grid gap-2 lg:grid-cols-5">
             <div className="relative lg:col-span-3">
               <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-400" />
 
@@ -589,14 +589,14 @@ export default function UsersPage() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar por usuario, correo, nombre o rol..."
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 pl-11 text-sm font-medium outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-100"
+                className="min-h-10 w-full rounded-lg border border-gray-300 px-3 py-2 pl-10 text-sm font-medium outline-none focus:border-red-700 focus:ring-2 focus:ring-red-100"
               />
             </div>
 
             <select
               value={roleFilter}
               onChange={(event) => setRoleFilter(event.target.value)}
-              className="rounded-xl border border-gray-300 px-4 py-3 text-sm font-medium outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-100"
+              className="min-h-10 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium outline-none focus:border-red-700 focus:ring-2 focus:ring-red-100"
             >
               <option value="">Todos los roles</option>
               {roles.map((role) => (
@@ -609,7 +609,7 @@ export default function UsersPage() {
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded-xl border border-gray-300 px-4 py-3 text-sm font-medium outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-100"
+              className="min-h-10 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium outline-none focus:border-red-700 focus:ring-2 focus:ring-red-100"
             >
               <option value="">Todos los estados</option>
               <option value="active">Activos</option>
@@ -656,7 +656,7 @@ export default function UsersPage() {
               <tbody className="divide-y divide-gray-100 bg-white">
                 {filteredUsers.map((user) => (
                   <tr key={user.id} className="align-top transition hover:bg-gray-50">
-                    <td className="px-5 py-4">
+                    <td className="px-3 py-3 sm:px-4">
                       <p className="font-black text-gray-950">
                         {user.username}
                       </p>
@@ -670,7 +670,7 @@ export default function UsersPage() {
                       </p>
                     </td>
 
-                    <td className="px-5 py-4">
+                    <td className="px-3 py-3 sm:px-4">
                       <div className="flex flex-wrap gap-2">
                         {(user.group_names || []).length === 0 ? (
                           <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-600 ring-1 ring-gray-200">
@@ -697,7 +697,7 @@ export default function UsersPage() {
                       )}
                     </td>
 
-                    <td className="px-5 py-4">
+                    <td className="px-3 py-3 sm:px-4">
                       <span
                         className={
                           user.is_active
@@ -709,48 +709,34 @@ export default function UsersPage() {
                       </span>
                     </td>
 
-                    <td className="px-5 py-4 text-xs text-gray-500">
+                    <td className="px-3 py-3 text-xs text-gray-500 sm:px-4">
                       {formatDate(user.last_login)}
                     </td>
 
-                    <td className="px-4 py-3">
-                      <div className="grid min-w-48 grid-cols-2 gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(user)}
-                          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-2 text-xs font-bold text-gray-700 transition hover:bg-gray-100"
-                        >
-                          <FaPen className="text-xs" />
-                          Editar
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button type="button" onClick={() => openEditModal(user)}
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 text-xs font-bold text-gray-800 hover:bg-gray-100">
+                          <FaPen aria-hidden="true" /> Editar
                         </button>
-                        <Link
-                          to={`/admin/usuarios/${user.id}/permisos`}
-                          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-purple-200 px-2 text-xs font-bold text-purple-700 transition hover:bg-purple-50"
-                        >
-                          <FaShieldAlt className="text-xs" />
-                          Accesos
+                        <Link to={`/admin/usuarios/${user.id}/permisos`}
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-red-200 px-2.5 text-xs font-bold text-red-800 hover:bg-red-50">
+                          <FaShieldAlt aria-hidden="true" /> Accesos
                         </Link>
-                        <button
-                          type="button"
+                        <button type="button" aria-label={`Cambiar contraseña de ${user.username}`}
+                          title="Cambiar contraseña"
                           onClick={() => {
                             setPasswordUser(user);
                             setNewPassword("");
                             setShowPassword(false);
                           }}
-                          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-blue-200 px-2 text-xs font-bold text-blue-700 transition hover:bg-blue-50"
-                        >
-                          <FaKey className="text-xs" />
-                          Contraseña
+                          className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">
+                          <FaKey aria-hidden="true" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleActive(user)}
-                          className={
-                            user.is_active
-                              ? "min-h-9 rounded-lg bg-red-50 px-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                              : "min-h-9 rounded-lg bg-green-50 px-2 text-xs font-bold text-green-700 transition hover:bg-green-100"
-                          }
-                        >
+                        <button type="button" onClick={() => toggleActive(user)} disabled={saving}
+                          className={`min-h-9 rounded-lg border px-2.5 text-xs font-bold disabled:opacity-50 ${user.is_active
+                            ? "border-gray-300 text-gray-700 hover:bg-red-50 hover:text-red-800"
+                            : "border-green-300 text-green-800 hover:bg-green-50"}`}>
                           {user.is_active ? "Desactivar" : "Activar"}
                         </button>
                       </div>
@@ -880,7 +866,7 @@ function UserFormModal({
                   </button>
                 </div>
               ) : (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {roles.map((role) => (
                     <RoleOption key={role.id} role={role}
                       checked={form.groups.includes(role.id)}
@@ -984,7 +970,7 @@ function UserFormModal({
         )}
 
         <div className="mt-6">
-          <label className="flex cursor-pointer gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 transition hover:bg-gray-100">
+          <label className="flex min-h-12 cursor-pointer gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5 transition hover:border-red-200 hover:bg-red-50/30">
             <input
               type="checkbox"
               checked={form.is_active}
@@ -1050,7 +1036,7 @@ function PasswordModal({
         onSubmit={onSubmit}
         className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-red-700">
               <FaKey />
@@ -1126,18 +1112,18 @@ function SummaryCard({ icon: Icon, label, value, description, tone }) {
 
   return (
     <div
-      className={`rounded-3xl border p-5 shadow-sm ${
+      className={`rounded-xl border px-3 py-2.5 shadow-sm sm:px-4 ${
         styles[tone] || styles.dark
       }`}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-bold opacity-80">{label}</p>
-          <p className="mt-2 text-3xl font-black">{value}</p>
-          <p className="mt-2 text-xs leading-5 opacity-80">{description}</p>
+          <p className="text-xs font-bold opacity-80">{label}</p>
+          <p className="mt-0.5 text-2xl font-black">{value}</p>
+          <p className="hidden text-xs leading-5 opacity-80 sm:mt-1 sm:block">{description}</p>
         </div>
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-gray-950 ring-1 ring-white/60">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/70 text-gray-950 ring-1 ring-white/60">
           <Icon />
         </div>
       </div>
@@ -1165,7 +1151,7 @@ function TextField({
         onChange={onChange}
         disabled={disabled}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-medium outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
+        className="w-full min-h-10 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium outline-none focus:border-red-700 focus:ring-2 focus:ring-red-100 disabled:bg-gray-100"
       />
     </div>
   );
@@ -1210,7 +1196,7 @@ function PasswordField({
 
 function RoleOption({ role, checked, onChange }) {
   return (
-    <label className="flex cursor-pointer gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 transition hover:bg-gray-100">
+    <label className="flex min-h-12 cursor-pointer gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5 transition hover:border-red-200 hover:bg-red-50/30">
       <input
         type="radio"
         name="bookexpress-primary-role"
@@ -1221,14 +1207,14 @@ function RoleOption({ role, checked, onChange }) {
 
       <span>
         <span
-          className={`inline-flex rounded-full px-3 py-1 text-xs font-black ring-1 ${getRoleBadgeClass(
+          className={`inline-flex rounded-md px-2 py-1 text-xs font-black ring-1 ${getRoleBadgeClass(
             role.name
           )}`}
         >
           {role.name}
         </span>
 
-        <span className="mt-2 block text-xs leading-5 text-gray-500">
+        <span className="mt-1 block text-xs leading-4 text-gray-600">
           {getRoleDescription(role.name)}
         </span>
       </span>
@@ -1238,7 +1224,7 @@ function RoleOption({ role, checked, onChange }) {
 
 function TableHead({ children }) {
   return (
-    <th className="px-5 py-3 text-left text-xs font-black uppercase tracking-wide text-gray-500">
+    <th className="px-3 py-2.5 text-left text-xs font-black uppercase tracking-wide text-gray-500 sm:px-4">
       {children}
     </th>
   );
