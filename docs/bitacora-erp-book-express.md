@@ -1,5 +1,20 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 17/11/2026 — Gestión visual de roles y permisos desde Administración [EN RAMA]
+
+**Motivo:** Usuario confirmó en VS Code migraciones Almacén 0016, 0017, 0018 `OK`, `sync_bookexpress_roles` con rol `JEFE_ALMACEN` (12 permisos), `manage.py check` sin incidencias y `npm run lint` / `npm run build` satisfactorios. Solicitó que los permisos se gestionen desde el panel y no únicamente por comandos. Capturas recibidas confirman instalaciones LOCALES anteriores a este cambio.
+
+**Implementado adicional:**
+- Nuevo panel `/admin/roles-permisos` (Seguridad y accesos → Roles y permisos) con siete roles predefinidos, checkboxes por categoría y descripción comprensible, adición/retirada de dependencias automática, confirmación al guardar e historial visible. Acceso exclusivamente Administrador. `ADMINISTRADOR` es ineditable aquí.
+- Usuarios y Gestión de acceso por usuario ahora incluyen `JEFE_ALMACEN` en las listas de roles disponibles. La gestión individual ya existía.
+- API `PATCH /api/admin/roles/{id}/permisos/` valida dependencias, conserva permisos no funcionales, guarda auditoría `RolePermissionAudit` y devuelve rol actualizado; `GET .../historial-permisos/` devuelve últimas 25 modificaciones. **Nueva migración de accounts `0002_role_permission_audit` necesaria**.
+- `python manage.py sync_bookexpress_roles` a partir de ahora **preserva permisos modificados en Administración** de roles ya existentes. Para forzar restaurar plantillas base se requiere explícitamente `python manage.py sync_bookexpress_roles --reset-permisos`; no usar este parámetro en operación habitual.
+- `accounts/test_role_permissions.py` cubre acceso admin, rechazo no-admin, dependencias, rol protegido, conservación de permisos no funcionales, auditoría, idempotencia y supervivencia al sync.
+
+**Paso operativo siguiente:** traer los commits actualizados en ambos repos con `git status` / `git pull --ff-only`, respaldar DB local, `python manage.py migrate` (accounts 0002), `python manage.py check`, `python manage.py test accounts.test_role_permissions warehouse.test_supervisor_receiving`, frontend `npm run lint && npm run build`. Después en **Seguridad y accesos → Roles y permisos** verificar ALMACEN vs JEFE_ALMACEN. Crear dos cuentas sin superusuario desde Usuarios, roles distintos, comprobar solicitud/aprobación de recepción y stock incrementado una sola vez. Cambios de rol pueden requerir nuevo inicio de sesión.
+
+**Protección:** las asignaciones globales son sensibles; solo ADMINISTRADOR, auditoría y confirmación. Mantener `warehouse.manage_receiving` para ALMACEN y `warehouse.validate_receiving` para JEFE_ALMACEN. El backend bloquea autoaprobación de no-superusuario aunque accidentalmente cuente con ambos permisos. Cambios no fusionados a main ni desplegados a Tecnoweb.
+
 ## 17/11/2026 — Implementación desde revisión de Gerencia en Almacén [EN RAMA, PENDIENTE VERIFICAR LOCALMENTE]
 
 Fuente: `Requerimiento 17-11-2026.docx` adjuntado por el usuario, 2 páginas, cinco observaciones con capturas de Recepción/Inventario. Se revisó el documento completo y el código existente; no se han inventado contactos.
