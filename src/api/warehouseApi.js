@@ -16,6 +16,16 @@ export async function listarRecepciones(page = 1) {
   return data;
 }
 
+export async function obtenerRecepcion(id) {
+  const { data } = await axiosClient.get(`${BASE}/${id}/`);
+  return data;
+}
+
+export async function listarRecepcionesPendientesAprobacion() {
+  const { data } = await axiosClient.get(`${BASE}/pendientes-aprobacion/`);
+  return data;
+}
+
 export async function crearRecepcion(payload) {
   const { data } = await axiosClient.post(`${BASE}/crear/`, payload);
   return data;
