@@ -270,3 +270,34 @@ export async function anularDistribucion(id, reason) {
   const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/${id}/anular/`, { reason });
   return data;
 }
+
+export async function consultarPreparacionDistribucion(id) {
+  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/${id}/preparacion/`);
+  return data;
+}
+
+export async function reservarDistribucion(id) {
+  const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/${id}/reservar/`, {});
+  return data;
+}
+
+export async function confirmarPreparacionDistribucion(id, counts) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/confirmar-preparacion/`,
+    { counts },
+  );
+  return data;
+}
+
+export async function consultarBorradorTransporte(id) {
+  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/${id}/documento-traslado/`);
+  return data;
+}
+
+export async function guardarBorradorTransporte(id, payload) {
+  const { data } = await axiosClient.put(
+    `${DISTRIBUTION_BASE}/${id}/documento-traslado/`,
+    payload,
+  );
+  return data;
+}
