@@ -96,6 +96,12 @@ const NAV_SECTIONS = [
     icon: <FaUsers />,
     children: [
       {
+        label: "Roles y permisos",
+        to: "/admin/roles-permisos",
+        icon: <FaUsers />,
+        roles: ADMIN_ONLY_ROLES,
+      },
+      {
         label: "Usuarios",
         to: "/admin/usuarios",
         icon: <FaUsers />,
