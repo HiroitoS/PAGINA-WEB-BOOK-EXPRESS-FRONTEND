@@ -4,6 +4,7 @@ export const ATTENTION_ROLE = "ATENCION";
 export const SALES_ADVISOR_ROLE = "ASESOR_COMERCIAL";
 export const SALES_MANAGER_ROLE = "JEFE_COMERCIAL";
 export const WAREHOUSE_ROLE = "ALMACEN";
+export const WAREHOUSE_MANAGER_ROLE = "JEFE_ALMACEN";
 
 export const DASHBOARD_ROLES = [
   ADMIN_ROLE,
@@ -126,6 +127,7 @@ export function getPrimaryRole(user) {
     SALES_ADVISOR_ROLE,
     CATALOG_ROLE,
     ATTENTION_ROLE,
+    WAREHOUSE_MANAGER_ROLE,
     WAREHOUSE_ROLE,
   ];
 
