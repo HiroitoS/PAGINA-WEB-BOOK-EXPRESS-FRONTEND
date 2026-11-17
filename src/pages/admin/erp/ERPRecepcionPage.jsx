@@ -11,6 +11,8 @@ import {
   consultarSeguimientoRecepcion,
   listarPedidosPorRecibir,
   listarRecepciones,
+  solicitarAprobacionRecepcion,
+  devolverRecepcion,
   validarRecepcion,
 } from "../../../api/warehouseApi";
 
@@ -41,6 +43,8 @@ function nombreEvento(accion) {
     created: "Recepción registrada",
     updated: "Borrador corregido",
     validated: "Recepción validada",
+    submitted: "Enviada a jefatura",
+    returned: "Devuelta para corrección",
     cancelled: "Borrador anulado",
   }[accion] || "Acción registrada";
 }
@@ -55,11 +59,13 @@ function normalizarListado(response) {
 function EstadoRecepcion({ estado, cumplimiento }) {
   const validada = estado === "validated";
   const anulada = estado === "cancelled";
+  const pendiente = estado === "submitted";
   const completo = validada && cumplimiento === "complete";
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
       <span className={`rounded-full border px-2 py-1 text-xs font-bold ${validada ? "border-gray-300 bg-white text-gray-700" : "border-gray-200 bg-gray-100 text-gray-600"}`}>
-        {anulada ? "Anulada" : validada ? "Recepción validada" : "En borrador"}
+        {anulada ? "Anulada" : validada ? "Recepción validada"
+          : pendiente ? "Pendiente de aprobación" : "En borrador"}
       </span>
       {validada && (
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold ${completo ? "border-green-300 bg-green-100 text-green-900" : "border-amber-300 bg-amber-100 text-amber-950"}`}>
@@ -287,6 +293,7 @@ export default function ERPRecepcionPage() {
   const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
   const [confirmarAnulacion, setConfirmarAnulacion] = useState(false);
   const [motivoAnulacion, setMotivoAnulacion] = useState("");
+  const [motivoDevolucion, setMotivoDevolucion] = useState("");
   const [cambiosSinGuardar, setCambiosSinGuardar] = useState(false);
   const [seguimiento, setSeguimiento] = useState(null);
   const [cargandoSeguimiento, setCargandoSeguimiento] = useState(false);
@@ -650,6 +657,44 @@ export default function ERPRecepcionPage() {
     }
   }
 
+  async function enviarParaAprobacion() {
+    if (!puedeCrear || recepcionSeleccionada?.status !== "draft" || procesando) return;
+    setProcesando(true);
+    setError("");
+    setMensaje("");
+    try {
+      if (cambiosSinGuardar) {
+        await actualizarRecepcion(recepcionSeleccionada.id, payloadEdicion());
+      }
+      await solicitarAprobacionRecepcion(recepcionSeleccionada.id);
+      setCambiosSinGuardar(false);
+      setMensaje("Recepción enviada a jefatura. El inventario se actualizará cuando sea aprobada.");
+      setCargando(true);
+      setRevision((actual) => actual + 1);
+    } catch (err) {
+      setError(errorLegible(err));
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  async function devolverParaCorreccion() {
+    if (!puedeValidar || recepcionSeleccionada?.status !== "submitted"
+      || motivoDevolucion.trim().length < 8 || procesando) return;
+    setProcesando(true);
+    setError("");
+    try {
+      await devolverRecepcion(recepcionSeleccionada.id, motivoDevolucion.trim());
+      setMotivoDevolucion("");
+      setMensaje("Recepción devuelta para corrección. No se modificó el inventario.");
+      setRevision((actual) => actual + 1);
+    } catch (err) {
+      setError(errorLegible(err));
+    } finally {
+      setProcesando(false);
+    }
+  }
+
   async function confirmarValidacion() {
     if (!recepcionSeleccionada || procesando || !puedeValidar || !confirmacionAbierta) return;
     setProcesando(true);
@@ -684,7 +729,7 @@ export default function ERPRecepcionPage() {
   }
 
   function solicitarValidacion() {
-    if (!recepcionSeleccionada || recepcionSeleccionada.status !== "draft" || !edicion) return;
+    if (!recepcionSeleccionada || recepcionSeleccionada.status !== "submitted" || !edicion) return;
     if (cambiosSinGuardar && !puedeCrear) {
       setError("No tienes permiso para guardar cambios en esta recepción.");
       return;
