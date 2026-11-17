@@ -64,7 +64,7 @@ function EstadoRecepcion({ estado, cumplimiento }) {
       {validada && (
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold ${completo ? "border-green-300 bg-green-100 text-green-900" : "border-amber-300 bg-amber-100 text-amber-950"}`}>
           <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${completo ? "bg-green-600" : "bg-amber-500"}`} />
-          {completo ? "Pedido completo hoy" : "Saldo pendiente hoy"}
+          {completo ? "Pedido completo" : "Pedido pendiente"}
         </span>
       )}
     </span>
@@ -813,12 +813,12 @@ export default function ERPRecepcionPage() {
                 </button>
               </div>
             )}
-            {pedidoDePruebaSeleccionado && (
+            {import.meta.env.DEV && pedidoDePruebaSeleccionado && (
               <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
-                <strong>Pedido de demostración.</strong> Usa «Otro documento» y una referencia
-                interna como «PRUEBA-REC-001» si estás simulando la entrega. No registres una
-                guía oficial inexistente. Al validar, las cantidades ingresarán al inventario
-                de esta base de datos y quedarán identificadas como una operación de prueba.
+                <strong>Operación de prueba.</strong> Para entregas simuladas, selecciona
+                «Otro documento» y utiliza una referencia de prueba. No registres
+                una guía oficial que no existe. Al validar se actualizará el
+                inventario utilizado para estas pruebas.
               </div>
             )}
             {documentoDuplicado && (
@@ -1112,7 +1112,7 @@ export default function ERPRecepcionPage() {
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                     <p className="text-sm font-black text-gray-900">Borrador anulado</p>
                     <p className="mt-1 text-xs leading-5 text-gray-600">
-                      Se conserva su historial, pero esta recepción no ingresó
+                      Se conserva el historial de esta recepción. No se ingresó
                       mercadería al inventario.
                     </p>
                     <p className="mt-2 text-xs text-gray-700">
@@ -1213,7 +1213,7 @@ export default function ERPRecepcionPage() {
                         {!confirmarAnulacion ? (
                           <button type="button" onClick={() => setConfirmarAnulacion(true)}
                             className="min-h-10 text-xs font-bold text-red-800 underline underline-offset-2">
-                            Anular este borrador (sin tocar inventario)
+                            Anular borrador
                           </button>
                         ) : (
                           <div className="space-y-2">
