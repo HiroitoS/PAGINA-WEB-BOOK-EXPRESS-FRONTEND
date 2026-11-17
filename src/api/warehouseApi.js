@@ -347,6 +347,11 @@ export async function guardarBorradorTransporte(id, payload) {
   return data;
 }
 
+export async function consultarAvisosRecepcion() {
+  const { data } = await axiosClient.get(`${INVENTORY_BASE}/avisos-recepcion/`);
+  return data;
+}
+
 export async function consultarFiltrosInventarioConsolidado() {
   const { data } = await axiosClient.get(`${INVENTORY_BASE}/consolidado-filtros/`);
   return data;
