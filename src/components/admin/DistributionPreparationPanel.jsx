@@ -7,7 +7,6 @@ import {
   reservarDistribucion,
 } from "../../api/warehouseApi";
 
-const button = "inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-300 disabled:opacity-50";
 const primary = "inline-flex min-h-10 items-center justify-center rounded-lg bg-red-700 px-4 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50";
 const input = "mt-1 min-h-10 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-red-700 focus:outline-none";
 
