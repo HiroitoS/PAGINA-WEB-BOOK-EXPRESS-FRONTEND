@@ -4,7 +4,7 @@ import { Link } from "react-router";
 import { FiArrowRight, FiMapPin } from "react-icons/fi";
 import {
   listarUbicacionesAlmacen, consultarResumenUbicaciones,
-  buscarLotesParaTraslado, registrarTrasladoAlmacen,
+  buscarLotesParaTraslado, consultarFiltrosLotesTraslado, registrarTrasladoAlmacen,
   consultarLotesDeGuia, registrarTrasladoPorGuia,
 } from "../../api/warehouseApi";
 import ConfirmActionDialog from "./ConfirmActionDialog";
@@ -26,6 +26,12 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
   const [sourceId, setSourceId] = useState("");
   const [destinationId, setDestinationId] = useState("");
   const [q, setQ] = useState("");
+  const [providerId, setProviderId] = useState("");
+  const [schoolId, setSchoolId] = useState("");
+  const [receiptId, setReceiptId] = useState("");
+  const [filters, setFilters] = useState({ providers: [], schools: [], documents: [] });
+  const [loadingFilters, setLoadingFilters] = useState(false);
+  const [loadingLots, setLoadingLots] = useState(false);
   const [page, setPage] = useState(1);
   const [lots, setLots] = useState([]);
   const [count, setCount] = useState(0);
@@ -66,24 +72,47 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
 
   useEffect(() => {
     let ignore = false;
-    if (!sourceId) {
-      Promise.resolve().then(() => {
-        if (!ignore) { setLots([]); setCount(0); }
-      });
-      return () => { ignore = true; };
-    }
+    if (!sourceId) return undefined;
     const timer = setTimeout(() => {
-      buscarLotesParaTraslado({ sourceId, q, page }).then((data) => {
+      consultarFiltrosLotesTraslado(sourceId).then((data) => {
+        if (ignore) return;
+        setFilters({
+          providers: data.providers ?? [],
+          schools: data.schools ?? [],
+          documents: data.documents ?? [],
+        });
+      }).catch((err) => {
+        if (!ignore) setError(explicarError(err));
+      }).finally(() => {
+        if (!ignore) setLoadingFilters(false);
+      });
+    }, 100);
+    return () => { ignore = true; clearTimeout(timer); };
+  }, [sourceId, refresh]);
+
+  useEffect(() => {
+    let ignore = false;
+    if (!sourceId) return undefined;
+    const timer = setTimeout(() => {
+      buscarLotesParaTraslado({
+        sourceId, q, page, providerId, schoolId, receiptId,
+      }).then((data) => {
         if (ignore) return;
         setLots(data.results ?? []);
         setCount(data.count ?? 0);
         setPages(data.pages ?? 1);
       }).catch((err) => {
-        if (!ignore) setError(explicarError(err));
+        if (ignore) return;
+        setLots([]);
+        setCount(0);
+        setPages(1);
+        setError(explicarError(err));
+      }).finally(() => {
+        if (!ignore) setLoadingLots(false);
       });
     }, 220);
     return () => { ignore = true; clearTimeout(timer); };
-  }, [sourceId, q, page, refresh]);
+  }, [sourceId, q, page, providerId, schoolId, receiptId, refresh]);
 
   const origin = locations.find((item) => String(item.id) === sourceId);
   const destination = locations.find((item) => String(item.id) === destinationId);
@@ -105,7 +134,7 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
   );
   const guideMatches = q.trim().length >= 2
     ? lots.filter((item, index, items) => (
-      item.receipt_id
+      item.document_type === "guide" && item.receipt_id
       && String(item.guide).toLowerCase().includes(q.trim().toLowerCase())
       && items.findIndex((other) => other.receipt_id === item.receipt_id) === index
     ))
@@ -113,6 +142,39 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
   const canSubmit = canManage && origin && destination
     && sourceId !== destinationId && entregaConfirmada && !busy
     && (guide ? guideInputsValid && guideSelectedRows.length > 0 : selected && validQuantity);
+
+  function changeLotFilter(name, value) {
+    if (name === "q") setQ(value);
+    if (name === "provider") setProviderId(value);
+    if (name === "school") setSchoolId(value);
+    if (name === "receipt") setReceiptId(value);
+    setPage(1);
+    setLoadingLots(true);
+    guideRequestRef.current += 1;
+    setLoadingGuide(false);
+    setSelected(null);
+    setGuide(null);
+    setGuideQuantities({});
+    setEntregaConfirmada(false);
+    setError("");
+    setMessage("");
+  }
+
+  function clearLotFilters() {
+    setProviderId("");
+    setSchoolId("");
+    setReceiptId("");
+    setQ("");
+    setPage(1);
+    setLoadingLots(true);
+    guideRequestRef.current += 1;
+    setLoadingGuide(false);
+    setSelected(null);
+    setGuide(null);
+    setGuideQuantities({});
+    setEntregaConfirmada(false);
+    setError("");
+  }
 
   function choose(item) {
     guideRequestRef.current += 1;
@@ -191,6 +253,8 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
       setGuideQuantities({});
       setEntregaConfirmada(false);
       setPage(1);
+      setLoadingFilters(true);
+      setLoadingLots(true);
       setRefresh((prev) => prev + 1);
       try {
         if (onRefresh) await onRefresh();
@@ -253,6 +317,9 @@ export default function InventoryTransfersPanel({ canManage, canViewLocations = 
                 guideRequestRef.current += 1;
                 setLoadingGuide(false);
                 setSelected(null); setGuide(null); setGuideQuantities({});
+                setProviderId(""); setSchoolId(""); setReceiptId(""); setQ("");
+                setFilters({ providers: [], schools: [], documents: [] });
+                setLoadingFilters(true); setLoadingLots(true);
                 setEntregaConfirmada(false); setPage(1); setMessage(""); setError("");
               }} className={inputClase}>
                 <option value="">Selecciona el origen</option>
