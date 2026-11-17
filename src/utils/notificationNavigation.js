@@ -11,7 +11,7 @@ export function getNotificationDestination(notification) {
   if (
     notification.source_app === "warehouse" &&
     notification.source_model === "GoodsReceipt" &&
-    /^\\d+$/.test(receiptId) &&
+    /^\d+$/.test(receiptId) &&
     notification.event_type?.startsWith("warehouse.receipt_")
   ) {
     return `/admin/erp/almacen/recepciones?recepcion=${encodeURIComponent(receiptId)}`;
