@@ -4,6 +4,19 @@ export function getNotificationDestination(notification) {
   const metadata = notification.metadata || {};
   const taskId = metadata.task_id;
 
+  // Notificaciones antiguas de Almacén solo tenían la ruta general.
+  // Recuperar el registro exacto desde la referencia de negocio también
+  // permite abrirlas si la lista de recepciones está paginada.
+  const receiptId = String(notification.source_id ?? "");
+  if (
+    notification.source_app === "warehouse" &&
+    notification.source_model === "GoodsReceipt" &&
+    /^\\d+$/.test(receiptId) &&
+    notification.event_type?.startsWith("warehouse.receipt_")
+  ) {
+    return `/admin/erp/almacen/recepciones?recepcion=${encodeURIComponent(receiptId)}`;
+  }
+
   if (taskId && notification.event_type === "workspace.task_comment_added") {
     const commentId = metadata.comment_id;
     const commentQuery = commentId ? `&comment=${encodeURIComponent(commentId)}` : "";
