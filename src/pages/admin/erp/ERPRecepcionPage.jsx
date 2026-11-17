@@ -74,6 +74,10 @@ function colorTarjetaRecepcion(recepcion) {
     ? "border-green-300 bg-green-50" : "border-amber-300 bg-amber-50";
 }
 
+function claveNivel(linea) {
+  return linea.nivel_id == null ? "sin-nivel" : String(linea.nivel_id);
+}
+
 function validarLineas(lineas) {
   if (!lineas.length) return "Ingresa al menos un producto con mercadería recibida.";
   for (const linea of lineas) {
@@ -211,6 +215,7 @@ export default function ERPRecepcionPage() {
   const [error, setError] = useState("");
   const [editorial, setEditorial] = useState("");
   const [buscarColegio, setBuscarColegio] = useState("");
+  const [nivelSeleccionado, setNivelSeleccionado] = useState("");
   const [pedidosMarcados, setPedidosMarcados] = useState([]);
   const [cantidades, setCantidades] = useState({});
   const [documento, setDocumento] = useState(documentoInicial);
@@ -292,6 +297,17 @@ export default function ERPRecepcionPage() {
       colegio: pedido.colegio,
     })));
 
+  const nivelesDisponibles = [...new Map(
+    lineasPreparadas.map((linea) => [
+      claveNivel(linea),
+      { clave: claveNivel(linea), nombre: linea.nivel || "Sin nivel" },
+    ]),
+  ).values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+  const lineasVisibles = nivelSeleccionado
+    ? lineasPreparadas.filter((linea) => claveNivel(linea) === nivelSeleccionado)
+    : lineasPreparadas;
+
   const pedidoDePruebaSeleccionado = pedidos.some(
     (pedido) => pedidosMarcados.includes(pedido.id) &&
       pedido.colegio?.startsWith("[PRUEBA ERP]"),
@@ -316,6 +332,7 @@ export default function ERPRecepcionPage() {
 
   function cambiarEditorial(value) {
     setEditorial(value);
+    setNivelSeleccionado("");
     setPedidosMarcados([]);
     setCantidades({});
   }
@@ -323,6 +340,7 @@ export default function ERPRecepcionPage() {
   function marcarPedido(pedido) {
     if (procesando) return;
     if (pedidosMarcados.includes(pedido.id)) {
+      setNivelSeleccionado("");
       setPedidosMarcados((actual) => actual.filter((id) => id !== pedido.id));
       return;
     }
@@ -334,6 +352,7 @@ export default function ERPRecepcionPage() {
       }
     }
     setPedidosMarcados((actual) => [...actual, pedido.id]);
+    setNivelSeleccionado("");
     setError("");
   }
 
@@ -431,6 +450,7 @@ export default function ERPRecepcionPage() {
       setDocumento(documentoInicial());
       setCantidades({});
       setPedidosMarcados([]);
+      setNivelSeleccionado("");
       setPestana("historial");
       setMensaje("Recepción guardada en borrador. Revísala y valídala cuando las cantidades estén verificadas.");
       setCargando(true);
@@ -715,8 +735,58 @@ export default function ERPRecepcionPage() {
                   Si llegan menos de los solicitados, el saldo seguirá pendiente.
                   Separa los libros dañados o incorrectos en «Observados».
                 </p>
+                <section aria-label="Filtrar libros por nivel educativo"
+                  className="space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-black text-gray-950">Ver productos por nivel</h3>
+                      <p className="mt-1 text-xs leading-5 text-gray-600">
+                        Muestra solo el nivel que estés contando. Cambiar de nivel
+                        no borra cantidades registradas en el formulario.
+                      </p>
+                    </div>
+                    <p role="status" className="text-xs font-bold text-gray-600">
+                      {lineasVisibles.length} de {lineasPreparadas.length} productos
+                    </p>
+                  </div>
+                  <div role="group" aria-label="Niveles educativos"
+                    className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setNivelSeleccionado("")}
+                      aria-pressed={!nivelSeleccionado}
+                      className={`min-h-10 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                        !nivelSeleccionado
+                          ? "bg-gray-950 text-white"
+                          : "border border-gray-300 bg-white text-gray-700 hover:border-gray-500"
+                      }`}>
+                      Todos ({lineasPreparadas.length})
+                    </button>
+                    {nivelesDisponibles.map((nivel) => {
+                      const count = lineasPreparadas.filter(
+                        (linea) => claveNivel(linea) === nivel.clave,
+                      ).length;
+                      return (
+                        <button key={nivel.clave} type="button"
+                          onClick={() => setNivelSeleccionado(nivel.clave)}
+                          aria-pressed={nivelSeleccionado === nivel.clave}
+                          className={`min-h-10 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                            nivelSeleccionado === nivel.clave
+                              ? "bg-red-700 text-white"
+                              : "border border-gray-300 bg-white text-gray-700 hover:border-red-400"
+                          }`}>
+                          {nivel.nombre} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {nivelSeleccionado && (
+                    <p className="text-xs leading-5 text-amber-800">
+                      Solo estás viendo este nivel. El pedido completo y las demás
+                      cantidades siguen disponibles en «Todos».
+                    </p>
+                  )}
+                </section>
                 <div className="space-y-3 lg:hidden">
-                  {lineasPreparadas.map((linea) => {
+                  {lineasVisibles.map((linea) => {
                     const llegada = cantidades[linea.item_id]?.llegada ?? "";
                     const observada = cantidades[linea.item_id]?.observada ?? "0";
                     const conformes = llegada === "" ? 0 : Math.max(0, Number(llegada) - Number(observada));
@@ -725,7 +795,10 @@ export default function ERPRecepcionPage() {
                     return (
                       <article key={linea.item_id} className="rounded-xl border border-gray-200 p-3">
                         <p className="break-words text-sm font-bold text-gray-950">{linea.producto}</p>
-                        <p className="mt-1 break-words text-xs text-gray-600">{linea.colegio} · {linea.pedido}</p>
+                        <p className="mt-1 break-words text-xs text-gray-600">
+                      {linea.nivel || "Sin nivel"}{linea.grado ? " · " + linea.grado : ""}
+                      {" · "}{linea.colegio} · {linea.pedido}
+                    </p>
                         <p className="mt-2 text-sm font-semibold text-gray-800">Pendientes: {linea.pendientes} unidades</p>
                         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
                           <label className="text-xs font-semibold text-gray-700">
@@ -779,7 +852,7 @@ export default function ERPRecepcionPage() {
                      </tr>
                   </thead>
                   <tbody>
-                    {lineasPreparadas.map((linea) => {
+                    {lineasVisibles.map((linea) => {
                       const llegada = cantidades[linea.item_id]?.llegada ?? "";
                       const observada = cantidades[linea.item_id]?.observada ?? "0";
                       const excedenteConforme = llegada === "" ? 0 : Math.max(0, Number(llegada) - Number(observada) - linea.pendientes);
@@ -789,7 +862,10 @@ export default function ERPRecepcionPage() {
                         <tr key={linea.item_id} className="border-b border-gray-100">
                           <td className="sticky left-0 z-10 min-w-64 bg-white py-2 pr-3">
                             <span className="block font-semibold text-gray-900">{linea.producto}</span>
-                            <span className="text-xs text-gray-500">{linea.colegio} · {linea.pedido}</span>
+                            <span className="text-xs text-gray-500">
+                              {linea.nivel || "Sin nivel"}{linea.grado ? " · " + linea.grado : ""}
+                              {" · "}{linea.colegio} · {linea.pedido}
+                            </span>
                             {excedente > 0 && (
                               <span className="mt-1 block text-xs font-semibold text-amber-800">
                                 {excedente} adicionales detectadas. Quedarán registradas automáticamente.
