@@ -34,6 +34,7 @@ const AVAILABLE_ROLES = [
   "ASESOR_COMERCIAL",
   "JEFE_COMERCIAL",
   "ALMACEN",
+  "JEFE_ALMACEN",
 ];
 
 const EMPTY_FORM = {
@@ -92,6 +93,9 @@ function getRoleBadgeClass(role) {
   if (role === "ALMACEN") {
     return "bg-slate-100 text-slate-800 ring-slate-200";
   }
+  if (role === "JEFE_ALMACEN") {
+    return "bg-amber-50 text-amber-900 ring-amber-200";
+  }
 
   return "bg-gray-100 text-gray-700 ring-gray-200";
 }
@@ -118,9 +122,12 @@ function getRoleDescription(role) {
   }
 
   if (role === "ALMACEN") {
-    return "Controla las solicitudes de mercadería y las tareas autorizadas de almacén.";
+    return "Registra recepciones y movimientos autorizados de mercadería.";
   }
 
+  if (role === "JEFE_ALMACEN") {
+    return "Revisa y aprueba recepciones, supervisa ubicaciones y movimientos."; 
+  }
   return "Rol interno del sistema.";
 }
 
