@@ -250,13 +250,15 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
           </div>
         ) : !loading && <p className="text-xs text-gray-600">Aún no se adjuntaron evidencias.</p>}
         {report && (
-          <section className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h4 className="text-sm font-black text-gray-950">Reporte para la editorial</h4>
+          <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <summary className="cursor-pointer text-sm font-black text-gray-950">
+              Preparar reporte para la editorial
+              <span className="ml-2 font-normal text-gray-600">· Revisión y envío opcional</span>
+            </summary>
+            <div className="mt-3 space-y-3">
               {report.validated && report.requires_attention && (
                 <button type="button" onClick={copyReport} className={button}>Copiar reporte</button>
               )}
-            </div>
             <p className="text-xs leading-5 text-gray-600">
               El reporte se genera con los datos del documento, diferencias físicas y evidencias guardadas.
               Una entrega parcial del pedido no se reporta automáticamente como faltante de la guía.
@@ -293,7 +295,8 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
                   : "Se trata de un borrador. El correo formal podrá enviarse después de la aprobación de jefatura."}
               </p>
             )}
-          </section>
+            </div>
+          </details>
         )}
       </div>
       </details>
