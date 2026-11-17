@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { FiArrowLeft, FiCheck, FiLock, FiRefreshCw, FiSave, FiShield } from "react-icons/fi";
+import { FiArrowLeft, FiCheck, FiLock, FiRefreshCw, FiSave, FiShield, FiSearch } from "react-icons/fi";
 import {
   getAdminFunctionalPermissions,
   getAdminRolePermissionHistory,
@@ -23,7 +23,7 @@ const descriptions = {
   JEFE_ALMACEN: "Supervisión, devoluciones y aprobación de recepciones.",
 };
 
-const labelClass = "flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 bg-white p-3 transition hover:border-red-200 hover:bg-red-50/30";
+const labelClass = "flex min-h-16 cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 transition hover:border-red-300 hover:bg-red-50/40 focus-within:ring-2 focus-within:ring-red-100";
 const formatTime = (value) => value
   ? new Date(value).toLocaleString("es-PE", { dateStyle: "short", timeStyle: "short" })
   : "Sin fecha";
@@ -54,6 +54,9 @@ export default function RolePermissionsPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [version, setVersion] = useState(0);
+  const [category, setCategory] = useState("Almacén");
+  const [permissionSearch, setPermissionSearch] = useState("");
+  const [onlySelected, setOnlySelected] = useState(false);
 
   const role = roles.find((item) => String(item.id) === roleId);
   const isProtected = role?.name === "ADMINISTRADOR";
@@ -62,15 +65,15 @@ export default function RolePermissionsPage() {
 
   const byCode = useMemo(() => new Map(permisos.map((item) => [item.code, item])), [permisos]);
   const byId = useMemo(() => new Map(permisos.map((item) => [item.id, item])), [permisos]);
-  const byCategory = useMemo(() => {
-    const groups = new Map();
-    for (const item of permisos) {
-      const category = item.category || "Otros";
-      if (!groups.has(category)) groups.set(category, []);
-      groups.get(category).push(item);
-    }
-    return [...groups.entries()];
-  }, [permisos]);
+  const categories = useMemo(() => [...new Set(permisos.map((item) => item.category || "Otros"))], [permisos]);
+  const visiblePermissions = useMemo(() => permisos.filter((item) => {
+    const inCategory = category === "Todos" || (item.category || "Otros") === category;
+    const inSelection = !onlySelected || selected.includes(item.id);
+    const term = permissionSearch.trim().toLocaleLowerCase("es");
+    const inSearch = !term || [item.label, item.description, item.category]
+      .some((value) => String(value || "").toLocaleLowerCase("es").includes(term));
+    return inCategory && inSelection && inSearch;
+  }), [permisos, selected, category, permissionSearch, onlySelected]);
 
   useEffect(() => {
     let ignore = false;
@@ -120,6 +123,10 @@ export default function RolePermissionsPage() {
   function selectRole(next) {
     if (dirty && !window.confirm("Hay cambios sin guardar. ¿Cambiar de rol y descartarlos?")) return;
     setRoleId(next);
+    setCategory(next === String(roles.find((item) => item.name === "ALMACEN")?.id) ||
+      next === String(roles.find((item) => item.name === "JEFE_ALMACEN")?.id) ? "Almacén" : "Todos");
+    setPermissionSearch("");
+    setOnlySelected(false);
     setError("");
     setMessage("");
   }
@@ -184,133 +191,192 @@ export default function RolePermissionsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl space-y-4 pb-10">
-      <header className="rounded-2xl bg-gray-950 p-5 text-white shadow-sm sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-red-400">Seguridad y accesos</p>
-            <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Roles y permisos</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-300">
-              Configura qué puede hacer cada función. Los permisos del rol se aplican a todos los usuarios asignados.
-            </p>
-          </div>
-          <Link to="/admin/usuarios" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-600 px-3 text-sm font-bold text-white hover:bg-gray-800">
-            <FiArrowLeft aria-hidden="true" /> Volver a usuarios
-          </Link>
+    <main className="mx-auto w-full max-w-6xl space-y-3 pb-8">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-gray-950 px-4 py-4 text-white shadow-sm sm:px-5">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-red-400">Seguridad y accesos</p>
+          <h1 className="mt-0.5 text-xl font-black tracking-tight sm:text-2xl">Roles y permisos</h1>
+          <p className="mt-1 text-xs text-gray-300 sm:text-sm">
+            Define las capacidades de cada equipo. Los cambios se aplican a todos los usuarios del rol.
+          </p>
         </div>
+        <Link to="/admin/usuarios"
+          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-600 px-3 text-xs font-bold text-white hover:bg-gray-800 focus-visible:outline-2 focus-visible:outline-white">
+          <FiArrowLeft aria-hidden="true" /> Usuarios
+        </Link>
       </header>
 
-      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-      {message && <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-900">{message}</p>}
+      {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+      {message && <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">{message}</p>}
       {loading ? (
-        <p role="status" className="rounded-xl border bg-white p-5 text-sm text-gray-700">Consultando permisos…</p>
+        <p role="status" className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-700">Consultando roles y permisos…</p>
+      ) : roles.length === 0 ? (
+        <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          No encontramos roles configurados. Consulta al administrador del sistema.
+        </p>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-12">
-          <aside className="min-w-0 space-y-3 lg:col-span-4">
-            <section className="rounded-xl border border-gray-200 bg-white p-4">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-black text-gray-950">Rol principal</h2>
-                <button type="button" title="Actualizar roles" onClick={() => { if (!dirty || window.confirm("¿Descartar cambios y actualizar?")) { setLoading(true); setVersion((v) => v + 1); } }}
-                  className="rounded-lg border border-gray-200 p-2 text-gray-700 hover:text-red-700">
-                  <FiRefreshCw aria-hidden="true" />
-                </button>
+        <>
+          <section aria-labelledby="roles-title" className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 id="roles-title" className="text-sm font-black text-gray-950">Selecciona el rol</h2>
+                <p className="mt-0.5 text-xs text-gray-600">Elige un cargo para consultar o modificar sus permisos.</p>
               </div>
-              <div className="mt-3 space-y-2" role="radiogroup" aria-label="Seleccionar rol">
-                {roles.map((item) => (
+              <button type="button" onClick={() => {
+                if (!dirty || window.confirm("¿Descartar cambios sin guardar y actualizar los roles?")) {
+                  setLoading(true);
+                  setVersion((v) => v + 1);
+                }
+              }} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-bold text-gray-800 hover:border-red-300">
+                <FiRefreshCw aria-hidden="true" /> Actualizar
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4" role="radiogroup" aria-label="Rol para administrar">
+              {roles.map((item) => {
+                const active = roleId === String(item.id);
+                const count = item.functional_permissions?.length || 0;
+                return (
                   <label key={item.id}
-                    className={`flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm ${roleId === String(item.id)
-                      ? "border-red-400 bg-red-50" : "border-gray-200 hover:bg-gray-50"}`}>
-                    <input type="radio" name="group-role" value={item.id} checked={roleId === String(item.id)}
-                      onChange={() => selectRole(String(item.id))} className="mt-1 accent-red-700" />
-                    <span className="min-w-0">
-                      <strong className="block text-gray-950">{item.name.replaceAll("_", " ")}</strong>
-                      <span className="mt-1 block text-xs leading-5 text-gray-600">{descriptions[item.name]}</span>
+                    className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition focus-within:ring-2 focus-within:ring-red-100 ${active
+                      ? "border-red-600 bg-red-50 text-red-900"
+                      : "border-gray-200 bg-white text-gray-800 hover:border-gray-400"}`}>
+                    <input type="radio" className="h-4 w-4 shrink-0 accent-red-700" name="role-choice"
+                      checked={active} onChange={() => selectRole(String(item.id))} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-black leading-5">{item.name.replaceAll("_", " ")}</span>
+                      <span className="block text-xs text-gray-600">{count} permisos</span>
                     </span>
                   </label>
-                ))}
-              </div>
-            </section>
-            <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-950">
-              <div className="flex items-center gap-2 font-black">
-                <FiShield aria-hidden="true" /> Control de aprobación
-              </div>
-              <p className="mt-2">
-                En Recepción, quien registra no puede aprobar su propio ingreso. Dar ambos permisos a un cargo
-                no elimina esta restricción.
-              </p>
-            </section>
-          </aside>
+                );
+              })}
+            </div>
+          </section>
 
-          <div className="min-w-0 space-y-4 lg:col-span-8">
-            <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 pb-4">
-                <div>
-                  <h2 className="text-lg font-black text-gray-950">
-                    {role ? role.name.replaceAll("_", " ") : "Seleccionar rol"}
-                  </h2>
-                  <p className="mt-1 text-xs text-gray-600">
-                    {isProtected
-                      ? "El rol Administrador conserva su acceso total y no se edita."
-                      : "Selecciona capacidades por área; los requisitos se agregan automáticamente."}
-                  </p>
-                </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-black text-gray-800">
-                  {selected.length} permisos
+          <section aria-labelledby="permissions-title" className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-3 py-3 sm:px-4">
+              <div className="min-w-0">
+                <h2 id="permissions-title" className="text-base font-black text-gray-950">
+                  {role?.name.replaceAll("_", " ") || "Permisos"}
+                </h2>
+                <p className="mt-0.5 text-xs text-gray-600">{descriptions[role?.name] || "Permisos asignados al rol."}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-bold text-gray-800">
+                  {selected.length} activos
                 </span>
-              </div>
-              <div className="mt-4 space-y-4">
-                {byCategory.map(([category, items]) => (
-                  <section key={category} className="space-y-2">
-                    <h3 className="text-sm font-black text-gray-950">{category}</h3>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {items.map((item) => (
-                        <label key={item.code} className={labelClass}>
-                          <input type="checkbox" checked={selected.includes(item.id)}
-                            onChange={() => toggle(item.code)} disabled={saving || isProtected}
-                            className="mt-1 h-4 w-4 shrink-0 accent-red-700" />
-                          <span className="min-w-0">
-                            <strong className="block text-xs text-gray-950">{item.label}</strong>
-                            <span className="mt-1 block text-xs leading-5 text-gray-600">{item.description}</span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </div>
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
-                <p className="text-xs text-gray-600">
-                  {dirty ? "Tienes cambios sin guardar." : "Permisos sincronizados con el servidor."}
-                </p>
                 <button type="button" onClick={saveRole} disabled={!dirty || saving || isProtected}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-50">
-                  {saving ? <FiRefreshCw className="animate-spin" aria-hidden="true" /> : <FiSave aria-hidden="true" />}
-                  Guardar permisos
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500">
+                  {saving ? <FiRefreshCw aria-hidden="true" className="animate-spin" /> : <FiSave aria-hidden="true" />}
+                  Guardar cambios
                 </button>
               </div>
-            </section>
+            </div>
 
-            <details className="rounded-xl border border-gray-200 bg-white p-4">
-              <summary className="flex cursor-pointer items-center gap-2 text-sm font-black text-gray-950">
-                <FiLock aria-hidden="true" /> Historial de cambios ({history.length})
-              </summary>
-              {history.length === 0 ? (
-                <p className="mt-3 text-xs text-gray-600">Todavía no hay modificaciones de permisos registradas para este rol.</p>
+            <div className="space-y-3 px-3 py-3 sm:px-4">
+              {isProtected ? (
+                <p className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                  <FiLock aria-hidden="true" className="mt-0.5 shrink-0" />
+                  El rol Administrador mantiene acceso total y no se modifica desde esta pantalla.
+                </p>
               ) : (
-                <div className="mt-3 space-y-2">
-                  {history.map((entry) => (
-                    <div key={entry.id} className="rounded-lg bg-gray-50 p-3 text-xs text-gray-700">
-                      <p className="flex items-center gap-2 font-bold text-gray-950">
-                        <FiCheck aria-hidden="true" /> {entry.actor} · {formatTime(entry.changed_at)}
-                      </p>
-                      <p className="mt-1">{entry.previous_permissions.length} permisos antes → {entry.new_permissions.length} después.</p>
-                    </div>
-                  ))}
-                </div>
+                <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+                  <FiShield aria-hidden="true" className="mt-0.5 shrink-0" />
+                  En Recepción, quien registra no puede aprobar su propia recepción, aunque tenga ambos permisos.
+                </p>
               )}
-            </details>
-          </div>
-        </div>
+
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por área">
+                {["Todos", ...categories].map((item) => {
+                  const count = permisos.filter((permission) => (
+                    item === "Todos" || (permission.category || "Otros") === item
+                  ) && selected.includes(permission.id)).length;
+                  return (
+                    <button key={item} type="button" aria-pressed={category === item}
+                      onClick={() => { setCategory(item); setPermissionSearch(""); }}
+                      className={`min-h-9 rounded-lg border px-3 text-xs font-bold transition ${category === item
+                        ? "border-gray-950 bg-gray-950 text-white"
+                        : "border-gray-200 bg-gray-50 text-gray-700 hover:border-red-300"}`}>
+                      {item} <span className="opacity-75">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="relative min-w-0 flex-1 basis-56">
+                  <span className="sr-only">Buscar permisos por nombre o descripción</span>
+                  <FiSearch aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input type="search" value={permissionSearch} onChange={(event) => setPermissionSearch(event.target.value)}
+                    placeholder="Buscar permiso o función…"
+                    className="min-h-10 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-900 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100" />
+                </label>
+                <label className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-bold text-gray-700">
+                  <input type="checkbox" checked={onlySelected} onChange={(event) => setOnlySelected(event.target.checked)}
+                    className="h-4 w-4 accent-red-700" />
+                  Solo activos
+                </label>
+              </div>
+
+              <p className="text-xs text-gray-500">
+                {visiblePermissions.length} permiso(s) mostrados · Al marcar una capacidad se incluyen sus requisitos.
+              </p>
+              {visiblePermissions.length > 0 ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {visiblePermissions.map((item) => {
+                    const enabled = selected.includes(item.id);
+                    return (
+                      <label key={item.code} className={`${labelClass} ${enabled ? "border-red-200 bg-red-50/30" : ""}`}>
+                        <input type="checkbox" checked={enabled} disabled={saving || isProtected}
+                          onChange={() => toggle(item.code)}
+                          className="mt-1 h-4 w-4 shrink-0 accent-red-700" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold leading-5 text-gray-950">{item.label}</span>
+                          <span className="mt-1 block text-xs leading-5 text-gray-600">{item.description}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p role="status" className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-5 text-center text-sm text-gray-600">
+                  No hay permisos con los filtros seleccionados.
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3">
+                <p role="status" className={`text-xs font-semibold ${dirty ? "text-amber-800" : "text-gray-600"}`}>
+                  {dirty ? "Cambios pendientes de guardar" : "Sin modificaciones pendientes"}
+                </p>
+                <button type="button" onClick={saveRole} disabled={!dirty || saving || isProtected}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-700 px-4 text-xs font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500">
+                  <FiSave aria-hidden="true" /> Guardar permisos del rol
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <details className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+            <summary className="flex cursor-pointer items-center gap-2 text-sm font-black text-gray-950">
+              <FiLock aria-hidden="true" /> Historial de cambios ({history.length})
+            </summary>
+            {history.length === 0 ? (
+              <p className="mt-3 text-sm text-gray-600">Todavía no hay cambios registrados para este rol.</p>
+            ) : (
+              <ol className="mt-3 space-y-2">
+                {history.map((entry) => (
+                  <li key={entry.id} className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+                    <p className="flex items-center gap-2 font-bold text-gray-950">
+                      <FiCheck aria-hidden="true" /> {entry.actor} · {formatTime(entry.changed_at)}
+                    </p>
+                    <p className="mt-1 text-xs">
+                      Antes: {entry.previous_permissions.length} permisos · Ahora: {entry.new_permissions.length}.
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </details>
+        </>
       )}
     </main>
   );
