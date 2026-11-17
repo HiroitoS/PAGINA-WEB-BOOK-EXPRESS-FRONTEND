@@ -1,5 +1,23 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 17/11/2026 — Navegación a recepciones, aviso a Jefatura y permisos personalizados [EN RAMA]
+
+**Prueba visual aportada por usuario:** Administrador abrió Roles y permisos; apareció un cuadro nativo del navegador `window.confirm` al guardar cambios en `JEFE_COMERCIAL` (no dar permisos de todas las áreas sin motivo). `Almacen1` creó borrador Santillana `T001-12358`, 20 físicos, 5 observados, 15 conformes, solicitó aprobación. `jefealmacen1` pudo revisar, aprobar y se generaron avisos de ingreso/diferencia; el pedido mantiene 5 pendientes. Flujo real con roles separados demostrado mediante capturas, **stock físico aún necesita revisión final de incremento una sola vez**.
+
+**Cambios nuevos programados:**
+- `RolePermissionsPage.jsx`: sustitución de todas las confirmaciones nativas por `ConfirmActionDialog` dentro del diseño; aplica a guardar, cambiar de rol con cambios sin guardar y actualizar. Resumen de permisos agregados/retirados, advierte que modifica a todos los usuarios y que deben revisarse accesos cruzados.
+- Backend `warehouse/api_views.py`: `GET /api/admin/erp/almacen/recepciones/pendientes-aprobacion/`: permisos efectivos `warehouse.validate_receiving`, hasta cinco documentos, conteo total, excluye registros propios de usuario no-superusuario. Sin duplicar autorizaciones de aprobación.
+- Backend `warehouse/receipt_notifications.py` y `warehouse/receiving.py`: enlaces completos `/admin/erp/almacen/recepciones?recepcion={id}` para aprobación/validación/diferencia; notifica al almacenero cuando jefatura devuelve con motivo; al resolver aprobación se marca resuelto/leído para no mantener avisos obsoletos. Cada nuevo reenvío puede generar un aviso nuevo.
+- Frontend `notificationNavigation.js`: avisos anteriores sin enlace específico también abren su recepción exacta usando `source_app=warehouse`, `source_model=GoodsReceipt`, `source_id`. Se evita abrir URL genérica.
+- Frontend `ERPRecepcionPage.jsx`: lee `?recepcion=id`, consulta detalle directo aun si el registro está en otra página, selecciona y muestra sección «Recepciones registradas». Agrega bandeja compacta de «N recepciones esperan tu aprobación» con botones por documento para jefe. Reutiliza las rutas existentes y conserva el registro original.
+- Backend `warehouse/test_supervisor_receiving.py`: prueba selección de pendientes, acceso 403 para almacenero, enlace directo, resolución, notificación a almacenero tras aprobación/devolución y reenvío sin reutilizar aviso antiguo. Aún requiere CI verde del último commit.
+
+**Permisos por usuario (YA EXISTENTE):** Seguridad y accesos → Usuarios → Accesos. Permite elegir rol principal y adicionar permisos directos individuales no heredados; no hace falta crear roles para excepciones. Roles globales → cambia todos los usuarios; permisos directos → una sola persona. Mantener principio de menor privilegio, no asignar funciones sensibles solo por comodidad.
+
+**Prueba siguiente:** `git pull --ff-only` en ambos repos (sin nuevas migraciones) → `python manage.py check`, test `warehouse.test_supervisor_receiving` → `npm run lint && npm run build`. En Jefatura confirmar tarjeta de pendientes y abrir con botón; en almacenero confirmar que nuevo aviso de aprobación abre documento exacto y que la ruta conserva `?recepcion=ID`. En Roles probar que guardar presenta modal corporativo y NO diálogo `localhost dice`. Confirmar saldo de 15 conformes/5 observados en Inventario y 5 pendientes de pedido. No crear nueva entrada al reprobar/abrir notificaciones.
+
+**Pendiente:** revisar aspecto en dispositivos reales y validar enlaces del centro de notificaciones, no declarar cerrado B4, sin fusionar con main ni desplegar a Tecnoweb.
+
 ## 17/11/2026 — Refinamiento compacto y pruebas UX en la misma rama
 
 **Capturas verificadas:** `/admin/roles-permisos` y `/admin/usuarios`: se observaron siete roles (incluido `JEFE_ALMACEN`) y dos usuarios para pruebas, `Almacen1` (ALMACEN) y `jefealmacen1` (JEFE_ALMACEN). No se introdujeron datos manualmente en PostgreSQL. La solicitud es minimizar longitud de la conversación y verificar de forma guiada.
