@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { FiAlertCircle, FiSearch, FiRefreshCw } from "react-icons/fi";
-import { consultarInventarioConsolidado } from "../../api/warehouseApi";
+import { consultarFiltrosInventarioConsolidado, consultarInventarioConsolidado } from "../../api/warehouseApi";
 
 const GRUPOS = [
   { value: "editorial", label: "Editorial", fullLabel: "Por editorial" },
@@ -32,6 +32,19 @@ export default function InventoryConsolidatedPanel() {
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(true);
   const [version, setVersion] = useState(0);
+  const [filtros, setFiltros] = useState({ editoriales: [], colegios: [] });
+  const [editorialId, setEditorialId] = useState("");
+  const [colegioId, setColegioId] = useState("");
+
+  useEffect(() => {
+    let ignore = false;
+    consultarFiltrosInventarioConsolidado().then((data) => {
+      if (!ignore) setFiltros(data);
+    }).catch(() => {
+      if (!ignore) setError("No pudimos cargar las opciones de colegios y editoriales.");
+    });
+    return () => { ignore = true; };
+  }, [version]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -49,6 +62,8 @@ export default function InventoryConsolidatedPanel() {
     let ignore = false;
     consultarInventarioConsolidado({
       grupo, buscar: busquedaAplicada, pagina,
+      ...(editorialId ? { editorial_id: editorialId } : {}),
+      ...(colegioId ? { colegio_id: colegioId } : {}),
     }).then((response) => {
       if (ignore) return;
       setDatos(response);
@@ -62,7 +77,7 @@ export default function InventoryConsolidatedPanel() {
       if (!ignore) setCargando(false);
     });
     return () => { ignore = true; };
-  }, [grupo, busquedaAplicada, pagina, version]);
+  }, [grupo, busquedaAplicada, pagina, version, editorialId, colegioId]);
 
   function cambiarGrupo(next) {
     setCargando(true);
@@ -131,13 +146,47 @@ export default function InventoryConsolidatedPanel() {
           </span>
         </label>
       </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="block text-xs font-bold text-gray-700">
+          Editorial
+          <select aria-label="Filtrar existencias por editorial" value={editorialId}
+            onChange={(event) => { setCargando(true); setPagina(1); setEditorialId(event.target.value); }}
+            className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900">
+            <option value="">Todas las editoriales</option>
+            {filtros.editoriales.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-xs font-bold text-gray-700">
+          Colegio de origen
+          <select aria-label="Filtrar existencias por colegio" value={colegioId}
+            onChange={(event) => { setCargando(true); setPagina(1); setColegioId(event.target.value); }}
+            className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900">
+            <option value="">Todos los colegios</option>
+            {filtros.colegios.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {(editorialId || colegioId || buscar) && (
+        <button type="button" className="text-xs font-bold text-red-700 underline"
+          onClick={() => {
+            setCargando(true);
+            setEditorialId(""); setColegioId(""); setBuscar("");
+            setBusquedaAplicada(""); setPagina(1);
+          }}>
+          Limpiar filtros
+        </button>
+      )}
 
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {cargando && <p role="status" className="rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Consultando existencias…</p>}
 
       {!cargando && datos && (
         <>
-          {busquedaAplicada && (
+          {(busquedaAplicada || editorialId || colegioId) && (
             <div aria-label="Totales de la búsqueda"
               className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
               <span className="font-bold text-gray-900">Esta búsqueda:</span>
