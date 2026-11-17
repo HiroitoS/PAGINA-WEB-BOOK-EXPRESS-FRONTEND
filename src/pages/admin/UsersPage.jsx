@@ -486,6 +486,10 @@ export default function UsersPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
+            <Link to="/admin/roles-permisos"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold text-white hover:bg-white/15">
+              <FaShieldAlt aria-hidden="true" /> Configurar roles
+            </Link>
             <Link
               to="/admin/dashboard"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/15"
