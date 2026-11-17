@@ -168,9 +168,7 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
             <button type="button" className="min-h-10 rounded-lg border border-amber-400 bg-white px-3 text-xs font-bold text-amber-950 hover:border-red-400"
               onClick={() => {
                 setExpanded(true);
-                if (!archivosPorLinea.has(Number(lineId))) {
-                  setLineId(String(sinEvidencia[0].id));
-                }
+                setLineId(String(sinEvidencia[0].id));
               }}>
               {canUpload ? "Adjuntar evidencia" : "Consultar incidencias"}
             </button>
