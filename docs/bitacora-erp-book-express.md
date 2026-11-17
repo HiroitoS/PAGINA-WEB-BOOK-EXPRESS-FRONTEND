@@ -1,5 +1,30 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 16/11/2026 — Recepción Bruño validada, inventario 39 y corrección UX/borradores duplicados [CAMBIOS EN RAMA; REVISIÓN LOCAL PENDIENTE]
+
+**Confirmado en cinco capturas del usuario:**
+- Antes de validar la recepción, Inventario consolidado tenía 10 unidades Santillana y **ningún registro de Bruño**.
+- Recepción `PRUEBA-REC-BRUNO-001` de la editorial Bruño: seis líneas (Inicial 8+8+8; Primaria 5+5+5), filtros de nivel correctos.
+- Se crearon **dos borradores Bruño** (`recepción N.º 2` y `N.º 3`) con el mismo documento «Otro documento». **Solo la N.º 3 fue validada**. Este comportamiento revela que el control anterior de documentos duplicados cubría solo `guide`, no otros tipos. No asumir que el borrador N.º 2 se puede borrar automáticamente.
+- La N.º 3 quedó Validada, 39 aceptadas, 0 observadas; `BE-OC-000003` pasó a 39 validadas y 0 pendientes; Inventario consolidado contiene exactamente los seis productos Bruño por 39 unidades, con costo total mostrado **S/ 5,256.00**. El flujo Compra → Recepción validada → Inventario funciona para este caso.
+- Borrador N.º 2 **debe anularse explícitamente con motivo y conservar su auditoría**; no entra dos veces a inventario.
+
+**Implementación backend:**
+- `GoodsReceipt.Status.CANCELLED`, migración `warehouse/migrations/0015_receipt_cancelled.py` (aplicarla solo en desarrollo tras respaldo) y actualización de restricciones de unicidad de guías para excluir anuladas.
+- `warehouse/receiving.py`: comprobación de duplicado en toda referencia de documento no vacía, por editorial y tipo, sin diferencia por mayúsculas/espacios; exclusión de anulados. Bloqueo de editorial serializa creación y validación. Para duplicados LEGADOS en borrador, validación no permite repetir una referencia ya validada. Cancelación solo de borrador, con motivo 8–500 caracteres, evento `cancelled` y preservación de líneas. No cambia stock/pedido ni se permite cancelar recepción validada.
+- `warehouse/api_views.py`: `POST /api/admin/erp/almacen/recepciones/{id}/anular-borrador/` con `reason`, exige permiso `warehouse.manage_receiving`. Tests en `warehouse/tests.py` para cancelación, documento «other» repetido y validación de copia anterior.
+- No hacemos eliminación automática/destructiva del borrador N.º 2, ni convertimos el registro de factura proveedor en parte de Recepción.
+
+**Implementación frontend:**
+- `SeguimientoPedidos` renombrado a **«Seguimiento del pedido»** y organizado en pestañas **«Resumen»** (3 cifras principales; estado del pedido y alerta de borrador) y **«Ver detalle»** (productos y entregas validadas). Diseño con divulgación progresiva, tabla oculta inicialmente.
+- `ERPRecepcionPage.jsx` destaca recepción en borrador para el mismo pedido y botón **«Continuar borrador N.º X»**; alerta por documento repetido con acceso al registro, bloqueando la nueva creación; en el historial, recepciones anuladas se agrupan en desplegable propio, mientras que validadas y pendientes siguen en vista principal.
+- **«Anular este borrador»** pide motivo y lo cancela sin borrar auditoría. Inventario abre **en otra pestaña** para no perder formularios en curso; encabezado compacto y panel izquierdo estrecho.
+- CI frontend para pestañas `d10a3cec7` aprobó; último ajuste completo `63a93a097` pasó lint/tests/build en job 133720817680; verificar estado final. Backend último cambio de tests `2aaa20689` pasó en job 133719991093, comprobar estado final.
+
+**Prueba manual necesaria antes de continuar traslados:** verificar `git status`, descargar ramas y hacer respaldo de PostgreSQL local; `python manage.py migrate --plan`, `python manage.py migrate` (debe aplicar 0015), `python manage.py check`, `python manage.py test warehouse.tests`. Frontend `npm run lint && npm run build`. Abrir Recepciones registradas, seleccionar **borrador N.º 2** de Bruño, confirmar que aparece «Anular este borrador», introducir motivo «Duplicado del documento validado en recepción N.º 3» y confirmar. Debe desaparecer de activos, quedar en «Borradores anulados», e Inventario continuar en Bruño 39 (no 78). No repetir registro/validación Bruño. La recepción N.º 3 validada no debe poder anularse ni editarse. Después comprobar inventario por almacén; **la conexión automática entre Entregas y Traslados sigue pendiente (B3/B4)**.
+
+**Criterio de diseño:** aplicar divulgación progresiva y resumen operativo visible (NN/g), no tablas extensas permanentes ni duplicar formularios. En Home público se analizará hero más inmersivo por separado, sin mezclar el diseño comercial con el ERP.
+
 ## 16/11/2026 — Prueba de borrador de recepción y ambigüedad de «Conciliación por pedido» [REVISIÓN UX PENDIENTE]
 
 **Capturas locales:** la recepción Bruño `PRUEBA-REC-BRUNO-001`, documento «Otro documento», está **En borrador**; seis líneas (8+8+8+5+5+5) proponen 39 unidades físicas, 0 observadas. En «Conciliación por pedido», pedido `BE-OC-000003` / 22 DE ABRIL muestra **Solicitadas 39, Aceptadas acumuladas 0, Por recibir 39**, historial de entregas validadas (0). Esto es **correcto**: guardar borrador no afecta pedido/stock, pero «Prop. aceptación 39» es propuesta de la guía, no confirmación.
