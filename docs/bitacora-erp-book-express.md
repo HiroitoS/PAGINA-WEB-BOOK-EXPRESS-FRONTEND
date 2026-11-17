@@ -1,5 +1,13 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 17/11/2026 — Revisión de continuidad y CI al retomar Fase B [CORRECCIÓN EN RAMA]
+
+**Revisión GitHub:** se comprobó la bitácora y la rama `feature/erp-p08-traslados-por-guia` en backend/frontend. El último CI frontend asociado a `90fe28bd` terminó correctamente. En el backend, el CI de `33b40b62` ejecutó 489 pruebas y falló exactamente en una prueba recién incorporada: `test_evidencia_despues_de_aprobacion_no_reingresa_inventario`, porque el fixture PNG contenía barras invertidas literales en vez de los bytes de cabecera; la validación de archivo respondió HTTP 400 y el test esperaba 201. Esto NO demuestra un defecto del flujo de evidencias en producción; es un error en el archivo de prueba.
+
+**Corrección mínima:** commit backend `f7273d49` sustituye la secuencia literal por la cabecera PNG correcta en el fixture, sin modificar la API, el comportamiento de stock ni las reglas de recepción. **CI del nuevo commit pendiente de confirmar antes de declarar verde**; no alterar `main` ni Tecnoweb.
+
+**Punto exacto de reanudación:** para la recepción Santillana N.° 6 (documento `T001-12358`), probar que se adjunta evidencia a su línea observada, que el PDF/JPG/PNG queda consultable, que el reporte para editorial se puede preparar/copiar sin enviarlo, y que `StockEntry` permanece con una sola entrada. Revisar en Inventario los 15 conformes, 5 observados y el pedido con 5 unidades pendientes según última captura. Después continuar B3: reservas por lote y verificación de preparación antes de B4/GRE/despacho.
+
 ## 17/11/2026 — Recepción Santillana N.° 6: enlace probado y evidencias visibles [EN RAMA, UX LOCAL PENDIENTE]
 
 **Capturas del usuario:** al pulsar «Ver recepción» desde campana en administrador y Almacen1, ambos navegan a `/admin/erp/almacen/recepciones?recepcion=6` y seleccionan documento `T001-12358` de Santillana; la ficha muestra 20 recibidos físicamente, 15 conformes, 5 observados, 0 adicionales, y el seguimiento de pedido `[PRUEBA ERP] ANDINO · 2027` muestra solicitados 20 / validados 15 / por recibir 5. Navegación exitosa, NO prueba todavía la ubicación/valorización de todas las entradas físicas. La captura muestra `0 adjuntos` en incidencias.
