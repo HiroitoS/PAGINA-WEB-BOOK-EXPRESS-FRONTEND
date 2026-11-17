@@ -26,6 +26,41 @@ export async function actualizarRecepcion(id, payload) {
   return data;
 }
 
+export async function listarEvidenciasRecepcion(id) {
+  const { data } = await axiosClient.get(`${BASE}/${id}/evidencias/`);
+  return data;
+}
+
+export async function subirEvidenciaRecepcion(id, { lineId, kind, description, file }) {
+  const form = new FormData();
+  form.append("receipt_line_id", String(lineId));
+  form.append("kind", kind);
+  form.append("description", description);
+  form.append("file", file);
+  const { data } = await axiosClient.post(`${BASE}/${id}/evidencias/`, form);
+  return data;
+}
+
+export async function descargarEvidenciaRecepcion(id, evidenceId) {
+  const { data } = await axiosClient.get(
+    `${BASE}/${id}/evidencias/${evidenceId}/archivo/`,
+    { responseType: "blob" },
+  );
+  return data;
+}
+
+export async function prepararReporteEditorial(id) {
+  const { data } = await axiosClient.get(`${BASE}/${id}/reporte-editorial/`);
+  return data;
+}
+
+export async function enviarReporteEditorial(id, recipient, dispatchKey) {
+  const { data } = await axiosClient.post(`${BASE}/${id}/reporte-editorial/`, {
+    recipient, dispatch_key: dispatchKey,
+  });
+  return data;
+}
+
 export async function solicitarAprobacionRecepcion(id) {
   const { data } = await axiosClient.post(`${BASE}/${id}/solicitar-aprobacion/`, {});
   return data;
