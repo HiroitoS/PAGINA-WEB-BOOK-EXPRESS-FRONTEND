@@ -125,6 +125,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
       const response = await guardarBorradorTransporte(operation.id, payload);
       setTransport(response);
       setNotice("Datos de traslado guardados para revisión. No se ha emitido una guía SUNAT.");
+      onChanged();
     } catch (err) {
       setError(errorText(err));
     } finally {
