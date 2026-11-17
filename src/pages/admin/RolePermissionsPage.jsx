@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import ConfirmActionDialog from "../../components/admin/ConfirmActionDialog";
 import { FiArrowLeft, FiCheck, FiLock, FiRefreshCw, FiSave, FiShield, FiSearch } from "react-icons/fi";
 import {
   getAdminFunctionalPermissions,
@@ -57,6 +58,7 @@ export default function RolePermissionsPage() {
   const [category, setCategory] = useState("Almacén");
   const [permissionSearch, setPermissionSearch] = useState("");
   const [onlySelected, setOnlySelected] = useState(false);
+  const [confirmation, setConfirmation] = useState(null);
 
   const role = roles.find((item) => String(item.id) === roleId);
   const isProtected = role?.name === "ADMINISTRADOR";
@@ -120,8 +122,7 @@ export default function RolePermissionsPage() {
     return () => { ignore = true; };
   }, [roleId, version]);
 
-  function selectRole(next) {
-    if (dirty && !window.confirm("Hay cambios sin guardar. ¿Cambiar de rol y descartarlos?")) return;
+  function switchRole(next) {
     setRoleId(next);
     setCategory(next === String(roles.find((item) => item.name === "ALMACEN")?.id) ||
       next === String(roles.find((item) => item.name === "JEFE_ALMACEN")?.id) ? "Almacén" : "Todos");
@@ -129,6 +130,25 @@ export default function RolePermissionsPage() {
     setOnlySelected(false);
     setError("");
     setMessage("");
+  }
+
+  function selectRole(next) {
+    if (next === roleId || saving) return;
+    if (dirty) {
+      setConfirmation({ type: "discard", next });
+      return;
+    }
+    switchRole(next);
+  }
+
+  function requestRefresh() {
+    if (saving) return;
+    if (dirty) {
+      setConfirmation({ type: "refresh" });
+      return;
+    }
+    setLoading(true);
+    setVersion((v) => v + 1);
   }
 
   function toggle(code) {
@@ -165,11 +185,13 @@ export default function RolePermissionsPage() {
     setMessage("");
   }
 
+  function requestSave() {
+    if (!role || !dirty || saving || isProtected) return;
+    setConfirmation({ type: "save" });
+  }
+
   async function saveRole() {
     if (!role || !dirty || saving || isProtected) return;
-    if (!window.confirm(
-      `Guardar permisos del rol ${role.name}? El cambio afectará a todos sus usuarios.`
-    )) return;
     setSaving(true);
     setError("");
     setMessage("");
@@ -187,6 +209,20 @@ export default function RolePermissionsPage() {
       setError(getError(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function confirmAction() {
+    if (!confirmation || saving) return;
+    const action = confirmation;
+    setConfirmation(null);
+    if (action.type === "save") {
+      await saveRole();
+    } else if (action.type === "refresh") {
+      setLoading(true);
+      setVersion((v) => v + 1);
+    } else if (action.type === "discard") {
+      switchRole(action.next);
     }
   }
 
@@ -222,12 +258,7 @@ export default function RolePermissionsPage() {
                 <h2 id="roles-title" className="text-sm font-black text-gray-950">Selecciona el rol</h2>
                 <p className="mt-0.5 text-xs text-gray-600">Elige un cargo para consultar o modificar sus permisos.</p>
               </div>
-              <button type="button" onClick={() => {
-                if (!dirty || window.confirm("¿Descartar cambios sin guardar y actualizar los roles?")) {
-                  setLoading(true);
-                  setVersion((v) => v + 1);
-                }
-              }} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-bold text-gray-800 hover:border-red-300">
+              <button type="button" onClick={requestRefresh} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-xs font-bold text-gray-800 hover:border-red-300">
                 <FiRefreshCw aria-hidden="true" /> Actualizar
               </button>
             </div>
@@ -264,7 +295,7 @@ export default function RolePermissionsPage() {
                 <span className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-bold text-gray-800">
                   {selected.length} activos
                 </span>
-                <button type="button" onClick={saveRole} disabled={!dirty || saving || isProtected}
+                <button type="button" onClick={requestSave} disabled={!dirty || saving || isProtected}
                   className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500">
                   {saving ? <FiRefreshCw aria-hidden="true" className="animate-spin" /> : <FiSave aria-hidden="true" />}
                   Guardar cambios
@@ -347,7 +378,7 @@ export default function RolePermissionsPage() {
                 <p role="status" className={`text-xs font-semibold ${dirty ? "text-amber-800" : "text-gray-600"}`}>
                   {dirty ? "Cambios pendientes de guardar" : "Sin modificaciones pendientes"}
                 </p>
-                <button type="button" onClick={saveRole} disabled={!dirty || saving || isProtected}
+                <button type="button" onClick={requestSave} disabled={!dirty || saving || isProtected}
                   className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-700 px-4 text-xs font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500">
                   <FiSave aria-hidden="true" /> Guardar permisos del rol
                 </button>
@@ -378,6 +409,29 @@ export default function RolePermissionsPage() {
           </details>
         </>
       )}
+      <ConfirmActionDialog
+        open={Boolean(confirmation)}
+        eyebrow="Seguridad y accesos"
+        title={confirmation?.type === "save"
+          ? "Confirmar cambios del rol"
+          : "Descartar cambios sin guardar"}
+        description={confirmation?.type === "save"
+          ? `Se modificarán los permisos del rol ${role?.name.replaceAll("_", " ")} para todos sus usuarios. Revisa que no estés otorgando accesos de otras áreas.`
+          : "Los cambios que todavía no guardaste se perderán."}
+        confirmLabel={confirmation?.type === "save" ? "Guardar permisos" : "Descartar cambios"}
+        cancelLabel="Seguir revisando"
+        processing={saving}
+        onCancel={() => setConfirmation(null)}
+        onConfirm={confirmAction}
+      >
+        {confirmation?.type === "save" && (
+          <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
+            <strong className="text-gray-950">{selected.length} permisos después del cambio.</strong>
+            {" "}Nuevos: {selected.filter((id) => !saved.includes(id)).length}.
+            {" "}Retirados: {saved.filter((id) => !selected.includes(id)).length}.
+          </div>
+        )}
+      </ConfirmActionDialog>
     </main>
   );
 }
