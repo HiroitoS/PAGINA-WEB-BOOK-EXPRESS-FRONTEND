@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { warehouseErrorMessage as errorLegible } from "../../../utils/warehouseErrorMessage";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog";
 import ReceivingEvidencePanel from "../../../components/admin/ReceivingEvidencePanel";
 import { useAuth } from "../../../hooks/useAuth";
@@ -12,6 +12,8 @@ import {
   consultarSeguimientoRecepcion,
   listarPedidosPorRecibir,
   listarRecepciones,
+  listarRecepcionesPendientesAprobacion,
+  obtenerRecepcion,
   solicitarAprobacionRecepcion,
   devolverRecepcion,
   validarRecepcion,
@@ -87,6 +89,27 @@ function colorTarjetaRecepcion(recepcion) {
 
 function claveNivel(linea) {
   return linea.nivel_id == null ? "sin-nivel" : String(linea.nivel_id);
+}
+
+function datosEditablesRecepcion(recepcion) {
+  return {
+    provider_id: recepcion.provider,
+    document_type: recepcion.document_type,
+    document_number: recepcion.document_number,
+    received_on: recepcion.received_on,
+    notes: recepcion.notes,
+    lines: recepcion.lines.map((linea) => ({
+      order_item_id: linea.order_item,
+      nombre: linea.product_name,
+      pedido: linea.order_id,
+      quantity_arrived: String(linea.quantity_arrived),
+      quantity_observed: String(linea.quantity_observed),
+      quantity_extra: String(linea.quantity_extra ?? 0),
+      pending_before: linea.pending_before,
+      quantity_documented: linea.quantity_documented == null ? "" : String(linea.quantity_documented),
+      notes: linea.notes,
+    })),
+  };
 }
 
 function validarLineas(lineas) {
@@ -264,6 +287,10 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
 export default function ERPRecepcionPage() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const receiptRouteValue = new URLSearchParams(location.search).get("recepcion") || "";
+  const receiptTargetId = /^\d+$/.test(receiptRouteValue) && Number.isSafeInteger(Number(receiptRouteValue))
+    ? Number(receiptRouteValue) : null;
   const rutaRetorno = location.state?.inventoryReturnTo;
   const retornoInventario = typeof rutaRetorno === "string" &&
     (rutaRetorno === "/admin/erp/almacen/inventario" ||
@@ -300,6 +327,7 @@ export default function ERPRecepcionPage() {
   const [seguimiento, setSeguimiento] = useState(null);
   const [cargandoSeguimiento, setCargandoSeguimiento] = useState(false);
   const [errorSeguimiento, setErrorSeguimiento] = useState("");
+  const [pendientesRevision, setPendientesRevision] = useState({ total: 0, recepciones: [] });
 
   useEffect(() => {
     let ignore = false;
@@ -312,7 +340,13 @@ export default function ERPRecepcionPage() {
         const lOrdenes = normalizarListado(ordenes);
         const lEntradas = normalizarListado(entradas);
         setPedidos(lOrdenes.items);
-        setRecepciones(lEntradas.items);
+        setRecepciones((current) => {
+          const selectedFromLink = current.find((item) => item.id === receiptTargetId);
+          if (selectedFromLink && !lEntradas.items.some((item) => item.id === receiptTargetId)) {
+            return [selectedFromLink, ...lEntradas.items];
+          }
+          return lEntradas.items;
+        });
         setMasPedidos(lOrdenes.next);
         setMasRecepciones(lEntradas.next);
         setPaginaPedidos(1);
@@ -326,7 +360,42 @@ export default function ERPRecepcionPage() {
     }
     consultar();
     return () => { ignore = true; };
-  }, [revision]);
+  }, [revision, receiptTargetId]);
+
+  useEffect(() => {
+    if (!receiptTargetId) return;
+    let ignore = false;
+    async function abrirDesdeEnlace() {
+      try {
+        const receipt = await obtenerRecepcion(receiptTargetId);
+        if (ignore) return;
+        setRecepciones((current) => {
+          const without = current.filter((item) => item.id !== receiptTargetId);
+          return [receipt, ...without];
+        });
+        setRecepcionId(receipt.id);
+        setEdicion(datosEditablesRecepcion(receipt));
+        setCambiosSinGuardar(false);
+        setPestana("historial");
+        setError("");
+      } catch (err) {
+        if (!ignore) setError(`No pudimos abrir esta recepción. ${errorLegible(err)}`);
+      }
+    }
+    abrirDesdeEnlace();
+    return () => { ignore = true; };
+  }, [receiptTargetId, revision]);
+
+  useEffect(() => {
+    if (!puedeValidar) return;
+    let ignore = false;
+    listarRecepcionesPendientesAprobacion().then((data) => {
+      if (!ignore) setPendientesRevision(data);
+    }).catch(() => {
+      if (!ignore) setPendientesRevision({ total: 0, recepciones: [] });
+    });
+    return () => { ignore = true; };
+  }, [puedeValidar, revision]);
 
   useEffect(() => {
     if (pestana !== "historial" || !recepcionId) return;
@@ -561,7 +630,8 @@ export default function ERPRecepcionPage() {
       setPedidosMarcados([]);
       setNivelSeleccionado("");
       setPestana("historial");
-      setMensaje("Recepción guardada en borrador. Revísala y valídala cuando las cantidades estén verificadas.");
+      navigate(`/admin/erp/almacen/recepciones?recepcion=${creada.id}`, { replace: true });
+      setMensaje("Recepción guardada en borrador. Verifica las cantidades y envíala a aprobación.");
       setCargando(true);
       setRevision((actual) => actual + 1);
     } catch (err) {
@@ -580,24 +650,8 @@ export default function ERPRecepcionPage() {
     setRecepcionId(recepcion.id);
     setConfirmacionAbierta(false);
     setCambiosSinGuardar(false);
-    setEdicion({
-      provider_id: recepcion.provider,
-      document_type: recepcion.document_type,
-      document_number: recepcion.document_number,
-      received_on: recepcion.received_on,
-      notes: recepcion.notes,
-      lines: recepcion.lines.map((linea) => ({
-        order_item_id: linea.order_item,
-        nombre: linea.product_name,
-        pedido: linea.order_id,
-        quantity_arrived: String(linea.quantity_arrived),
-        quantity_observed: String(linea.quantity_observed),
-          quantity_extra: String(linea.quantity_extra ?? 0),
-          pending_before: linea.pending_before,
-          quantity_documented: linea.quantity_documented == null ? "" : String(linea.quantity_documented),
-        notes: linea.notes,
-      })),
-    });
+    setEdicion(datosEditablesRecepcion(recepcion));
+    navigate(`/admin/erp/almacen/recepciones?recepcion=${recepcion.id}`, { replace: true });
   }
 
   function modificarLinea(index, campo, value) {
@@ -808,6 +862,32 @@ export default function ERPRecepcionPage() {
           </button>
         ))}
       </div>
+
+      {puedeValidar && pendientesRevision.total > 0 && (
+        <section aria-label="Recepciones por aprobar"
+          className="rounded-xl border border-amber-300 bg-amber-50 p-3 sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-black text-amber-950">
+                {pendientesRevision.total} recepción(es) esperan tu aprobación
+              </h2>
+              <p className="mt-1 text-xs text-amber-950">
+                Selecciona una recepción para revisar cantidades, evidencias y aprobar o devolver.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {pendientesRevision.recepciones.map((item) => (
+              <button key={item.id} type="button"
+                onClick={() => navigate(`/admin/erp/almacen/recepciones?recepcion=${item.id}`)}
+                className="min-h-10 rounded-lg border border-amber-300 bg-white px-3 py-2 text-left text-xs font-bold text-gray-950 hover:border-red-600 hover:text-red-800">
+                {item.editorial} · {item.documento}
+                <span className="ml-2 font-normal text-gray-600">Revisar →</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {mensaje && <p role="status" className="rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-800">{mensaje}</p>}
