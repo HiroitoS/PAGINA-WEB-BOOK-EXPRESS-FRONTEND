@@ -235,7 +235,9 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
               <select value={formulario.kind}
                 onChange={(event) => actualizarCampo("kind", event.target.value)}
                 className={campoClase}>
-                {TIPOS.map((tipo) => <option key={tipo.value} value={tipo.value}>{tipo.label}</option>)}
+                {TIPOS.filter((tipo) => editandoId !== null || tipo.value !== "fair").map((tipo) => (
+                  <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
+                ))}
               </select>
             </label>
             <label className="min-w-0 text-xs font-semibold text-gray-700 sm:col-span-2">
@@ -256,7 +258,9 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
           </div>
           <p className="rounded-lg bg-white px-3 py-2 text-xs leading-5 text-gray-600">
             {DESCRIPCIONES_TIPO[formulario.kind]}
-            {" "}Los traslados se habilitarán cuando las existencias estén conciliadas por ubicación.
+            {" "}Para registrar una feria nueva, utiliza «Ferias y subalmacenes por evento»,
+            disponible arriba. Los traslados se habilitarán cuando las existencias
+            estén conciliadas por ubicación.
           </p>
           <label className="block text-xs font-semibold text-gray-700">
             Observaciones (opcional)
@@ -308,7 +312,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
                 </div>
                 <p className="text-xs text-gray-600">{mostrarTipo(item.kind)}</p>
                 {item.address && <p className="break-words text-xs text-gray-600">{item.address}</p>}
-                {puedeGestionar && (
+                {puedeGestionar && !item.fair_event_id && (
                   <button type="button" onClick={() => editar(item)}
                     className="min-h-11 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-red-700">
                     Editar ubicación
@@ -335,10 +339,14 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
                     <td className="p-3">{item.is_active ? "Activa" : "Inactiva"}</td>
                     {puedeGestionar && (
                       <td className="p-3">
-                        <button type="button" onClick={() => editar(item)}
+                        {item.fair_event_id ? (
+                          <span className="text-xs text-gray-500">Feria registrada</span>
+                        ) : (
+                          <button type="button" onClick={() => editar(item)}
                           className="min-h-11 rounded-lg px-2 font-semibold text-red-700 hover:underline">
                           Editar
-                        </button>
+                          </button>
+                        )}
                       </td>
                     )}
                   </tr>
