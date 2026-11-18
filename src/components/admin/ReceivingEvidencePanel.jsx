@@ -189,7 +189,7 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
       </summary>
       <div className="mt-3 space-y-3">
         {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-800">{error}</p>}
-        {notice && <p role="status" className="rounded-lg bg-green-50 p-3 text-xs text-green-900">{notice}</p>}
+        {notice && <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-900">{notice}</p>}
         {loading && <p role="status" className="text-xs text-gray-600">Consultando evidencias…</p>}
         {canUpload && receipt.status !== "cancelled" && (
           <form onSubmit={uploadEvidence} className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -276,7 +276,7 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
                     {copyFeedback ? "Copiar nuevamente" : "Copiar texto del correo"}
                   </button>
                   {copyFeedback && (
-                    <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-green-900">
+                    <p role="status" className="rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 text-xs font-bold text-gray-900">
                       ✓ Correo copiado (asunto y mensaje). Descarga y adjunta los archivos
                       en tu correo antes de enviarlo. No se ha enviado nada.
                     </p>
