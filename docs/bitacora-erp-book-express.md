@@ -1,5 +1,21 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 18/11/2026 — UX de Ubicaciones: pestañas compactas + guía para personal [EN RAMA, PRUEBA VISUAL PENDIENTE]
+
+**Origen:** captura local del usuario en `/admin/erp/almacen/ubicaciones` demuestra que la feria `COLEGIO 22 DE ABRIL` ya está registrada con ubicación propia, recinto, fechas y custodia de ROBERTO, y que existen 5 ubicaciones registradas. El usuario reportó que la página continua de ferias + ubicaciones es extensa y que no distingue claramente Movimientos/Entregas/Traslados.
+
+**Cambios UI confirmados en GitHub:**
+- `ERPUbicacionesPage.jsx`: sustituye las dos secciones apiladas por **3 pestañas independientes**: **Ferias**, **Almacenes y destinos**, **Guía del proceso**. La pestaña se conserva en el query param `?seccion=`; encabezado breve, botones responsivos y acceso de vuelta a Inventario. La guía muestra solo enlaces reales según permisos, indica operaciones actuales y pendientes y advierte del traslado directo.
+- `WarehouseFairsPanel.jsx`: listado compacto en filas, fechas legibles y formulario sencillo a 2 columnas; observaciones opcionales plegadas. Mantiene el endpoint existente y su control de idempotencia; registrar un evento no crea ni mueve stock.
+- `WarehouseMovementTabs.jsx` y `ERPTrasladosPage.jsx`: etiquetas de ayuda precisan que **Entregas** planifica/reserva/prepara, mientras **Traslados** registra un movimiento físico ya realizado. No utilizar traslados directos como sustituto del despacho/recepción documentados B4 todavía pendientes.
+- `docs/erp/GUIA_RAPIDA_ALMACEN_PERSONAL.md`: guía de capacitación con recorrido de menú, límites funcionales y prueba **solo de lectura** usando feria COLEGIO 22 DE ABRIL y entrega ANDINO 15 preparados + 5 pendientes. No pedir un traslado de demostración sin recepción física.
+
+**Verificaciones:** GitHub Actions frontend aprobó lint/build para cambios visuales y de navegación hasta `e54eb731`; pruebas visuales locales después de `git pull` siguen pendientes. No se modificaron APIs ni modelos, ni `main` ni Tecnoweb.
+
+**Prueba mínima:** abrir la página local actualizada, comprobar pestaña **Ferias** con el evento existente sin duplicarlo; **Almacenes y destinos** con las 5 ubicaciones; **Guía del proceso** con enlaces a Pedidos, Recepción, Inventario y Entregas. Abrir Movimientos solo para leer títulos; no generar nuevas entradas/reservas/traslados. La entrega ANDINO de 15 sigue preparada físicamente en Principal; 5 unidades pendientes y observadas separadas.
+
+**Próxima implementación útil:** antes de programar módulos comerciales adicionales, cerrar **B4: documento interno de salida, despacho controlado, tránsito y recepción en destino** de manera común a Feria y Consignación. Más adelante rendición/ventas/devoluciones de consignación y packs. No prometer emisión SUNAT desde un documento interno.
+
 ## 18/11/2026 — Ubicaciones invisibles en menú + consignación completa [CORREGIDO EN RAMA]
 
 **Evidencia visual del usuario:** en `/admin/erp/almacen/inventario` el lateral desplegado bajo ERP → Almacén mostraba Recepción, Inventario, Movimientos, **pero NO Ubicaciones**, aunque la ruta `/admin/erp/almacen/ubicaciones` y la nueva página B3.2 de ferias sí existían. El usuario pidió una navegación más directa y recordó que **consignación** también necesita salida, liquidación/ventas, facturación y devoluciones.
