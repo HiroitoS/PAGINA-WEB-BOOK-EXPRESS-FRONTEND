@@ -68,7 +68,6 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
   const [tab, setTab] = useState("stock");
   const [revision, setRevision] = useState(0);
   const [preparation, setPreparation] = useState(null);
-  const [transport, setTransport] = useState(null);
   const [documentForm, setDocumentForm] = useState(null);
   const [counts, setCounts] = useState({});
   const [manualSelection, setManualSelection] = useState(false);
@@ -89,7 +88,6 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
     ]).then(([stock, draft]) => {
       if (ignore) return;
       setPreparation(stock);
-      setTransport(draft);
       setDocumentForm(Object.fromEntries(Object.entries(draft.draft).map(
         ([key, value]) => [key, value == null ? "" : String(value)],
       )));
@@ -166,8 +164,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
         departure_on: documentForm.departure_on || null,
         gross_weight_kg: documentForm.gross_weight_kg || null,
       };
-      const response = await guardarBorradorTransporte(operation.id, payload);
-      setTransport(response);
+      await guardarBorradorTransporte(operation.id, payload);
       setDocumentChanged(false);
       setNotice("Datos de coordinación guardados. La reserva y preparación no dependen de estos datos; no se registró ninguna salida.");
       onChanged();
