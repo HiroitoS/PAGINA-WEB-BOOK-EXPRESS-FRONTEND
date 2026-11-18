@@ -10,7 +10,7 @@
 
 **Definición de documento interno pendiente para B4:** formato numerado/identificable, operación/adopción/colegio, modalidad Feria/Consignación, fecha y hora, almacén de origen, destino concreto/subalmacén de feria, libros/lotes/cantidades preparadas, responsable que entrega, responsable que recibe, firmas o confirmación y trazabilidad; generar, registrar salida una única vez y conciliar recepción. NO declararlo GRE ni reemplazar obligaciones SUNAT.
 
-**Punto de continuación:** verificar CI frontend de la simplificación y pantalla local, sin repetir B2/B3 ya comprobados. Después B3.2 ferias específicas con subalmacenes y B4 documento interno/salida/recepción, considerando packs y devoluciones. La operación de 15 libros permanece preparada; **no crear otro movimiento manual** ni completar artificialmente datos de transporte. No subir `main` ni Tecnoweb.
+**Verificación:** commit frontend `1c988680` superó GitHub Actions (lint, pruebas y build); la pantalla simplificada requiere prueba visual en localhost. No repetir B2/B3 ya comprobados. **Punto de continuación:** documento interno y movimiento físico real en B4, con feria específica/subalmacén. Después B3.2 ferias específicas con subalmacenes y B4 documento interno/salida/recepción, considerando packs y devoluciones. La operación de 15 libros permanece preparada; **no crear otro movimiento manual** ni completar artificialmente datos de transporte. No subir `main` ni Tecnoweb.
 
 ## 17/11/2026 — B3.1b: reserva de 15 y cinco pendientes de Feria [EN RAMA; PRUEBA LOCAL PENDIENTE]
 
