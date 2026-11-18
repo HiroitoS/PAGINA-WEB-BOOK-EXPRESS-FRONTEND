@@ -195,6 +195,10 @@ export default function InventoryConsolidatedPanel() {
               <span>Valor <strong className="tabular-nums text-gray-950">{soles(resumen?.valor_referencial)}</strong></span>
             </div>
           )}
+          <p className="text-xs leading-5 text-gray-600">
+            «Conformes» indica libros físicos aptos. Puede incluir unidades ya reservadas
+            para otras entregas; el saldo libre para reservar se calcula al preparar cada entrega.
+          </p>
           {Number(resumen?.unidades_sin_costo ?? 0) > 0 && (
             <p className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
               <FiAlertCircle className="mt-0.5 shrink-0" aria-hidden="true" />
