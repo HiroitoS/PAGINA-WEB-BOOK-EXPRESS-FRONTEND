@@ -331,6 +331,14 @@ export async function consultarPreparacionDistribucion(id) {
   return data;
 }
 
+export async function separarDisponiblesDistribucion(id, idempotencyKey) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/separar-disponibles/`,
+    { idempotency_key: idempotencyKey },
+  );
+  return data;
+}
+
 export async function reservarDistribucion(id, lots = null) {
   const payload = lots === null ? {} : { lots };
   const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/${id}/reservar/`, payload);
