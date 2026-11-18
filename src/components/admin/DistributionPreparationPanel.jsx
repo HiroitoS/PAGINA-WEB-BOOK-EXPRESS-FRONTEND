@@ -13,22 +13,6 @@ import {
 const primary = "inline-flex min-h-11 items-center justify-center rounded-xl bg-red-700 px-5 text-sm font-semibold text-white transition hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600";
 const input = "mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-950 transition-colors focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100";
 
-const FIELD_LABELS = {
-  issuer_ruc: "RUC del remitente",
-  departure_address: "Dirección de partida",
-  destination_address: "Dirección real de llegada",
-  destination_name: "Destinatario o responsable",
-  destination_id_number: "Documento del destinatario",
-  transport_mode: "Modalidad de transporte",
-  transfer_reason: "Motivo del traslado",
-  departure_on: "Fecha de salida",
-  gross_weight_kg: "Peso bruto",
-  license_plate: "Placa del vehículo",
-  driver_document: "Documento del conductor",
-  driver_license: "Licencia del conductor",
-  carrier_ruc: "RUC del transportista",
-};
-
 const FIELD_LIMITS = {
   issuer_ruc: 11, destination_name: 180, destination_id_number: 20,
   departure_address: 300, destination_address: 300, license_plate: 15,
@@ -185,7 +169,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
       const response = await guardarBorradorTransporte(operation.id, payload);
       setTransport(response);
       setDocumentChanged(false);
-      setNotice("Borrador guardado para revisión. No se emitió ninguna guía SUNAT.");
+      setNotice("Datos de coordinación guardados. La reserva y preparación no dependen de estos datos; no se registró ninguna salida.");
       onChanged();
     } catch (err) {
       setError(errorText(err));
@@ -208,15 +192,6 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
   );
   const canSplit = preparation?.status === "planned"
     && splitAvailable > 0 && splitPending > 0;
-  const requiredFields = [
-    "issuer_ruc", "departure_address", "destination_address",
-    "destination_name", "destination_id_number", "transport_mode",
-    "transfer_reason", "departure_on", "gross_weight_kg",
-    ...(documentForm?.transport_mode === "private"
-      ? ["license_plate", "driver_document", "driver_license"] : []),
-    ...(documentForm?.transport_mode === "public" ? ["carrier_ruc"] : []),
-  ];
-  const draftMissing = requiredFields.filter((key) => !String(documentForm?.[key] ?? "").trim());
   const canEditDraft = canManage && operation.status !== "cancelled";
 
   function changeDraft(key, value) {
@@ -264,8 +239,8 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
             </p>
             <h4 className="mt-1 text-lg font-bold">Preparación y documentación</h4>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-200">
-              Primero se verifican y reservan los libros. Después se prepara la documentación
-              para el traslado real. Guardar datos no envía ni mueve mercadería.
+              Reservar y contar los libros es independiente del transporte. La salida física
+              y sus documentos se gestionan en una etapa posterior.
             </p>
           </div>
           <span className="rounded-lg border border-gray-500 bg-gray-800 px-3 py-2 text-xs font-semibold text-white">
@@ -289,7 +264,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
               ? "flex min-h-12 items-center gap-2 rounded-xl bg-white px-4 text-left text-sm font-bold text-gray-950"
               : "flex min-h-12 items-center gap-2 rounded-xl border border-gray-600 px-4 text-left text-sm font-semibold text-white hover:bg-gray-800"}>
             <FiFileText aria-hidden="true" className="shrink-0 text-lg" />
-            2. Datos para la guía de traslado
+            2. Coordinación del traslado (opcional)
           </button>
         </div>
       </div>
@@ -482,7 +457,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
           )}
           {preparation.status === "prepared" && (
             <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-xs font-bold text-green-900">
-              Preparación verificada. Pendiente de documentación y despacho.
+              Preparación verificada. Los libros siguen en origen. El despacho se gestionará por separado.
             </p>
           )}
           {preparation.status === "cancelled" && (
@@ -491,196 +466,130 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
         </div>
       )}
       {!loading && tab === "document" && documentForm && (
-        <form onSubmit={saveDocument} className="space-y-4" aria-label="Borrador de datos de traslado">
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
-            <div className="flex max-w-2xl items-start gap-3">
-              <FiAlertTriangle aria-hidden="true" className="mt-0.5 shrink-0 text-xl text-amber-900" />
-              <div>
-                <h5 className="text-sm font-bold text-amber-950">Documento preparatorio, no es una guía SUNAT</h5>
-                <p className="mt-1 text-sm leading-6 text-amber-950">
-                  Puedes guardar este borrador incompleto. Su información debe ser revisada
-                  antes del traslado. Esta pantalla no emite ni valida una Guía de
-                  Remisión Electrónica, ni autoriza la salida de libros.
-                </p>
-              </div>
-            </div>
-            <span className="rounded-lg border border-amber-500 px-3 py-2 text-xs font-bold text-amber-950">
-              Sin emisión
-            </span>
+        <form onSubmit={saveDocument} className="space-y-4" aria-label="Datos de coordinación del traslado">
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <h5 className="text-sm font-bold text-gray-950">Coordinación de la salida · opcional</h5>
+            <p className="mt-2 text-sm leading-6 text-gray-700">
+              La mercadería ya puede reservarse y contarse sin completar los datos
+              del vehículo ni del transportista. Esta sección solo registra información
+              conocida para organizar una salida futura.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-gray-700">
+              El documento interno de salida se gestionará al despachar y no sustituye
+              la guía de remisión que corresponda legalmente. Guardar aquí no significa
+              que la mercadería haya salido del almacén.
+            </p>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <div className="rounded-xl border border-gray-200 p-4">
             <div className="flex items-center gap-2">
-              <FiMapPin aria-hidden="true" className="text-xl text-gray-700" />
-              <h5 className="text-sm font-bold text-gray-950">Recorrido previsto de esta entrega</h5>
+              <FiMapPin aria-hidden="true" className="text-lg text-gray-700" />
+              <h5 className="text-sm font-bold text-gray-950">Ruta interna prevista</h5>
             </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-white p-3 ring-1 ring-gray-200">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Ubicación interna de origen</p>
-                <p className="mt-1 break-words text-sm font-bold text-gray-900">{operation.source}</p>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Origen</p>
+                <p className="mt-1 text-sm font-bold text-gray-950">{operation.source}</p>
               </div>
-              <div className="rounded-lg bg-white p-3 ring-1 ring-gray-200">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Ubicación interna de destino</p>
-                <p className="mt-1 break-words text-sm font-bold text-gray-900">{operation.destination}</p>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">Destino previsto</p>
+                <p className="mt-1 text-sm font-bold text-gray-950">{operation.destination}</p>
               </div>
             </div>
             {operation.mode === "fair" && (
-              <div className="mt-3 space-y-1 rounded-lg border-l-4 border-red-700 bg-white p-3">
-                <p className="text-sm font-semibold text-gray-900">Feria: identificar el destino físico concreto</p>
-                <p className="text-sm leading-6 text-gray-700">
-                  Un almacén genérico denominado Feria no reemplaza el nombre del evento,
-                  su recinto, dirección real, fechas y custodio. Antes del despacho,
-                  debe registrarse la feria específica y verificar el motivo tributario
-                  correspondiente; no todas las ferias equivalen a un establecimiento propio.
-                </p>
-                <Link to="/admin/erp/almacen/ubicaciones"
-                  className="inline-flex min-h-10 items-center text-sm font-semibold text-red-700 underline underline-offset-4">
-                  Consultar ubicaciones de almacén
-                </Link>
-              </div>
+              <p className="mt-3 text-sm leading-6 text-gray-700">
+                En una feria se identificará el evento y su ubicación real antes
+                de registrar la salida. El almacén genérico no sustituye el destino
+                físico de cada feria.
+              </p>
             )}
           </div>
 
-          <fieldset className="space-y-4 rounded-xl border border-gray-200 p-4">
-            <legend className="px-2 text-base font-bold text-gray-950">1. Motivo y modalidad</legend>
-            <p className="text-sm leading-6 text-gray-600">
-              Selecciona el motivo real del movimiento. La modalidad comercial
-              Feria, Tienda o Consignación no determina automáticamente el motivo ante SUNAT.
+          <fieldset className="rounded-xl border border-gray-200 p-4">
+            <legend className="px-2 text-sm font-bold text-gray-950">Datos para coordinar la entrega</legend>
+            <p className="mb-3 text-sm leading-6 text-gray-600">
+              Son opcionales y pueden añadirse cuando se conozcan.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
+              {draftField("destination_name", "Persona que recibirá la mercadería", {
+                placeholder: "Nombre del responsable, si se conoce",
+              })}
+              {draftField("departure_on", "Fecha estimada de salida", { type: "date" })}
+              {draftField("destination_address", "Lugar real de entrega", {
+                wide: true, placeholder: "Dirección del recinto o lugar de entrega",
+              })}
+            </div>
+          </fieldset>
+
+          <details className="group rounded-xl border border-gray-200 bg-white p-4">
+            <summary className="flex cursor-pointer items-center gap-2 text-sm font-bold text-gray-950">
+              <FiTruck aria-hidden="true" className="shrink-0 text-lg" />
+              Datos adicionales del transporte (solo cuando estén disponibles)
+            </summary>
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              Estos datos sirven para la revisión del traslado real y no son necesarios
+              para reservar ni preparar existencias. No se envían a SUNAT desde aquí.
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <label className="block min-w-0">
-                <span className="text-sm font-semibold text-gray-900">Motivo a revisar</span>
+                <span className="text-sm font-semibold text-gray-900">Modalidad de transporte</span>
+                <select className={input} value={documentForm.transport_mode ?? ""}
+                  disabled={!canEditDraft}
+                  onChange={(event) => changeDraft("transport_mode", event.target.value)}>
+                  <option value="">Por definir</option>
+                  <option value="private">Transporte privado</option>
+                  <option value="public">Transporte público</option>
+                </select>
+              </label>
+              <label className="block min-w-0">
+                <span className="text-sm font-semibold text-gray-900">Motivo del traslado a revisar</span>
                 <select className={input} value={documentForm.transfer_reason ?? ""}
                   disabled={!canEditDraft}
                   onChange={(event) => changeDraft("transfer_reason", event.target.value)}>
                   {REASONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
               </label>
-              <label className="block min-w-0">
-                <span className="text-sm font-semibold text-gray-900">Modalidad de transporte</span>
-                <select className={input} value={documentForm.transport_mode ?? ""}
-                  disabled={!canEditDraft}
-                  onChange={(event) => changeDraft("transport_mode", event.target.value)}>
-                  <option value="">Seleccionar transporte</option>
-                  <option value="private">Privado · vehículo bajo responsabilidad del remitente</option>
-                  <option value="public">Público · empresa transportista</option>
-                </select>
-              </label>
-            </div>
-          </fieldset>
-
-          <fieldset className="space-y-4 rounded-xl border border-gray-200 p-4">
-            <legend className="px-2 text-base font-bold text-gray-950">2. Remitente y lugar de partida</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {draftField("issuer_ruc", "RUC del remitente", {
-                hint: "Escribe el RUC real de la empresa que sustenta el traslado.",
-                placeholder: "11 dígitos",
-              })}
-              {draftField("departure_address", "Dirección física de salida", {
-                wide: true,
-                hint: "Consigna la dirección exacta desde donde saldrán los libros; no basta el nombre del almacén.",
-                placeholder: "Dirección del punto de partida",
-              })}
-            </div>
-          </fieldset>
-
-          <fieldset className="space-y-4 rounded-xl border border-gray-200 p-4">
-            <legend className="px-2 text-base font-bold text-gray-950">3. Destinatario y destino real</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {draftField("destination_name", "Destinatario o responsable de recepción", {
-                placeholder: "Nombre o razón social real",
-              })}
-              {draftField("destination_id_number", "Documento del destinatario", {
-                placeholder: "RUC u otro documento que corresponda",
-              })}
-              {draftField("destination_address", "Dirección física de llegada", {
-                wide: true,
-                hint: "Para Feria, identifica el recinto y dirección real. No se completa automáticamente a partir del subalmacén.",
-                placeholder: "Dirección concreta del punto de llegada",
-              })}
-            </div>
-          </fieldset>
-
-          <fieldset className="space-y-4 rounded-xl border border-gray-200 p-4">
-            <legend className="px-2 text-base font-bold text-gray-950">4. Transporte y fechas</legend>
-            <div className="flex items-start gap-2 rounded-lg bg-gray-50 p-3">
-              <FiTruck aria-hidden="true" className="mt-0.5 shrink-0 text-lg text-gray-700" />
-              <p className="text-sm leading-6 text-gray-700">
-                Los datos del vehículo o transportista se solicitan según
-                la modalidad elegida y deben verificarse con el encargado real.
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {draftField("departure_on", "Fecha prevista de salida", { type: "date" })}
-              {draftField("gross_weight_kg", "Peso bruto total (kg)", {
-                type: "number", placeholder: "Ej. 12.500",
-              })}
+              {draftField("departure_address", "Dirección física de partida")}
+              {draftField("destination_id_number", "Documento del destinatario")}
+              {draftField("issuer_ruc", "RUC del remitente")}
+              {draftField("gross_weight_kg", "Peso bruto total (kg)", { type: "number" })}
               {documentForm.transport_mode === "private" && (
                 <>
-                  {draftField("license_plate", "Placa de la unidad", { placeholder: "Placa real" })}
-                  {draftField("driver_document", "Documento del conductor", { placeholder: "Documento real" })}
-                  {draftField("driver_license", "Licencia de conducir", { placeholder: "Licencia real" })}
+                  {draftField("license_plate", "Placa del vehículo")}
+                  {draftField("driver_document", "Documento del conductor")}
+                  {draftField("driver_license", "Licencia del conductor")}
                 </>
               )}
               {documentForm.transport_mode === "public" &&
-                draftField("carrier_ruc", "RUC del transportista", {
-                  hint: "Empresa que presta el servicio de transporte.",
-                  placeholder: "11 dígitos",
-                })}
-              {!documentForm.transport_mode && (
-                <p className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600 sm:col-span-2">
-                  Elige la modalidad de transporte para mostrar los datos que le corresponden.
-                </p>
-              )}
+                draftField("carrier_ruc", "RUC del transportista")}
             </div>
-          </fieldset>
+          </details>
 
           <label className="block rounded-xl border border-gray-200 p-4">
-            <span className="text-sm font-bold text-gray-950">Observaciones de documentación (opcional)</span>
-            <span className="mt-1 block text-xs leading-5 text-gray-600">
-              Anota el recinto, referencias operativas o asuntos pendientes por confirmar.
-            </span>
-            <textarea rows={3} maxLength={500} className={input}
+            <span className="text-sm font-bold text-gray-950">Indicaciones para la entrega (opcional)</span>
+            <textarea rows={2} maxLength={500} className={input}
               disabled={!canEditDraft}
               value={documentForm.notes ?? ""}
-              placeholder="Datos para revisión de Jefatura; no reemplazan la guía."
+              placeholder="Horario, persona de contacto, detalles operativos…"
               onChange={(event) => changeDraft("notes", event.target.value)} />
           </label>
 
-          <div className="rounded-xl border border-gray-300 bg-gray-50 p-4">
-            <h5 className="text-sm font-bold text-gray-950">Resumen de revisión preliminar</h5>
-            <p className="mt-1 text-sm leading-6 text-gray-700">
-              {draftMissing.length === 0
-                ? "Los campos internos están completos para revisión; esto todavía no garantiza conformidad SUNAT."
-                : "Faltan " + draftMissing.length + " dato(s) para la revisión interna. Puedes guardar el borrador sin completarlos."}
-            </p>
-            {draftMissing.length > 0 && (
-              <p className="mt-2 text-sm text-gray-600">
-                Por completar: {draftMissing.map((key) => FIELD_LABELS[key]).join(", ")}.
-              </p>
-            )}
-            {documentChanged && (
-              <p role="status" className="mt-2 text-sm font-bold text-amber-900">
-                Hay cambios sin guardar en el borrador.
-              </p>
-            )}
-            {transport && !documentChanged && (
-              <p className="mt-2 text-xs text-gray-600">
-                Último borrador guardado: {transport.data_complete_for_review
-                  ? "campos internos completos" : "con datos pendientes"}.
-                La plataforma no ha emitido ninguna guía de remisión.
-              </p>
-            )}
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
             {canEditDraft && (
-              <button type="submit" className={primary} disabled={busy}>
-                {busy ? "Guardando…" : "Guardar borrador para revisión"}
+              <button type="submit" className={primary} disabled={busy || !documentChanged}>
+                {busy ? "Guardando…" : "Guardar datos de coordinación"}
               </button>
             )}
+            {documentChanged ? (
+              <p role="status" className="text-sm font-semibold text-gray-800">Hay cambios sin guardar.</p>
+            ) : (
+              <p className="text-sm text-gray-600">Sin cambios pendientes. Esta sección no registra salida física.</p>
+            )}
             {!canEditDraft && (
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="text-sm text-gray-600">
                 {operation.status === "cancelled"
-                  ? "Esta entrega fue anulada y su documentación ya no puede modificarse."
-                  : "Puedes consultar estos datos, pero no tienes permiso para modificarlos."}
+                  ? "Esta entrega fue anulada; sus datos no pueden modificarse."
+                  : "Puedes consultar los datos, pero no tienes permiso para modificarlos."}
               </p>
             )}
           </div>
