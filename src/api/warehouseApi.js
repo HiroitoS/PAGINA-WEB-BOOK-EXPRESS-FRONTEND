@@ -156,6 +156,18 @@ export async function registrarCortesiaInventario(payload) {
   return data;
 }
 
+const FAIR_BASE = "/admin/erp/almacen/ferias";
+
+export async function listarFeriasAlmacen() {
+  const { data } = await axiosClient.get(`${FAIR_BASE}/`);
+  return data;
+}
+
+export async function registrarFeriaAlmacen(payload) {
+  const { data } = await axiosClient.post(`${FAIR_BASE}/`, payload);
+  return data;
+}
+
 const LOCATION_BASE = "/admin/erp/almacen/ubicaciones";
 
 export async function listarUbicacionesAlmacen() {
