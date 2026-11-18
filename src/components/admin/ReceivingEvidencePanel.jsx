@@ -30,6 +30,7 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
   const [version, setVersion] = useState(0);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [recipient, setRecipient] = useState("");
@@ -69,6 +70,7 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
     setBusy(true);
     setError("");
     try {
+      setCopyFeedback(false);
       await subirEvidenciaRecepcion(receipt.id, {
         lineId, kind, description, file,
       });
@@ -84,16 +86,18 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
   }
 
   async function copyReport() {
-    if (!report?.validated || !report?.requires_attention) return;
+    if (!canSend || !report?.validated || !report?.requires_attention) return;
+    setCopyFeedback(false);
     try {
       if (!navigator.clipboard?.writeText) {
         setError("No es posible copiar desde este navegador. Selecciona el texto del reporte para copiarlo.");
         return;
       }
       await navigator.clipboard.writeText(`Asunto: ${report.subject}\n\n${report.body}`);
-      setNotice("Reporte copiado. Si lo envías desde tu correo, verifica destinatario y adjunta las evidencias manualmente. La copia no registra un envío.");
+      setCopyFeedback(true);
       setError("");
     } catch {
+      setCopyFeedback(false);
       setError("No se pudo copiar el reporte. Selecciona el texto y cópialo manualmente.");
     }
   }
@@ -241,6 +245,10 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
                   <p className="text-xs font-bold text-gray-950">{item.product} · {item.kind_label}</p>
                   <p className="mt-1 text-xs text-gray-700">{item.description}</p>
                   <p className="mt-1 text-xs text-gray-500">{item.original_name}</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Registrado por: {item.created_by}
+                    {item.created_at ? ` · ${new Date(item.created_at).toLocaleString("es-PE")}` : ""}
+                  </p>
                 </div>
                 <button type="button" className={button} onClick={() => download(item)}>
                   Descargar archivo
@@ -249,6 +257,12 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
             ))}
           </div>
         ) : !loading && <p className="text-xs text-gray-600">Aún no se adjuntaron evidencias.</p>}
+        {items.length > 0 && (
+          <p className="text-xs leading-5 text-gray-600">
+            Estos archivos quedan vinculados a la recepción. Jefatura puede
+            revisarlos y descargarlos desde esta misma pantalla con sus permisos.
+          </p>
+        )}
         {report && (
           <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
             <summary className="cursor-pointer text-sm font-black text-gray-950">
@@ -256,12 +270,28 @@ export default function ReceivingEvidencePanel({ receipt, canUpload, canSend }) 
               <span className="ml-2 font-normal text-gray-600">· Revisión y envío opcional</span>
             </summary>
             <div className="mt-3 space-y-3">
-              {report.validated && report.requires_attention && (
-                <button type="button" onClick={copyReport} className={button}>Copiar reporte</button>
+              {report.validated && report.requires_attention && canSend && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={copyReport} className={button}>
+                    {copyFeedback ? "Copiar nuevamente" : "Copiar texto del correo"}
+                  </button>
+                  {copyFeedback && (
+                    <p role="status" className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-green-900">
+                      ✓ Correo copiado (asunto y mensaje). Descarga y adjunta los archivos
+                      en tu correo antes de enviarlo. No se ha enviado nada.
+                    </p>
+                  )}
+                </div>
+              )}
+              {report.validated && report.requires_attention && !canSend && (
+                <p className="text-xs text-gray-700">
+                  El reporte formal será gestionado por Jefatura de Almacén.
+                </p>
               )}
             <p className="text-xs leading-5 text-gray-600">
-              El reporte se genera con los datos del documento, diferencias físicas y evidencias guardadas.
-              Una entrega parcial del pedido no se reporta automáticamente como faltante de la guía.
+              El correo incluye únicamente las incidencias registradas: faltantes frente
+              a la guía y libros observados, con sus evidencias. Los libros pendientes
+              de otro envío del proveedor no se presentan como faltantes de esta guía.
             </p>
             <label className="block text-xs font-bold text-gray-700">
               Asunto
