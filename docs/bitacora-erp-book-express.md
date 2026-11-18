@@ -1,5 +1,15 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 17/11/2026 — B3.1: elección de guías/lotes en la reserva [EN RAMA, PRUEBA LOCAL PENDIENTE]
+
+**Continuidad verificada:** tras la corrección de fixture PNG (`f7273d49`), GitHub Actions del backend terminó **success**; la regresión anterior quedó resuelta. No implica que la carga de evidencia Santillana N.° 6 ya haya sido comprobada en la BD local del usuario; esa prueba manual sigue pendiente.
+
+**Novedad B3.1:** en `feature/erp-p08-traslados-por-guia`, backend permite elegir manualmente lotes/guías de recepción al reservar una entrega de adopción, manteniendo el modo FIFO predeterminado; API valida colegio, producto, saldo en origen, reservas simultáneas y suma exacta, con transacción y rollback. UI `DistributionPreparationPanel.jsx` incorpora la elección entre FIFO y guías/cantidades, más contadores por producto. No se crea stock, traslado, despacho ni GRE. No hay migración nueva por B3.1. Tests backend para reserva exacta, duplicidad, saldo agotado y rechazo atómico. La guía de prueba se actualizó en `docs/erp/B3_preparacion_GRE_alcance_y_pruebas.md`.
+
+**Verificaciones:** CI frontend de `1b003de9` finalizó **success**; CI backend de `e12c35a1` estaba aún en curso al redactar esta nota, **confirmar antes de declarar aprobado**. No se ha probado el recorrido visual en VS Code local ni la carga real de evidencia. Sin merge a `main`, sin despliegue a Tecnoweb.
+
+**Próximo recorrido del usuario:** actualizar ambos proyectos en la rama y comprobar primero el archivo adjunto en recepción Santillana `T001-12358` (N.° 6), con 15 conformes, 5 observados y 5 pendientes en pedido, sin doble `StockEntry`; después crear una planificación DEMO nueva con stock libre, elegir lotes por guía, reservar y confirmar conteo. B4 (GRE, despacho, recepción de destino) permanece bloqueada hasta pruebas físicas/tributarias.
+
 ## 17/11/2026 — Revisión de continuidad y CI al retomar Fase B [CORRECCIÓN EN RAMA]
 
 **Revisión GitHub:** se comprobó la bitácora y la rama `feature/erp-p08-traslados-por-guia` en backend/frontend. El último CI frontend asociado a `90fe28bd` terminó correctamente. En el backend, el CI de `33b40b62` ejecutó 489 pruebas y falló exactamente en una prueba recién incorporada: `test_evidencia_despues_de_aprobacion_no_reingresa_inventario`, porque el fixture PNG contenía barras invertidas literales en vez de los bytes de cabecera; la validación de archivo respondió HTTP 400 y el test esperaba 201. Esto NO demuestra un defecto del flujo de evidencias en producción; es un error en el archivo de prueba.
