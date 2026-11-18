@@ -201,6 +201,12 @@ const NAV_SECTIONS = [
             permissions: ["warehouse.view_receiving"],
           },
           {
+            label: "Ubicaciones y ferias",
+            to: "/admin/erp/almacen/ubicaciones",
+            icon: <FaMapMarkerAlt />,
+            permissions: ["warehouse.view_warehouse_locations"],
+          },
+          {
             label: "Movimientos",
             to: "/admin/erp/almacen/traslados",
             icon: <FaMapMarkerAlt />,
