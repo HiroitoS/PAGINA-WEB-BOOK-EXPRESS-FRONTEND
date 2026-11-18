@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { FiArrowLeft, FiMapPin, FiTruck } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import WarehouseLocationsPanel from "../../../components/admin/WarehouseLocationsPanel";
+import WarehouseFairsPanel from "../../../components/admin/WarehouseFairsPanel";
 
 export default function ERPUbicacionesPage() {
   const { user } = useAuth();
+  const [revisionUbicaciones, setRevisionUbicaciones] = useState(0);
   const puedeGestionar = userHasPermission(user, ["warehouse.manage_warehouse_locations"]);
   const puedeVerTraslados = userHasPermission(user, ["warehouse.view_receiving"]);
   const puedeConciliar = puedeGestionar
@@ -48,8 +51,11 @@ export default function ERPUbicacionesPage() {
           </div>
         </div>
       </header>
+      <WarehouseFairsPanel puedeGestionar={puedeGestionar}
+        onCreated={() => setRevisionUbicaciones((current) => current + 1)} />
       <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <WarehouseLocationsPanel puedeGestionar={puedeGestionar} puedeConciliar={puedeConciliar} puedeVerInventario={puedeVerTraslados} />
+        <WarehouseLocationsPanel key={revisionUbicaciones} puedeGestionar={puedeGestionar}
+          puedeConciliar={puedeConciliar} puedeVerInventario={puedeVerTraslados} />
       </section>
       <p className="rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-600 sm:px-4">
         Registrar una ubicación no mueve libros ni modifica el stock global. Las recepciones nuevas
