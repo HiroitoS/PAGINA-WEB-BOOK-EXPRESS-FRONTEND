@@ -18,7 +18,7 @@ export default function ERPTrasladosPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
             <h1 className="mt-1 text-xl font-black tracking-tight text-gray-950 sm:text-2xl">Movimientos</h1>
             <p className="mt-1 text-sm leading-5 text-gray-600">
-              Traslada libros entre almacenes y consulta las entregas registradas.
+              Registra un movimiento físico que ya se completó. Para reservar y preparar libros, utiliza «Entregas».
             </p>
           </div>
           <Link to="/admin/erp/almacen/inventario"
