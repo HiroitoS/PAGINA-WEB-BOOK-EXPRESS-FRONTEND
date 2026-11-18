@@ -331,8 +331,9 @@ export async function consultarPreparacionDistribucion(id) {
   return data;
 }
 
-export async function reservarDistribucion(id) {
-  const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/${id}/reservar/`, {});
+export async function reservarDistribucion(id, lots = null) {
+  const payload = lots === null ? {} : { lots };
+  const { data } = await axiosClient.post(`${DISTRIBUTION_BASE}/${id}/reservar/`, payload);
   return data;
 }
 
