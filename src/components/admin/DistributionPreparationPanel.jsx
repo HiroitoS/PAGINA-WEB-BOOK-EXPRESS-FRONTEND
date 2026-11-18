@@ -183,28 +183,78 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
   const counted = active.length > 0 && active.every(
     (row) => counts[row.id] !== undefined && String(counts[row.id]).trim() !== "",
   );
+  const shortageItems = preparation?.items?.filter((item) => item.shortage > 0) ?? [];
+  const requiredFields = [
+    "issuer_ruc", "departure_address", "destination_address",
+    "destination_name", "destination_id_number", "transport_mode",
+    "transfer_reason", "departure_on", "gross_weight_kg",
+    ...(documentForm?.transport_mode === "private"
+      ? ["license_plate", "driver_document", "driver_license"] : []),
+    ...(documentForm?.transport_mode === "public" ? ["carrier_ruc"] : []),
+  ];
+  const draftMissing = requiredFields.filter((key) => !String(documentForm?.[key] ?? "").trim());
+
+  function changeDraft(key, value) {
+    setDocumentForm((previous) => ({ ...previous, [key]: value }));
+    setDocumentChanged(true);
+  }
+
+  function draftField(key, label, options = {}) {
+    const { type = "text", hint = "", placeholder = "", wide = false } = options;
+    return (
+      <label key={key} className={wide ? "block min-w-0 sm:col-span-2" : "block min-w-0"}>
+        <span className="text-sm font-semibold text-gray-900">{label}</span>
+        {hint && <span className="mt-0.5 block text-xs leading-5 text-gray-600">{hint}</span>}
+        <input type={type} className={input} value={documentForm?.[key] ?? ""}
+          maxLength={FIELD_LIMITS[key]}
+          inputMode={key === "issuer_ruc" || key === "carrier_ruc" ? "numeric" : undefined}
+          min={key === "gross_weight_kg" ? "0.001" : undefined}
+          step={key === "gross_weight_kg" ? "0.001" : undefined}
+          placeholder={placeholder}
+          onChange={(event) => changeDraft(key, event.target.value)}
+        />
+      </label>
+    );
+  }
 
   return (
-    <section className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3"
+    <section className="space-y-4 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4"
       aria-label="Preparación y documentos de entrega">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h4 className="text-sm font-black text-gray-950">Preparación de esta entrega</h4>
-          <p className="mt-1 text-xs leading-5 text-gray-600">
-            La reserva separa libros para esta entrega. No los despacha ni modifica su ubicación.
-          </p>
+      <div className="rounded-xl bg-gray-950 p-4 text-white sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-300">
+              Entrega logística · {operation.mode === "fair" ? "Feria" : operation.mode === "consignment" ? "Consignación" : "Punto de venta"}
+            </p>
+            <h4 className="mt-1 text-lg font-bold">Preparación y documentación</h4>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-200">
+              Primero se verifican y reservan los libros. Después se prepara la documentación
+              para el traslado real. Guardar datos no envía ni mueve mercadería.
+            </p>
+          </div>
+          <span className="rounded-lg border border-gray-500 bg-gray-800 px-3 py-2 text-xs font-semibold text-white">
+            {preparation?.status === "prepared" ? "Preparada · sin despacho" :
+              preparation?.status === "reserved" ? "Existencias reservadas" :
+                preparation?.status === "cancelled" ? "Anulada" : "Por preparar"}
+          </span>
         </div>
-        <div role="tablist" aria-label="Información de la entrega"
-          className="inline-flex rounded-lg bg-white p-1 ring-1 ring-gray-200">
-          {[["stock", "Libros y conteo"], ["document", "Datos del traslado"]].map(([value, label]) => (
-            <button key={value} type="button" role="tab"
-              aria-selected={tab === value} onClick={() => setTab(value)}
-              className={`min-h-9 rounded-lg px-3 text-xs font-bold ${
-                tab === value ? "bg-gray-950 text-white" : "text-gray-700"
-              }`}>
-              {label}
-            </button>
-          ))}
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <button type="button" aria-pressed={tab === "stock"}
+            onClick={() => setTab("stock")}
+            className={tab === "stock"
+              ? "flex min-h-12 items-center gap-2 rounded-xl bg-white px-4 text-left text-sm font-bold text-gray-950"
+              : "flex min-h-12 items-center gap-2 rounded-xl border border-gray-600 px-4 text-left text-sm font-semibold text-white hover:bg-gray-800"}>
+            <FiPackage aria-hidden="true" className="shrink-0 text-lg" />
+            1. Existencias, reserva y conteo
+          </button>
+          <button type="button" aria-pressed={tab === "document"}
+            onClick={() => setTab("document")}
+            className={tab === "document"
+              ? "flex min-h-12 items-center gap-2 rounded-xl bg-white px-4 text-left text-sm font-bold text-gray-950"
+              : "flex min-h-12 items-center gap-2 rounded-xl border border-gray-600 px-4 text-left text-sm font-semibold text-white hover:bg-gray-800"}>
+            <FiFileText aria-hidden="true" className="shrink-0 text-lg" />
+            2. Datos para la guía de traslado
+          </button>
         </div>
       </div>
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">{error}</p>}
@@ -212,9 +262,15 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
       {loading && <p role="status" className="text-xs text-gray-600">Consultando información…</p>}
       {!loading && tab === "stock" && preparation && (
         <div role="tabpanel" className="space-y-3">
-          <p className="text-xs text-gray-700">
-            <strong>Origen:</strong> {preparation.source}{" · "}
-            <strong>Destino previsto:</strong> {preparation.destination}
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+            <FiMapPin aria-hidden="true" className="text-lg text-gray-600" />
+            <span><strong>Sale de:</strong> {preparation.source}</span>
+            <span aria-hidden="true" className="text-gray-400">→</span>
+            <span><strong>Se prepara para:</strong> {preparation.destination}</span>
+          </div>
+          <p className="text-sm leading-6 text-gray-700">
+            Las unidades se reservan por guía de recepción y colegio, sin cambiar
+            de almacén ni generar una venta.
           </p>
           {canManage && preparation.status === "planned" && (
             <fieldset className="rounded-lg border border-gray-200 bg-white p-3">
@@ -282,12 +338,40 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
               </div>
             ))}
           </div>
+          {preparation.status === "planned" && !preparation.can_reserve && (
+            <div role="status" className="flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <FiAlertTriangle aria-hidden="true" className="mt-0.5 shrink-0 text-xl text-amber-800" />
+              <div className="space-y-2 text-sm text-amber-950">
+                <p className="font-bold">No se puede reservar todavía: falta disponibilidad en el lugar de salida.</p>
+                {shortageItems.map((item) => (
+                  <p key={item.product_id}>
+                    {item.product}: planificados {item.planned}, libres {item.free_at_origin},
+                    faltan <strong>{item.shortage}</strong> ejemplares conformes.
+                  </p>
+                ))}
+                <p>Las unidades observadas no se pueden preparar como libros conformes.
+                  Revisa primero las entradas y el saldo por ubicación.
+                </p>
+                <Link to="/admin/erp/almacen/inventario?vista=consolidado"
+                  className="inline-flex min-h-10 items-center rounded-lg border border-amber-600 px-3 font-bold text-amber-950 hover:bg-amber-100">
+                  Revisar inventario
+                </Link>
+              </div>
+            </div>
+          )}
           {canManage && preparation.status === "planned" && (
-            <button type="button" className={primary}
-              disabled={busy || !preparation.can_reserve || (manualSelection && !lotSelection.valid)}
-              onClick={() => applyAction("reserve")}>
-              Reservar existencias de esta entrega
-            </button>
+            <div className="space-y-2">
+              <button type="button" className={primary}
+                disabled={busy || !preparation.can_reserve || (manualSelection && !lotSelection.valid)}
+                onClick={() => applyAction("reserve")}>
+                Reservar existencias de esta entrega
+              </button>
+              {preparation.can_reserve && manualSelection && !lotSelection.valid && (
+                <p className="text-sm font-medium text-gray-700">
+                  Elige cantidades por guía que sumen exactamente lo planificado.
+                </p>
+              )}
+            </div>
           )}
           {preparation.status === "reserved" && (
             <div className="space-y-3">
