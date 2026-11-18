@@ -190,7 +190,7 @@ export default function InventoryConsolidatedPanel() {
             <div aria-label="Totales de la búsqueda"
               className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
               <span className="font-bold text-gray-900">Esta búsqueda:</span>
-              <span>Disponibles <strong className="tabular-nums text-gray-950">{resumen?.disponible ?? 0}</strong></span>
+              <span>Conformes <strong className="tabular-nums text-gray-950">{resumen?.disponible ?? 0}</strong></span>
               <span>Observados <strong className="tabular-nums text-gray-950">{resumen?.observado ?? 0}</strong></span>
               <span>Valor <strong className="tabular-nums text-gray-950">{soles(resumen?.valor_referencial)}</strong></span>
             </div>
@@ -229,7 +229,7 @@ export default function InventoryConsolidatedPanel() {
                     {grupo !== "editorial" && <p className="text-xs text-gray-600">{item.editorial}</p>}
                     <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                       {[
-                        ["Disponibles", item.disponible],
+                        ["Conformes", item.disponible],
                         ["Observados", item.observado],
                         ["Costo promedio c/u", soles(item.costo_promedio)],
                         ["Valor disponible", soles(item.valor_referencial)],
@@ -249,7 +249,7 @@ export default function InventoryConsolidatedPanel() {
                     <tr>
                       <th scope="col" className="p-3">{etiquetaGrupo}</th>
                       <th scope="col" className="p-3">Producto</th>
-                      <th scope="col" className="p-3 text-right">Disponibles</th>
+                      <th scope="col" className="p-3 text-right">Conformes</th>
                       <th scope="col" className="p-3 text-right">Observados</th>
                       <th scope="col" className="p-3 text-right">Costo prom. c/u</th>
                       <th scope="col" className="p-3 text-right">Valor</th>
