@@ -1,5 +1,17 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 18/11/2026 — Ubicaciones invisibles en menú + consignación completa [CORREGIDO EN RAMA]
+
+**Evidencia visual del usuario:** en `/admin/erp/almacen/inventario` el lateral desplegado bajo ERP → Almacén mostraba Recepción, Inventario, Movimientos, **pero NO Ubicaciones**, aunque la ruta `/admin/erp/almacen/ubicaciones` y la nueva página B3.2 de ferias sí existían. El usuario pidió una navegación más directa y recordó que **consignación** también necesita salida, liquidación/ventas, facturación y devoluciones.
+
+**Corrección puntual aplicada:** `src/layouts/AdminLayout.jsx` incorpora **«Ubicaciones y ferias»** como entrada visible en ERP → Almacén, con permiso `warehouse.view_warehouse_locations` y ruta existente; no se cambian permisos ni rutas. `ERPInventarioPage.jsx` renombra **«Disponibles» a «Conformes»** para que un libro reservado continúe contabilizado físicamente pero no sea confundido con saldo libre para nueva reserva. Mensaje contextual aclara que el saldo realmente libre se valida al preparar. Cambios frontend aprobados en GitHub Actions (lint/build).
+
+**Consignación preservada en el mapa** `docs/erp/P09_mapa_cierre_flujo_almacen.md`: planificar → reservar → preparar → despacho/documento interno → confirmación de recepción en custodia por colegio/tercero → rendición de vendidos y no vendidos → validar facturación desde Ventas/Administración → devolución física inspeccionada y conciliación. **No facturar automáticamente solo porque salió en consignación**; términos comerciales y tributarios requieren comprobación con Administración/Contabilidad. Evitar doble reducción de stock y doble factura. No está implementado aún el ciclo de custodia, rendición, facturación ni devoluciones.
+
+**Prueba mínima al retomar:** actualizar únicamente el frontend desde rama `feature/erp-p08-traslados-por-guia`; comprobar que el menú lateral ahora muestra «Ubicaciones y ferias» y que abre la página; confirmar que se puede registrar una feria DEMO y que se crea su subalmacén vacío cuando backend local esté migrado a 0020. **No modificar la entrega ANDINO 15 preparada ni hacer movimientos reales**. Siguiente desarrollo útil después de verificar menú: cerrar preparación→despacho interno y recepción en destino, compartido por Feria y Consignación, antes de crear facturación.
+
+**Sin promoción a `main` ni despliegue Tecnoweb.**
+
 ## 18/11/2026 — B3.2: ferias concretas y subalmacenes por evento [EN RAMA, PRUEBA LOCAL PENDIENTE]
 
 **Continuidad:** después de B3.1 se comprobaron 15 libros de LECTOPOLIS 4 reservados y preparados en Almacén Principal, y 5 pendientes en otra entrega; los 5 observados Santillana no se reservaron. El borrador de coordinación del transporte permanece opcional. El usuario pidió continuar con implementación/pruebas, y el próximo hito registrado era **B3.2**. La importación Excel de nuevas editoriales para catálogo 2027 es un flujo **separado**, no equivale a desplegar el ERP; el archivo quedó preparado para previsualización y validación en Tecnoweb, sin confirmación de carga en este chat.
