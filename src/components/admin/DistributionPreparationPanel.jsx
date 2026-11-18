@@ -7,6 +7,7 @@ import {
   consultarPreparacionDistribucion,
   guardarBorradorTransporte,
   reservarDistribucion,
+  separarDisponiblesDistribucion,
 } from "../../api/warehouseApi";
 
 const primary = "inline-flex min-h-11 items-center justify-center rounded-xl bg-red-700 px-5 text-sm font-semibold text-white transition hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600";
@@ -88,6 +89,8 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
   const [counts, setCounts] = useState({});
   const [manualSelection, setManualSelection] = useState(false);
   const [lotQuantities, setLotQuantities] = useState({});
+  const [splitConfirm, setSplitConfirm] = useState(false);
+  const [splitKey, setSplitKey] = useState(() => crypto.randomUUID());
   const [documentChanged, setDocumentChanged] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -109,6 +112,8 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
       setCounts({});
       setManualSelection(false);
       setLotQuantities({});
+      setSplitConfirm(false);
+      setSplitKey(crypto.randomUUID());
       setDocumentChanged(false);
     }).catch((err) => {
       if (!ignore) setError(errorText(err));
@@ -129,6 +134,17 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
           operation.id, manualSelection ? lotSelection.lots : null,
         );
         setNotice("Libros reservados en el almacén de origen. Todavía no fueron despachados.");
+      } else if (action === "split") {
+        const response = await separarDisponiblesDistribucion(operation.id, splitKey);
+        const reservedQuantity = response.reserved.reservations
+          .filter((row) => row.status === "active")
+          .reduce((sum, row) => sum + row.quantity, 0);
+        const pendingQuantity = response.pending.reduce((sum, row) => sum + row.quantity, 0);
+        setNotice(
+          `Se reservaron ${reservedQuantity} libros conformes. Quedaron ${pendingQuantity} ` +
+          "para otra entrega planificada. Todavía no salieron del almacén.",
+        );
+        setSplitConfirm(false);
       } else {
         const reservations = preparation?.reservations?.filter((row) => row.status === "active") ?? [];
         const payload = reservations.map((row) => ({
@@ -184,6 +200,14 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
     (row) => counts[row.id] !== undefined && String(counts[row.id]).trim() !== "",
   );
   const shortageItems = preparation?.items?.filter((item) => item.shortage > 0) ?? [];
+  const splitAvailable = (preparation?.items ?? []).reduce(
+    (total, item) => total + Math.min(item.planned, item.free_at_origin), 0,
+  );
+  const splitPending = (preparation?.items ?? []).reduce(
+    (total, item) => total + item.shortage, 0,
+  );
+  const canSplit = preparation?.status === "planned"
+    && splitAvailable > 0 && splitPending > 0;
   const requiredFields = [
     "issuer_ruc", "departure_address", "destination_address",
     "destination_name", "destination_id_number", "transport_mode",
@@ -354,20 +378,67 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
             <div role="status" className="flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
               <FiAlertTriangle aria-hidden="true" className="mt-0.5 shrink-0 text-xl text-amber-800" />
               <div className="space-y-2 text-sm text-amber-950">
-                <p className="font-bold">No se puede reservar todavía: falta disponibilidad en el lugar de salida.</p>
+                <p className="font-bold">No hay unidades suficientes para reservar toda esta entrega en una sola salida.</p>
                 {shortageItems.map((item) => (
                   <p key={item.product_id}>
                     {item.product}: planificados {item.planned}, libres {item.free_at_origin},
                     faltan <strong>{item.shortage}</strong> ejemplares conformes.
                   </p>
                 ))}
-                <p>Las unidades observadas no se pueden preparar como libros conformes.
-                  Revisa primero las entradas y el saldo por ubicación.
+                <p>Los libros observados no pueden reservarse como conformes.
+                  Puedes programar toda la entrega para después o separar
+                  ahora lo disponible, sin perder el saldo pendiente.
                 </p>
                 <Link to="/admin/erp/almacen/inventario?vista=consolidado"
                   className="inline-flex min-h-10 items-center rounded-lg border border-amber-600 px-3 font-bold text-amber-950 hover:bg-amber-100">
                   Revisar inventario
                 </Link>
+                {canManage && canSplit && !manualSelection && (
+                  <div className="mt-3 space-y-3 rounded-xl border border-amber-300 bg-white p-3">
+                    <div>
+                      <p className="text-sm font-bold text-gray-950">
+                        ¿Quieres separar los libros que sí están disponibles?
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-gray-800">
+                        Esta entrega pasará a {splitAvailable} libros reservados.
+                        Se creará otra planificación con {splitPending} pendientes.
+                        No se despachará ningún libro ni se modificará el stock físico.
+                      </p>
+                    </div>
+                    {!splitConfirm ? (
+                      <button type="button"
+                        disabled={busy}
+                        onClick={() => setSplitConfirm(true)}
+                        className={primary}>
+                        Reservar {splitAvailable} y dejar {splitPending} pendientes
+                      </button>
+                    ) : (
+                      <div className="space-y-2 rounded-xl border border-gray-300 bg-gray-50 p-3">
+                        <p className="text-sm font-semibold text-gray-950">
+                          Confirma: se registrarán dos entregas separadas
+                          de la misma adopción. La reserva de {splitAvailable} será automática por guía.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" disabled={busy} className={primary}
+                            onClick={() => applyAction("split")}>
+                            {busy ? "Registrando…" : "Confirmar división y reserva"}
+                          </button>
+                          <button type="button" disabled={busy}
+                            className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-800"
+                            onClick={() => setSplitConfirm(false)}>
+                            Volver
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {canManage && canSplit && manualSelection && (
+                  <p className="mt-2 text-xs text-gray-800">
+                    Para dividir la entrega automáticamente, selecciona primero
+                    «Automáticamente, por orden de recepción».
+                  </p>
+                )}
               </div>
             </div>
           )}
