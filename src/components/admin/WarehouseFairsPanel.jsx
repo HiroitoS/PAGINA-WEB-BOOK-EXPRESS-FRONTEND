@@ -87,20 +87,20 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
   }
 
   return (
-    <section aria-labelledby="ferias-titulo" className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section aria-labelledby="ferias-titulo" className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-red-700">B3 · Ferias escolares</p>
-          <h2 id="ferias-titulo" className="mt-1 text-lg font-black text-gray-950">Ferias y subalmacenes por evento</h2>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-700">
-            Cada feria necesita su propia ubicación de custodia para no mezclar libros
-            entre eventos. Registrarla no crea existencias ni registra un despacho.
+          <h2 id="ferias-titulo" className="text-base font-black text-gray-950">
+            Ferias registradas {!cargando && <span className="text-sm font-semibold text-gray-500">({ferias.length})</span>}
+          </h2>
+          <p className="mt-1 text-xs leading-5 text-gray-600">
+            Una feria, una ubicación de custodia. Crear el evento no mueve libros.
           </p>
         </div>
         {puedeGestionar && !mostrarFormulario && (
           <button type="button" onClick={abrirFormulario}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800">
-            <FiPlus aria-hidden="true" /> Registrar feria
+            <FiPlus aria-hidden="true" /> Nueva feria
           </button>
         )}
       </div>
@@ -117,7 +117,7 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
               <FiX aria-hidden="true" /> Cancelar
             </button>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             {[
               ["name", "Nombre de la feria", "Identifica un evento concreto", 150],
               ["venue_name", "Recinto o local", "Nombre real del recinto", 180],
@@ -143,11 +143,14 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
                 onChange={(event) => cambiar("ends_on", event.target.value)} />
             </label>
           </div>
-          <label className="block text-sm font-semibold text-gray-900">
-            Observaciones (opcional)
-            <textarea rows={2} maxLength={500} className={inputClass}
-              value={formulario.notes} onChange={(event) => cambiar("notes", event.target.value)} />
-          </label>
+          <details className="rounded-lg border border-gray-200 bg-white p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-gray-900">
+              Observaciones (opcional)
+            </summary>
+            <textarea aria-label="Observaciones de la feria" rows={2} maxLength={500}
+              className={inputClass} value={formulario.notes}
+              onChange={(event) => cambiar("notes", event.target.value)} />
+          </details>
           <p className="text-xs leading-5 text-gray-700">
             Se creará una ubicación interna exclusiva de esta feria. No se le asignará
             mercadería automáticamente ni se emitirá documentación SUNAT.
@@ -167,32 +170,34 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
         </p>
       )}
       {ferias.length > 0 && (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="divide-y divide-gray-200 overflow-hidden rounded-xl border border-gray-200">
           {ferias.map((feria) => (
-            <article key={feria.id} className="rounded-xl border border-gray-200 p-4">
-              <h3 className="text-sm font-bold text-gray-950">{feria.name}</h3>
-              <p className="mt-1 flex items-start gap-2 text-sm text-gray-700">
-                <FiMapPin aria-hidden="true" className="mt-0.5 shrink-0" />
-                {feria.venue_name} · {feria.venue_address}
-              </p>
-              <p className="mt-2 flex items-center gap-2 text-xs text-gray-700">
-                <FiCalendar aria-hidden="true" />
-                {feria.starts_on} al {feria.ends_on}
-              </p>
-              <p className="mt-1 text-xs text-gray-700">Custodia: {feria.responsible_name}</p>
-              <p className="mt-1 text-xs text-gray-500">Ubicación: {feria.location_name}</p>
+            <article key={feria.id} className="grid gap-2 px-3 py-3 sm:grid-cols-2 sm:gap-4 sm:px-4">
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-gray-950">{feria.name}</h3>
+                <p className="mt-1 flex items-start gap-2 text-xs leading-5 text-gray-700">
+                  <FiMapPin aria-hidden="true" className="mt-0.5 shrink-0" />
+                  <span>{feria.venue_name} · {feria.venue_address}</span>
+                </p>
+              </div>
+              <div className="min-w-0 space-y-1 text-xs text-gray-700 sm:text-right">
+                <p className="inline-flex items-center gap-1.5 sm:justify-end">
+                  <FiCalendar aria-hidden="true" />
+                  {feria.starts_on.split("-").reverse().join("/")} – {feria.ends_on.split("-").reverse().join("/")}
+                </p>
+                <p>Responsable: <strong>{feria.responsible_name}</strong></p>
+                <p className="text-gray-500">Custodia: {feria.location_name}</p>
+              </div>
             </article>
           ))}
         </div>
       )}
 
-      <p className="text-sm leading-6 text-gray-700">
-        Cuando la feria esté registrada, puedes seleccionarla como destino al
-        {" "}<Link to="/admin/erp/almacen/distribuciones" className="font-semibold text-red-700 underline underline-offset-2">
+      <p className="rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-700">
+        Siguiente paso: elegir esta feria como destino al
+        {" "}<Link to="/admin/erp/almacen/distribuciones" className="font-bold text-red-700 underline underline-offset-2">
           planificar una entrega
-        </Link>.
-        Los libros solo pasarán a esa ubicación mediante un despacho y una recepción confirmados,
-        aún pendientes de implementación.
+        </Link>. El despacho y la recepción controlados aún están pendientes.
       </p>
     </section>
   );
