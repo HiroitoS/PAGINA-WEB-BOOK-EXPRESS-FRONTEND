@@ -106,10 +106,10 @@ export default function ERPInventarioPage() {
 
   const indicadores = [
     { titulo: "Existencia física", valor: resumen?.physical ?? 0, ayuda: "Incluye observados" },
-    { titulo: "Disponibles", valor: resumen?.conforming ?? 0, ayuda: "Para venta o traslado" },
+    { titulo: "Conformes", valor: resumen?.conforming ?? 0, ayuda: "Aptos físicamente; pueden estar reservados" },
     { titulo: "Observados", valor: resumen?.nonconforming ?? 0, ayuda: "Separados del disponible" },
     {
-      titulo: "Valor disponible",
+      titulo: "Valor conforme",
       valor: dinero(resumen?.value_reference),
       ayuda: Number(resumen?.unvalued_units || 0) > 0 ? "Faltan costos por registrar" : "Costo histórico referencial",
       parcial: Number(resumen?.unvalued_units || 0) > 0,
@@ -119,7 +119,7 @@ export default function ERPInventarioPage() {
     {
       titulo: "Valor físico referencial",
       valor: resumen?.physical_value_reference,
-      ayuda: "Disponibles más observados",
+      ayuda: "Conformes más observados",
       parcial: !resumen?.physical_valuation_complete,
     },
     {
@@ -309,6 +309,10 @@ export default function ERPInventarioPage() {
                 {editoriales.map((nombre) => <option key={nombre} value={nombre}>{nombre}</option>)}
               </select>
             </div>
+            <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-700">
+              «Conformes» indica libros físicos aptos; pueden incluir unidades reservadas.
+              El saldo libre para otras entregas se calcula al preparar cada entrega.
+            </p>
             <div className="max-h-96 space-y-2 overflow-y-auto overscroll-contain sm:hidden">
               {visibles.map((item) => (
                 <article key={item.product_id} className="min-w-0 rounded-lg border border-gray-200 bg-white p-3">
@@ -317,7 +321,7 @@ export default function ERPInventarioPage() {
                   <dl className="mt-3 grid grid-cols-2 gap-2">
                     {[
                       ["Existencia física", item.physical],
-                      ["Disponibles", item.available],
+                      ["Conformes", item.available],
                       ["Observados", item.nonconforming],
                       ["Adicionales incluidos", item.extra_included],
                     ].map(([label, cantidad]) => (
@@ -350,7 +354,7 @@ export default function ERPInventarioPage() {
                     <th scope="col" className="p-2">Producto</th>
                     <th scope="col" className="p-2">Editorial</th>
                     <th scope="col" className="p-2 text-right">Físico</th>
-                    <th scope="col" className="p-2 text-right">Disponibles</th>
+                    <th scope="col" className="p-2 text-right">Conformes</th>
                     <th scope="col" className="p-2 text-right">Observados</th>
                     <th scope="col" className="p-2 text-right">Adicionales</th>
                     <th scope="col" className="p-2 text-right">Costo prom. c/u</th>
@@ -403,7 +407,7 @@ export default function ERPInventarioPage() {
                     <tr>
                       <th scope="col" className="p-2">Editorial</th>
                       <th scope="col" className="p-2 text-right">Físico</th>
-                      <th scope="col" className="p-2 text-right">Disponible</th>
+                      <th scope="col" className="p-2 text-right">Conformes</th>
                       <th scope="col" className="p-2 text-right">Observado</th>
                       <th scope="col" className="p-2 text-right">Adic. históricos</th>
                       <th scope="col" className="p-2 text-right">Valor disponible</th>
