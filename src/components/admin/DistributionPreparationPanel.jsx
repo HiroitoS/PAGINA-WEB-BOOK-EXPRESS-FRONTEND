@@ -193,9 +193,20 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
     ...(documentForm?.transport_mode === "public" ? ["carrier_ruc"] : []),
   ];
   const draftMissing = requiredFields.filter((key) => !String(documentForm?.[key] ?? "").trim());
+  const canEditDraft = canManage && operation.status !== "cancelled";
 
   function changeDraft(key, value) {
-    setDocumentForm((previous) => ({ ...previous, [key]: value }));
+    if (!canEditDraft) return;
+    setDocumentForm((previous) => {
+      const updated = { ...previous, [key]: value };
+      if (key === "transport_mode" && value === "private") updated.carrier_ruc = "";
+      if (key === "transport_mode" && value === "public") {
+        updated.license_plate = "";
+        updated.driver_document = "";
+        updated.driver_license = "";
+      }
+      return updated;
+    });
     setDocumentChanged(true);
   }
 
@@ -211,6 +222,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
           min={key === "gross_weight_kg" ? "0.001" : undefined}
           step={key === "gross_weight_kg" ? "0.001" : undefined}
           placeholder={placeholder}
+          disabled={!canEditDraft}
           onChange={(event) => changeDraft(key, event.target.value)}
         />
       </label>
@@ -258,7 +270,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
         </div>
       </div>
       {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">{error}</p>}
-      {notice && <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-xs text-green-900">{notice}</p>}
+      {notice && <p role="status" className="rounded-xl border border-gray-300 bg-gray-100 p-3 text-sm font-semibold text-gray-900">{notice}</p>}
       {loading && <p role="status" className="text-xs text-gray-600">Consultando información…</p>}
       {!loading && tab === "stock" && preparation && (
         <div role="tabpanel" className="space-y-3">
@@ -468,6 +480,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
               <label className="block min-w-0">
                 <span className="text-sm font-semibold text-gray-900">Motivo a revisar</span>
                 <select className={input} value={documentForm.transfer_reason ?? ""}
+                  disabled={!canEditDraft}
                   onChange={(event) => changeDraft("transfer_reason", event.target.value)}>
                   {REASONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
@@ -475,6 +488,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
               <label className="block min-w-0">
                 <span className="text-sm font-semibold text-gray-900">Modalidad de transporte</span>
                 <select className={input} value={documentForm.transport_mode ?? ""}
+                  disabled={!canEditDraft}
                   onChange={(event) => changeDraft("transport_mode", event.target.value)}>
                   <option value="">Seleccionar transporte</option>
                   <option value="private">Privado · vehículo bajo responsabilidad del remitente</option>
@@ -556,6 +570,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
               Anota el recinto, referencias operativas o asuntos pendientes por confirmar.
             </span>
             <textarea rows={3} maxLength={500} className={input}
+              disabled={!canEditDraft}
               value={documentForm.notes ?? ""}
               placeholder="Datos para revisión de Jefatura; no reemplazan la guía."
               onChange={(event) => changeDraft("notes", event.target.value)} />
@@ -585,14 +600,16 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
                 La plataforma no ha emitido ninguna guía de remisión.
               </p>
             )}
-            {canManage && operation.status !== "cancelled" && (
+            {canEditDraft && (
               <button type="submit" className={primary} disabled={busy}>
                 {busy ? "Guardando…" : "Guardar borrador para revisión"}
               </button>
             )}
-            {!canManage && (
+            {!canEditDraft && (
               <p className="mt-2 text-sm text-gray-600">
-                Puedes consultar los datos, pero no tienes permiso para modificarlos.
+                {operation.status === "cancelled"
+                  ? "Esta entrega fue anulada y su documentación ya no puede modificarse."
+                  : "Puedes consultar estos datos, pero no tienes permiso para modificarlos."}
               </p>
             )}
           </div>
