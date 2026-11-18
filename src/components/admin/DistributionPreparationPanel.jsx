@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
+import { FiAlertTriangle, FiFileText, FiMapPin, FiPackage, FiTruck } from "react-icons/fi";
 import {
   confirmarPreparacionDistribucion,
   consultarBorradorTransporte,
@@ -7,27 +9,36 @@ import {
   reservarDistribucion,
 } from "../../api/warehouseApi";
 
-const primary = "inline-flex min-h-10 items-center justify-center rounded-lg bg-red-700 px-4 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-50";
-const input = "mt-1 min-h-10 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-red-700 focus:outline-none";
+const primary = "inline-flex min-h-11 items-center justify-center rounded-xl bg-red-700 px-5 text-sm font-semibold text-white transition hover:bg-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600";
+const input = "mt-1 min-h-11 w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-950 transition-colors focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100";
 
-const FIELDS = [
-  ["issuer_ruc", "RUC del remitente", "text"],
-  ["destination_name", "Destinatario o encargado", "text"],
-  ["destination_id_number", "Documento del destinatario", "text"],
-  ["departure_address", "Dirección real de partida", "text"],
-  ["destination_address", "Dirección real de llegada", "text"],
-  ["departure_on", "Fecha prevista de inicio del traslado", "date"],
-  ["gross_weight_kg", "Peso bruto aproximado (kg)", "number"],
-  ["license_plate", "Placa del vehículo", "text"],
-  ["driver_document", "Documento del conductor", "text"],
-  ["driver_license", "Licencia de conducir", "text"],
-  ["carrier_ruc", "RUC de la empresa transportista", "text"],
-];
+const FIELD_LABELS = {
+  issuer_ruc: "RUC del remitente",
+  departure_address: "Dirección de partida",
+  destination_address: "Dirección real de llegada",
+  destination_name: "Destinatario o responsable",
+  destination_id_number: "Documento del destinatario",
+  transport_mode: "Modalidad de transporte",
+  transfer_reason: "Motivo del traslado",
+  departure_on: "Fecha de salida",
+  gross_weight_kg: "Peso bruto",
+  license_plate: "Placa del vehículo",
+  driver_document: "Documento del conductor",
+  driver_license: "Licencia del conductor",
+  carrier_ruc: "RUC del transportista",
+};
+
+const FIELD_LIMITS = {
+  issuer_ruc: 11, destination_name: 180, destination_id_number: 20,
+  departure_address: 300, destination_address: 300, license_plate: 15,
+  driver_document: 20, driver_license: 30, carrier_ruc: 11,
+};
 
 const REASONS = [
   ["", "Elegir según el traslado real"],
   ["consignment", "Consignación"],
-  ["company_transfer", "Entre establecimientos de la empresa"],
+  ["company_transfer", "Entre establecimientos de la misma empresa"],
+  ["itinerant", "Traslado por emisor itinerante (evaluar caso)"],
   ["sale", "Venta"],
   ["other", "Otro (verificar motivo aplicable en SUNAT)"],
 ];
@@ -77,6 +88,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
   const [counts, setCounts] = useState({});
   const [manualSelection, setManualSelection] = useState(false);
   const [lotQuantities, setLotQuantities] = useState({});
+  const [documentChanged, setDocumentChanged] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -97,6 +109,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
       setCounts({});
       setManualSelection(false);
       setLotQuantities({});
+      setDocumentChanged(false);
     }).catch((err) => {
       if (!ignore) setError(errorText(err));
     }).finally(() => {
@@ -155,7 +168,8 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
       };
       const response = await guardarBorradorTransporte(operation.id, payload);
       setTransport(response);
-      setNotice("Datos de traslado guardados para revisión. No se ha emitido una guía SUNAT.");
+      setDocumentChanged(false);
+      setNotice("Borrador guardado para revisión. No se emitió ninguna guía SUNAT.");
       onChanged();
     } catch (err) {
       setError(errorText(err));
