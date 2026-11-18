@@ -118,3 +118,22 @@ ARCHIVO DOCUMENTAL: guías, facturas, constancias y evidencias firmadas
 **Devoluciones por origen/destino, todas pendientes de implementación:** (a) retorno de feria al almacén tras conciliación de unidades vendidas/no vendidas, (b) liquidación y retorno de consignación por colegio, (c) devolución de cliente con verificación comercial/documental y revisión física, (d) devolución a editorial por incidencia, daño, sobrante o acuerdo autorizado. No confundir un retorno con una nueva compra ni sumar dos veces existencias. Cada caso tendrá solicitud, autorización según proceda, conteo, clasificación vendible/observado/dañado, documento y movimiento auditable. Una devolución a editorial requiere separación física, conteo conciliado con el proveedor y guía/documento correspondiente; ajustes de descuentos/facturas únicamente con autorización de Administración y rastro de auditoría.
 
 **No usar traslados manuales ni ajustes de inventario como sustitutos de estas devoluciones.** Definir los casos AS-IS con responsables reales antes de programar. La mejora actual de correo por observados **solo documenta un reclamo**, no crea automáticamente una devolución ni una nota de crédito.
+
+## 18/11/2026 — Consignación: preparación, venta, facturación y retorno [DISEÑO PENDIENTE]
+
+**Regla de negocio:** la reserva/preparación que ya probamos en Feria también debe servir para consignación. Después de entregar físicamente los libros, hay que controlar la custodia del colegio o tercero, sus ventas rendidas, los comprobantes correspondientes y la devolución de sobrantes o dañados. **Salir en consignación NO implica automáticamente vender ni facturar toda la mercadería**: los términos exactos dependen del convenio y de la validación de Administración/Contabilidad.
+
+**Flujo previsto:**
+1. Registrar operación de consignación, colegio/consignatario, campaña, fechas, ubicación de custodia y responsable. No mezclar consignaciones distintas.
+2. Planificar → reservar por guía/lote → verificar conteo (B3 ya disponible) → documento interno numerado de salida + verificación tributaria cuando corresponda (B4, pendiente).
+3. Despachar → registrar tránsito → confirmar cantidades efectivamente recibidas en el destino. El traslado entre custodias no aumenta ni reduce el inventario global por sí solo.
+4. Rendición: registrar período, productos, unidades entregadas, unidades vendidas, no vendidas, devueltas y diferencias; impedir vender más que lo recibido y evitar duplicidad.
+5. Validación de lo vendido y emisión de boleta/factura cuando proceda desde el futuro módulo **Ventas/Facturación**. Vincular a cada rendición, comprobar destinatario y condiciones comerciales. No generar factura por el mero despacho; criterio tributario sujeto a validación profesional.
+6. Devolución parcial o total: autorización según política, retorno físico, conteo, inspección, clasificación conforme/observado/dañado y movimiento auditado al almacén receptor. No simular devolución como una compra nueva.
+7. Conciliar saldos, diferencias, comprobantes y responsabilidades antes de cerrar; informar por colegio/consignatario, campaña, editorial, producto y lote.
+
+**Regla contable-operativa:** unidades en custodia + vendidas registradas + devueltas recibidas + diferencias justificadas deben reconciliar contra lo entregado, con movimientos/idempotencia trazables; definir el tratamiento de cada faltante y nota de crédito antes de codificar.
+
+**Estado del código:** B3 soporta modalidad Consignación y reserva, **pero todavía NO** existe el circuito integral de recepción en destino, custodia por colegio, rendición, facturación ni retorno de consignación. B3.2 agregó solo ferias específicas. No habilitar botones de Facturar o Devolver sin soporte backend; preparar el diseño equivalente de subalmacenes de consignación por colegio como siguiente alcance.
+
+**Simplificación UX:** una línea operativa común Planificar → Reservar → Preparar → Despachar → Recibir → Liquidar / Devolver, mostrando solo las acciones posibles en la etapa actual. No solicitar conductor ni transportista para apartar libros; documentación interna en despacho, no en reserva. La facturación se visualiza en Ventas/Administración, enlazada a la rendición.
