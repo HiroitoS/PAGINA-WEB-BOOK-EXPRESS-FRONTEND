@@ -978,7 +978,8 @@ export default function ERPDistribucionesPage() {
                     {event.actor} · {event.action === "created" ? "Planificación creada"
                       : event.action === "cancelled" ? "Planificación anulada"
                         : event.action === "stock_reserved" ? "Existencias reservadas"
-                          : event.action === "prepared" ? "Preparación verificada"
+                          : event.action === "split_by_stock" ? "Entrega dividida: saldo pendiente en otra planificación"
+                            : event.action === "prepared" ? "Preparación verificada"
                             : event.action === "transport_draft_updated" ? "Datos de traslado actualizados"
                               : "Planificación modificada"}
                     {event.previous?.mode && event.previous.mode !== event.current?.mode
