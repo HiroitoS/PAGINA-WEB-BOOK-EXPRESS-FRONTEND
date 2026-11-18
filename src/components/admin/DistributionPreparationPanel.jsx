@@ -43,6 +43,31 @@ function errorText(error) {
   return first || "Revisa la información de la entrega.";
 }
 
+function buildLotSelection(preparation, quantities) {
+  const lots = [];
+  const totals = {};
+  let valid = Boolean(preparation?.items?.length);
+  for (const item of preparation?.items ?? []) {
+    let total = 0;
+    for (const lot of item.lots) {
+      const raw = quantities[lot.stock_entry_id] ?? "";
+      if (raw === "") continue;
+      const amount = Number(raw);
+      if (!Number.isSafeInteger(amount) || amount < 0 || amount > lot.free) {
+        valid = false;
+        continue;
+      }
+      if (amount > 0) {
+        lots.push({ stock_entry_id: lot.stock_entry_id, quantity: amount });
+        total += amount;
+      }
+    }
+    totals[item.product_id] = total;
+    if (total !== item.planned) valid = false;
+  }
+  return { lots, totals, valid };
+}
+
 export default function DistributionPreparationPanel({ operation, canManage, onChanged }) {
   const [tab, setTab] = useState("stock");
   const [revision, setRevision] = useState(0);
@@ -50,6 +75,8 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
   const [transport, setTransport] = useState(null);
   const [documentForm, setDocumentForm] = useState(null);
   const [counts, setCounts] = useState({});
+  const [manualSelection, setManualSelection] = useState(false);
+  const [lotQuantities, setLotQuantities] = useState({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +95,8 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
         ([key, value]) => [key, value == null ? "" : String(value)],
       )));
       setCounts({});
+      setManualSelection(false);
+      setLotQuantities({});
     }).catch((err) => {
       if (!ignore) setError(errorText(err));
     }).finally(() => {
@@ -83,7 +112,9 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
     setNotice("");
     try {
       if (action === "reserve") {
-        await reservarDistribucion(operation.id);
+        await reservarDistribucion(
+          operation.id, manualSelection ? lotSelection.lots : null,
+        );
         setNotice("Libros reservados en el almacén de origen. Todavía no fueron despachados.");
       } else {
         const reservations = preparation?.reservations?.filter((row) => row.status === "active") ?? [];
@@ -133,6 +164,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
     }
   }
 
+  const lotSelection = buildLotSelection(preparation, lotQuantities);
   const active = preparation?.reservations?.filter((row) => row.status === "active") ?? [];
   const counted = active.length > 0 && active.every(
     (row) => counts[row.id] !== undefined && String(counts[row.id]).trim() !== "",
@@ -170,6 +202,28 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
             <strong>Origen:</strong> {preparation.source}{" · "}
             <strong>Destino previsto:</strong> {preparation.destination}
           </p>
+          {canManage && preparation.status === "planned" && (
+            <fieldset className="rounded-lg border border-gray-200 bg-white p-3">
+              <legend className="px-1 text-xs font-bold text-gray-900">
+                ¿Cómo se elegirán los lotes?
+              </legend>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:gap-5">
+                <label className="flex min-h-10 items-center gap-2 text-xs text-gray-800">
+                  <input type="radio" name={`lot-selection-${operation.id}`}
+                    checked={!manualSelection} onChange={() => setManualSelection(false)} />
+                  Automáticamente, por orden de recepción
+                </label>
+                <label className="flex min-h-10 items-center gap-2 text-xs text-gray-800">
+                  <input type="radio" name={`lot-selection-${operation.id}`}
+                    checked={manualSelection} onChange={() => setManualSelection(true)} />
+                  Elegir guía y cantidades
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Solo se usarán existencias conformes del colegio y del lugar de salida.
+              </p>
+            </fieldset>
+          )}
           <div className="space-y-2">
             {preparation.items.map((row) => (
               <div key={row.product_id} className="rounded-lg border border-gray-200 bg-white p-3">
@@ -180,18 +234,43 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
                   {" · "}Reservados para esta entrega: <strong>{row.already_reserved}</strong>
                   {row.shortage > 0 && <span className="font-bold text-red-700"> · Faltan {row.shortage}</span>}
                 </p>
-                {preparation.status === "planned" && row.lots.length > 0 && (
+                {preparation.status === "planned" && !manualSelection && row.lots.length > 0 && (
                   <p className="mt-1 text-xs text-gray-500">
                     Lotes: {row.lots.filter((lot) => lot.free > 0).map(
                       (lot) => `${lot.receipt_number} (${lot.free})`,
                     ).join(", ") || "Sin unidades libres"}
                   </p>
                 )}
+                {preparation.status === "planned" && manualSelection && canManage && (
+                  <div className="mt-2 space-y-2">
+                    {row.lots.filter((lot) => lot.free > 0).map((lot) => (
+                      <label key={lot.stock_entry_id}
+                        className="block rounded-lg bg-gray-50 p-2 text-xs text-gray-800">
+                        Guía {lot.receipt_number} · Disponibles: {lot.free}
+                        <input type="number" min="0" max={lot.free} step="1"
+                          inputMode="numeric" className={input}
+                          value={lotQuantities[lot.stock_entry_id] ?? ""}
+                          onChange={(event) => setLotQuantities((previous) => ({
+                            ...previous,
+                            [lot.stock_entry_id]: event.target.value,
+                          }))}
+                          placeholder="Unidades de esta guía" />
+                      </label>
+                    ))}
+                    <p className={`text-xs font-semibold ${
+                      lotSelection.totals[row.product_id] === row.planned
+                        ? "text-gray-700" : "text-red-700"
+                    }`}>
+                      Seleccionadas: {lotSelection.totals[row.product_id] ?? 0} de {row.planned}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
           {canManage && preparation.status === "planned" && (
-            <button type="button" className={primary} disabled={busy || !preparation.can_reserve}
+            <button type="button" className={primary}
+              disabled={busy || !preparation.can_reserve || (manualSelection && !lotSelection.valid)}
               onClick={() => applyAction("reserve")}>
               Reservar existencias de esta entrega
             </button>
