@@ -288,6 +288,7 @@ export default function ERPDistribucionesPage() {
       const mode = MODE_LABELS[found.sale_mode] ? found.sale_mode : prev.mode;
       const suggested = opciones.locations.filter(
         (location) => location.kind === MODE_LOCATION_KIND[mode]
+          && (mode !== "fair" || Boolean(location.fair_event_id))
           && String(location.id) !== origin,
       );
       return {
@@ -303,6 +304,7 @@ export default function ERPDistribucionesPage() {
     setForm((prev) => {
       const suggested = opciones.locations.filter(
         (location) => location.kind === MODE_LOCATION_KIND[mode]
+          && (mode !== "fair" || Boolean(location.fair_event_id))
           && String(location.id) !== prev.source_id,
       );
       return {
@@ -439,8 +441,11 @@ export default function ERPDistribucionesPage() {
   );
   const matchingLocations = opciones.locations.filter(
     (place) => place.kind === MODE_LOCATION_KIND[form.mode]
+      && (form.mode !== "fair" || Boolean(place.fair_event_id))
       && String(place.id) !== form.source_id,
   );
+  const legacyFairDestination = form.mode === "fair" && destination?.kind === "fair"
+    && !destination.fair_event_id;
   const otherLocations = opciones.locations.filter(
     (place) => !matchingLocations.some((match) => match.id === place.id),
   );
@@ -724,6 +729,22 @@ export default function ERPDistribucionesPage() {
                   </span>
                 </label>
               </div>
+              {form.mode === "fair" && matchingLocations.length === 0 && (
+                <p className="rounded-lg border border-gray-300 bg-gray-50 p-3 text-xs leading-5 text-gray-700">
+                  Para una nueva feria registra primero el evento y su dirección real en
+                  {" "}<Link to="/admin/erp/almacen/ubicaciones"
+                    className="font-bold text-red-700 underline underline-offset-2">
+                    Ferias y subalmacenes
+                  </Link>. Así cada evento tendrá mercadería separada.
+                </p>
+              )}
+              {legacyFairDestination && (
+                <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                  Elegiste una ubicación genérica de feria. Las ferias nuevas deben
+                  tener un destino propio para no mezclar existencias entre eventos.
+                  Las planificaciones antiguas conservan su destino hasta su revisión.
+                </p>
+              )}
               {source && destination && source.id === destination.id && (
                 <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
                   El lugar de salida y el de llegada son el mismo.
