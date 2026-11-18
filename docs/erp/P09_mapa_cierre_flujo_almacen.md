@@ -53,7 +53,7 @@ ARCHIVO DOCUMENTAL: guías, facturas, constancias y evidencias firmadas
 | Traslado entre ubicaciones y por guía | Implementado P-08.3 | Directo tras entrega física; no en tránsito |
 | Cortesías | Implementado parcialmente | Revisar salidas desde destinos diferentes del principal |
 | Navegación de vuelta a Inventario | Corregida | Traslados y Cortesías, pendiente validación visual |
-| Preparación/picking, armado de packs | Pendiente | No reservar sin control de concurrencia |
+| Reserva por lote y conteo B3; picking/armado de packs | B3 parcial en rama; packs pendientes | La reserva ya controla concurrencia; no equivale a despacho ni arma packs |
 | Despacho con guía, tránsito y recepción en destino | Pendiente | Requiere identidad del destino, responsable y pruebas |
 | Feria y consignación por evento/colegio | Pendiente | Un almacén genérico no distingue varias operaciones simultáneas |
 | Devoluciones (varios orígenes) | Pendiente | No usar "ajuste" o "traslado" como sustituto |
@@ -74,7 +74,7 @@ ARCHIVO DOCUMENTAL: guías, facturas, constancias y evidencias firmadas
 - Requerimientos internos: solicitante, destino exacto, colegio/feria, modalidad, campaña, productos, cantidades y fechas; estados y permisos.
 - Referencia del MOF: atención en temporada alta 48 horas, baja 24 horas; confirmar vigencia antes de automatizar SLA.
 
-### Fase 2 — Preparación y packs [PENDIENTE]
+### Fase 2 — Preparación y packs [EN CURSO: B3 parcial; packs pendientes]
 - Separar preparación (picking/conteo/reserva) de traslado/venta; registrar quién preparó y cantidades.
 - Modelo de packs Santillana: agrupación física **por colegio/adopción** con componentes por producto, cantidad, proveedor, etiqueta, estado de armado; código interno de identificación logística si es necesario, **sin crear SKU comercial ni duplicar stock**. Manejar packs termosellados entregados ya armados y libros sueltos.
 - Casos de apertura, armado incompleto, desarme, devolución e identificación de colegio. No publicar "pack colegio" en catálogo web.
@@ -110,3 +110,11 @@ ARCHIVO DOCUMENTAL: guías, facturas, constancias y evidencias firmadas
 - ¿Qué documentos y aprobaciones exige cada tipo de devolución? El MOF describe logística, pero no fija políticas completas de devoluciones.
 - ¿Qué roles concretos de Django se asignarán a los cargos del MOF y qué actos necesitan doble aprobación?
 - ¿Cómo migrar datos históricos del sistema anterior sin generar stock doble?
+
+## 17/11/2026 — Decisiones recuperadas: packs y devoluciones (NO implementar todavía)
+
+**Packs Santillana y otras editoriales:** un pack puede llegar termosellado con etiqueta de colegio, o sus libros pueden llegar sueltos. No siempre existe código propio de pack; las facturas de la editorial y comprobantes de venta detallan **libros individuales**, que deben conservar sus códigos, costos y saldos. El futuro ERP relacionará pack físico/logístico, colegio, campaña, adopción, proveedor, componentes y estado de sellado/armado. **No generar inventario adicional por crear un pack**, y no crear un SKU comercial artificial para el pack. La apertura/ruptura será excepcional, autorizada, y registrará quién, cuándo, motivo, componentes retirados y faltantes; la política exacta de autorización continúa sujeta a confirmación. En el catálogo web público no aparece «pack colegio».
+
+**Devoluciones por origen/destino, todas pendientes de implementación:** (a) retorno de feria al almacén tras conciliación de unidades vendidas/no vendidas, (b) liquidación y retorno de consignación por colegio, (c) devolución de cliente con verificación comercial/documental y revisión física, (d) devolución a editorial por incidencia, daño, sobrante o acuerdo autorizado. No confundir un retorno con una nueva compra ni sumar dos veces existencias. Cada caso tendrá solicitud, autorización según proceda, conteo, clasificación vendible/observado/dañado, documento y movimiento auditable. Una devolución a editorial requiere separación física, conteo conciliado con el proveedor y guía/documento correspondiente; ajustes de descuentos/facturas únicamente con autorización de Administración y rastro de auditoría.
+
+**No usar traslados manuales ni ajustes de inventario como sustitutos de estas devoluciones.** Definir los casos AS-IS con responsables reales antes de programar. La mejora actual de correo por observados **solo documenta un reclamo**, no crea automáticamente una devolución ni una nota de crédito.
