@@ -12,7 +12,7 @@
 
 **Siguiente acción de prueba concreta:** actualizar backend/frontend mediante pull en rama cuando CI esté verde, abrir la entrega original ANDINO, verificar que aparece «Reservar 15 y dejar 5 pendientes», inspeccionar confirmación y **solo si se desea ejecutar la operación de prueba**, confirmar. El listado debe mostrar dos entregas distintas y el inventario físico debe permanecer con 15 conformes (15 reservadas no disponibles para otra salida), 5 observados. Después hacer conteo físico de la reserva de 15 y no despachar: B4/GRE y feria específica B3.2 siguen pendientes.
 
-**Inventario consolidado:** la columna «Disponibles» representaba unidades conformes físicas, incluidas las comprometidas en reservas. Se renombró a «Conformes» y se añadió una aclaración explícita: el saldo libre para nuevas reservas se comprueba en la preparación de la entrega, descontando reservas activas. No se modificaron los costos ni movimientos de inventario por este ajuste visual. El CI de este último refinamiento frontend debe verificarse.
+**Inventario consolidado:** la columna «Disponibles» representaba unidades conformes físicas, incluidas las comprometidas en reservas. Se renombró a «Conformes» y se añadió una aclaración explícita: el saldo libre para nuevas reservas se comprueba en la preparación de la entrega, descontando reservas activas. No se modificaron los costos ni movimientos de inventario por este ajuste visual. GitHub Actions del frontend (commit `573c0fc3`) terminó exitosamente en lint y build.
 
 **Backlog intacto:** subalmacenes/ferias por evento, packs termosellados Santillana sin doble stock, retornos de feria, devoluciones de consignación, cliente y editorial. Sin cambios a `main` ni Tecnoweb.
 
