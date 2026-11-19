@@ -38,7 +38,7 @@ function Progress({ state }) {
               ? "bg-white font-bold text-gray-950 shadow-sm"
               : "text-gray-500")
           }>
-          <Icon aria-hidden="true" className={index < stageIndex ? "text-green-700" : ""} />
+          <Icon aria-hidden="true" className={index < stageIndex ? "text-gray-900" : ""} />
           <span className="leading-4">{title}</span>
         </li>
       ))}
@@ -182,9 +182,10 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
                 Confirmar una salida real (no es obligatorio durante la preparación)
               </h5>
               <p className="text-xs leading-5 text-amber-900">
-                Antes del movimiento verifica el sustento tributario aplicable fuera de
-                este sistema. Una orden interna NO reemplaza la GRE exigida.
-                Solo confirma aquí cuando la mercadería vaya a salir físicamente.
+                Antes del movimiento, verifica el documento legal aplicable fuera
+                del ERP. Una orden interna NO reemplaza la GRE exigible.
+                El sistema registra lo declarado por el responsable, pero no consulta SUNAT.
+                No uses referencias ficticias ni confirmes la salida sin movimiento real.
               </p>
               <fieldset className="space-y-2 rounded-xl border border-amber-200 bg-white p-3">
                 <legend className="text-xs font-bold text-amber-950">Sustento comprobado por el responsable</legend>
@@ -304,8 +305,8 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
           )}
 
           {dispatch.status === "received" && (
-            <div className="flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4">
-              <FiCheckCircle aria-hidden="true" className="mt-0.5 shrink-0 text-lg text-green-700" />
+            <div className="flex items-start gap-3 rounded-xl border border-gray-300 bg-gray-50 p-4">
+              <FiCheckCircle aria-hidden="true" className="mt-0.5 shrink-0 text-lg text-gray-900" />
               <div className="text-sm text-gray-950">
                 <strong>Recepción confirmada en {dispatch.destination}.</strong>
                 <p className="mt-1 text-xs text-gray-700">
