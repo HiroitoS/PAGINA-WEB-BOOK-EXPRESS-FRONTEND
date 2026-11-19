@@ -125,6 +125,7 @@ export default function ERPDistribucionesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [formStep, setFormStep] = useState(0);
   const [editingId, setEditingId] = useState(null);
   const [originalPlan, setOriginalPlan] = useState(null);
   const [nonce, setNonce] = useState("");
@@ -199,6 +200,7 @@ export default function ERPDistribucionesPage() {
   }, [formOpen, form.adoption_id, editingId, version]);
 
   function createNew() {
+    setFormStep(0);
     setForm(blank());
     setSelectedAdoption(null);
     setAllocation(null);
@@ -220,6 +222,7 @@ export default function ERPDistribucionesPage() {
   }
 
   function editExisting(item) {
+    setFormStep(1);
     setAllocation(null);
     setAllocationBusy(true);
     setQuantities({});
@@ -298,6 +301,7 @@ export default function ERPDistribucionesPage() {
     if (!found) return;
     setSelectedAdoption(found);
     setShowAdoptionResults(false);
+    setFormStep(1);
     setAllocation(null);
     setAllocationBusy(true);
     setQuantities({});
@@ -333,6 +337,39 @@ export default function ERPDistribucionesPage() {
     });
   }
 
+  function siguientePaso() {
+    setError("");
+    if (formStep === 0 && !form.adoption_id) {
+      setError("Selecciona primero la adopción confirmada que vas a atender.");
+      return;
+    }
+    if (formStep === 1 && (
+      !form.mode || !form.source_id || !form.destination_id
+      || form.source_id === form.destination_id
+    )) {
+      setError("Elige modalidad, lugar de origen y un destino diferente.");
+      return;
+    }
+    if (formStep === 2) {
+      if (!allocation || allocationBusy) {
+        setError("Primero revisa las cantidades de la adopción.");
+        return;
+      }
+      const items = allocation.items.filter((line) => {
+        const raw = String(quantities[line.product_id] ?? "0");
+        const qty = Number(raw);
+        return /^\\d+$/.test(raw) && Number.isSafeInteger(qty)
+          && qty >= 0 && qty <= line.assignable;
+      });
+      if (items.length !== allocation.items.length
+        || !items.some((line) => Number(quantities[line.product_id] || 0) > 0)) {
+        setError("Revisa los saldos e indica al menos un libro para la entrega.");
+        return;
+      }
+    }
+    setFormStep((current) => Math.min(3, current + 1));
+  }
+
   async function save(event) {
     event.preventDefault();
     if (saving) return;
@@ -342,6 +379,10 @@ export default function ERPDistribucionesPage() {
     }
     if (form.source_id === form.destination_id) {
       setError("Selecciona un destino diferente del almacén de origen.");
+      return;
+    }
+    if (!form.operation_name.trim() || !form.responsible_name.trim()) {
+      setError("Indica el nombre de la entrega y el responsable de recepción.");
       return;
     }
     if (form.scheduled_on && form.scheduled_until && form.scheduled_until < form.scheduled_on) {
@@ -545,8 +586,23 @@ export default function ERPDistribucionesPage() {
               <button type="button" onClick={() => { setFormOpen(false); setError(""); }}
                 className={buttonClass}>Cerrar</button>
             </div>
+            <nav aria-label="Pasos de la planificación" className="grid grid-cols-4 gap-1 rounded-xl bg-gray-200 p-1">
+              {["Adopción", "Modalidad y destino", "Cantidades", "Responsable"].map((name, index) => (
+                <button key={name} type="button" disabled={index > formStep}
+                  aria-current={index === formStep ? "step" : undefined}
+                  className={"min-h-11 rounded-lg px-2 text-center text-xs font-semibold transition-colors " + (
+                    index === formStep
+                      ? "bg-white text-red-700 shadow-sm"
+                      : index < formStep ? "text-gray-900 hover:bg-white" : "text-gray-500"
+                  )}
+                  onClick={() => { setFormStep(index); setError(""); }}>
+                  <span className="hidden sm:inline">{index + 1}. </span>{name}
+                </button>
+              ))}
+            </nav>
 
-            <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+            {formStep === 0 && (
+              <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
               <div>
                 <h4 className="text-sm font-black text-gray-950">1. Elegir adopción confirmada</h4>
                 <p className="mt-1 text-xs text-gray-600">
@@ -673,8 +729,11 @@ export default function ERPDistribucionesPage() {
                   )}
                 </div>
               )}
-            </section>
+              </section>
+            )}
 
+            {formStep === 1 && (
+              <>
             <fieldset className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
               <legend className="sr-only">Tipo de atención</legend>
               <div>
@@ -809,8 +868,10 @@ export default function ERPDistribucionesPage() {
                 </p>
               )}
             </section>
+              </>
+            )}
 
-            {form.adoption_id && (
+            {formStep === 2 && form.adoption_id && (
               <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 text-xs">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
@@ -881,6 +942,8 @@ export default function ERPDistribucionesPage() {
                 )}
               </section>
             )}
+            {formStep === 3 && (
+              <>
             <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
               <div>
                 <h4 className="text-sm font-black text-gray-950">5. Responsable y fechas</h4>
@@ -946,6 +1009,25 @@ export default function ERPDistribucionesPage() {
                 className="min-h-11 rounded-xl bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-50">
                 {saving ? "Guardando…" : editingId ? "Guardar cambio" : "Guardar planificación"}
               </button>
+              </div>
+            </div>
+              </>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-gray-600">Paso {formStep + 1} de 4</p>
+              <div className="flex gap-2">
+                {formStep > 0 && (
+                  <button type="button" className={buttonClass}
+                    onClick={() => { setFormStep((value) => Math.max(0, value - 1)); setError(""); }}>
+                    Anterior
+                  </button>
+                )}
+                {formStep < 3 && (
+                  <button type="button" onClick={siguientePaso}
+                    className="min-h-11 rounded-lg bg-gray-950 px-5 text-xs font-bold text-white hover:bg-gray-800">
+                    Siguiente paso →
+                  </button>
+                )}
               </div>
             </div>
           </form>
