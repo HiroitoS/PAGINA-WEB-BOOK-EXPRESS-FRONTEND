@@ -110,11 +110,13 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
     setBusy(true);
     setError("");
     setNotice("");
+    let nextStatus = operation.status;
     try {
       if (action === "reserve") {
         await reservarDistribucion(
           operation.id, manualSelection ? lotSelection.lots : null,
         );
+        nextStatus = "reserved";
         setNotice("Libros reservados en el almacén de origen. Todavía no fueron despachados.");
       } else if (action === "split") {
         const response = await separarDisponiblesDistribucion(operation.id, splitKey);
@@ -127,6 +129,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
           "para otra entrega planificada. Todavía no salieron del almacén.",
         );
         setSplitConfirm(false);
+        nextStatus = "reserved";
       } else {
         const reservations = preparation?.reservations?.filter((row) => row.status === "active") ?? [];
         const payload = reservations.map((row) => ({
@@ -140,11 +143,12 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
           return;
         }
         await confirmarPreparacionDistribucion(operation.id, payload);
+        nextStatus = "prepared";
         setNotice("Preparación verificada. Los libros siguen en el almacén hasta su despacho.");
       }
       setLoading(true);
       setRevision((current) => current + 1);
-      onChanged();
+      onChanged(nextStatus);
     } catch (err) {
       setError(errorText(err));
     } finally {
