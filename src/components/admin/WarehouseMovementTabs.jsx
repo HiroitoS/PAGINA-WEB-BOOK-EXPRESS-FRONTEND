@@ -2,8 +2,8 @@ import { NavLink } from "react-router";
 import { FiClock, FiGift, FiTruck, FiPackage } from "react-icons/fi";
 
 const tabs = [
-  { label: "Entregas", to: "/admin/erp/almacen/distribuciones", icon: FiPackage, detalle: "Planificar, reservar y preparar libros" },
-  { label: "Traslados", to: "/admin/erp/almacen/traslados", icon: FiTruck, detalle: "Registrar un traslado físico ya realizado" },
+  { label: "Entregas", to: "/admin/erp/almacen/distribuciones", icon: FiPackage, detalle: "Planificar, reservar, preparar, despachar y confirmar recepción" },
+  { label: "Traslados directos", to: "/admin/erp/almacen/traslados", icon: FiTruck, detalle: "Movimiento físico directo ya realizado, independiente de las entregas planificadas" },
   { label: "Cortesías", to: "/admin/erp/almacen/cortesias", icon: FiGift, detalle: "Registrar entregas sin venta" },
   { label: "Historial", to: "/admin/erp/almacen/historial-traslados", icon: FiClock, detalle: "Consultar movimientos registrados" },
 ];
