@@ -171,7 +171,10 @@ export default function DistributionDispatchPanel({
         <PreparedFairDestinationCorrection
           operation={operation}
           canCorrect={canManage && canResolveIncidents}
-          onCorrected={() => onChanged?.("prepared")}
+          onCorrected={() => {
+            setNotice("Feria específica asignada con historial. Ya puedes crear la orden interna.");
+            onChanged?.("prepared");
+          }}
         />
       )}
 
