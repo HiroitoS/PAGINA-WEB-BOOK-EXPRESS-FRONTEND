@@ -194,10 +194,18 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
       {categoria === "subalmacenes" && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
           <span>Tiendas, ferias y consignaciones: cada destino conserva sus propias existencias.</span>
-          <Link to="/admin/erp/almacen/ubicaciones"
-            className="font-bold text-red-700 underline underline-offset-2">
-            Las ferias nuevas se registran en la pestaña Ferias
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            {puedeVerInventario && (
+              <Link to="/admin/erp/almacen/stock-por-almacen"
+                className="font-bold text-red-700 underline underline-offset-2">
+                Consultar existencias
+              </Link>
+            )}
+            <Link to="/admin/erp/almacen/ubicaciones"
+              className="font-bold text-red-700 underline underline-offset-2">
+              Registrar feria
+            </Link>
+          </div>
         </div>
       )}
       {mensaje && (
