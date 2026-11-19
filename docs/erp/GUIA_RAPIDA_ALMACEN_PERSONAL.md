@@ -1,6 +1,6 @@
 # Book Express — Guía de recorrido para personal de Almacén (ERP en pruebas)
 
-**Revisión:** 18/11/2026 · **Entorno:** rama de pruebas `feature/erp-p08-traslados-por-guia` · **No publicado en Tecnoweb**.
+**Revisión:** 19/11/2026 · **Entorno:** rama de pruebas `feature/erp-p08-traslados-por-guia` · **No publicado en Tecnoweb**.
 
 > **Regla básica:** pedir ≠ recibir ≠ reservar ≠ preparar ≠ trasladar ≠ vender. Cada operación tiene responsable y momento diferentes. Crear una ubicación o feria **no crea ni mueve stock**.
 
@@ -12,12 +12,22 @@
 | Registrar guías que llegan | ERP → Almacén → Recepción de mercadería | Sí | Conteo, observados, evidencia y validación; luego existencias conformes. |
 | Revisar cantidades y dónde están | ERP → Almacén → Inventario | Sí | Solo consulta, sin movimiento. |
 | Registrar una feria o un depósito | ERP → Almacén → Ubicaciones y ferias | Sí, B3.2 | Identifica ubicación de custodia. Stock inicial cero. |
-| Preparar libros para feria, tienda o consignación | ERP → Almacén → Movimientos → **Entregas** | Sí, B2/B3 | Planificar → reservar por lote → conteo físico. Aún en origen. |
+| Preparar libros para feria, tienda o consignación | ERP → Almacén → Movimientos → **Distribuciones** | Sí, B2/B3 | Planificar → reservar por lote → conteo físico. Aún en origen. |
 | Registrar un traslado físico directo ya concluido | ERP → Almacén → Movimientos → **Traslados directos** | Sí, función independiente | Cambia existencias de origen a destino, sin vincularse a una entrega planificada. |
 | Registrar una cortesía | ERP → Almacén → Movimientos → **Cortesías** | Sí, con permisos y controles existentes | Salida sin venta; no confundir con consignación. |
 | Consultar traslados anteriores | ERP → Almacén → Movimientos → **Historial** | Sí | Consulta y auditoría de los traslados. |
-| Generar orden interna, despachar y confirmar llegada | ERP → Almacén → Movimientos → **Entregas** | Implementado B4 en la rama; prueba local pendiente | Orden interna numerada (sin mover stock) → confirmar salida física (en tránsito) → recepción por lote (ingresa en destino). No es GRE. |
+| Generar orden interna, despachar y confirmar llegada | ERP → Almacén → Movimientos → **Distribuciones** | Implementado B4 en la rama; prueba local pendiente | Orden interna numerada (sin mover stock) → confirmar salida física (en tránsito) → recepción por lote (ingresa en destino). No es GRE. |
 | Liquidar ventas en consignación, facturar y devolver sobrantes | En desarrollo B5 + Ventas | **Aún no** | No facturar automáticamente por solo entregar en consignación. |
+
+## Cuando una entrega preparada apunta a «ALMACEN FERIA»
+
+No significa que el almacenero haya contado mal. Es una ubicación **genérica** que se usó antes de registrar ferias individuales. El ERP no permite crear una orden interna para este destino impreciso.
+
+En **Movimientos → Distribuciones → Preparadas**, abre la entrega y selecciona **Asignar feria real**. Solo un usuario autorizado por Jefatura podrá elegir una feria registrada (con recinto y fecha), explicar el motivo y confirmar que corresponde al colegio de esa entrega. Esta corrección **NO modifica las unidades, las reservas ni el almacén de origen**. Después aparecerá **Crear orden interna**. Si aún no hay una feria real para ese colegio, debe registrarse antes; no elegir una feria de otro colegio solo para eliminar la alerta.
+
+**¿Y el documento?** Solo existe después de pulsar **Crear orden interna**. Se consulta desde la misma entrega en **Ver / imprimir documento interno**. Crear o imprimir la orden no confirma salida física ni sustituye la guía tributaria exigible.
+
+Las demás ediciones se restringen: una planificación sin preparar puede modificarse, pero después de reservar y contar no deben cambiarse libremente los lotes, cantidades, modalidad u origen. Una entrega ya documentada, en tránsito o recibida conserva su historial. Las reversiones supervisadas más amplias permanecen pendientes.
 
 ## Una sola historia de ejemplo, con datos de la base local
 
