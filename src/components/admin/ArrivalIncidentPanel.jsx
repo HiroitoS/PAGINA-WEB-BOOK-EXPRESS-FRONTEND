@@ -51,7 +51,6 @@ export function ArrivalIncidentHistory({ incidents }) {
       ))}
     </div>
   </details>
-  )}
   ) : null;
 }
 
