@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { warehouseErrorMessage as mensajeError } from "../../utils/warehouseErrorMessage";
 import { Link } from "react-router";
-import { FiArrowRight, FiBox, FiMapPin } from "react-icons/fi";
+import { FiBox, FiMapPin } from "react-icons/fi";
 import {
   actualizarUbicacionAlmacen,
   crearUbicacionAlmacen,
@@ -45,6 +45,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   const [editandoId, setEditandoId] = useState(null);
   const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
   const [categoria, setCategoria] = useState("principales");
+  const [conciliacionAbierta, setConciliacionAbierta] = useState(false);
   const formRef = useRef(null);
   const principales = ubicaciones.filter((item) => item.kind === "main");
   const subalmacenes = ubicaciones.filter((item) => item.kind !== "main");
@@ -162,7 +163,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
             Una ubicación identifica dónde están los libros; no genera ni mueve existencias.
           </p>
         </div>
-        {puedeGestionar && !formularioAbierto && (
+        {puedeGestionar && !formularioAbierto && (categoria === "subalmacenes" || !principalActivo) && (
           <button type="button" onClick={abrirNuevo}
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-red-700 px-4 text-xs font-bold text-white hover:bg-red-800">
             + {categoria === "principales" && !principalActivo ? "Registrar almacén principal" : "Nueva ubicación"}
@@ -194,8 +195,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
           <span>Tiendas, ferias y consignaciones: cada destino conserva sus propias existencias.</span>
           <Link to="/admin/erp/almacen/ubicaciones"
-            className="font-bold text-red-700 underline underline-offset-2"
-            onClick={() => elegirCategoria("subalmacenes")}>
+            className="font-bold text-red-700 underline underline-offset-2">
             Las ferias nuevas se registran en la pestaña Ferias
           </Link>
         </div>
@@ -369,7 +369,8 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         </p>
       )}
       {puedeConciliar && !cargando && ubicaciones.length > 0 && (
-        <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+        <details className="rounded-xl border border-gray-200 bg-gray-50 p-3"
+          onToggle={(event) => setConciliacionAbierta(event.currentTarget.open)}> 
           <summary className="cursor-pointer text-sm font-bold text-gray-950">
             Conciliación inicial de existencias · solo jefatura
           </summary>
@@ -377,7 +378,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
             Se utiliza únicamente para verificar la ubicación de existencias anteriores,
             no para preparar ni despachar una entrega.
           </p>
-          <WarehouseReconciliationPanel ubicaciones={ubicaciones} />
+          {conciliacionAbierta && <WarehouseReconciliationPanel ubicaciones={ubicaciones} />}
         </details>
       )}
     </div>
