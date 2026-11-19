@@ -365,6 +365,20 @@ export async function confirmarLlegadaInterna(id, payload) {
   return data;
 }
 
+export async function registrarDiferenciaLlegada(id, payload) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/registrar-diferencia-llegada/`, payload,
+  );
+  return data;
+}
+
+export async function resolverDiferenciaLlegada(id, payload) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/resolver-diferencia-llegada/`, payload,
+  );
+  return data;
+}
+
 export async function consultarPreparacionDistribucion(id) {
   const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/${id}/preparacion/`);
   return data;
