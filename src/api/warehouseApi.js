@@ -338,10 +338,10 @@ export async function anularDistribucion(id, reason) {
   return data;
 }
 
-export async function corregirDestinoFeriaPreparada(id, destinationId, reason) {
+export async function corregirDestinoFeriaPreparada(id, destinationId, reason, verified) {
   const { data } = await axiosClient.post(
     `${DISTRIBUTION_BASE}/${id}/corregir-destino-feria/`,
-    { destination_id: destinationId, reason },
+    { destination_id: destinationId, reason, fair_verified_for_delivery: verified },
   );
   return data;
 }
