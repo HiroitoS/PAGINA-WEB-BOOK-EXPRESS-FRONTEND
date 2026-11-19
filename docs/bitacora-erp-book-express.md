@@ -12,7 +12,7 @@
 - **Prueba local recomendada sin doble stock:** Entregas → abrir **Detalle** de `Entrega · 22 DE ABRIL` (ya creada); verificar producto/cantidad y stock del **mismo colegio, lote y ALMACEN PRINCIPAL**, no asumir disponibilidad por el inventario agregado. Si el sistema permite, reservar conforme, contar físicamente y preparar; si no, detenerse en aviso de saldo. **No confirmar Traslados**, documento interno ni venta. Esta prueba no generará un movimiento físico: B4 pendiente.
 - `docs/erp/GUIA_RAPIDA_ALMACEN_PERSONAL.md` y mapa de consignaciones se mantienen como referencia de capacitación.
 
-**Validación:** cambios de ubicación hasta `d4b5f29` pasaron GitHub Actions (lint/pruebas/build). El ajuste de Entregas `2555aa9f` debe verificar CI. Sin comprobación visual local de las nuevas subpestañas. No modificar `main` ni Tecnoweb.
+**Validación:** cambios de ubicación hasta `d4b5f29` pasaron GitHub Actions (lint/pruebas/build). El ajuste de Entregas `2555aa9f` también pasó GitHub Actions (lint, pruebas y build); el fallo previo por import/prop no usado quedó corregido. Sin comprobación visual local de las nuevas subpestañas. No modificar `main` ni Tecnoweb.
 
 ## 18/11/2026 — UX de Ubicaciones: pestañas compactas + guía para personal [EN RAMA, PRUEBA VISUAL PENDIENTE]
 
