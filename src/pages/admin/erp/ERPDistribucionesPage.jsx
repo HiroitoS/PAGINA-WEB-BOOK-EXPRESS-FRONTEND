@@ -547,10 +547,10 @@ export default function ERPDistribucionesPage() {
       <section className="space-y-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-black text-gray-950">Planificación de entregas</h2>
+            <h2 className="text-base font-black text-gray-950">Distribuciones y entregas</h2>
             <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-600">
-              Planifica libros para tienda, feria o consignación. Guardar el plan
-              no reserva ni traslada mercadería: el conteo se verifica en Detalle.
+              Organiza los libros para tienda, feria o consignación. Sigue cada entrega
+              desde la reserva y preparación hasta la recepción en destino.
             </p>
           </div>
           <div className="flex gap-2">
@@ -561,7 +561,7 @@ export default function ERPDistribucionesPage() {
             {puedeGestionar && (
               <button type="button" onClick={createNew}
                 className="min-h-10 rounded-lg bg-red-700 px-3 text-xs font-bold text-white transition-colors hover:bg-red-800">
-                Planificar entrega
+                Nueva distribución
               </button>
             )}
           </div>
@@ -1112,10 +1112,21 @@ export default function ERPDistribucionesPage() {
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className={buttonClass}
+                <button type="button"
+                  className={
+                    "inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border px-3 text-xs font-bold transition-colors " +
+                    (expandedId === item.id
+                      ? "border-gray-300 bg-gray-50 text-gray-900"
+                      : "border-red-700 bg-red-700 text-white hover:bg-red-800")
+                  }
                   aria-expanded={expandedId === item.id}
                   onClick={() => setExpandedId((current) => current === item.id ? null : item.id)}>
-                  Detalle <FiChevronDown className="ml-1" aria-hidden="true" />
+                  {item.status === "planned" || item.status === "reserved"
+                    ? "Preparar libros"
+                    : item.status === "prepared" || item.status === "in_transit"
+                      ? "Continuar despacho"
+                      : "Ver detalle"}
+                  <FiChevronDown aria-hidden="true" />
                 </button>
                 {puedeGestionar && item.status === "planned" && (
                   <button type="button" className={buttonClass} onClick={() => editExisting(item)}>
