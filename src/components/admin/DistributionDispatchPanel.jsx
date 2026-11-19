@@ -4,6 +4,7 @@ import {
   consultarDocumentoInterno, crearDocumentoInterno,
   confirmarSalidaInterna, confirmarLlegadaInterna,
 } from "../../api/warehouseApi";
+import printInternalDispatch from "./printInternalDispatch";
 
 const buttonPrimary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
 const fieldClass = "mt-1 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100";
@@ -15,75 +16,6 @@ function readError(err) {
   const message = fields.detail ?? Object.values(fields)[0];
   return Array.isArray(message) ? message[0] : typeof message === "string"
     ? message : "No se pudo completar la operación. Revisa la información.";
-}
-
-function cleanHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[character]);
-}
-
-function printInternalDocument(data) {
-  const page = window.open("", "_blank");
-  if (!page) return false;
-  const rows = (data.lines || []).map((line) => `
-    <tr>
-      <td>${cleanHtml(line.product)}</td>
-      <td>${cleanHtml(line.receipt_number)}</td>
-      <td style="text-align:right">${cleanHtml(line.quantity)}</td>
-    </tr>`).join("");
-  const html = `<!doctype html>
-<html lang="es"><head><meta charset="UTF-8">
-<title>${cleanHtml(data.document_number)} · Book Express</title>
-<style>
-@page{size:A4;margin:15mm}body{font:13px Arial,sans-serif;color:#151515;margin:0}
-header{display:flex;justify-content:space-between;align-items:start;border-bottom:3px solid #bc0000;padding-bottom:12px}
-h1{font-size:20px;margin:0}h2{font-size:14px;margin:18px 0 8px}
-small,.muted{color:#555}.tag{border:1px solid #555;padding:5px 8px;font-weight:bold}
-p{margin:6px 0;line-height:1.55}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-table{width:100%;border-collapse:collapse;margin-top:9px}th,td{border:1px solid #bbb;padding:9px 8px;text-align:left;vertical-align:top}
-th{background:#f1f1f1}.signatures{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:68px}
-.signatures div{border-top:1px solid #444;padding-top:8px;text-align:center}
-.footer{margin-top:26px;padding:10px;background:#f6f6f6;font-size:11px;border:1px solid #ccc}
-@media print{button{display:none}}
-</style></head>
-<body>
-<button type="button" onclick="window.print()" style="margin-bottom:16px;padding:9px 18px;background:#bb0000;color:#fff;border:0;border-radius:6px;cursor:pointer">Imprimir documento</button>
-<header>
-  <div><h1>BOOK EXPRESS</h1><p>Orden interna de salida / entrega</p>
-  <small>Documento de control logístico</small></div>
-  <span class="tag">${cleanHtml(data.document_number)}</span>
-</header>
-<h2>Identificación de la operación</h2>
-<div class="grid">
-  <div><p><strong>Colegio:</strong> ${cleanHtml(data.school)}</p>
-  <p><strong>Entrega:</strong> ${cleanHtml(data.operation_name)}</p>
-  <p><strong>Modalidad:</strong> ${cleanHtml({fair:"Feria",consignment:"Consignación",point_of_sale:"Punto de venta"}[data.mode] ?? data.mode)}</p></div>
-  <div><p><strong>Origen:</strong> ${cleanHtml(data.source)}</p>
-  <p><strong>Destino:</strong> ${cleanHtml(data.destination)}</p>
-  <p><strong>Responsable previsto:</strong> ${cleanHtml(data.responsible_name)}</p></div>
-</div>
-<h2>Mercadería identificada por lote</h2>
-<table><thead><tr><th>Producto</th><th>Guía de recepción</th><th>Cantidad</th></tr></thead>
-<tbody>${rows}</tbody><tfoot><tr><th colspan="2">TOTAL</th>
-<th style="text-align:right">${cleanHtml(data.total)}</th></tr></tfoot></table>
-<p><strong>Estado:</strong> ${cleanHtml({
- documented:"Orden interna emitida, salida NO confirmada",
- in_transit:"Salida física confirmada, pendiente recepción",
- received:"Recepción de destino confirmada",
-}[data.status] ?? data.status)}</p>
-${data.external_guide_reference ? `<p><strong>Referencia GRE externa declarada:</strong> ${cleanHtml(data.external_guide_reference)}</p>` : ""}
-${data.recipient_name ? `<p><strong>Recibido por:</strong> ${cleanHtml(data.recipient_name)}</p>` : ""}
-<div class="signatures"><div>Responsable que entrega / fecha</div><div>Responsable que recibe / fecha</div></div>
-<p class="footer"><strong>Control interno:</strong> no es guía de remisión electrónica, no acredita emisión
-ni aceptación de SUNAT y no reemplaza los documentos legalmente exigibles. Las firmas no
-alteran el inventario digital: el registro de salida y el de recepción se confirman por separado.</p>
-</body></html>`;
-  page.document.open();
-  page.document.write(html);
-  page.document.close();
-  page.focus();
-  return true;
 }
 
 const stages = [
@@ -236,7 +168,7 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
               </p>
             </div>
             <button type="button" onClick={() => {
-              if (!printInternalDocument(dispatch)) {
+              if (!printInternalDispatch(dispatch)) {
                 setError("El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para imprimir.");
               }
             }} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-950 hover:border-red-600">
