@@ -5,7 +5,7 @@ import {
   confirmarSalidaInterna, confirmarLlegadaInterna,
   registrarDiferenciaLlegada, resolverDiferenciaLlegada,
 } from "../../api/warehouseApi";
-import ArrivalIncidentPanel from "./ArrivalIncidentPanel";
+import ArrivalIncidentPanel, { ArrivalIncidentHistory } from "./ArrivalIncidentPanel";
 import printInternalDispatch from "./printInternalDispatch";
 
 const buttonPrimary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
@@ -343,6 +343,9 @@ export default function DistributionDispatchPanel({
                 </p>
               </div>
             </div>
+          )}
+          {dispatch.status === "received" && (
+            <ArrivalIncidentHistory incidents={dispatch.arrival_incidents ?? []} />
           )}
         </>
       )}
