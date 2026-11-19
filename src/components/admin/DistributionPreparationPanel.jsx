@@ -110,7 +110,7 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
     setBusy(true);
     setError("");
     setNotice("");
-    let nextStatus = operation.status;
+    let nextStatus;
     try {
       if (action === "reserve") {
         await reservarDistribucion(
