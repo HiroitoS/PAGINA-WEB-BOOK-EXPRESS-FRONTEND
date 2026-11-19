@@ -104,6 +104,7 @@ export default function ERPDistribucionesPage() {
   const { user } = useAuth();
   const puedeGestionar = userHasPermission(user, ["warehouse.manage_distribution_operations"]);
   const puedeTrasladar = userHasPermission(user, ["warehouse.manage_stock_transfers"]);
+  const puedeResolverIncidencias = userHasPermission(user, ["warehouse.validate_receiving"]);
   const [opciones, setOpciones] = useState({
     adoptions: [], adoptions_meta: { count: 0, page: 1, pages: 1 },
     locations: [], modes: [], campaign_years: [],
@@ -1180,6 +1181,7 @@ export default function ERPDistribucionesPage() {
                 {["prepared", "in_transit", "delivered"].includes(item.status) && (
                   <DistributionDispatchPanel operation={item} canManage={puedeGestionar}
                     canMoveStock={puedeTrasladar}
+                    canResolveIncidents={puedeResolverIncidencias}
                     onChanged={refrescarEntrega} />
                 )}
                 <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
