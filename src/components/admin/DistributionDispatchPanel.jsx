@@ -186,7 +186,7 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
                 este sistema. Una orden interna NO reemplaza la GRE exigida.
                 Solo confirma aquí cuando la mercadería vaya a salir físicamente.
               </p>
-              <fieldset className="space-y-2">
+              <fieldset className="space-y-2 rounded-xl border border-amber-200 bg-white p-3">
                 <legend className="text-xs font-bold text-amber-950">Sustento comprobado por el responsable</legend>
                 <label className="flex items-start gap-2 text-xs text-gray-900">
                   <input type="radio" name={`basis-${operation.id}`} className="mt-0.5"
@@ -196,7 +196,7 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
                 <label className="flex items-start gap-2 text-xs text-gray-900">
                   <input type="radio" name={`basis-${operation.id}`} className="mt-0.5"
                     checked={basis === "exception"} onChange={() => setBasis("exception")} />
-                  Excepción legal revisada y documentada
+                  Excepción legal revisada y documentada (solo cuando corresponda)
                 </label>
               </fieldset>
               {basis === "external_guide" && (
@@ -208,12 +208,22 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
                 </label>
               )}
               {basis === "exception" && (
-                <label className="block text-xs font-bold text-gray-900">
-                  Sustento de la excepción (mín. 20 caracteres)
-                  <textarea rows={3} className={fieldClass} maxLength={500}
-                    value={exemption} onChange={(event) => setExemption(event.target.value)}
-                    placeholder="Explicar la norma y el caso concreto revisado" />
-                </label>
+                <div className="space-y-2 rounded-xl border border-amber-300 bg-white p-3">
+                  <label className="block text-xs font-bold text-gray-900">
+                    Sustento de la excepción (mínimo 20 caracteres)
+                    <textarea rows={3}
+                      className="mt-2 w-full rounded-xl border border-gray-300 bg-white p-3 text-sm font-normal text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100"
+                      maxLength={500} value={exemption}
+                      onChange={(event) => setExemption(event.target.value)}
+                      placeholder="Indicar el supuesto legal aplicable y su sustento previamente revisado" />
+                  </label>
+                  <p className="text-xs leading-5 text-gray-700">
+                    {exemption.trim().length} de 20 caracteres mínimos.
+                    {exemption.trim().length < 20
+                      ? " El botón permanecerá bloqueado hasta completar la explicación."
+                      : " Longitud mínima completa; esto no verifica automáticamente la validez legal."}
+                  </p>
+                </div>
               )}
               <label className="flex items-start gap-2 text-xs leading-5 text-gray-900">
                 <input type="checkbox" checked={dispatchChecked} className="mt-0.5"
@@ -244,8 +254,8 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
               <div className="space-y-2">
                 {dispatch.lines.map((line) => (
                   <label key={line.id}
-                    className="grid gap-2 rounded-lg border border-gray-200 bg-white p-3 sm:grid-cols-4 sm:items-center">
-                    <span className="text-xs leading-5 text-gray-900 sm:col-span-3">
+                    className="grid gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_7rem] sm:items-center">
+                    <span className="min-w-0 text-xs leading-5 text-gray-900">
                       <strong>{line.product}</strong>
                       <span className="block text-gray-600">
                         Guía {line.receipt_number} · Despachadas {line.quantity}
@@ -254,11 +264,12 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
                     <span className="text-xs font-semibold text-gray-700">
                       Contadas
                       <input type="number" min="0" step="1" inputMode="numeric"
+                        aria-label={`Unidades recibidas de ${line.product}`}
                         value={counts[line.id] ?? ""}
                         onChange={(event) => setCounts((previous) => ({
                           ...previous, [line.id]: event.target.value,
                         }))}
-                        className={fieldClass} />
+                        className="mt-1 h-10 w-28 rounded-lg border border-gray-300 bg-white px-3 text-right text-sm font-bold tabular-nums text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100" />
                     </span>
                   </label>
                 ))}
