@@ -35,6 +35,14 @@ Por separado, se registró una feria `COLEGIO 22 DE ABRIL`, con responsable `ROB
 
 **Resultado aceptado:** el empleado comprende las diferencias sin crear entradas, reservas, traslados, ventas ni documentos fiscales nuevos. Si faltan datos o permisos, anotar la observación y no inventar operaciones para completar una prueba.
 
+## Si la mercadería llega con diferencias
+
+Cuando la distribución figure **En tránsito**, el responsable del destino registra las unidades que realmente cuenta de cada producto y lote. Si alguna cantidad no coincide, la pantalla habilita **Registrar incidencia**: debe indicar quién recibió, el conteo real y qué ocurrió. El ERP conserva la diferencia y **no incorpora los libros al destino**.
+
+La **Jefatura autorizada** revisa la incidencia. Si tras un recuento físico aparecen TODOS los ejemplares y se confirma su conformidad, puede documentar el resultado y cerrar la incidencia; luego el responsable registra la recepción normalmente. Si persisten faltantes, sobrantes o dañados, **no debe marcarse conformidad ficticia**: la incidencia queda pendiente hasta que exista el procedimiento formal de resolución. Esta última parte todavía está en desarrollo.
+
+Los controles descritos solo existen en la rama de prueba. No simules guías tributarias para habilitar un movimiento en una operación real.
+
 ## ¿Qué haremos después?
 
 **B4 (en rama, pendiente prueba local):** al confirmar el conteo, Entregas permite generar orden interna numerada e imprimible, verificar externamente el sustento legal, registrar salida física (en tránsito) y confirmar recepción por lote. El documento interno no sustituye la GRE legalmente exigible. Solo realizar estas acciones si el movimiento es real o en una base de prueba aislada; no generar un traslado ficticio en Tecnoweb.
