@@ -61,7 +61,7 @@ const STATUS = {
   },
   reserved: {
     name: "Existencias reservadas",
-    styles: "border-blue-200 bg-blue-50 text-blue-900",
+    styles: "border-gray-300 bg-gray-100 text-gray-900",
   },
   prepared: {
     name: "Preparada",
@@ -69,11 +69,11 @@ const STATUS = {
   },
   in_transit: {
     name: "En tránsito",
-    styles: "border-blue-200 bg-blue-50 text-blue-900",
+    styles: "border-gray-800 bg-gray-900 text-white",
   },
   delivered: {
     name: "Recibida en destino",
-    styles: "border-green-200 bg-green-50 text-green-900",
+    styles: "border-gray-300 bg-gray-100 text-gray-900",
   },
   cancelled: {
     name: "Anulada",
@@ -1116,12 +1116,12 @@ export default function ERPDistribucionesPage() {
                   </p>
                 )}
                 {item.status === "in_transit" && (
-                  <p className="mt-1 text-xs font-semibold text-blue-800">
+                  <p className="mt-1 text-xs font-semibold text-gray-900">
                     Mercadería despachada: pendiente de conteo y recepción en destino.
                   </p>
                 )}
                 {item.status === "delivered" && (
-                  <p className="mt-1 text-xs font-semibold text-green-800">
+                  <p className="mt-1 text-xs font-semibold text-gray-700">
                     Llegada confirmada. La mercadería ya figura en la ubicación de destino.
                   </p>
                 )}
