@@ -1216,7 +1216,7 @@ export default function ERPDistribucionesPage() {
                                   : event.action === "received_destination" ? "Recepción en destino confirmada"
                                     : event.action === "arrival_incident_opened" ? "Diferencia de llegada registrada"
                                       : event.action === "arrival_incident_closed" ? "Incidencia cerrada con recuento conforme"
-                                        : "Planificación modificada"
+                                        : "Planificación modificada"}
                     {event.previous?.mode && event.previous.mode !== event.current?.mode
                       ? ` · ${MODE_LABELS[event.previous.mode]} → ${MODE_LABELS[event.current.mode]}`
                       : ""}
