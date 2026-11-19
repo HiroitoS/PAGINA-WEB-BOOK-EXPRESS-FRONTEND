@@ -121,7 +121,8 @@ export default function printInternalDispatch(data) {
     <header class="top">
       <div class="logo"><img src="${logoUrl}" alt="Book Express"></div>
       <div class="center">
-        <div class="business">BOOK EXPRESS S.A.C.</div>
+        <div class="business">BOOK EXPRESS</div>
+        <div class="tax">Distribuidora y Comercializadora Book Express S.A.C.</div>
         <div class="tax">RUC 20601658811</div>
       </div>
       <div class="doc-id"><small>N.º DE CONTROL INTERNO</small>
@@ -135,6 +136,9 @@ export default function printInternalDispatch(data) {
       ${field("Operación", data.operation_name)}
       ${field("Modalidad", modeLabels[data.mode] ?? data.mode)}
       ${field("Responsable previsto", data.responsible_name)}
+      ${field("Fecha de registro", data.created_at
+        ? new Date(data.created_at).toLocaleDateString("es-PE")
+        : "—")}
       ${field("Lugar de salida", data.source)}
       ${field("Lugar de destino", data.destination)}
     </dl>
