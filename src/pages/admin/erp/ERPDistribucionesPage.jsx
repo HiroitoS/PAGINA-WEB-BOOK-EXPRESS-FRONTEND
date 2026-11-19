@@ -11,6 +11,7 @@ import {
 } from "../../../api/warehouseApi";
 import WarehouseMovementTabs from "../../../components/admin/WarehouseMovementTabs";
 import DistributionPreparationPanel from "../../../components/admin/DistributionPreparationPanel";
+import DistributionDispatchPanel from "../../../components/admin/DistributionDispatchPanel";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 
@@ -55,6 +56,14 @@ const STATUS = {
   },
   prepared: {
     name: "Preparada",
+    styles: "border-gray-300 bg-gray-50 text-gray-900",
+  },
+  in_transit: {
+    name: "En tránsito",
+    styles: "border-blue-200 bg-blue-50 text-blue-900",
+  },
+  delivered: {
+    name: "Recibida en destino",
     styles: "border-green-200 bg-green-50 text-green-900",
   },
   cancelled: {
@@ -86,6 +95,7 @@ function messageFromError(error) {
 export default function ERPDistribucionesPage() {
   const { user } = useAuth();
   const puedeGestionar = userHasPermission(user, ["warehouse.manage_distribution_operations"]);
+  const puedeTrasladar = userHasPermission(user, ["warehouse.manage_stock_transfers"]);
   const [opciones, setOpciones] = useState({
     adoptions: [], adoptions_meta: { count: 0, page: 1, pages: 1 },
     locations: [], modes: [], campaign_years: [],
@@ -959,8 +969,18 @@ export default function ERPDistribucionesPage() {
                   </p>
                 )}
                 {item.status === "prepared" && (
-                  <p className="mt-1 text-xs font-semibold text-gray-800">
-                    Preparada, sin salida física registrada. El despacho controlado sigue pendiente.
+                  <p className="mt-1 text-xs font-semibold text-red-700">
+                    Siguiente: generar orden interna y organizar la salida.
+                  </p>
+                )}
+                {item.status === "in_transit" && (
+                  <p className="mt-1 text-xs font-semibold text-blue-800">
+                    Mercadería despachada: pendiente de conteo y recepción en destino.
+                  </p>
+                )}
+                {item.status === "delivered" && (
+                  <p className="mt-1 text-xs font-semibold text-green-800">
+                    Llegada confirmada. La mercadería ya figura en la ubicación de destino.
                   </p>
                 )}
               </div>
@@ -989,8 +1009,12 @@ export default function ERPDistribucionesPage() {
                     : item.status === "reserved"
                       ? " Los libros están reservados, pero no despachados."
                       : item.status === "prepared"
-                        ? " Los libros están preparados; aún no han salido del almacén."
-                        : " Esta entrega fue anulada."}
+                        ? " Los libros están preparados; falta confirmar la salida."
+                        : item.status === "in_transit"
+                          ? " Los libros salieron y esperan confirmación de llegada."
+                          : item.status === "delivered"
+                            ? " La recepción en destino ya fue confirmada."
+                            : " Esta entrega fue anulada."}
                 </p>
                 <div className="space-y-1">
                   {item.items.map((line) => (
@@ -1000,15 +1024,31 @@ export default function ERPDistribucionesPage() {
                     </p>
                   ))}
                 </div>
-                <DistributionPreparationPanel operation={item} canManage={puedeGestionar}
-                  onChanged={() => setVersion((current) => current + 1)} />
-                {item.status === "prepared" && (
-                  <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                    La entrega ya fue preparada. Para cancelarla se requiere
-                    verificar físicamente el retorno de los libros antes de liberar la reserva.
-                  </p>
+                {["planned", "reserved"].includes(item.status) && (
+                  <DistributionPreparationPanel operation={item} canManage={puedeGestionar}
+                    onChanged={() => setVersion((current) => current + 1)} />
                 )}
-                <p className="font-black text-gray-900">Historial de cambios</p>
+                {item.status === "prepared" && (
+                  <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                    <summary className="cursor-pointer text-sm font-bold text-gray-900">
+                      Ver conteo confirmado y coordinación opcional
+                    </summary>
+                    <div className="mt-3">
+                      <DistributionPreparationPanel operation={item} canManage={puedeGestionar}
+                        onChanged={() => setVersion((current) => current + 1)} />
+                    </div>
+                  </details>
+                )}
+                {["prepared", "in_transit", "delivered"].includes(item.status) && (
+                  <DistributionDispatchPanel operation={item} canManage={puedeGestionar}
+                    canMoveStock={puedeTrasladar}
+                    onChanged={() => setVersion((current) => current + 1)} />
+                )}
+                <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                  <summary className="cursor-pointer text-sm font-bold text-gray-900">
+                    Historial de la operación ({item.events.length})
+                  </summary>
+                  <div className="mt-3 space-y-2">
                 {item.events.map((event, idx) => (
                   <p key={idx} className="break-words text-gray-700">
                     {event.actor} · {event.action === "created" ? "Planificación creada"
@@ -1016,14 +1056,19 @@ export default function ERPDistribucionesPage() {
                         : event.action === "stock_reserved" ? "Existencias reservadas"
                           : event.action === "split_by_stock" ? "Entrega dividida: saldo pendiente en otra planificación"
                             : event.action === "prepared" ? "Preparación verificada"
-                            : event.action === "transport_draft_updated" ? "Datos de traslado actualizados"
-                              : "Planificación modificada"}
+                            : event.action === "transport_draft_updated" ? "Datos de coordinación actualizados"
+                              : event.action === "dispatch_document" ? "Orden interna generada"
+                                : event.action === "dispatched" ? "Salida física confirmada"
+                                  : event.action === "received_destination" ? "Recepción en destino confirmada"
+                                    : "Planificación modificada"}
                     {event.previous?.mode && event.previous.mode !== event.current?.mode
                       ? ` · ${MODE_LABELS[event.previous.mode]} → ${MODE_LABELS[event.current.mode]}`
                       : ""}
                     {event.reason ? ` · ${event.reason}` : ""}
                   </p>
                 ))}
+                  </div>
+                </details>
                 {puedeGestionar && ["planned", "reserved"].includes(item.status) && (
                   cancelId === item.id ? (
                     <div className="space-y-2 rounded-lg bg-gray-50 p-3">
