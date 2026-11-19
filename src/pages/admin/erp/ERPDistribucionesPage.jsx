@@ -490,6 +490,19 @@ export default function ERPDistribucionesPage() {
     }
   }
 
+  function refrescarEntrega(nextStatus) {
+    if (nextStatus === "prepared" || nextStatus === "in_transit"
+      || nextStatus === "delivered") {
+      setDeliveryFilter(nextStatus);
+      setPage(1);
+    } else if (nextStatus === "planned" || nextStatus === "reserved") {
+      setDeliveryFilter("planned,reserved");
+      setPage(1);
+    }
+    setLoading(true);
+    setVersion((v) => v + 1);
+  }
+
   const seleccionada = selectedAdoption || opciones.adoptions.find((item) =>
     String(item.id) === String(form.adoption_id));
   const source = opciones.locations.find((place) => String(place.id) === form.source_id);
@@ -1140,7 +1153,7 @@ export default function ERPDistribucionesPage() {
                 </div>
                 {["planned", "reserved"].includes(item.status) && (
                   <DistributionPreparationPanel operation={item} canManage={puedeGestionar}
-                    onChanged={() => setVersion((current) => current + 1)} />
+                    onChanged={refrescarEntrega} />
                 )}
                 {item.status === "prepared" && (
                   <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
@@ -1149,14 +1162,14 @@ export default function ERPDistribucionesPage() {
                     </summary>
                     <div className="mt-3">
                       <DistributionPreparationPanel operation={item} canManage={puedeGestionar}
-                        onChanged={() => setVersion((current) => current + 1)} />
+                        onChanged={refrescarEntrega} />
                     </div>
                   </details>
                 )}
                 {["prepared", "in_transit", "delivered"].includes(item.status) && (
                   <DistributionDispatchPanel operation={item} canManage={puedeGestionar}
                     canMoveStock={puedeTrasladar}
-                    onChanged={() => setVersion((current) => current + 1)} />
+                    onChanged={refrescarEntrega} />
                 )}
                 <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                   <summary className="cursor-pointer text-sm font-bold text-gray-900">
