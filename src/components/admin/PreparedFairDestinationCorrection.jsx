@@ -32,9 +32,10 @@ export default function PreparedFairDestinationCorrection({
   const [choices, setChoices] = useState([]);
   const [destinationId, setDestinationId] = useState("");
   const [reason, setReason] = useState("");
+  const [verified, setVerified] = useState(false);
   const [error, setError] = useState("");
   const canSave = !saving && !loading && Boolean(destinationId)
-    && reason.trim().length >= 12;
+    && reason.trim().length >= 12 && verified;
 
   async function toggle() {
     if (open) {
@@ -64,7 +65,7 @@ export default function PreparedFairDestinationCorrection({
     setError("");
     try {
       const updated = await corregirDestinoFeriaPreparada(
-        operation.id, Number(destinationId), reason.trim(),
+        operation.id, Number(destinationId), reason.trim(), verified,
       );
       setOpen(false);
       onCorrected?.(updated);
@@ -129,7 +130,9 @@ export default function PreparedFairDestinationCorrection({
                     onChange={(event) => setDestinationId(event.target.value)}>
                     <option value="">Selecciona una feria específica</option>
                     {choices.map((loc) => (
-                      <option key={loc.id} value={loc.id}>{loc.name}</option>
+                      <option key={loc.id} value={loc.id}>
+                        {loc.fair_event_name || loc.name} · {loc.fair_starts_on || "Fecha pendiente"}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -142,6 +145,13 @@ export default function PreparedFairDestinationCorrection({
                   </Link>
                 </div>
               )}
+              {destinationId && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs leading-5 text-gray-800">
+                  <strong>Feria seleccionada:</strong>{" "}
+                  {choices.find((place) => String(place.id) === destinationId)?.fair_event_name}
+                  {" · "}{choices.find((place) => String(place.id) === destinationId)?.fair_venue}
+                </div>
+              )}
               <label className="block text-xs font-semibold text-gray-800">
                 Motivo de la corrección (mínimo 12 caracteres)
                 <textarea rows={2} maxLength={500}
@@ -149,6 +159,13 @@ export default function PreparedFairDestinationCorrection({
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
                   placeholder="Ej. Se asigna la feria registrada para esta entrega." />
+              </label>
+              <label className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs leading-5 text-gray-900">
+                <input type="checkbox" checked={verified}
+                  onChange={(event) => setVerified(event.target.checked)}
+                  className="mt-0.5 shrink-0 accent-red-700" />
+                He comprobado que la feria elegida corresponde a la entrega del colegio
+                <strong>{operation.school}</strong> y que los libros realmente se enviarán allí.
               </label>
               <p className="text-xs leading-5 text-gray-600">
                 Solo se corrige el destino de una preparación aún sin orden interna.
