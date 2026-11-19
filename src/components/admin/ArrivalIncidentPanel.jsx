@@ -29,6 +29,32 @@ function DifferenceRows({ rows, lines }) {
   );
 }
 
+
+export function ArrivalIncidentHistory({ incidents }) {
+  return incidents.length > 0 ? (
+  <details className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-700">
+    <summary className="cursor-pointer font-semibold text-gray-900">
+      Historial de incidencias ({incidents.length})
+    </summary>
+    <div className="mt-3 space-y-2">
+      {incidents.map((item) => (
+        <div key={item.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <p className="font-bold text-gray-950">
+            #{item.id} · {item.status === "open" ? "Pendiente" : "Recuento conforme"}
+          </p>
+          <p className="mt-1">{item.observations}</p>
+          <p className="mt-1 text-gray-500">Registró: {item.reported_by}</p>
+          {item.resolution_note && (
+            <p className="mt-1 text-gray-800">Cierre: {item.resolution_note}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  </details>
+  )}
+  ) : null;
+}
+
 export default function ArrivalIncidentPanel({
   dispatch, counts, receiverName, busy, canReport, canResolve, onReport, onResolve,
 }) {
@@ -141,27 +167,7 @@ export default function ArrivalIncidentPanel({
           </motion.section>
         )}
       </AnimatePresence>
-      {incidents.length > 0 && (
-        <details className="rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-700">
-          <summary className="cursor-pointer font-semibold text-gray-900">
-            Historial de incidencias ({incidents.length})
-          </summary>
-          <div className="mt-3 space-y-2">
-            {incidents.map((item) => (
-              <div key={item.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                <p className="font-bold text-gray-950">
-                  #{item.id} · {item.status === "open" ? "Pendiente" : "Recuento conforme"}
-                </p>
-                <p className="mt-1">{item.observations}</p>
-                <p className="mt-1 text-gray-500">Registró: {item.reported_by}</p>
-                {item.resolution_note && (
-                  <p className="mt-1 text-gray-800">Cierre: {item.resolution_note}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </details>
-      )}
+      <ArrivalIncidentHistory incidents={incidents} />
     </div>
   );
 }
