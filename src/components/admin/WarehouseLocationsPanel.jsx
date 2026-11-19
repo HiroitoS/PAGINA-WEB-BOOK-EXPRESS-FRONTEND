@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { warehouseErrorMessage as mensajeError } from "../../utils/warehouseErrorMessage";
 import { Link } from "react-router";
-import { FiArrowRight, FiCheckCircle, FiMapPin } from "react-icons/fi";
+import { FiArrowRight, FiBox, FiMapPin } from "react-icons/fi";
 import {
   actualizarUbicacionAlmacen,
   crearUbicacionAlmacen,
@@ -44,10 +44,12 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   const [formularioAbierto, setFormularioAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
+  const [categoria, setCategoria] = useState("principales");
   const formRef = useRef(null);
-  const principalActivo = ubicaciones.some((item) => item.kind === "main" && item.is_active);
-  const destinosActivos = ubicaciones.filter((item) => item.kind !== "main" && item.is_active).length;
-  const listoParaTrasladar = principalActivo && destinosActivos > 0;
+  const principales = ubicaciones.filter((item) => item.kind === "main");
+  const subalmacenes = ubicaciones.filter((item) => item.kind !== "main");
+  const visibles = categoria === "principales" ? principales : subalmacenes;
+  const principalActivo = principales.some((item) => item.is_active);
 
   useEffect(() => {
     let ignore = false;
@@ -70,10 +72,9 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   }
 
   function abrirNuevo() {
-    const existePrincipal = ubicaciones.some((item) => item.kind === "main" && item.is_active);
     setFormulario({
       ...FORMULARIO_VACIO,
-      kind: existePrincipal ? "store" : "main",
+      kind: categoria === "principales" ? "main" : "store",
     });
     setEditandoId(null);
     setError("");
@@ -83,6 +84,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   }
 
   function editar(ubicacion) {
+    setCategoria(ubicacion.kind === "main" ? "principales" : "subalmacenes");
     setEditandoId(ubicacion.id);
     setFormulario({
       name: ubicacion.name,
@@ -108,6 +110,14 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
     setFormulario((previo) => ({ ...previo, [campo]: valor }));
   }
 
+  function elegirCategoria(nueva) {
+    setCategoria(nueva);
+    setFormularioAbierto(false);
+    setEditandoId(null);
+    setError("");
+    setMensaje("");
+  }
+
   async function guardar(event) {
     event.preventDefault();
     if (guardando || !puedeGestionar) return;
@@ -129,6 +139,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         ...anteriores.filter((item) => item.id !== guardado.id),
         guardado,
       ].sort((a, b) => a.name.localeCompare(b.name, "es")));
+      setCategoria(guardado.kind === "main" ? "principales" : "subalmacenes");
       setMensaje(editandoId !== null
         ? "La ubicación se actualizó correctamente."
         : "Ubicación registrada correctamente. No se modificaron las existencias.");
@@ -143,58 +154,52 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   }
 
   return (
-    <div className="min-w-0 space-y-4 p-3 sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="min-w-0 space-y-3 p-3 sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-base font-black text-gray-950">Lugares registrados</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Configura los almacenes y destinos de futuros traslados. Las cantidades se consultan en Inventario.
+          <h2 className="text-base font-black text-gray-950">Lugares de custodia</h2>
+          <p className="mt-1 text-xs leading-5 text-gray-600">
+            Una ubicación identifica dónde están los libros; no genera ni mueve existencias.
           </p>
-          {!cargando && !error && (
-            <p className="mt-1 text-xs font-semibold text-gray-500">
-              {ubicaciones.length} {ubicaciones.length === 1 ? "ubicación registrada" : "ubicaciones registradas"}
-            </p>
-          )}
         </div>
         {puedeGestionar && !formularioAbierto && (
           <button type="button" onClick={abrirNuevo}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 sm:w-auto">
-            + Agregar ubicación
+            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-red-700 px-4 text-xs font-bold text-white hover:bg-red-800">
+            + {categoria === "principales" && !principalActivo ? "Registrar almacén principal" : "Nueva ubicación"}
           </button>
         )}
       </div>
 
-      {!cargando && !error && (
-        listoParaTrasladar ? (
-          <div role="status" className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-start gap-2 text-sm text-gray-700">
-              <FiCheckCircle className="mt-0.5 shrink-0 text-gray-700" aria-hidden="true" />
-              <p><span className="font-bold text-gray-950">Ubicaciones listas.</span> Almacén principal y {destinosActivos} {destinosActivos === 1 ? "destino activo" : "destinos activos"} registrados.</p>
-            </div>
-            {puedeVerInventario && (
-              <Link to="/admin/erp/almacen/stock-por-almacen"
-                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-2 text-sm font-bold text-red-700 hover:bg-red-50">
-                Ver existencias <FiArrowRight aria-hidden="true" />
-              </Link>
-            )}
-          </div>
-        ) : (
-          <section aria-label="Configuración de ubicaciones" className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <h3 className="text-sm font-black text-gray-950">Antes de registrar traslados</h3>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <p className="flex items-start gap-2 rounded-lg bg-white p-3 text-sm leading-5 text-gray-700">
-                <FiMapPin className="mt-0.5 shrink-0 text-red-700" aria-hidden="true" />
-                {principalActivo ? "Almacén principal listo." : "Registra el almacén principal donde se reciben los libros."}
-              </p>
-              <p className="flex items-start gap-2 rounded-lg bg-white p-3 text-sm leading-5 text-gray-700">
-                <FiMapPin className="mt-0.5 shrink-0 text-red-700" aria-hidden="true" />
-                {destinosActivos ? "Destino de traslado listo." : "Agrega un destino físico real, como la tienda."}
-              </p>
-            </div>
-          </section>
-        )
-      )}
+      <nav aria-label="Clasificar ubicaciones" className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+        {[
+          { id: "principales", name: "Almacenes principales", total: principales.length, icon: FiBox },
+          { id: "subalmacenes", name: "Subalmacenes y destinos", total: subalmacenes.length, icon: FiMapPin },
+        ].map(({ id, name, total, icon: Icon }) => (
+          <button type="button" key={id} aria-pressed={categoria === id}
+            onClick={() => elegirCategoria(id)}
+            className={
+              "flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-center text-xs sm:text-sm " +
+              (categoria === id
+                ? "bg-white font-bold text-gray-950 shadow-sm ring-1 ring-gray-200"
+                : "font-semibold text-gray-600 hover:bg-white/70")
+            }>
+            <Icon aria-hidden="true" className="hidden shrink-0 sm:block" />
+            <span>{name}</span>
+            <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs tabular-nums text-gray-800">{total}</span>
+          </button>
+        ))}
+      </nav>
 
+      {categoria === "subalmacenes" && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+          <span>Tiendas, ferias y consignaciones: cada destino conserva sus propias existencias.</span>
+          <Link to="/admin/erp/almacen/ubicaciones"
+            className="font-bold text-red-700 underline underline-offset-2"
+            onClick={() => elegirCategoria("subalmacenes")}>
+            Las ferias nuevas se registran en la pestaña Ferias
+          </Link>
+        </div>
+      )}
       {mensaje && (
         <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-800">
           {mensaje}
@@ -297,10 +302,10 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         </div>
       )}
 
-      {ubicaciones.length > 0 && (
+      {visibles.length > 0 && (
         <>
           <div className="grid gap-2 sm:hidden">
-            {ubicaciones.map((item) => (
+            {visibles.map((item) => (
               <article key={item.id} className="min-w-0 space-y-2 rounded-xl border border-gray-200 bg-white p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -332,7 +337,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
                 </tr>
               </thead>
               <tbody>
-                {ubicaciones.map((item) => (
+                {visibles.map((item) => (
                   <tr key={item.id} className="border-t border-gray-100">
                     <td className="p-3">{item.name}</td>
                     <td className="p-3">{mostrarTipo(item.kind)}</td>
@@ -356,8 +361,24 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
           </div>
         </>
       )}
+      {!cargando && visibles.length === 0 && ubicaciones.length > 0 && (
+        <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+          {categoria === "principales"
+            ? "No hay un almacén principal registrado en esta lista."
+            : "No hay subalmacenes ni destinos registrados."}
+        </p>
+      )}
       {puedeConciliar && !cargando && ubicaciones.length > 0 && (
-        <WarehouseReconciliationPanel ubicaciones={ubicaciones} />
+        <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+          <summary className="cursor-pointer text-sm font-bold text-gray-950">
+            Conciliación inicial de existencias · solo jefatura
+          </summary>
+          <p className="mt-2 text-xs leading-5 text-gray-700">
+            Se utiliza únicamente para verificar la ubicación de existencias anteriores,
+            no para preparar ni despachar una entrega.
+          </p>
+          <WarehouseReconciliationPanel ubicaciones={ubicaciones} />
+        </details>
       )}
     </div>
   );
