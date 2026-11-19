@@ -436,13 +436,23 @@ export default function DistributionPreparationPanel({ operation, canManage, onC
             <div className="space-y-3">
               <h5 className="text-xs font-black text-gray-900">Conteo físico por lote</h5>
               {active.map((row) => (
-                <label key={row.id} className="block rounded-lg border border-gray-200 bg-white p-3 text-xs font-bold text-gray-800">
-                  {row.product} · {row.receipt_number} · Reservadas: {row.quantity}
-                  <input type="number" inputMode="numeric" min="0" step="1"
-                    value={counts[row.id] ?? ""}
-                    onChange={(event) => setCounts((previous) => ({ ...previous, [row.id]: event.target.value }))}
-                    placeholder="Unidades verificadas físicamente"
-                    className={input} />
+                <label key={row.id}
+                  className="grid items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold leading-5 text-gray-950">{row.product}</span>
+                    <span className="mt-1 block text-xs leading-5 text-gray-600">
+                      Guía {row.receipt_number} · <strong>{row.quantity} reservados</strong>
+                    </span>
+                  </span>
+                  <span className="block">
+                    <span className="mb-1 block text-xs font-semibold text-gray-700">Conteo físico</span>
+                    <input type="number" inputMode="numeric" min="0" step="1"
+                      aria-label={`Unidades contadas de ${row.product}`}
+                      value={counts[row.id] ?? ""}
+                      onChange={(event) => setCounts((previous) => ({ ...previous, [row.id]: event.target.value }))}
+                      placeholder="0"
+                      className="h-10 w-28 rounded-lg border border-gray-300 bg-white px-3 text-right text-sm font-bold tabular-nums text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100" />
+                  </span>
                 </label>
               ))}
               <p className="text-xs text-amber-900">
