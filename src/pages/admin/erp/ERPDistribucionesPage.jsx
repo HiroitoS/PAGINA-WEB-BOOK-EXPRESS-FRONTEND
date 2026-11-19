@@ -475,8 +475,8 @@ export default function ERPDistribucionesPage() {
           <div>
             <h2 className="text-base font-black text-gray-950">Planificación de entregas</h2>
             <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-600">
-              Puedes cambiar entre Punto de venta, Feria y Consignación sin volver al CRM.
-              Esta planificación aún no mueve ni reserva mercadería. La entrega se confirma por separado.
+              Planifica libros para tienda, feria o consignación. Guardar el plan
+              no reserva ni traslada mercadería: el conteo se verifica en Detalle.
             </p>
           </div>
           <div className="flex gap-2">
@@ -496,7 +496,7 @@ export default function ERPDistribucionesPage() {
         {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
 
         {formOpen && puedeGestionar && (
-          <form onSubmit={save} className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4">
+          <form onSubmit={save} className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-black text-gray-950">
                 {editingId ? "Cambiar planificación" : "Planificar entrega"}
@@ -512,7 +512,7 @@ export default function ERPDistribucionesPage() {
                   Busca por colegio, campaña o número de adopción. Solo se muestran las adopciones vigentes.
                 </p>
               </div>
-              {!editingId && (
+              {!editingId && (showAdoptionResults || !seleccionada) && (
                 <div className="grid min-w-0 gap-3 sm:grid-cols-3">
                   <label className="block min-w-0 text-xs font-bold text-gray-700 sm:col-span-2">
                     Buscar colegio o campaña
@@ -948,6 +948,21 @@ export default function ERPDistribucionesPage() {
                   Responsable: {item.responsible_name}
                   {item.scheduled_on ? ` · ${item.scheduled_on}` : ""}
                 </p>
+                {item.status === "planned" && (
+                  <p className="mt-1 text-xs font-semibold text-red-700">
+                    Siguiente: abre Detalle para revisar existencias y reservar.
+                  </p>
+                )}
+                {item.status === "reserved" && (
+                  <p className="mt-1 text-xs font-semibold text-gray-800">
+                    Siguiente: abre Detalle para verificar el conteo físico.
+                  </p>
+                )}
+                {item.status === "prepared" && (
+                  <p className="mt-1 text-xs font-semibold text-gray-800">
+                    Preparada, sin salida física registrada. El despacho controlado sigue pendiente.
+                  </p>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" className={buttonClass}
