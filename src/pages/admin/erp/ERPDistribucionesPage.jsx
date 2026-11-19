@@ -358,7 +358,7 @@ export default function ERPDistribucionesPage() {
       const items = allocation.items.filter((line) => {
         const raw = String(quantities[line.product_id] ?? "0");
         const qty = Number(raw);
-        return /^\\d+$/.test(raw) && Number.isSafeInteger(qty)
+        return /^\d+$/.test(raw) && Number.isSafeInteger(qty)
           && qty >= 0 && qty <= line.assignable;
       });
       if (items.length !== allocation.items.length
