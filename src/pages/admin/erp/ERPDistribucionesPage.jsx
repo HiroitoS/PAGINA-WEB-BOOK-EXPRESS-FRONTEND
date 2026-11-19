@@ -45,6 +45,14 @@ const EDITABLE_FIELDS = [
   "responsible_name", "scheduled_on", "scheduled_until", "notes",
 ];
 
+const DELIVERY_FILTERS = [
+  { id: "planned,reserved", label: "Por preparar" },
+  { id: "prepared", label: "Preparadas" },
+  { id: "in_transit", label: "En tránsito" },
+  { id: "delivered", label: "Recibidas" },
+  { id: "", label: "Todas" },
+];
+
 const STATUS = {
   planned: {
     name: "Por preparar",
@@ -112,6 +120,7 @@ export default function ERPDistribucionesPage() {
   const [originalQuantities, setOriginalQuantities] = useState({});
   const [lista, setLista] = useState({ results: [], page: 1, pages: 1, count: 0 });
   const [page, setPage] = useState(1);
+  const [deliveryFilter, setDeliveryFilter] = useState("planned,reserved");
   const [version, setVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -128,7 +137,7 @@ export default function ERPDistribucionesPage() {
 
   useEffect(() => {
     let ignore = false;
-    listarDistribuciones(page)
+    listarDistribuciones(page, deliveryFilter)
       .then((records) => {
         if (ignore) return;
         setLista(records);
@@ -139,7 +148,7 @@ export default function ERPDistribucionesPage() {
       })
       .finally(() => { if (!ignore) setLoading(false); });
     return () => { ignore = true; };
-  }, [page, version]);
+  }, [page, version, deliveryFilter]);
 
   useEffect(() => {
     if (!formOpen) return undefined;
@@ -408,6 +417,7 @@ export default function ERPDistribucionesPage() {
       setAllocation(null);
       setFormOpen(false);
       setLoading(true);
+      setDeliveryFilter("planned,reserved");
       setPage(1);
       setVersion((v) => v + 1);
     } catch (err) {
@@ -502,6 +512,27 @@ export default function ERPDistribucionesPage() {
             )}
           </div>
         </div>
+        <nav aria-label="Filtrar entregas por avance"
+          className="flex gap-1 overflow-x-auto rounded-xl bg-gray-100 p-1">
+          {DELIVERY_FILTERS.map(({ id, label }) => (
+            <button key={id} type="button" aria-pressed={deliveryFilter === id}
+              onClick={() => {
+                if (deliveryFilter === id) return;
+                setDeliveryFilter(id);
+                setExpandedId(null);
+                setPage(1);
+                setLoading(true);
+              }}
+              className={
+                "min-h-10 shrink-0 rounded-lg px-3 text-xs font-semibold transition-colors sm:px-4 " +
+                (deliveryFilter === id
+                  ? "bg-white text-gray-950 shadow-sm ring-1 ring-gray-200"
+                  : "text-gray-600 hover:bg-white/80")
+              }>
+              {label}
+            </button>
+          ))}
+        </nav>
         {notice && <p role="status" className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-800">{notice}</p>}
         {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
 
@@ -923,7 +954,8 @@ export default function ERPDistribucionesPage() {
         {loading && <p role="status" className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">Consultando entregas…</p>}
         {!loading && lista.results.length === 0 && (
           <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600">
-            Todavía no hay entregas planificadas. Puedes crearlas desde una adopción confirmada.
+            No hay entregas en esta etapa. Puedes consultar otra pestaña
+            o planificar una nueva entrega desde una adopción confirmada.
           </p>
         )}
         {!loading && lista.results.map((item) => (
