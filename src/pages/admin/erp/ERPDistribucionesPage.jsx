@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Link } from "react-router";
 import { FiArrowLeft, FiChevronDown, FiRefreshCw } from "react-icons/fi";
 import {
@@ -105,6 +106,7 @@ export default function ERPDistribucionesPage() {
   const puedeGestionar = userHasPermission(user, ["warehouse.manage_distribution_operations"]);
   const puedeTrasladar = userHasPermission(user, ["warehouse.manage_stock_transfers"]);
   const puedeResolverIncidencias = userHasPermission(user, ["warehouse.validate_receiving"]);
+  const reduceMotion = useReducedMotion();
   const [opciones, setOpciones] = useState({
     adoptions: [], adoptions_meta: { count: 0, page: 1, pages: 1 },
     locations: [], modes: [], campaign_years: [],
@@ -579,11 +581,16 @@ export default function ERPDistribucionesPage() {
                 setLoading(true);
               }}
               className={
-                "min-h-10 shrink-0 rounded-lg px-3 text-xs font-semibold transition-colors sm:px-4 " +
+                "relative isolate min-h-10 shrink-0 rounded-lg px-3 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-700 sm:px-4 " +
                 (deliveryFilter === id
-                  ? "bg-white text-gray-950 shadow-sm ring-1 ring-gray-200"
+                  ? "text-gray-950"
                   : "text-gray-600 hover:bg-white/80")
               }>
+              {deliveryFilter === id && (
+                <motion.span aria-hidden="true" layoutId="distribution-active-filter"
+                  className="absolute inset-0 -z-10 rounded-lg bg-white shadow-sm ring-1 ring-gray-200"
+                  transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 34 }} />
+              )}
               {label}
             </button>
           ))}
@@ -1054,8 +1061,14 @@ export default function ERPDistribucionesPage() {
             o planificar una nueva entrega desde una adopción confirmada.
           </p>
         )}
-        {!loading && lista.results.map((item) => (
-          <article key={item.id} className="min-w-0 rounded-xl border border-gray-200 p-3">
+        <AnimatePresence initial={false}>
+        {!loading && lista.results.map((item, index) => (
+          <motion.article key={item.id}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -4 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18, delay: reduceMotion ? 0 : Math.min(index * 0.025, 0.15) }}
+            className="min-w-0 rounded-xl border border-gray-200 bg-white p-3 shadow-sm transition-shadow duration-200 hover:border-gray-300 hover:shadow-md sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1088,12 +1101,12 @@ export default function ERPDistribucionesPage() {
                 </p>
                 {item.status === "planned" && (
                   <p className="mt-1 text-xs font-semibold text-red-700">
-                    Siguiente: abre Detalle para revisar existencias y reservar.
+                    Siguiente: preparar libros y reservar existencias.
                   </p>
                 )}
                 {item.status === "reserved" && (
                   <p className="mt-1 text-xs font-semibold text-gray-800">
-                    Siguiente: abre Detalle para verificar el conteo físico.
+                    Siguiente: verificar físicamente los lotes reservados.
                   </p>
                 )}
                 {item.status === "prepared" && (
@@ -1200,7 +1213,9 @@ export default function ERPDistribucionesPage() {
                               : event.action === "dispatch_document" ? "Orden interna generada"
                                 : event.action === "dispatched" ? "Salida física confirmada"
                                   : event.action === "received_destination" ? "Recepción en destino confirmada"
-                                    : "Planificación modificada"}
+                                    : event.action === "arrival_incident_opened" ? "Diferencia de llegada registrada"
+                                      : event.action === "arrival_incident_closed" ? "Incidencia cerrada con recuento conforme"
+                                        : "Planificación modificada"
                     {event.previous?.mode && event.previous.mode !== event.current?.mode
                       ? ` · ${MODE_LABELS[event.previous.mode]} → ${MODE_LABELS[event.current.mode]}`
                       : ""}
@@ -1239,8 +1254,9 @@ export default function ERPDistribucionesPage() {
                 )}
               </div>
             )}
-          </article>
+          </motion.article>
         ))}
+        </AnimatePresence>
         {!loading && lista.count > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs text-gray-600">
             <span>{lista.count} operaciones · Página {lista.page} de {lista.pages}</span>
