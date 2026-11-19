@@ -169,7 +169,7 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
       }
       setDispatch(next);
       setRevision((v) => v + 1);
-      onChanged?.();
+      onChanged?.(next.operation_status);
     } catch (err) {
       setError(readError(err));
     } finally {
