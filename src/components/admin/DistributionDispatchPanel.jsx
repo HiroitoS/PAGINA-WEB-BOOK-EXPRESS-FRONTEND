@@ -7,6 +7,7 @@ import {
 } from "../../api/warehouseApi";
 import ArrivalIncidentPanel, { ArrivalIncidentHistory } from "./ArrivalIncidentPanel";
 import printInternalDispatch from "./printInternalDispatch";
+import PreparedFairDestinationCorrection from "./PreparedFairDestinationCorrection";
 
 const buttonPrimary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
 const fieldClass = "mt-1 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100";
@@ -133,6 +134,9 @@ export default function DistributionDispatchPanel({
   }
 
   const state = dispatch?.exists ? dispatch.status : "prepared";
+  const needsSpecificFair = operation.mode === "fair"
+    && operation.destination_kind === "fair"
+    && operation.destination_fair_event_id === null;
   const receptionValid = dispatch?.lines?.length > 0 && dispatch.lines.every(
     (line) => counts[line.id] !== undefined && String(counts[line.id]).trim() !== ""
       && Number.isSafeInteger(Number(counts[line.id])) && Number(counts[line.id]) >= 0,
@@ -163,7 +167,15 @@ export default function DistributionDispatchPanel({
       {notice && <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-900">{notice}</p>}
       {loading && <p role="status" className="text-sm text-gray-600">Consultando documento interno…</p>}
 
-      {!loading && dispatch && !dispatch.exists && (
+      {!loading && dispatch && !dispatch.exists && needsSpecificFair && (
+        <PreparedFairDestinationCorrection
+          operation={operation}
+          canCorrect={canManage && canResolveIncidents}
+          onCorrected={() => onChanged?.("prepared")}
+        />
+      )}
+
+      {!loading && dispatch && !dispatch.exists && !needsSpecificFair && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
           <p className="max-w-xl text-sm leading-6 text-gray-700">
             La preparación está verificada. Genera una orden interna numerada con los
