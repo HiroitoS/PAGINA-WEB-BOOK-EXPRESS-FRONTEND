@@ -105,7 +105,8 @@ export default function ERPDistribucionesPage() {
   const { user } = useAuth();
   const puedeGestionar = userHasPermission(user, ["warehouse.manage_distribution_operations"]);
   const puedeTrasladar = userHasPermission(user, ["warehouse.manage_stock_transfers"]);
-  const puedeResolverIncidencias = userHasPermission(user, ["warehouse.validate_receiving"]);
+  const puedeResolverIncidencias = puedeGestionar
+    && userHasPermission(user, ["warehouse.validate_receiving"]);
   const reduceMotion = useReducedMotion();
   const [opciones, setOpciones] = useState({
     adoptions: [], adoptions_meta: { count: 0, page: 1, pages: 1 },
@@ -588,10 +589,10 @@ export default function ERPDistribucionesPage() {
               }>
               {deliveryFilter === id && (
                 <motion.span aria-hidden="true" layoutId="distribution-active-filter"
-                  className="absolute inset-0 -z-10 rounded-lg bg-white shadow-sm ring-1 ring-gray-200"
+                  className="absolute inset-0 z-0 rounded-lg bg-white shadow-sm ring-1 ring-gray-200"
                   transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 34 }} />
               )}
-              {label}
+              <span className="relative z-10">{label}</span>
             </button>
           ))}
         </nav>
