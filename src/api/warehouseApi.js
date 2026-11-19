@@ -299,9 +299,9 @@ export async function resolverSolicitudMercaderia(id, action, note = "") {
 
 const DISTRIBUTION_BASE = "/admin/erp/almacen/operaciones-distribucion";
 
-export async function listarDistribuciones(page = 1) {
+export async function listarDistribuciones(page = 1, estado = "") {
   const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/`, {
-    params: { page },
+    params: { page, ...(estado ? { estado } : {}) },
   });
   return data;
 }
