@@ -48,6 +48,7 @@ th{background:#f1f1f1}.signatures{display:grid;grid-template-columns:1fr 1fr;gap
 @media print{button{display:none}}
 </style></head>
 <body>
+<button type="button" onclick="window.print()" style="margin-bottom:16px;padding:9px 18px;background:#bb0000;color:#fff;border:0;border-radius:6px;cursor:pointer">Imprimir documento</button>
 <header>
   <div><h1>BOOK EXPRESS</h1><p>Orden interna de salida / entrega</p>
   <small>Documento de control logístico</small></div>
