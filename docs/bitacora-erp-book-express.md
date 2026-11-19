@@ -1,5 +1,11 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 18/11/2026 — Nombre visible de Distribuciones corregido; prueba guiada de feria [EN RAMA]
+
+**Captura:** `/admin/erp/almacen/distribuciones` mostraba pestaña superior «Entregas», no «Distribuciones», provocando duda legítima de ubicación; no era ausencia de módulo sino nomenclatura de UX. Se cambió la pestaña a **Distribuciones** (misma ruta/API, sin duplicar módulo), encabezado a **Distribuciones y entregas**, botón a **Nueva distribución** y acción genérica «Detalle» a **Preparar libros** / **Continuar despacho** / **Ver detalle** según estado.
+
+**Prueba paso a paso:** (1) actualizar frontend en rama; (2) Movimientos → Distribuciones → Por preparar → **22 DE ABRIL** → Preparar libros; (3) comprobar 39 planificados, 32 conformes disponibles, 7 faltantes; (4) en **base de pruebas aislada y respaldada**, confirmar «Reservar 32 y dejar 7 pendientes»; (5) volver a la entrega reservada en Por preparar y registrar conteo real por lote, pulsar «Confirmar preparación física»; (6) pestaña Preparadas → Continuar despacho → Crear orden interna; (7) comprobar `BE-SI-...` e imprimir, **sin confirmar salida ni llegada física ficticia**. Una vez salida/recepción sean reales, validar tránsito y destino por separado. No cambiar main/Tecnoweb.
+
 ## 18/11/2026 — B4: documento interno, despacho y recepción por lotes + rediseño UX [EN RAMA; DEMO LOCAL PENDIENTE]
 
 **Motivación:** el usuario rechazó la pantalla larga y repetitiva de Entregas; solicitó un flujo realmente dinámico, que permita entender todas las operaciones de Almacén sin introducir artificialmente traslados directos. En la captura más reciente la operación **Feria · COLEGIO 22 DE ABRIL** muestra **39 libros planificados**, **32 conformes libres** y **7 faltantes** en ALMACEN PRINCIPAL (seis títulos Bruño). La acción de separación existente ofrece **32 reservados + 7 en otra planificación**, pero aún NO se ejecutó en la captura. NO suponer que ya fueron reservados ni preparados. La operación previa ANDINO conserva sus 15 preparados y 5 pendientes, con destino histórico «ALMACEN FERIA» genérico, que no es una feria específica.
