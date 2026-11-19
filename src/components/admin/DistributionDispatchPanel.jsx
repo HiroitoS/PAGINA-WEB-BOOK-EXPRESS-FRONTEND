@@ -3,7 +3,9 @@ import { FiCheckCircle, FiClipboard, FiFileText, FiPrinter, FiTruck } from "reac
 import {
   consultarDocumentoInterno, crearDocumentoInterno,
   confirmarSalidaInterna, confirmarLlegadaInterna,
+  registrarDiferenciaLlegada, resolverDiferenciaLlegada,
 } from "../../api/warehouseApi";
+import ArrivalIncidentPanel from "./ArrivalIncidentPanel";
 import printInternalDispatch from "./printInternalDispatch";
 
 const buttonPrimary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
@@ -46,7 +48,9 @@ function Progress({ state }) {
   );
 }
 
-export default function DistributionDispatchPanel({ operation, canManage, canMoveStock, onChanged }) {
+export default function DistributionDispatchPanel({
+  operation, canManage, canMoveStock, canResolveIncidents, onChanged,
+}) {
   const [dispatch, setDispatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -71,7 +75,7 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
     return () => { ignore = true; };
   }, [operation.id, revision]);
 
-  async function run(action) {
+  async function run(action, extra = {}) {
     if (busy) return;
     setError("");
     setNotice("");
@@ -90,6 +94,24 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
           physical_dispatch_confirmed: dispatchChecked,
         });
         setNotice("Salida registrada. Los libros están en tránsito, sin ingresar al destino.");
+      } else if (action === "report_incident") {
+        next = await registrarDiferenciaLlegada(operation.id, {
+          receiver_name: receiverName.trim(),
+          observations: extra.observations,
+          counts: dispatch.lines.map((line) => ({
+            line_id: line.id, counted: Number(counts[line.id]),
+          })),
+        });
+        setNotice("Incidencia registrada. La entrega continúa en tránsito; no se ingresaron libros al destino.");
+      } else if (action === "resolve_incident") {
+        next = await resolverDiferenciaLlegada(operation.id, {
+          incident_id: extra.incidentId,
+          resolution_note: extra.resolutionNote,
+          counts: dispatch.lines.map((line) => ({
+            line_id: line.id, counted: Number(counts[line.id]),
+          })),
+        });
+        setNotice("Recuento conforme registrado por Jefatura. Ya puedes confirmar la recepción física.");
       } else {
         next = await confirmarLlegadaInterna(operation.id, {
           receiver_name: receiverName.trim(),
@@ -281,12 +303,18 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
                   onChange={(event) => setReceiverName(event.target.value)}
                   placeholder="Responsable que cuenta los libros" />
               </label>
-              {receptionValid && dispatch.lines.some((line) => Number(counts[line.id]) !== line.quantity) && (
-                <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-                  Existe una diferencia. No registres entrada conforme hasta documentar
-                  y resolver la incidencia con Jefatura.
-                </p>
-              )}
+              <ArrivalIncidentPanel
+                dispatch={dispatch}
+                counts={counts}
+                receiverName={receiverName}
+                busy={busy}
+                canReport={canManage && canMoveStock}
+                canResolve={canResolveIncidents}
+                onReport={(observations) => run("report_incident", { observations })}
+                onResolve={(incidentId, resolutionNote) => run("resolve_incident", {
+                  incidentId, resolutionNote,
+                })}
+              />
               <label className="flex items-start gap-2 text-xs leading-5 text-gray-900">
                 <input type="checkbox" checked={arrivalChecked}
                   onChange={(event) => setArrivalChecked(event.target.checked)} className="mt-0.5" />
@@ -295,7 +323,7 @@ export default function DistributionDispatchPanel({ operation, canManage, canMov
               {canManage && canMoveStock && (
                 <button type="button" className={buttonPrimary}
                   disabled={busy || !receptionValid || !arrivalChecked
-                    || receiverName.trim().length === 0
+                    || dispatch.open_incident || receiverName.trim().length === 0
                     || dispatch.lines.some((line) => Number(counts[line.id]) !== line.quantity)}
                   onClick={() => run("arrival")}>
                   <FiCheckCircle aria-hidden="true" /> Confirmar recepción física
