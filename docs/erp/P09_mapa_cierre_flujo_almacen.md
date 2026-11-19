@@ -137,3 +137,13 @@ ARCHIVO DOCUMENTAL: guías, facturas, constancias y evidencias firmadas
 **Estado del código:** B3 soporta modalidad Consignación y reserva, **pero todavía NO** existe el circuito integral de recepción en destino, custodia por colegio, rendición, facturación ni retorno de consignación. B3.2 agregó solo ferias específicas. No habilitar botones de Facturar o Devolver sin soporte backend; preparar el diseño equivalente de subalmacenes de consignación por colegio como siguiente alcance.
 
 **Simplificación UX:** una línea operativa común Planificar → Reservar → Preparar → Despachar → Recibir → Liquidar / Devolver, mostrando solo las acciones posibles en la etapa actual. No solicitar conductor ni transportista para apartar libros; documentación interna en despacho, no en reserva. La facturación se visualiza en Ventas/Administración, enlazada a la rendición.
+
+## B5.1 — Incidencias de llegada y recuento supervisado (19/11/2026, en rama)
+
+**Implementado en backend y frontend:** registro de diferencia por lote al confirmar una recepción en destino, observaciones y persona que contó; una sola incidencia abierta por despacho, con historial. Al registrar una diferencia **no entra mercancía al destino** ni cambia la existencia global: permanece en tránsito. El cierre por jefatura exige contar nuevamente todos los lotes y que coincidan exactamente con lo despachado; la jefatura deja una explicación y solo entonces puede realizarse la confirmación de recepción habitual por separado. Auditoría y pruebas PostgreSQL incluidas (508 pruebas OK).
+
+**No implementado en B5.1:** recepción parcial aceptando diferencias, clasificación automática de dañados, faltantes que no aparecen en un recuento, reclamos a transportista, retorno al origen y resolución contable de pérdidas. Una incidencia con diferencia persistente **debe permanecer abierta** hasta implementar una resolución autorizada sin inventar saldo. La corrección supervisada de conteo no puede usarse para justificar bienes no recibidos.
+
+**Modernización UX asociada:** pantalla de Distribuciones con tarjetas y filtro animados (Motion compatible con preferencia de movimiento reducido), formulario de preparación compacto, documento interno con logo real y formato A4 institucional; panel de incidencias contextual en la etapa En tránsito, sin presentar acciones todavía no soportadas.
+
+**Prueba local pendiente:** migración `0022_distribution_arrival_incidents` en entorno de desarrollo respaldado; probar mediante datos sintéticos en base aislada para no falsear GRE, despacho ni recepción del Colegio 22 DE ABRIL. No desplegar a producción sin validar interfaz, documentos y permisos.
