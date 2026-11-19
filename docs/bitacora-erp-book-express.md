@@ -1,5 +1,19 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 18/11/2026 — Claridad de Entregas/Traslados y subpestañas de almacenes [EN RAMA; VALIDACIÓN LOCAL PENDIENTE]
+
+**Capturas del usuario:** en Ubicaciones existen 5 lugares: ALMACEN PRINCIPAL, ALMACEN FERIA (genérico previo), ALMACEN CONSIGNACION, ALMACEN TIENDA y COLEGIO 22 DE ABRIL (ubicación específica de feria, vinculada al evento). En Entregas aparece **Entrega · 22 DE ABRIL** modalidad **Feria**, estado **Por preparar**, salida ALMACEN PRINCIPAL y destino COLEGIO 22 DE ABRIL; responsable LEVI, fecha 23/02/2027. También permanecen ANDINO · 2027 con 15 preparados y otra entrega de 5 pendientes. **La planificación del colegio 22 DE ABRIL ya existe: no crear una segunda entrega para probar lo mismo.**
+
+**Decisión arquitectónica:** Entregas es **el flujo común de planificación, reserva por lote y preparación** para Punto de venta, Feria y Consignación (B2/B3). Traslados es un formulario de **movimiento físico directo ya efectuado**, que puede abarcar cualquier par de ubicaciones reales y *no* implica ventas ni facturas; actualmente **no está vinculado de forma segura al despacho de una entrega preparada**. No usar Traslados para simular la salida de ANDINO ni de 22 DE ABRIL. B4 debe crear documento interno y confirmar despacho/tránsito/recepción únicos; documento interno no reemplaza GRE cuando corresponda.
+
+**UX implementada frontend:**
+- `WarehouseLocationsPanel.jsx` ahora divide **Almacenes principales** y **Subalmacenes y destinos** en pestañas internas (tipo `main` vs el resto). La ubicación COLEGIO 22 DE ABRIL aparecerá entre subalmacenes; la feria específica se registra exclusivamente en la pestaña externa **Ferias**, nunca desde la edición genérica. Se muestra el número de lugares por categoría; se oculta botón de crear otro principal activo y la conciliación inicial queda plegada y se carga bajo demanda para reducir scroll.
+- `ERPDistribucionesPage.jsx`: al seleccionar adopción se pliega la búsqueda, se acortan textos y cada tarjeta de entrega indica claramente su siguiente paso según estado `planned`, `reserved` o `prepared` (sin despacho todavía). No se cambian rutas ni modelos.
+- **Prueba local recomendada sin doble stock:** Entregas → abrir **Detalle** de `Entrega · 22 DE ABRIL` (ya creada); verificar producto/cantidad y stock del **mismo colegio, lote y ALMACEN PRINCIPAL**, no asumir disponibilidad por el inventario agregado. Si el sistema permite, reservar conforme, contar físicamente y preparar; si no, detenerse en aviso de saldo. **No confirmar Traslados**, documento interno ni venta. Esta prueba no generará un movimiento físico: B4 pendiente.
+- `docs/erp/GUIA_RAPIDA_ALMACEN_PERSONAL.md` y mapa de consignaciones se mantienen como referencia de capacitación.
+
+**Validación:** cambios de ubicación hasta `d4b5f29` pasaron GitHub Actions (lint/pruebas/build). El ajuste de Entregas `2555aa9f` debe verificar CI. Sin comprobación visual local de las nuevas subpestañas. No modificar `main` ni Tecnoweb.
+
 ## 18/11/2026 — UX de Ubicaciones: pestañas compactas + guía para personal [EN RAMA, PRUEBA VISUAL PENDIENTE]
 
 **Origen:** captura local del usuario en `/admin/erp/almacen/ubicaciones` demuestra que la feria `COLEGIO 22 DE ABRIL` ya está registrada con ubicación propia, recinto, fechas y custodia de ROBERTO, y que existen 5 ubicaciones registradas. El usuario reportó que la página continua de ferias + ubicaciones es extensa y que no distingue claramente Movimientos/Entregas/Traslados.
