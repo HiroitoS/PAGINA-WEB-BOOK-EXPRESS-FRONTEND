@@ -192,6 +192,9 @@ export default function InventoryConsolidatedPanel() {
               <span className="font-bold text-gray-900">Esta búsqueda:</span>
               <span>Conformes <strong className="tabular-nums text-gray-950">{resumen?.disponible ?? 0}</strong></span>
               <span>Observados <strong className="tabular-nums text-gray-950">{resumen?.observado ?? 0}</strong></span>
+              {Number(resumen?.unidades_en_transito ?? 0) > 0 && (
+                <span>En tránsito <strong className="tabular-nums text-gray-950">{resumen.unidades_en_transito}</strong></span>
+              )}
               <span>Valor <strong className="tabular-nums text-gray-950">{soles(resumen?.valor_referencial)}</strong></span>
             </div>
           )}
@@ -199,6 +202,12 @@ export default function InventoryConsolidatedPanel() {
             «Conformes» indica libros físicos aptos. Puede incluir unidades ya reservadas
             para otras entregas; el saldo libre para reservar se calcula al preparar cada entrega.
           </p>
+          {Number(resumen?.unidades_en_transito ?? 0) > 0 && (
+            <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-900">
+              {resumen.unidades_en_transito} unidades despachadas están en tránsito: ya salieron
+              del origen, pero todavía no figuran como recibidas en destino. No son stock libre.
+            </p>
+          )}
           {Number(resumen?.unidades_sin_costo ?? 0) > 0 && (
             <p className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
               <FiAlertCircle className="mt-0.5 shrink-0" aria-hidden="true" />
