@@ -338,6 +338,33 @@ export async function anularDistribucion(id, reason) {
   return data;
 }
 
+export async function consultarDocumentoInterno(id) {
+  const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/${id}/documento-interno/`);
+  return data;
+}
+
+export async function crearDocumentoInterno(id, idempotencyKey) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/documento-interno/`,
+    { idempotency_key: idempotencyKey },
+  );
+  return data;
+}
+
+export async function confirmarSalidaInterna(id, payload) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/confirmar-salida/`, payload,
+  );
+  return data;
+}
+
+export async function confirmarLlegadaInterna(id, payload) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/confirmar-llegada/`, payload,
+  );
+  return data;
+}
+
 export async function consultarPreparacionDistribucion(id) {
   const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/${id}/preparacion/`);
   return data;
