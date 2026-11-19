@@ -338,6 +338,14 @@ export async function anularDistribucion(id, reason) {
   return data;
 }
 
+export async function corregirDestinoFeriaPreparada(id, destinationId, reason) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/corregir-destino-feria/`,
+    { destination_id: destinationId, reason },
+  );
+  return data;
+}
+
 export async function consultarDocumentoInterno(id) {
   const { data } = await axiosClient.get(`${DISTRIBUTION_BASE}/${id}/documento-interno/`);
   return data;
