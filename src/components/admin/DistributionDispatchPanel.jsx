@@ -388,14 +388,15 @@ export default function DistributionDispatchPanel({
               </div>
             </div>
           )}
-          {dispatch.status === "received" && operation.mode === "fair" && (
+          {dispatch.status === "received" && ["fair", "consignment"].includes(operation.mode) && (
             <FairReturnPanel
               dispatch={dispatch}
               operationId={operation.id}
+              mode={operation.mode}
               enabled={canManage && canMoveStock && canResolveIncidents}
               onSaved={(next) => {
                 setDispatch(next);
-                setNotice("Retorno físico registrado con trazabilidad. Las existencias fueron actualizadas.");
+                setNotice("Retorno físico registrado. Las existencias quedaron actualizadas con historial.");
                 setRevision((value) => value + 1);
                 onChanged?.(next.operation_status);
               }}
