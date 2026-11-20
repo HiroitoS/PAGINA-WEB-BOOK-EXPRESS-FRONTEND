@@ -388,7 +388,14 @@ export default function DistributionDispatchPanel({
               </div>
             </div>
           )}
-          {dispatch.status === "received" && ["fair", "consignment"].includes(operation.mode) && (
+          {dispatch.status === "received" && operation.destination_school_conflict && (
+            <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm font-semibold text-red-800">
+              Esta feria contiene entregas asociadas a colegios diferentes. No se permiten
+              retornos ni regularizaciones automáticas hasta conciliar la custodia real con Jefatura.
+            </p>
+          )}
+          {dispatch.status === "received" && ["fair", "consignment"].includes(operation.mode)
+            && !operation.destination_school_conflict && (
             <FairReturnPanel
               dispatch={dispatch}
               operationId={operation.id}
