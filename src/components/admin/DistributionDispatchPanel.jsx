@@ -349,7 +349,7 @@ export default function DistributionDispatchPanel({
               <ArrivalIncidentPanel
                 dispatch={dispatch}
                 counts={counts}
-                receiverName={receiverName}
+                receiverValid={receiverValid}
                 busy={busy}
                 canReport={canManage && canMoveStock}
                 canResolve={canResolveIncidents}
