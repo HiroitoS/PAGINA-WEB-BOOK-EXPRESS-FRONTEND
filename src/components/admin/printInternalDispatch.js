@@ -10,6 +10,14 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function localDateTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("es-PE", {
+    timeZone: "America/Lima", dateStyle: "short", timeStyle: "short",
+  });
+}
+
 const modeLabels = {
   fair: "Feria",
   consignment: "Consignación",
@@ -99,6 +107,8 @@ export default function printInternalDispatch(data) {
       margin: 55px 0 16px; break-inside: avoid; }
     .signature { border-top: 1px solid #444; padding: 6px 5px 0;
       text-align: center; font-size: 10px; }
+    .receipt-panel { border: 1px solid #d2d5db; padding: 10px; background: #fafafa; break-inside: avoid; }
+    .receipt-panel p { margin: 6px 0; }
     .legal { margin: 14px 0 0; padding: 9px; border: 1px solid #d6d6d6;
       color: #555; font-size: 9px; text-align: center; break-inside: avoid; }
     @media print {
@@ -136,9 +146,8 @@ export default function printInternalDispatch(data) {
       ${field("Operación", data.operation_name)}
       ${field("Modalidad", modeLabels[data.mode] ?? data.mode)}
       ${field("Responsable previsto", data.responsible_name)}
-      ${field("Fecha de registro", data.created_at
-        ? new Date(data.created_at).toLocaleDateString("es-PE")
-        : "—")}
+      ${field("Registrado el", localDateTime(data.created_at))}
+      ${field("Registró documento", data.document_by)}
       ${field("Lugar de salida", data.source)}
       ${field("Lugar de destino", data.destination)}
     </dl>
@@ -163,14 +172,35 @@ export default function printInternalDispatch(data) {
       ${data.external_guide_reference ? `<br><strong>GRE externa declarada:</strong> ${escapeHtml(data.external_guide_reference)}` : ""}
       ${data.recipient_name ? `<br><strong>Responsable que recibió:</strong> ${escapeHtml(data.recipient_name)}` : ""}
     </div>
+    ${data.dispatched_at ? `
+      <div class="section-title">Control de salida física</div>
+      <dl class="grid">
+        ${field("Fecha y hora de salida", localDateTime(data.dispatched_at))}
+        ${field("Registró la salida", data.dispatched_by)}
+      </dl>
+    ` : ""}
+    ${data.received_at ? `
+      <div class="section-title">Constancia de recepción en destino</div>
+      <div class="receipt-panel">
+        <dl class="grid">
+          ${field("Fecha y hora de recepción", localDateTime(data.received_at))}
+          ${field("Responsable que recibió", data.recipient_name)}
+          ${field("Registro en el ERP", data.received_by)}
+          ${field("Cantidades confirmadas", `${data.total} ejemplares · ${data.lines.length} lotes`)}
+        </dl>
+        <p>Recepción digital registrada después de verificar las cantidades completas
+          del documento. Las firmas manuscritas se recogen en este formato impreso.</p>
+      </div>
+    ` : ""}
     <div class="signatures">
-      <div class="signature">Entrega / firma y fecha</div>
-      <div class="signature">Recibe / firma y fecha</div>
+      <div class="signature">Nombre, firma y fecha de quien entrega</div>
+      <div class="signature">Nombre, firma y fecha de quien recibe</div>
     </div>
     <p class="legal"><strong>Uso interno:</strong> esta orden no acredita emisión ni aceptación
       de una GRE, no representa una venta y no sustituye los documentos tributarios
-      que sean exigibles. El movimiento se registra únicamente al confirmar salida
-      y recepción en el ERP.</p>
+      que sean exigibles. Las firmas manuscritas acreditan el control físico
+      en papel, no constituyen una firma electrónica validada por el ERP.
+      La salida y la recepción se registran separadamente.</p>
   </main>
 </body>
 </html>`;
