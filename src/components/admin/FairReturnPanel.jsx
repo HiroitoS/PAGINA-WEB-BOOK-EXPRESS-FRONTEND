@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { FiArrowLeft, FiCheckCircle } from "react-icons/fi";
+import { FiArrowLeft, FiCheckCircle, FiPrinter } from "react-icons/fi";
+import printInternalReturn from "./printInternalReturn";
 import { prepararRetornoDestino, registrarRetornoDestino } from "../../api/warehouseApi";
 
 const field = "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 focus:border-red-700 focus:outline-none";
@@ -146,10 +147,19 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
           </summary>
           <div className="mt-2 space-y-2">
             {dispatch.internal_return_plans.map((plan) => (
-              <p key={plan.id} className="rounded-lg bg-white p-2 text-gray-700">
-                <strong>{plan.reference}</strong> · {plan.reason}. Documento de control:
-                no confirma transporte ni recepción.
-              </p>
+              <div key={plan.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3">
+                <p className="min-w-0 flex-1 text-gray-700">
+                  <strong className="text-gray-950">{plan.reference}</strong> · {plan.reason}
+                  <span className="block text-gray-500">Solo preparación; sin traslado confirmado.</span>
+                </p>
+                <button type="button" onClick={() => {
+                  if (!printInternalReturn(plan, dispatch)) {
+                    setError("Permite ventanas emergentes para imprimir la constancia.");
+                  }
+                }} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 font-semibold text-gray-900 hover:border-red-600">
+                  <FiPrinter aria-hidden="true" /> Ver / imprimir
+                </button>
+              </div>
             ))}
           </div>
         </details>
@@ -195,7 +205,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={!canPrepare} onClick={prepare}
               className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
-              Generar constancia interna BE-RI
+              Generar documento interno de retorno
             </button>
             <p className="text-xs text-gray-600">Sin alterar stock ni registrar salida.</p>
           </div>
