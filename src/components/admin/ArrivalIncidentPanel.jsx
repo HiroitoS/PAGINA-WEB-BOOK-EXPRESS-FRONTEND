@@ -55,7 +55,7 @@ export function ArrivalIncidentHistory({ incidents }) {
 }
 
 export default function ArrivalIncidentPanel({
-  dispatch, counts, receiverName, busy, canReport, canResolve, onReport, onResolve,
+  dispatch, counts, receiverValid, busy, canReport, canResolve, onReport, onResolve,
 }) {
   const reducedMotion = useReducedMotion();
   const [observations, setObservations] = useState("");
@@ -109,7 +109,7 @@ export default function ArrivalIncidentPanel({
             </label>
             {canReport ? (
               <button type="button" className={primaryButton}
-                disabled={busy || !receiverName.trim() || observations.trim().length < 10}
+                disabled={busy || !receiverValid || observations.trim().length < 10}
                 onClick={() => onReport(observations.trim())}>
                 <FiClipboard aria-hidden="true" /> Registrar incidencia
               </button>
