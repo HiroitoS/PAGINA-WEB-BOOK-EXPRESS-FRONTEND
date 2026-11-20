@@ -380,6 +380,13 @@ export async function registrarDiferenciaLlegada(id, payload) {
   return data;
 }
 
+export async function prepararRetornoDestino(id, payload) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/preparar-retorno-destino/`, payload,
+  );
+  return data;
+}
+
 export async function registrarRetornoDestino(id, payload) {
   const { data } = await axiosClient.post(
     `${DISTRIBUTION_BASE}/${id}/registrar-retorno-destino/`, payload,
