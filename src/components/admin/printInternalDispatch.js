@@ -140,12 +140,16 @@ export default function printInternalDispatch(data) {
     </header>
     <h1>ORDEN INTERNA DE SALIDA Y ENTREGA</h1>
     <p class="subtitle">Documento logístico interno · no es comprobante ni guía de remisión SUNAT</p>
+    ${data.recipient_name ? `<div class="status"><strong>Recepción física confirmada:</strong>
+      ${escapeHtml(data.recipient_name)} · ${escapeHtml(localDateTime(data.received_at))}
+      <br>El responsable previsto puede ser distinto de quien recibió físicamente.</div>` : ""}
     <div class="section-title">Información de la entrega</div>
     <dl class="grid">
       ${field("Colegio", data.school)}
       ${field("Operación", data.operation_name)}
       ${field("Modalidad", modeLabels[data.mode] ?? data.mode)}
-      ${field("Responsable previsto", data.responsible_name)}
+      ${field("Responsable previsto en la planificación", data.responsible_name)}
+      ${field("Recepción física por", data.recipient_name || "Pendiente de confirmar")}
       ${field("Registrado el", localDateTime(data.created_at))}
       ${field("Registró documento", data.document_by)}
       ${field("Lugar de salida", data.source)}
