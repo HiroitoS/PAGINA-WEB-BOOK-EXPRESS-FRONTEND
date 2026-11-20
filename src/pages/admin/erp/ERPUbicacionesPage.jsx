@@ -7,8 +7,8 @@ import WarehouseLocationsPanel from "../../../components/admin/WarehouseLocation
 import WarehouseFairsPanel from "../../../components/admin/WarehouseFairsPanel";
 
 const SECCIONES = [
-  { id: "ferias", nombre: "Ferias", icono: FiMapPin },
-  { id: "lugares", nombre: "Almacenes y destinos", icono: FiBox },
+  { id: "ferias", nombre: "Ferias · ubicaciones temporales", icono: FiMapPin },
+  { id: "lugares", nombre: "Almacenes · tiendas y consignación", icono: FiBox },
 ];
 
 export default function ERPUbicacionesPage() {
@@ -39,7 +39,8 @@ export default function ERPUbicacionesPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
             <h1 className="mt-1 text-xl font-black text-gray-950">Ubicaciones</h1>
             <p className="mt-1 text-sm text-gray-600">
-              Almacenes, ferias y destinos de mercadería.
+              Cada feria tiene su propia ubicación temporal de custodia.
+              Los almacenes y destinos permanentes se gestionan por separado.
             </p>
           </div>
           <Link to="/admin/erp/almacen/inventario"
