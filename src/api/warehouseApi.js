@@ -186,6 +186,13 @@ export async function actualizarUbicacionAlmacen(id, payload) {
 }
 
 
+export async function consultarAlertasReposicion(locationId) {
+  const { data } = await axiosClient.get(`${LOCATION_BASE}/alertas-reposicion/`, {
+    params: { location_id: locationId },
+  });
+  return data;
+}
+
 export async function consultarResumenUbicaciones() {
   const { data } = await axiosClient.get(`${LOCATION_BASE}/resumen-ubicaciones/`);
   return data;
