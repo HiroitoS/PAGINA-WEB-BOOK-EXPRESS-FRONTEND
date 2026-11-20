@@ -1083,6 +1083,17 @@ export default function ERPDistribucionesPage() {
                 <h3 className="mt-2 break-words text-sm font-black text-gray-950">
                   {item.operation_name}
                 </h3>
+                <p className="mt-1 text-xs text-gray-500">
+                  Entrega #{item.id} · Cada tarjeta representa una entrega independiente,
+                  no el total del colegio.
+                </p>
+                {item.operation_name.toLowerCase().includes("saldo pendiente") && (
+                  <p className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-800">
+                    Esta es la entrega pendiente de completar. Una parte de los libros
+                    puede estar preparada o recibida en otra entrega del mismo colegio.
+                    No prepares nuevamente cantidades ya separadas.
+                  </p>
+                )}
                 <p className="mt-1 text-xs leading-5 text-gray-700">
                   <strong>Colegio:</strong> {item.school}
                   {item.campaign_year ? " · Campaña " + item.campaign_year : ""}
@@ -1105,7 +1116,7 @@ export default function ERPDistribucionesPage() {
                   </p>
                 )}
                 <p className="text-xs leading-5 text-gray-600">
-                  Responsable: {item.responsible_name}
+                  Responsable previsto: {item.responsible_name}
                   {item.scheduled_on ? ` · ${item.scheduled_on}` : ""}
                 </p>
                 {item.status === "planned" && (
