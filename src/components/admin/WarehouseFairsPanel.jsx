@@ -94,7 +94,8 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
             Ferias registradas {!cargando && <span className="text-sm font-semibold text-gray-500">({ferias.length})</span>}
           </h2>
           <p className="mt-1 text-xs leading-5 text-gray-600">
-            Una feria, una ubicación de custodia. Crear el evento no mueve libros.
+            Cada feria registrada crea su depósito temporal de custodia. No se requiere
+            un segundo subalmacén ni se modifica el stock al crearla.
           </p>
         </div>
         {puedeGestionar && !mostrarFormulario && (
@@ -194,10 +195,11 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
       )}
 
       <p className="rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-700">
-        Siguiente paso: elegir esta feria como destino al
+        Siguiente paso: elegir la feria como destino en
         {" "}<Link to="/admin/erp/almacen/distribuciones" className="font-bold text-red-700 underline underline-offset-2">
-          planificar una entrega
-        </Link>. El despacho y la recepción controlados aún están pendientes.
+          Distribuciones
+        </Link>. El almacén principal prepara y despacha; el responsable de la feria
+        confirma el conteo al recibir. La guía tributaria exigible se gestiona aparte.
       </p>
     </section>
   );
