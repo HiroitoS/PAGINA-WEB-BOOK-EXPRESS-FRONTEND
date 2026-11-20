@@ -202,6 +202,10 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             <input className={field} maxLength={180} value={receiver}
               onChange={(event) => setReceiver(event.target.value)} />
           </label>
+          <label className={label}>Motivo del retorno
+            <textarea rows={2} maxLength={500} className={field} value={reason}
+              onChange={(event) => setReason(event.target.value)} />
+          </label>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={!canPrepare} onClick={prepare}
               className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
@@ -213,10 +217,6 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             <input className={field} maxLength={120} value={reference}
               onChange={(event) => setReference(event.target.value.toUpperCase())}
               placeholder="EG01-00000001" />
-          </label>
-          <label className={label}>Motivo del retorno
-            <textarea rows={2} maxLength={500} className={field} value={reason}
-              onChange={(event) => setReason(event.target.value)} />
           </label>
           <label className="flex items-start gap-2 text-xs leading-5 text-gray-800">
             <input type="checkbox" checked={confirmed} className="mt-1"
