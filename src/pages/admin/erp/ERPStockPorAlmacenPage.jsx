@@ -146,9 +146,22 @@ export default function ERPStockPorAlmacenPage() {
                 Selecciona el almacén
                 <select value={ubicacionId} onChange={(e) => { setUbicacionId(e.target.value); setPagina(1); }}
                   className="mt-2 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-red-600 focus:outline-none">
-                  {ubicaciones.filter((item) => item.is_active).map((item) => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
-                  ))}
+                  {[
+                    { kind: "main", label: "Almacén principal" },
+                    { kind: "store", label: "Tiendas" },
+                    { kind: "fair", label: "Ferias y puntos temporales" },
+                    { kind: "consignment", label: "Consignaciones" },
+                    { kind: "other", label: "Otros depósitos" },
+                  ].map(({ kind, label }) => {
+                    const locations = ubicaciones.filter((item) => item.is_active && item.kind === kind);
+                    return locations.length > 0 ? (
+                      <optgroup key={kind} label={label}>
+                        {locations.map((item) => (
+                          <option key={item.id} value={item.id}>{item.name}</option>
+                        ))}
+                      </optgroup>
+                    ) : null;
+                  })}
                 </select>
               </label>
               <label className="block text-sm font-bold text-gray-800">
@@ -159,6 +172,22 @@ export default function ERPStockPorAlmacenPage() {
                   className="mt-2 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-red-600 focus:outline-none" />
               </label>
             </div>
+            {ubicacion?.kind === "fair" && (
+              <div className="mt-3 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-gray-950">Custodia de feria: {ubicacion.name}</p>
+                  <p className="mt-1 text-xs leading-5 text-gray-600">
+                    Cada feria conserva su propio saldo, responsable y trazabilidad. Esta
+                    agrupación es visual: no transfiere libros al depósito llamado
+                    «Almacén Feria» ni mezcla existencias de colegios diferentes.
+                  </p>
+                </div>
+                <Link to="/admin/erp/almacen/ubicaciones"
+                  className="inline-flex min-h-10 items-center rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-800 hover:border-red-600">
+                  Gestionar ferias
+                </Link>
+              </div>
+            )}
             {ubicacion && (
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="rounded-xl bg-gray-50 p-3">
