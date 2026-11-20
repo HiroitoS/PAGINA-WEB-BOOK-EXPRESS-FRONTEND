@@ -6,6 +6,8 @@
 
 **Cambios de protección realizados en backend** (`46f7ee52` y `50066a5d`): `confirmar_recepcion_destino` comparte ahora `_validar_conteo_lineas` con el registro de incidencias, incluyendo rechazo en la capa de servicio de cantidades negativas y valores booleanos; nueva prueba de regresión valida ambos rechazos y que los conteos parciales no negativos siguen admitidos para registrar diferencia. **CI recién lanzado, no declarar aprobado hasta terminar**. No hubo migraciones ni cambios de stock en producción; tampoco cambios de frontend.
 
+**Corrección de CI posterior:** las pruebas de los commits `46f7ee52` y `50066a5d` fallaron porque el refactor de conteos dejó sin inicializar `lines` en `confirmar_recepcion_destino` (NameError; 513 pruebas ejecutadas). Se corrigió restaurando la consulta/bloqueo de las líneas en commit backend `0956fb729725`. **Esperar CI del commit correctivo antes de sincronizar para demo o afirmar que está verde.**
+
 **Siguiente implementación real:** diseñar y probar B5.2 cierre de diferencia persistente con cantidades conformes, faltantes y deterioradas, bajo decisión de Jefatura, preservando stock y trazabilidad; después B5.3 retorno por lotes desde ferias y consignaciones, sin duplicar traslados ni reconocer ventas. Probar con base aislada y datos de ensayo. Mantener `main` y Tecnoweb intactos.
 
 
