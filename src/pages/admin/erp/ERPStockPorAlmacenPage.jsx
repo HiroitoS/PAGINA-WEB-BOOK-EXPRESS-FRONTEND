@@ -73,6 +73,10 @@ export default function ERPStockPorAlmacenPage() {
   const ubicacion = ubicaciones.find((item) => String(item.id) === ubicacionId);
   const saldo = (resumen?.locations ?? []).find((item) => String(item.id) === ubicacionId);
   const sinUbicacion = resumen?.unassigned?.lots ?? 0;
+  const tieneReserva = (saldo?.reserved ?? 0) > 0;
+  const libreParaTraslado = saldo?.free_to_transfer ?? 0;
+  const sinLibresPorReserva = !busqueda.trim() && (saldo?.available ?? 0) > 0
+    && libreParaTraslado === 0 && tieneReserva;
 
   return (
     <main className="mx-auto w-full min-w-0 max-w-6xl space-y-4">
@@ -129,10 +133,18 @@ export default function ERPStockPorAlmacenPage() {
               </label>
             </div>
             {ubicacion && (
-              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="rounded-xl bg-gray-50 p-3">
-                  <p className="text-xs font-semibold text-gray-600">Unidades disponibles</p>
+                  <p className="text-xs font-semibold text-gray-600">Existencias físicas conformes</p>
                   <p className="mt-1 text-xl font-black tabular-nums text-gray-950">{saldo?.available ?? 0}</p>
+                </div>
+                <div className="rounded-xl bg-gray-50 p-3">
+                  <p className="text-xs font-semibold text-gray-600">Reservadas para entregas</p>
+                  <p className="mt-1 text-xl font-black tabular-nums text-gray-950">{saldo?.reserved ?? 0}</p>
+                </div>
+                <div className="rounded-xl bg-gray-50 p-3">
+                  <p className="text-xs font-semibold text-gray-600">Libres para traslado</p>
+                  <p className="mt-1 text-xl font-black tabular-nums text-gray-950">{libreParaTraslado}</p>
                 </div>
                 <div className="rounded-xl bg-gray-50 p-3">
                   <p className="text-xs font-semibold text-gray-600">Unidades observadas</p>
@@ -153,19 +165,27 @@ export default function ERPStockPorAlmacenPage() {
               </p>
             )}
             <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-black text-gray-950">Libros disponibles en este almacén</h2>
+              <h2 className="text-base font-black text-gray-950">Lotes libres para traslado</h2>
               <span className="text-xs text-gray-600">{datos.count} lotes</span>
             </div>
             <p className="mt-1 text-xs leading-5 text-gray-600">
-              El detalle muestra únicamente libros conformes disponibles, agrupados por lote de recepción.
-              Las unidades observadas se incluyen solo en el resumen.
+              El detalle muestra lotes con unidades conformes libres, descontando las
+              reservas para entregas en preparación. Los lotes reservados siguen en
+              existencias físicas y no pueden trasladarse dos veces. Las unidades
+              observadas se incluyen solo en el resumen.
               El costo histórico corresponde a la recepción de ese lote; no equivale a la deuda pendiente con la editorial.
             </p>
             {consultando ? (
               <p role="status" className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">Consultando libros…</p>
             ) : datos.results.length === 0 ? (
               <p className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-left text-sm text-gray-600">
-                {busqueda ? "No encontramos libros con esta búsqueda." : "Este almacén todavía no tiene libros disponibles. Los ingresos aparecen después de validar una recepción."}
+                {busqueda
+                  ? "No encontramos lotes libres que coincidan con esta búsqueda."
+                  : sinLibresPorReserva
+                    ? "Este almacén tiene libros, pero todos están reservados para entregas en preparación. Revisa Distribuciones para gestionar las reservas; no es un almacén vacío."
+                    : (saldo?.available ?? 0) > 0 && libreParaTraslado > 0
+                      ? "El resumen indica saldo libre, pero no encontramos lotes trasladables. Revisa la conciliación de ubicaciones y los movimientos antes de operar."
+                      : "No hay lotes conformes libres para traslado en esta ubicación."}
               </p>
             ) : (
               <>
