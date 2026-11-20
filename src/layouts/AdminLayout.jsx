@@ -201,6 +201,12 @@ const NAV_SECTIONS = [
             permissions: ["warehouse.view_receiving"],
           },
           {
+            label: "Existencias por almacén",
+            to: "/admin/erp/almacen/stock-por-almacen",
+            icon: <FaBoxOpen />,
+            permissions: ["warehouse.view_receiving"],
+          },
+          {
             label: "Ubicaciones y ferias",
             to: "/admin/erp/almacen/ubicaciones",
             icon: <FaMapMarkerAlt />,
