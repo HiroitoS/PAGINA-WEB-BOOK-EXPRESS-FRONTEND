@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FiArrowLeft, FiCheckCircle } from "react-icons/fi";
-import { registrarRetornoDestino } from "../../api/warehouseApi";
+import { prepararRetornoDestino, registrarRetornoDestino } from "../../api/warehouseApi";
 
 const field = "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 focus:border-red-700 focus:outline-none";
 const label = "block text-xs font-semibold text-gray-900";
@@ -24,6 +24,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
   const [key, setKey] = useState(() => crypto.randomUUID());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const returned = new Map();
   for (const entry of dispatch.destination_returns ?? dispatch.fair_returns ?? []) {
@@ -43,17 +44,42 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
     return Number.isSafeInteger(number) && number >= 0
       && number <= line.quantity - (returned.get(line.id) ?? 0);
   });
+  const canPrepare = enabled && !busy && validQuantities && requested.length > 0
+    && reason.trim().length >= 15;
   const canSubmit = enabled && !busy && validQuantities && requested.length > 0
     && receiver.trim().split(/\s+/).length >= 2
     && grePattern.test(reference.trim().toUpperCase())
     && Number(reference.trim().split("-")[1]) > 0
     && reason.trim().length >= 15 && confirmed;
 
+  async function prepare(event) {
+    event.preventDefault();
+    if (!canPrepare) return;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await prepararRetornoDestino(operationId, {
+        idempotency_key: key,
+        reason: reason.trim(),
+        lines: requested,
+      });
+      setKey(crypto.randomUUID());
+      setNotice(`Constancia interna ${result.internal_return_number} registrada. No se han trasladado libros.`);
+      onSaved?.(result);
+    } catch (err) {
+      setError(readError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit(event) {
     event.preventDefault();
     if (!canSubmit) return;
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       const result = await registrarRetornoDestino(operationId, {
         idempotency_key: key,
@@ -67,6 +93,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
       setQuantities({});
       setConfirmed(false);
       setExpanded(false);
+      setNotice("Retorno físico registrado en el inventario.");
       onSaved?.(result);
     } catch (err) {
       setError(readError(err));
@@ -112,17 +139,34 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
           </div>
         </details>
       )}
+      {(dispatch.internal_return_plans ?? []).length > 0 && (
+        <details className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
+          <summary className="cursor-pointer font-bold text-gray-900">
+            Constancias internas de retorno ({dispatch.internal_return_plans.length})
+          </summary>
+          <div className="mt-2 space-y-2">
+            {dispatch.internal_return_plans.map((plan) => (
+              <p key={plan.id} className="rounded-lg bg-white p-2 text-gray-700">
+                <strong>{plan.reference}</strong> · {plan.reason}. Documento de control:
+                no confirma transporte ni recepción.
+              </p>
+            ))}
+          </div>
+        </details>
+      )}
+      {notice && <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs font-bold text-gray-900">{notice}</p>}
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-800">{error}</p>}
       {expanded && enabled && (
         <form onSubmit={submit} className="space-y-3 rounded-xl bg-gray-50 p-3">
-          <p className="text-xs leading-5 text-gray-700">
-            Este retorno utiliza el documento interno {dispatch.document_number} para
-            identificar libros, lotes y responsables. No ingreses aquí la guía de tu
-            proveedor: esa corresponde a la recepción de compra. Si la mercadería
-            viaja entre direcciones distintas, verifica la GRE del traslado de retorno
-            emitida por el responsable que corresponda. El documento interno no
-            reemplaza una GRE cuando sea exigible.
-          </p>
+          <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs leading-5 text-gray-700">
+            <p><strong>Documento de entrega original: {dispatch.document_number}</strong></p>
+            <p className="mt-1">Primero puedes generar una constancia interna automática BE-RI
+              para contar y preparar el retorno. Esto no mueve existencias ni acredita
+              transporte. La guía de tu editorial corresponde a la compra, no a este retorno.</p>
+            <p className="mt-1">Para confirmar el regreso físico entre direcciones diferentes,
+              identifica la GRE que realmente sustenta ese traslado cuando corresponda.
+              La constancia interna no la sustituye.</p>
+          </div>
           <div className="space-y-2">
             {dispatch.lines.map((line) => {
               const available = Math.max(0, line.quantity - (returned.get(line.id) ?? 0));
@@ -148,7 +192,14 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             <input className={field} maxLength={180} value={receiver}
               onChange={(event) => setReceiver(event.target.value)} />
           </label>
-          <label className={label}>Referencia GRE del retorno (no de la editorial)
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" disabled={!canPrepare} onClick={prepare}
+              className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
+              Generar constancia interna BE-RI
+            </button>
+            <p className="text-xs text-gray-600">Sin alterar stock ni registrar salida.</p>
+          </div>
+          <label className={label}>GRE del retorno, únicamente si corresponde al traslado real
             <input className={field} maxLength={120} value={reference}
               onChange={(event) => setReference(event.target.value.toUpperCase())}
               placeholder="EG01-00000001" />
