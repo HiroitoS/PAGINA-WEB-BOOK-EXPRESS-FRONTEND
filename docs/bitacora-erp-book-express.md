@@ -1,5 +1,12 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 19/11/2026 — B5.2: primera entrega de clasificación supervisada de diferencias [CÓDIGO EN RAMA; CI PENDIENTE]
+
+Aclaración: **B5.1 registro de incidencias ya existía**, no duplicarlo. Se incorporó ahora al backend un paso NUEVO y separado para documentar desglose físico de incidencia persistente: `POST operaciones-distribucion/{id}/documentar-diferencia-persistente/`, solo Jefatura (`warehouse.validate_receiving`), con `incident_id`, `breakdown` por línea (`line_id`, `conforming`, `damaged`, `extra`) y `note`. Calcula faltantes = despachado - conforme - dañado, verifica concordancia exacta con el conteo original, impide duplicar diagnóstico por incidencia y guarda evento inmutable `arrival_diagnosed`. Respuesta `documento-interno` ahora expone `arrival_diagnoses`. **No modifica existencias ni cierra incidencia: NO es recepción parcial todavía.** Se agregó prueba end-to-end Django para rechazo de conteos discordantes, autorización, unicidad y conservación de stock. Commits backend `76b2fd8`, `6081658`, `b9316b7`, `8a947ce`. No hay migración nueva; no se tocó frontend operativo, `main` ni Tecnoweb.
+
+**Siguiente paso:** implementar acto de recepción parcial bajo supervisión que consuma solo cantidades conformes y preserve estados para faltantes/deteriorados, con movimientos y reportes consistentes. No habilitar al usuario botón de recepción parcial hasta que ese circuito esté probado. CI backend en proceso: verificar resultado del último commit antes de sincronizar.
+
+
 ## 19/11/2026 — Verificación B5: incidencia registrada ≠ recepción parcial [CONTINUIDAD]
 
 **Revisión de código en backend (rama de desarrollo):** el usuario confirmó que la UI permite ingresar cantidades distintas y sustentar una incidencia. Verificado en `warehouse/distribution_dispatch.py`, `warehouse/api_distribution.py` y prueba `test_b5_diferencia_llegada_no_mueve_stock_y_reconteo_conforme_requiere_jefatura`: **sí** existe registro y seguimiento de diferencias por lote, bloqueo de doble registro, validación de permisos y cierre por recuento completamente conforme. **No** existe todavía recepción parcial contable/operativa: registrar la incidencia deja el despacho en tránsito y no suma al destino las unidades conformes, ni permite cerrar diferencias persistentes. Mantener esta distinción antes de presentar B5.2 como finalizada.
