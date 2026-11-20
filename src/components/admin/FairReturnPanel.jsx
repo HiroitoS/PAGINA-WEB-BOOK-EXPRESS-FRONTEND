@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FiArrowLeft, FiCheckCircle } from "react-icons/fi";
-import { registrarRetornoFeria } from "../../api/warehouseApi";
+import { registrarRetornoDestino } from "../../api/warehouseApi";
 
 const field = "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 focus:border-red-700 focus:outline-none";
 const label = "block text-xs font-semibold text-gray-900";
@@ -13,8 +13,9 @@ function readError(error) {
     ? value : "No fue posible registrar la devolución. Revisa los datos.";
 }
 
-export default function FairReturnPanel({ dispatch, operationId, enabled, onSaved }) {
+export default function FairReturnPanel({ dispatch, operationId, mode, enabled, onSaved }) {
   const [expanded, setExpanded] = useState(false);
+  const destinationLabel = mode === "consignment" ? "consignación" : "feria";
   const [quantities, setQuantities] = useState({});
   const [receiver, setReceiver] = useState("");
   const [reference, setReference] = useState("");
@@ -25,7 +26,7 @@ export default function FairReturnPanel({ dispatch, operationId, enabled, onSave
   const [error, setError] = useState("");
 
   const returned = new Map();
-  for (const entry of dispatch.fair_returns ?? []) {
+  for (const entry of dispatch.destination_returns ?? dispatch.fair_returns ?? []) {
     for (const item of entry.details ?? []) {
       returned.set(item.line_id, (returned.get(item.line_id) ?? 0) + item.quantity);
     }
@@ -54,7 +55,7 @@ export default function FairReturnPanel({ dispatch, operationId, enabled, onSave
     setBusy(true);
     setError("");
     try {
-      const result = await registrarRetornoFeria(operationId, {
+      const result = await registrarRetornoDestino(operationId, {
         idempotency_key: key,
         receiver_name: receiver.trim(),
         transport_reference: reference.trim().toUpperCase(),
@@ -76,14 +77,14 @@ export default function FairReturnPanel({ dispatch, operationId, enabled, onSave
 
   return (
     <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-3"
-      aria-label="Retorno de libros desde feria">
+      aria-label={`Retorno de libros desde ${destinationLabel}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h5 className="flex items-center gap-2 text-sm font-bold text-gray-950">
-            <FiArrowLeft aria-hidden="true" /> Retornos de feria
+            <FiArrowLeft aria-hidden="true" /> Retornos de {destinationLabel}
           </h5>
           <p className="mt-1 text-xs leading-5 text-gray-600">
-            Registra solo los libros que ya regresaron físicamente al almacén de origen.
+            Registra únicamente los libros que ya regresaron físicamente al almacén de origen.
           </p>
         </div>
         {enabled && (
@@ -96,10 +97,10 @@ export default function FairReturnPanel({ dispatch, operationId, enabled, onSave
       {(dispatch.fair_returns ?? []).length > 0 && (
         <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
           <summary className="cursor-pointer text-xs font-bold text-gray-950">
-            Historial de retornos ({dispatch.fair_returns.length})
+            Historial de retornos ({(dispatch.destination_returns ?? dispatch.fair_returns ?? []).length})
           </summary>
           <div className="mt-3 space-y-2 text-xs text-gray-700">
-            {dispatch.fair_returns.map((item) => (
+            {(dispatch.destination_returns ?? dispatch.fair_returns ?? []).map((item) => (
               <div key={item.id} className="rounded-lg bg-white p-3">
                 <p className="font-bold text-gray-950">
                   {item.details.reduce((total, line) => total + line.quantity, 0)} libros retornados
