@@ -12,6 +12,13 @@ import PreparedFairDestinationCorrection from "./PreparedFairDestinationCorrecti
 const buttonPrimary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
 const fieldClass = "mt-1 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100";
 const blankCount = {};
+const grePattern = /^EG[A-Z0-9]{2}-[0-9]{1,8}$/;
+const recipientPattern = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[ '-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)+$/;
+
+function validRecipient(value) {
+  const cleaned = value.trim().replace(/\s+/g, " ");
+  return cleaned.length >= 6 && recipientPattern.test(cleaned);
+}
 
 function readError(err) {
   if (!err?.response) return "No se pudo conectar. Comprueba el servidor.";
@@ -90,7 +97,7 @@ export default function DistributionDispatchPanel({
       } else if (action === "dispatch") {
         next = await confirmarSalidaInterna(operation.id, {
           evidence_kind: basis,
-          external_guide_reference: guideRef.trim(),
+          external_guide_reference: guideRef.trim().toUpperCase(),
           exception_justification: exemption.trim(),
           physical_dispatch_confirmed: dispatchChecked,
         });
@@ -137,6 +144,11 @@ export default function DistributionDispatchPanel({
   const needsSpecificFair = operation.mode === "fair"
     && operation.destination_kind === "fair"
     && operation.destination_fair_event_id === null;
+  const receiverValid = validRecipient(receiverName);
+  const greValid = grePattern.test(guideRef.trim().toUpperCase())
+    && Number(guideRef.trim().split("-")[1]) > 0;
+  const exceptionValid = canResolveIncidents && exemption.trim().length >= 60
+    && exemption.trim().split(/\s+/).length >= 9;
   const receptionValid = dispatch?.lines?.length > 0 && dispatch.lines.every(
     (line) => counts[line.id] !== undefined && String(counts[line.id]).trim() !== ""
       && Number.isSafeInteger(Number(counts[line.id])) && Number(counts[line.id]) >= 0,
@@ -231,24 +243,35 @@ export default function DistributionDispatchPanel({
                     checked={basis === "external_guide"} onChange={() => setBasis("external_guide")} />
                   GRE verificada externamente, anotar referencia
                 </label>
-                <label className="flex items-start gap-2 text-xs text-gray-900">
-                  <input type="radio" name={`basis-${operation.id}`} className="mt-0.5"
-                    checked={basis === "exception"} onChange={() => setBasis("exception")} />
-                  Excepción legal revisada y documentada (solo cuando corresponda)
-                </label>
+                {canResolveIncidents && (
+                  <label className="flex items-start gap-2 text-xs text-gray-900">
+                    <input type="radio" name={`basis-${operation.id}`} className="mt-0.5"
+                      checked={basis === "exception"} onChange={() => setBasis("exception")} />
+                    Otra excepción legal, autorizada por Jefatura
+                  </label>
+                )}
               </fieldset>
               {basis === "external_guide" && (
                 <label className="block text-xs font-bold text-gray-900">
                   Referencia de la GRE (sistema externo)
                   <input className={fieldClass} maxLength={120} value={guideRef}
-                    onChange={(event) => setGuideRef(event.target.value)}
-                    placeholder="Número o referencia verificada" />
+                    onChange={(event) => setGuideRef(event.target.value.toUpperCase())}
+                    placeholder="EG01-00000001" />
+                  <span className="mt-1 block text-xs font-normal leading-5 text-gray-700">
+                    Formato: serie EG de 4 caracteres, guion y número. Se verifica
+                    manualmente fuera del ERP; el formato no acredita aceptación SUNAT.
+                  </span>
+                  {guideRef && !greValid && (
+                    <span role="status" className="mt-1 block text-xs font-semibold text-red-700">
+                      Revisa la serie y el correlativo de la GRE.
+                    </span>
+                  )}
                 </label>
               )}
               {basis === "exception" && (
                 <div className="space-y-2 rounded-xl border border-amber-300 bg-white p-3">
                   <label className="block text-xs font-bold text-gray-900">
-                    Sustento de la excepción (mínimo 20 caracteres)
+                    Sustento legal supervisado (mínimo 60 caracteres y 9 palabras)
                     <textarea rows={3}
                       className="mt-2 w-full rounded-xl border border-gray-300 bg-white p-3 text-sm font-normal text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100"
                       maxLength={500} value={exemption}
@@ -256,10 +279,10 @@ export default function DistributionDispatchPanel({
                       placeholder="Indicar el supuesto legal aplicable y su sustento previamente revisado" />
                   </label>
                   <p className="text-xs leading-5 text-gray-700">
-                    {exemption.trim().length} de 20 caracteres mínimos.
-                    {exemption.trim().length < 20
-                      ? " El botón permanecerá bloqueado hasta completar la explicación."
-                      : " Longitud mínima completa; esto no verifica automáticamente la validez legal."}
+                    {exemption.trim().length} caracteres · {exemption.trim().split(/\s+/).filter(Boolean).length} palabras.
+                    {!exceptionValid
+                      ? " Jefatura debe explicar el supuesto legal y las pruebas revisadas."
+                      : " Extensión suficiente; la validez legal debe comprobarse fuera del ERP."}
                   </p>
                 </div>
               )}
@@ -272,8 +295,8 @@ export default function DistributionDispatchPanel({
               {canManage && canMoveStock && (
                 <button type="button" disabled={
                   busy || !dispatchChecked
-                  || (basis === "external_guide" && guideRef.trim().length < 5)
-                  || (basis === "exception" && exemption.trim().length < 20)
+                  || (basis === "external_guide" && !greValid)
+                  || (basis === "exception" && !exceptionValid)
                   || !basis
                 } className={buttonPrimary} onClick={() => run("dispatch")}>
                   <FiTruck aria-hidden="true" /> Confirmar salida física
@@ -313,10 +336,15 @@ export default function DistributionDispatchPanel({
                 ))}
               </div>
               <label className="block text-xs font-bold text-gray-900">
-                Nombre de quien recibe
+                Nombres y apellidos de quien recibe
                 <input className={fieldClass} maxLength={180} value={receiverName}
                   onChange={(event) => setReceiverName(event.target.value)}
-                  placeholder="Responsable que cuenta los libros" />
+                  placeholder="Ej. Rosa Quispe" />
+                {receiverName && !receiverValid && (
+                  <span role="status" className="mt-1 block text-xs font-normal text-red-700">
+                    Indica al menos dos palabras, sin números ni símbolos.
+                  </span>
+                )}
               </label>
               <ArrivalIncidentPanel
                 dispatch={dispatch}
@@ -338,10 +366,10 @@ export default function DistributionDispatchPanel({
               {canManage && canMoveStock && (
                 <button type="button" className={buttonPrimary}
                   disabled={busy || !receptionValid || !arrivalChecked
-                    || dispatch.open_incident || receiverName.trim().length === 0
+                    || dispatch.open_incident || !receiverValid
                     || dispatch.lines.some((line) => Number(counts[line.id]) !== line.quantity)}
                   onClick={() => run("arrival")}>
-                  <FiCheckCircle aria-hidden="true" /> Confirmar recepción física
+                  <FiCheckCircle aria-hidden="true" /> Cerrar entrega y confirmar recepción
                 </button>
               )}
             </div>
