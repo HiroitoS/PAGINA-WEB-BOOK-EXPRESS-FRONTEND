@@ -1,5 +1,14 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 19/11/2026 — Verificación B5: incidencia registrada ≠ recepción parcial [CONTINUIDAD]
+
+**Revisión de código en backend (rama de desarrollo):** el usuario confirmó que la UI permite ingresar cantidades distintas y sustentar una incidencia. Verificado en `warehouse/distribution_dispatch.py`, `warehouse/api_distribution.py` y prueba `test_b5_diferencia_llegada_no_mueve_stock_y_reconteo_conforme_requiere_jefatura`: **sí** existe registro y seguimiento de diferencias por lote, bloqueo de doble registro, validación de permisos y cierre por recuento completamente conforme. **No** existe todavía recepción parcial contable/operativa: registrar la incidencia deja el despacho en tránsito y no suma al destino las unidades conformes, ni permite cerrar diferencias persistentes. Mantener esta distinción antes de presentar B5.2 como finalizada.
+
+**Cambios de protección realizados en backend** (`46f7ee52` y `50066a5d`): `confirmar_recepcion_destino` comparte ahora `_validar_conteo_lineas` con el registro de incidencias, incluyendo rechazo en la capa de servicio de cantidades negativas y valores booleanos; nueva prueba de regresión valida ambos rechazos y que los conteos parciales no negativos siguen admitidos para registrar diferencia. **CI recién lanzado, no declarar aprobado hasta terminar**. No hubo migraciones ni cambios de stock en producción; tampoco cambios de frontend.
+
+**Siguiente implementación real:** diseñar y probar B5.2 cierre de diferencia persistente con cantidades conformes, faltantes y deterioradas, bajo decisión de Jefatura, preservando stock y trazabilidad; después B5.3 retorno por lotes desde ferias y consignaciones, sin duplicar traslados ni reconocer ventas. Probar con base aislada y datos de ensayo. Mantener `main` y Tecnoweb intactos.
+
+
 ## 19/11/2026 — Cierre de la prueba de recepción y endurecimiento de controles [EN RAMA; AUDITORÍA LOCAL PENDIENTE]
 
 **Hechos mostrados por capturas aportadas por el usuario:** la orden interna **BE-SI-0000001** (22 DE ABRIL, 32 libros Bruño) imprime correctamente su logo, encabezado y líneas por lote. En otra distribución, correspondiente a **[PRUEBA ERP] Colegio de demostración 2027**, el usuario corrigió su destino genérico a la **feria COLEGIO 22 DE ABRIL**, generó una segunda orden interna **BE-SI-0000002** de **10 libros Santillana LECTOPOLIS 3**, registró salida con referencia **`asdasdas`** y confirmó recepción bajo el nombre **`shamir`** (ver capturas finales con estado Recibida). Este último recorrido movió stock EN LA BASE LOCAL y dejó libros en el destino de otro colegio; **es una mezcla operativa para investigar y conciliar, NO una validación de traslado legal ni de identidad**. NO borrar, cambiar directamente filas ni simular devoluciones para "corregir" el saldo: se requiere **corrección supervisada y auditable**, preservando el historial. No tocar Tecnoweb.
