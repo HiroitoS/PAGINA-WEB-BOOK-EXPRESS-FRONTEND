@@ -1091,6 +1091,14 @@ export default function ERPDistribucionesPage() {
                   <strong>Salida:</strong> {item.source}
                   {" → "}<strong>Destino:</strong> {item.destination}
                 </p>
+                {item.destination_school_conflict && (
+                  <p role="alert"
+                    className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-900">
+                    Atención: este depósito de feria figura en operaciones de
+                    colegios diferentes. Requiere conciliación antes de nuevas
+                    salidas, devoluciones o ventas.
+                  </p>
+                )}
                 {item.destination_kind && MODE_LOCATION_KIND[item.mode] !== item.destination_kind && (
                   <p className="mt-1 text-xs font-bold text-amber-800">
                     Revisar destino: el lugar elegido no es del tipo habitual para esta modalidad.
