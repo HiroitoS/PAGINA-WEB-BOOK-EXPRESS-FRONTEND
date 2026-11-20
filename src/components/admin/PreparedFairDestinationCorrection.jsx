@@ -48,12 +48,11 @@ export default function PreparedFairDestinationCorrection({
     setLoading(true);
     try {
       const data = await opcionesDistribucion({});
-      setChoices((data.locations || []).filter(
-        (loc) => loc.kind === "fair" && Boolean(loc.fair_event_id)
-          && (loc.assigned_school_ids?.length ?? 0) === 0
-          || loc.kind === "fair" && Boolean(loc.fair_event_id)
-          && loc.assigned_school_ids?.every((id) => id === operation.school_id),
-      ));
+      setChoices((data.locations || []).filter((loc) => {
+        const assigned = loc.assigned_school_ids || [];
+        return loc.kind === "fair" && Boolean(loc.fair_event_id)
+          && assigned.every((schoolId) => schoolId === operation.school_id);
+      }));
     } catch (err) {
       setError(messageFromError(err));
     } finally {
@@ -96,6 +95,7 @@ export default function PreparedFairDestinationCorrection({
             <p className="mt-2 text-xs text-gray-700">
               La corrección conserva los libros preparados, la guía, los lotes y las
               cantidades. No registra ningún traslado ni modifica el stock.
+              Las ferias asignadas a otros colegios no aparecen aquí.
               Solo se muestran ferias sin otra asignación o vinculadas a este colegio.
             </p>
           </div>
