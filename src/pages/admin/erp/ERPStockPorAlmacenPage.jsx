@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { FiArrowLeft, FiBox, FiMapPin } from "react-icons/fi";
+import { FiAlertTriangle, FiArrowLeft, FiBox, FiMapPin, FiTruck } from "react-icons/fi";
 import {
   buscarLotesParaTraslado,
+  consultarAlertasReposicion,
   consultarResumenUbicaciones,
   listarUbicacionesAlmacen,
 } from "../../../api/warehouseApi";
@@ -25,6 +26,9 @@ export default function ERPStockPorAlmacenPage() {
   const [cargando, setCargando] = useState(true);
   const [consultando, setConsultando] = useState(false);
   const [error, setError] = useState("");
+  const [alertas, setAlertas] = useState(null);
+  const [alertasCargando, setAlertasCargando] = useState(false);
+  const [alertasError, setAlertasError] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -69,6 +73,29 @@ export default function ERPStockPorAlmacenPage() {
     }, busqueda.trim() ? 300 : 0);
     return () => { ignore = true; clearTimeout(timer); };
   }, [ubicacionId, busqueda, pagina]);
+
+  useEffect(() => {
+    let ignore = false;
+    if (!ubicacionId) return undefined;
+    const timer = setTimeout(() => {
+      setAlertasCargando(true);
+      setAlertas(null);
+      setAlertasError("");
+      consultarAlertasReposicion(ubicacionId)
+        .then((response) => {
+          if (!ignore) setAlertas(response);
+        })
+        .catch(() => {
+          if (!ignore) setAlertasError(
+            "No pudimos verificar las necesidades pendientes de este almacén."
+          );
+        })
+        .finally(() => {
+          if (!ignore) setAlertasCargando(false);
+        });
+    }, 0);
+    return () => { ignore = true; clearTimeout(timer); };
+  }, [ubicacionId]);
 
   const ubicacion = ubicaciones.find((item) => String(item.id) === ubicacionId);
   const saldo = (resumen?.locations ?? []).find((item) => String(item.id) === ubicacionId);
@@ -158,6 +185,87 @@ export default function ERPStockPorAlmacenPage() {
                   )}
                 </div>
               </div>
+            )}
+            {alertasCargando && (
+              <p role="status" className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+                Comprobando necesidades de las entregas pendientes…
+              </p>
+            )}
+            {alertasError && (
+              <p role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                {alertasError} El inventario sigue disponible para consulta.
+              </p>
+            )}
+            {alertas && alertas.products_with_shortage > 0 && (
+              <section aria-labelledby="alerta-reposicion" className="mt-4 overflow-hidden rounded-2xl border border-amber-300 bg-amber-50">
+                <div className="flex flex-wrap items-start justify-between gap-3 p-4 sm:p-5">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-900">
+                      <FiAlertTriangle aria-hidden="true" size={20} />
+                    </span>
+                    <div>
+                      <h2 id="alerta-reposicion" className="text-base font-black text-amber-950">
+                        Faltan libros para entregas planificadas
+                      </h2>
+                      <p className="mt-1 text-sm leading-6 text-amber-900">
+                        {alertas.missing_units} unidades por cubrir en {alertas.products_with_shortage}
+                        {" "}{alertas.products_with_shortage === 1 ? "producto" : "productos"}.
+                        Se compararon las cantidades por preparar con el stock libre de este almacén.
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-amber-900">
+                        No es una orden de compra. Revisa primero traslados disponibles
+                        en otros almacenes y los pedidos a editoriales existentes.
+                      </p>
+                    </div>
+                  </div>
+                  <Link to="/admin/erp/compras/pedidos"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800">
+                    <FiTruck aria-hidden="true" /> Revisar pedidos
+                  </Link>
+                </div>
+                <div className="divide-y divide-amber-200 border-t border-amber-200 bg-white">
+                  {alertas.results.slice(0, 5).map((row) => (
+                    <div key={row.product_id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-bold text-gray-950">{row.product}</p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          {row.editorial} · {row.operations.length} {row.operations.length === 1 ? "entrega" : "entregas"} por preparar
+                        </p>
+                        <p className="mt-1 text-xs text-gray-700">
+                          Colegios: {[...new Set(row.operations.map((item) => item.school))].slice(0, 3).join(", ")}
+                          {new Set(row.operations.map((item) => item.school)).size > 3 ? " y otros" : ""}
+                        </p>
+                      </div>
+                      <div className="text-right text-xs text-gray-700">
+                        <p>Requeridas: <strong>{row.required}</strong> · Libres: <strong>{row.free}</strong></p>
+                        <p className="mt-1 font-black text-red-700">Faltan {row.shortage}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {alertas.products_with_shortage > 5 && (
+                  <p className="border-t border-amber-200 px-4 py-3 text-xs text-amber-900">
+                    Hay más productos con faltantes. Revisa las distribuciones y pedidos antes de solicitar.
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2 border-t border-amber-200 bg-amber-50 px-4 py-3 sm:px-5">
+                  <Link to="/admin/erp/almacen/distribuciones"
+                    className="inline-flex min-h-10 items-center rounded-lg border border-amber-400 bg-white px-3 text-xs font-bold text-amber-950 hover:border-amber-600">
+                    Revisar entregas pendientes
+                  </Link>
+                  <Link to="/admin/erp/almacen/solicitudes"
+                    className="inline-flex min-h-10 items-center rounded-lg border border-amber-400 bg-white px-3 text-xs font-bold text-amber-950 hover:border-amber-600">
+                    Solicitar traslado interno
+                  </Link>
+                </div>
+              </section>
+            )}
+            {alertas && alertas.products_with_shortage === 0 && (
+              <p role="status" className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+                Las entregas por preparar no presentan faltantes frente al saldo libre
+                de esta ubicación. Esto no significa que exista cobertura para todas
+                las adopciones futuras.
+              </p>
             )}
             {sinUbicacion > 0 && (
               <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
