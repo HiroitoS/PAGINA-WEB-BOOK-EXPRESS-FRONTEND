@@ -232,35 +232,43 @@ export default function DistributionDispatchPanel({
                 Confirmar una salida real (no es obligatorio durante la preparación)
               </h5>
               <p className="text-xs leading-5 text-amber-900">
-                Antes del movimiento, verifica el documento legal aplicable fuera
-                del ERP. Una orden interna NO reemplaza la GRE exigible.
-                El sistema registra lo declarado por el responsable, pero no consulta SUNAT.
-                No uses referencias ficticias ni confirmes la salida sin movimiento real.
+                El documento BE-SI ya se generó automáticamente: puedes imprimirlo
+                y utilizarlo para verificar los lotes y responsables de esta entrega.
+                Para confirmar la salida, identifica el sustento legal real del transporte.
+                Si corresponde una GRE, registra su número verdadero emitido fuera del ERP.
+                No es la guía de compra de Santillana, Bruño u otra editorial.
+              </p>
+              <p className="rounded-lg border border-amber-300 bg-white p-3 text-xs leading-5 text-amber-950">
+                <strong>¿No tienes una GRE del traslado?</strong> No inventes una serie
+                para habilitar el botón ni uses el número BE-SI como si fuera SUNAT.
+                Consulta el caso concreto con el contador. Solo Jefatura puede
+                registrar una excepción legal previamente verificada, con su sustento.
+                La guía interna no acredita por sí sola una exoneración.
               </p>
               <fieldset className="space-y-2 rounded-xl border border-amber-200 bg-white p-3">
                 <legend className="text-xs font-bold text-amber-950">Sustento comprobado por el responsable</legend>
                 <label className="flex items-start gap-2 text-xs text-gray-900">
                   <input type="radio" name={`basis-${operation.id}`} className="mt-0.5"
                     checked={basis === "external_guide"} onChange={() => setBasis("external_guide")} />
-                  GRE verificada externamente, anotar referencia
+                  Tengo una GRE real del traslado y registraré su número
                 </label>
                 {canResolveIncidents && (
                   <label className="flex items-start gap-2 text-xs text-gray-900">
                     <input type="radio" name={`basis-${operation.id}`} className="mt-0.5"
                       checked={basis === "exception"} onChange={() => setBasis("exception")} />
-                    Otra excepción legal, autorizada por Jefatura
+                    Existe una excepción legal verificada y autorizada por Jefatura
                   </label>
                 )}
               </fieldset>
               {basis === "external_guide" && (
                 <label className="block text-xs font-bold text-gray-900">
-                  Referencia de la GRE (sistema externo)
+                  Número de la GRE real del traslado (no guía del proveedor)
                   <input className={fieldClass} maxLength={120} value={guideRef}
                     onChange={(event) => setGuideRef(event.target.value.toUpperCase())}
-                    placeholder="EG01-00000001" />
+                    placeholder="Serie y número de la GRE emitida" />
                   <span className="mt-1 block text-xs font-normal leading-5 text-gray-700">
-                    Formato: serie EG de 4 caracteres, guion y número. Se verifica
-                    manualmente fuera del ERP; el formato no acredita aceptación SUNAT.
+                    Copia el número exacto del documento emitido, por ejemplo EG01-00000001.
+                    El formato se valida, pero el ERP no verifica emisión ni aceptación SUNAT.
                   </span>
                   {guideRef && !greValid && (
                     <span role="status" className="mt-1 block text-xs font-semibold text-red-700">
