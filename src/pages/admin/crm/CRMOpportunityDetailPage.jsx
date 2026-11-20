@@ -12,11 +12,13 @@ import { Link, useLocation, useParams } from "react-router";
 
 import {
   getCRMOpportunity,
+  inheritCRMOpportunitySchoolAssignment,
   getCRMOpportunityActivities,
   getCRMOpportunityAdoptions,
   getCRMOpportunityCommercialHistory,
   getCRMSchoolCommercialHistory,
 } from "../../../api/crmApi";
+import { useAuth } from "../../../hooks/useAuth";
 import CRMOpportunityActivitySection from "../../../components/admin/crm/CRMOpportunityActivitySection";
 import CRMOpportunityAdoptionSection from "../../../components/admin/crm/CRMOpportunityAdoptionSection";
 import CRMOpportunityProjectionSection from "../../../components/admin/crm/CRMOpportunityProjectionSection";
@@ -87,6 +89,9 @@ function EmptyState({ title, description }) {
 }
 
 export default function CRMOpportunityDetailPage() {
+  const { hasPermission, hasRole } = useAuth();
+  const canAssignAdvisor = hasRole(["ADMINISTRADOR"])
+    || hasPermission(["crm.assign_opportunities"]);
   const { id } = useParams();
   const location = useLocation();
 
@@ -101,6 +106,29 @@ export default function CRMOpportunityDetailPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [advisorSyncing, setAdvisorSyncing] = useState(false);
+  const [advisorFeedback, setAdvisorFeedback] = useState("");
+
+  async function inheritAdvisorFromSchool() {
+    if (advisorSyncing) return;
+    setAdvisorSyncing(true);
+    setAdvisorFeedback("");
+    try {
+      const updated = await inheritCRMOpportunitySchoolAssignment(id);
+      setOpportunity(updated);
+      setAdvisorFeedback("Asesor del colegio asignado a esta oportunidad.");
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      const message = error?.response?.data?.detail;
+      setAdvisorFeedback(
+        typeof message === "string"
+          ? message
+          : "Revisa que el colegio tenga un equipo y un asesor comercial válido.",
+      );
+    } finally {
+      setAdvisorSyncing(false);
+    }
+  }
 
   const returnContext = useMemo(
     () =>
@@ -265,19 +293,19 @@ export default function CRMOpportunityDetailPage() {
 
   return (
     <div className="mx-auto w-full max-w-screen-2xl">
-      <div className="mb-4">
+      <div className="mb-2">
         <Link
           to={returnContext.path}
           state={returnContext.state}
-          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-black text-gray-700 shadow-sm transition hover:bg-gray-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 shadow-sm transition hover:bg-gray-50"
         >
           <FaArrowLeft className="text-xs" />
           Volver a {returnContext.label || "Oportunidades"}
         </Link>
       </div>
 
-      <section className="overflow-hidden rounded-3xl bg-gray-950 text-white shadow-sm">
-        <div className="flex flex-col justify-between gap-5 px-5 py-5 sm:px-7 xl:flex-row xl:items-end">
+      <section className="overflow-hidden rounded-2xl bg-gray-950 text-white shadow-sm">
+        <div className="flex flex-col justify-between gap-3 px-4 py-3 sm:px-5 lg:flex-row lg:items-center">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wide text-red-300">
@@ -289,16 +317,16 @@ export default function CRMOpportunityDetailPage() {
               </span>
             </div>
 
-            <h1 className="mt-3 wrap-break-word text-2xl font-black sm:text-3xl">
+            <h1 className="mt-2 break-words text-xl font-black sm:text-2xl">
               {opportunity.school?.name || opportunity.title}
             </h1>
-            <p className="mt-1 text-sm text-gray-300">
-              {opportunity.title}
-            </p>
+            {opportunity.title !== opportunity.school?.name && (
+              <p className="mt-1 text-xs text-gray-300">{opportunity.title}</p>
+            )}
           </div>
 
-          <div className="grid min-w-0 gap-2 sm:grid-cols-2 xl:min-w-105">
-            <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
+          <div className="grid min-w-0 gap-2 sm:grid-cols-2 lg:min-w-80">
+            <div className="rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10">
               <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
                 Campaña
               </p>
@@ -307,26 +335,37 @@ export default function CRMOpportunityDetailPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
+            <div className="rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10">
               <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
                 Asesor
               </p>
               <p className="mt-1 text-sm font-black">
                 {formatOwner(opportunity.owner)}
               </p>
+              {!opportunity.owner && canAssignAdvisor && (
+                <button type="button" onClick={inheritAdvisorFromSchool}
+                  disabled={advisorSyncing}
+                  className="mt-2 rounded-lg border border-white/30 px-2 py-1.5 text-xs font-bold text-white transition hover:bg-white/15 disabled:opacity-50">
+                  {advisorSyncing ? "Verificando…" : "Recuperar asesor del colegio"}
+                </button>
+              )}
             </div>
-
           </div>
         </div>
+        {advisorFeedback && (
+          <p role="status" className="border-t border-white/10 px-4 py-2 text-xs font-semibold text-amber-100">
+            {advisorFeedback}
+          </p>
+        )}
 
-        <div className="border-t border-white/10 bg-gray-900 px-3 py-3 sm:px-5">
-          <div className="flex gap-2 overflow-x-auto">
+        <div className="border-t border-white/10 bg-gray-900 px-2 py-2 sm:px-4">
+          <div className="flex gap-1.5 overflow-x-auto">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className={`shrink-0 rounded-xl px-4 py-2 text-sm font-black transition ${
+                className={`shrink-0 rounded-lg px-3 py-2 text-xs font-black transition ${
                   activeTab === tab.key
                     ? "bg-red-700 text-white"
                     : "bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"
@@ -339,8 +378,8 @@ export default function CRMOpportunityDetailPage() {
         </div>
       </section>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-12">
-        <main className="min-w-0 xl:col-span-9 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
+      <div className="mt-3 grid items-start gap-3 xl:grid-cols-12">
+        <main className="min-w-0 xl:col-span-9">
           {activeTab === "summary" ? (
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -687,17 +726,17 @@ export default function CRMOpportunityDetailPage() {
           ) : null}
         </main>
 
-        <aside className="min-w-0 xl:col-span-3 xl:max-h-[68vh] xl:overflow-y-scroll xl:overscroll-contain xl:pr-2">
-          <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <aside className="min-w-0 xl:col-span-3">
+          <section className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
             <p className="text-xs font-black uppercase tracking-wide text-red-700">
               Relaciones
             </p>
-            <h2 className="mt-1 text-xl font-black text-gray-950">
-              Contexto de la oportunidad
+            <h2 className="mt-1 text-base font-black text-gray-950">
+              Colegio y contacto
             </h2>
 
-            <div className="mt-4 space-y-3">
-              <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
+            <div className="mt-3 space-y-2">
+              <div className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-950 text-white">
                     <FaSchool />
@@ -723,9 +762,9 @@ export default function CRMOpportunityDetailPage() {
                 ) : null}
               </div>
 
-              <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-700">
+              <div className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                <div className="flex items-start gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-700">
                     <FaUserTie />
                   </div>
                   <div className="min-w-0">
@@ -762,9 +801,9 @@ export default function CRMOpportunityDetailPage() {
                 ) : null}
               </div>
 
-              <div className="rounded-2xl bg-gray-50 p-4 ring-1 ring-gray-200">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-red-700 ring-1 ring-gray-200">
+              <div className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200">
+                <div className="flex items-start gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-red-700 ring-1 ring-gray-200">
                     <FaCalendarAlt />
                   </div>
                   <div className="min-w-0">

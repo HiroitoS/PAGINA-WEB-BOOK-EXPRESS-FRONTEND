@@ -487,7 +487,10 @@ export default function NotificationBell() {
                         onClick={() => handleOpenNotification(notification)}
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-3 py-2 text-xs font-black text-white transition hover:bg-gray-800"
                       >
-                        Ver detalle
+                        {notification.event_type === "warehouse.receipt_approval_requested"
+                          ? "Revisar recepción"
+                          : notification.event_type?.startsWith("warehouse.receipt_")
+                            ? "Ver recepción" : "Ver detalle"}
                         <FaChevronRight className="text-[10px]" />
                       </button>
                     </div>

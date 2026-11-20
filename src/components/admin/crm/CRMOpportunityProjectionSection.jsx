@@ -384,11 +384,15 @@ export default function CRMOpportunityProjectionSection({
       }
 
       seen.add(key);
+      const serviceDrafts = drafts.filter((item) => String(item.serviceId) === key);
+      const selectedGrades = serviceDrafts.filter((item) => item.selected);
       options.push({
         serviceId: key,
         label: draft.campusName
           ? `${draft.campusName} · ${draft.levelName}`
           : draft.levelName,
+        gradeCount: selectedGrades.length,
+        productCount: selectedGrades.reduce((total, item) => total + item.products.length, 0),
       });
     }
 
@@ -407,6 +411,10 @@ export default function CRMOpportunityProjectionSection({
     () => getProjectionGroups(projection),
     [projection],
   );
+  const selectedGradeCount = drafts.filter((draft) => draft.selected).length;
+  const selectedProductCount = drafts
+    .filter((draft) => draft.selected)
+    .reduce((sum, draft) => sum + draft.products.length, 0);
 
   const hasReferencePrices = useMemo(
     () =>
@@ -1093,6 +1101,16 @@ export default function CRMOpportunityProjectionSection({
                   </div>
                 </div>
 
+                <div role="status" className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
+                  <p className="text-sm font-black text-blue-950">
+                    Proyección conjunta · {selectedGradeCount} grados · {selectedProductCount} productos
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-blue-900">
+                    Puedes trabajar Inicial, Primaria o ambos. Cambiar de nivel
+                    solo cambia lo que estás viendo: los grados y libros seleccionados
+                    en otros niveles permanecen y se guardan juntos.
+                  </p>
+                </div>
                 <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-gray-500">
@@ -1110,7 +1128,12 @@ export default function CRMOpportunityProjectionSection({
                               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                           }`}
                         >
-                          {option.label}
+                          <span className="block">{option.label}</span>
+                          <span className={`mt-1 block text-xs font-semibold ${
+                            activeServiceId === option.serviceId ? "text-gray-300" : "text-gray-500"
+                          }`}>
+                            {option.gradeCount} grados · {option.productCount} libros
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -1509,7 +1532,7 @@ export default function CRMOpportunityProjectionSection({
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <FaSave />
-                  {saving ? "Guardando..." : "Guardar proyección"}
+                  {saving ? "Guardando..." : "Guardar proyección completa"}
                 </button>
               </div>
             </form>

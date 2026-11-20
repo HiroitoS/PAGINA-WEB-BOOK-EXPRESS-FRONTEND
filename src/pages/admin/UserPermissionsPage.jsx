@@ -23,6 +23,8 @@ const AVAILABLE_ROLES = [
   "ATENCION",
   "ASESOR_COMERCIAL",
   "JEFE_COMERCIAL",
+  "ALMACEN",
+  "JEFE_ALMACEN",
 ];
 
 function getResults(data) {
@@ -38,6 +40,8 @@ function getRoleDescription(role) {
     ATENCION: "Gestiona solicitudes y seguimiento de clientes.",
     ASESOR_COMERCIAL: "Usa ToDo y consulta el catálogo para su trabajo comercial.",
     JEFE_COMERCIAL: "Coordina trabajo comercial, grupos y asignaciones del equipo.",
+    ALMACEN: "Registra recepciones y movimientos autorizados de mercadería.",
+    JEFE_ALMACEN: "Revisa y aprueba recepciones y supervisa almacenes.",
   };
 
   return descriptions[role] || "Rol interno del sistema.";
@@ -50,6 +54,8 @@ function getRoleBadgeClass(role) {
     ATENCION: "bg-green-50 text-green-700 ring-green-100",
     ASESOR_COMERCIAL: "bg-amber-50 text-amber-700 ring-amber-100",
     JEFE_COMERCIAL: "bg-purple-50 text-purple-700 ring-purple-100",
+    ALMACEN: "bg-slate-100 text-slate-800 ring-slate-200",
+    JEFE_ALMACEN: "bg-amber-50 text-amber-900 ring-amber-200",
   };
 
   return styles[role] || "bg-gray-100 text-gray-700 ring-gray-200";

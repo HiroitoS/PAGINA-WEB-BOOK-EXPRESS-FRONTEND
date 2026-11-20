@@ -38,6 +38,8 @@ import CRMActivityLocationSummary from "../../../components/admin/crm/CRMActivit
 import CRMSchoolAssignmentPanel from "../../../components/admin/crm/CRMSchoolAssignmentPanel";
 import SchoolInstitutionalPopulationSection from "../../../components/admin/crm/SchoolInstitutionalPopulationSection";
 import SchoolEditorialUsagesSection from "../../../components/admin/crm/SchoolEditorialUsagesSection";
+import { useAuth } from "../../../hooks/useAuth";
+import { userHasPermission } from "../../../utils/adminAccess";
 import { getCRMActivityTypeLabel } from "../../../utils/crmActivityTypes";
 import {
   buildNavigationState,
@@ -346,6 +348,7 @@ function LoadingState() {
 }
 
 export default function CRMSchoolDetailPage() {
+  const { user } = useAuth();
   const { id } = useParams();
   const location = useLocation();
 
@@ -1941,6 +1944,19 @@ export default function CRMSchoolDetailPage() {
                           ? "Hay más de una campaña escolar activa. Regulariza las campañas antes de crear una oportunidad."
                           : `No existe una oportunidad abierta para ${activeSchoolCampaign.name}.`}
                     </div>
+
+                    {activeSchoolCampaigns.length !== 1 && (
+                      userHasPermission(user, ["crm.manage_campaigns"]) ? (
+                        <Link to="/admin/crm/campanas"
+                          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-red-300 bg-white px-4 text-sm font-bold text-red-700 hover:bg-red-50">
+                          Gestionar campañas
+                        </Link>
+                      ) : (
+                        <p className="mt-2 text-xs leading-5 text-gray-600">
+                          Solicita al administrador que configure la campaña escolar.
+                        </p>
+                      )
+                    )}
 
                     {activeSchoolCampaigns.length === 1 ? (
                       <button

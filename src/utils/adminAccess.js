@@ -4,6 +4,7 @@ export const ATTENTION_ROLE = "ATENCION";
 export const SALES_ADVISOR_ROLE = "ASESOR_COMERCIAL";
 export const SALES_MANAGER_ROLE = "JEFE_COMERCIAL";
 export const WAREHOUSE_ROLE = "ALMACEN";
+export const WAREHOUSE_MANAGER_ROLE = "JEFE_ALMACEN";
 
 export const DASHBOARD_ROLES = [
   ADMIN_ROLE,
@@ -23,6 +24,7 @@ export const CURRENT_PANEL_PERMISSIONS = [
   "purchasing.view_purchasing",
   "warehouse.view_receiving",
   "warehouse.view_warehouse_locations",
+  "warehouse.view_internal_stock_requests",
 ];
 
 export function userHasRole(user, allowedRoles = []) {
@@ -79,6 +81,10 @@ export function getDefaultAdminPath(user) {
     return "/admin/crm";
   }
 
+  if (userHasPermission(user, ["warehouse.view_internal_stock_requests"])) {
+    return "/admin/erp/almacen/solicitudes";
+  }
+
   if (userHasPermission(user, ["warehouse.view_receiving"])) {
     return "/admin/erp/almacen/recepciones";
   }
@@ -121,6 +127,7 @@ export function getPrimaryRole(user) {
     SALES_ADVISOR_ROLE,
     CATALOG_ROLE,
     ATTENTION_ROLE,
+    WAREHOUSE_MANAGER_ROLE,
     WAREHOUSE_ROLE,
   ];
 

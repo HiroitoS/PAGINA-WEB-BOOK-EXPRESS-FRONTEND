@@ -25,25 +25,15 @@ export default function QuotationBulkSupplierDiscountPanel({
   const [discount, setDiscount] = useState("");
   const [feedback, setFeedback] = useState("");
 
-  const selectedProviderName = useMemo(() => {
-    if (providerName && providers.includes(providerName)) {
-      return providerName;
-    }
-
-    if (providers.length === 1) {
-      return providers[0];
-    }
-
-    return "";
-  }, [providerName, providers]);
+  const selectedProviderName = providers.includes(providerName)
+    ? providerName : "";
 
   const levels = useMemo(
     () =>
       uniqueSorted(
         items
           .filter(
-            (item) =>
-              item.provider_name === selectedProviderName,
+            (item) => !selectedProviderName || item.provider_name === selectedProviderName,
           )
           .map((item) => item.level_name),
       ),
@@ -59,7 +49,7 @@ export default function QuotationBulkSupplierDiscountPanel({
     () =>
       items.filter(
         (item) =>
-          item.provider_name === selectedProviderName
+          (!selectedProviderName || item.provider_name === selectedProviderName)
           && (
             !selectedLevelName
             || item.level_name === selectedLevelName
@@ -70,11 +60,6 @@ export default function QuotationBulkSupplierDiscountPanel({
 
   function handleApply() {
     const numericDiscount = Number(discount);
-
-    if (!selectedProviderName) {
-      setFeedback("Selecciona una editorial.");
-      return;
-    }
 
     if (
       discount === ""
@@ -102,9 +87,10 @@ export default function QuotationBulkSupplierDiscountPanel({
     });
 
     setFeedback(
-      "Aplicado a "
-      + matchingCount
-      + " producto(s). Puedes ajustar excepciones de forma individual.",
+      "Descuento aplicado a " + matchingCount + " producto(s)"
+      + (selectedProviderName ? " de " + selectedProviderName : " de todas las editoriales")
+      + (selectedLevelName ? " en " + selectedLevelName : " en todos los niveles")
+      + ". Puedes ajustar excepciones por libro.",
     );
   }
 
@@ -120,9 +106,9 @@ export default function QuotationBulkSupplierDiscountPanel({
             Aplicar condición editorial en bloque
           </p>
           <p className="mt-1 text-xs leading-5 text-gray-600">
-            Completa el descuento editorial por editorial y, si corresponde,
-            por nivel. Después puedes modificar cualquier producto
-            individualmente.
+            Selecciona una editorial o todas, y un nivel o todos los niveles.
+            Se actualizarán los productos del alcance elegido; después puedes
+            ajustar las excepciones de forma individual.
           </p>
         </div>
       </div>
@@ -140,7 +126,7 @@ export default function QuotationBulkSupplierDiscountPanel({
             }}
             className="mt-1.5 w-full rounded-xl border border-red-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-gray-100"
           >
-            <option value="">Seleccionar editorial</option>
+            <option value="">Todas las editoriales</option>
             {providers.map((provider) => (
               <option key={provider} value={provider}>
                 {provider}
@@ -153,7 +139,7 @@ export default function QuotationBulkSupplierDiscountPanel({
           Nivel
           <select
             value={selectedLevelName}
-            disabled={disabled || !selectedProviderName}
+            disabled={disabled || items.length === 0}
             onChange={(event) => {
               setLevelName(event.target.value);
               setFeedback("");
@@ -192,7 +178,6 @@ export default function QuotationBulkSupplierDiscountPanel({
             type="button"
             disabled={
               disabled
-              || !selectedProviderName
               || discount === ""
               || matchingCount === 0
             }
@@ -204,8 +189,14 @@ export default function QuotationBulkSupplierDiscountPanel({
         </div>
       </div>
 
+      <p className="mt-2 text-xs leading-5 text-gray-600">
+        Alcance actual: {matchingCount} producto(s) ·
+        {selectedProviderName ? " " + selectedProviderName : " Todas las editoriales"} ·
+        {selectedLevelName ? " " + selectedLevelName : " Todos los niveles"}.
+        Este cambio se guardará con la cotización.
+      </p>
       {feedback ? (
-        <p className="mt-3 text-xs font-bold leading-5 text-gray-700">
+        <p role="status" className="mt-3 text-xs font-bold leading-5 text-gray-700">
           {feedback}
         </p>
       ) : null}

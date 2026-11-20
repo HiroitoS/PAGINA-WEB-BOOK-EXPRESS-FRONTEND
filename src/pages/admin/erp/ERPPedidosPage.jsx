@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../hooks/useAuth";
 import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog";
+import SupplierInvoicePanel from "../../../components/admin/SupplierInvoicePanel";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
   aprobarPedido, descargarOrdenCompraPdf, generarPedidosDesdeAdopcion, guardarCantidadesPedido,
@@ -74,6 +75,8 @@ export default function ERPPedidosPage() {
   const puedeEditar = userHasPermission(user, ["purchasing.manage_purchasing"]);
   const puedeAprobar = userHasPermission(user, ["purchasing.approve_purchasing"]);
   const puedeEnviar = userHasPermission(user, ["purchasing.record_purchase_dispatch"]);
+  const puedeVerFacturas = userHasPermission(user, ["purchasing.view_supplier_invoices"]);
+  const puedeRegistrarFacturas = userHasPermission(user, ["purchasing.manage_supplier_invoices"]);
   const [pedidos, setPedidos] = useState([]);
   const [filtros, setFiltros] = useState({ status: "", provider: "", school: "", campaign: "" });
   const [pestana, setPestana] = useState("adopciones");
@@ -479,6 +482,14 @@ export default function ERPPedidosPage() {
                   )}
                 </div>
               )}
+              {puedeVerFacturas &&
+                ["approved", "sent", "partially_received", "received", "closed_partial"].includes(seleccionado.status) && (
+                  <SupplierInvoicePanel
+                    key={seleccionado.id}
+                    pedido={seleccionado}
+                    puedeAdministrar={puedeRegistrarFacturas}
+                  />
+                )}
               {seleccionado.status === "draft" && (
                 <p className="text-xs text-gray-500">
                   La orden formal estará disponible cuando apruebes este pedido.
