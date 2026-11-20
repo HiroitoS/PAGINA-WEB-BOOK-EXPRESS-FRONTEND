@@ -4,6 +4,7 @@ import { registrarRetornoFeria } from "../../api/warehouseApi";
 
 const field = "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 focus:border-red-700 focus:outline-none";
 const label = "block text-xs font-semibold text-gray-900";
+const grePattern = /^EG[A-Z0-9]{2}-[0-9]{1,8}$/;
 
 function readError(error) {
   if (!error?.response) return "No se pudo conectar con el servidor.";
@@ -43,7 +44,9 @@ export default function FairReturnPanel({ dispatch, operationId, enabled, onSave
   });
   const canSubmit = enabled && !busy && validQuantities && requested.length > 0
     && receiver.trim().split(/\s+/).length >= 2
-    && reference.trim().length >= 8 && reason.trim().length >= 15 && confirmed;
+    && grePattern.test(reference.trim().toUpperCase())
+    && Number(reference.trim().split("-")[1]) > 0
+    && reason.trim().length >= 15 && confirmed;
 
   async function submit(event) {
     event.preventDefault();
@@ -54,7 +57,7 @@ export default function FairReturnPanel({ dispatch, operationId, enabled, onSave
       const result = await registrarRetornoFeria(operationId, {
         idempotency_key: key,
         receiver_name: receiver.trim(),
-        transport_reference: reference.trim(),
+        transport_reference: reference.trim().toUpperCase(),
         reason: reason.trim(),
         received_confirmed: true,
         lines: requested,
@@ -140,9 +143,10 @@ export default function FairReturnPanel({ dispatch, operationId, enabled, onSave
             <input className={field} maxLength={180} value={receiver}
               onChange={(event) => setReceiver(event.target.value)} />
           </label>
-          <label className={label}>Referencia documental del traslado
+          <label className={label}>Referencia GRE verificada externamente
             <input className={field} maxLength={120} value={reference}
-              onChange={(event) => setReference(event.target.value)} />
+              onChange={(event) => setReference(event.target.value.toUpperCase())}
+              placeholder="EG01-00000001" />
           </label>
           <label className={label}>Motivo del retorno
             <textarea rows={2} maxLength={500} className={field} value={reason}
