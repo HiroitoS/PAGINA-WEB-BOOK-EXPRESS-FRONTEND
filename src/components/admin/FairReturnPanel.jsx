@@ -116,8 +116,12 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
       {expanded && enabled && (
         <form onSubmit={submit} className="space-y-3 rounded-xl bg-gray-50 p-3">
           <p className="text-xs leading-5 text-gray-700">
-            Esta acción actualiza existencias de feria y almacén al confirmar. Verifica
-            la documentación del traslado fuera del sistema; este registro no es una GRE.
+            Este retorno utiliza el documento interno {dispatch.document_number} para
+            identificar libros, lotes y responsables. No ingreses aquí la guía de tu
+            proveedor: esa corresponde a la recepción de compra. Si la mercadería
+            viaja entre direcciones distintas, verifica la GRE del traslado de retorno
+            emitida por el responsable que corresponda. El documento interno no
+            reemplaza una GRE cuando sea exigible.
           </p>
           <div className="space-y-2">
             {dispatch.lines.map((line) => {
@@ -144,7 +148,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             <input className={field} maxLength={180} value={receiver}
               onChange={(event) => setReceiver(event.target.value)} />
           </label>
-          <label className={label}>Referencia GRE verificada externamente
+          <label className={label}>Referencia GRE del retorno (no de la editorial)
             <input className={field} maxLength={120} value={reference}
               onChange={(event) => setReference(event.target.value.toUpperCase())}
               placeholder="EG01-00000001" />
