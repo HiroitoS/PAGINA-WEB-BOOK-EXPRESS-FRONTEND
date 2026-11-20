@@ -155,13 +155,19 @@ export default function ERPInventarioPage() {
           <h1 className="mt-1 text-2xl font-black tracking-tight text-gray-950">Inventario</h1>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">Controla las existencias, ingresos y costos de tus libros.</p>
         </div>
-        {puedeVerUbicaciones && (
-          <Link to="/admin/erp/almacen/ubicaciones"
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:border-red-300 hover:text-red-700">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link to="/admin/erp/almacen/stock-por-almacen"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white transition-colors hover:bg-red-800">
             <FiMapPin size={16} aria-hidden="true" />
-            Gestionar almacenes
+            Existencias por almacén
           </Link>
-        )}
+          {puedeVerUbicaciones && (
+            <Link to="/admin/erp/almacen/ubicaciones"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-700 transition-colors hover:border-red-300 hover:text-red-700">
+              Gestionar ubicaciones
+            </Link>
+          )}
+        </div>
       </header>
       {(avisos.recientes.length > 0 || avisos.pendientes_aprobacion > 0) && (
         <section aria-label="Novedades de recepción" className="rounded-xl border border-gray-200 bg-white px-3 py-3 sm:px-4">
