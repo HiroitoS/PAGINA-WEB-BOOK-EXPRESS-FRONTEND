@@ -193,6 +193,13 @@ export async function consultarAlertasReposicion(locationId) {
   return data;
 }
 
+export async function consultarSeguimientoConsignaciones() {
+  const { data } = await axiosClient.get(
+    `${LOCATION_BASE}/seguimiento-consignaciones/`,
+  );
+  return data;
+}
+
 export async function consultarResumenUbicaciones() {
   const { data } = await axiosClient.get(`${LOCATION_BASE}/resumen-ubicaciones/`);
   return data;
