@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FiArrowLeft, FiCheckCircle, FiFileText, FiPrinter } from "react-icons/fi";
 import printInternalReturn from "./printInternalReturn";
-import { prepararRetornoDestino, registrarRetornoDestino } from "../../api/warehouseApi";
+import { prepararRetornoDestino, registrarRetornoDestino, simularRetornoDestino } from "../../api/warehouseApi";
 
 const field = "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 focus:border-red-700 focus:outline-none";
 const label = "block text-xs font-semibold text-gray-900";
@@ -27,6 +27,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [recentPlanId, setRecentPlanId] = useState(null);
+  const [simulacion, setSimulacion] = useState(null);
 
   const plans = dispatch.internal_return_plans ?? [];
   const recentPlan = plans.find((plan) => plan.id === recentPlanId)
@@ -63,6 +64,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
     setBusy(true);
     setError("");
     setNotice("");
+    setSimulacion(null);
     try {
       const result = await prepararRetornoDestino(operationId, {
         idempotency_key: key,
@@ -76,6 +78,21 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
       setRecentPlanId(plan?.id ?? null);
       setNotice(`Documento ${result.internal_return_number} generado. Puedes abrirlo e imprimirlo aquí mismo; no se movió inventario.`);
       onSaved?.(result);
+    } catch (err) {
+      setError(readError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function simulate() {
+    if (!enabled || busy || !validQuantities || requested.length === 0) return;
+    setBusy(true);
+    setError("");
+    setSimulacion(null);
+    try {
+      const response = await simularRetornoDestino(operationId, { lines: requested });
+      setSimulacion(response);
     } catch (err) {
       setError(readError(err));
     } finally {
@@ -103,6 +120,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
       setConfirmed(false);
       setExpanded(false);
       setNotice("Retorno físico registrado en el inventario.");
+      setSimulacion(null);
       onSaved?.(result);
     } catch (err) {
       setError(readError(err));
@@ -234,6 +252,30 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             <textarea rows={2} maxLength={500} className={field} value={reason}
               onChange={(event) => setReason(event.target.value)} />
           </label>
+          <div className="rounded-xl border border-gray-200 bg-white p-3">
+            <p className="text-sm font-bold text-gray-950">Prueba del retorno sin afectar existencias</p>
+            <p className="mt-1 text-xs leading-5 text-gray-600">
+              Comprueba cantidades, saldos y restricciones antes de realizar un movimiento real.
+              Esta prueba no pide GRE, no crea documento ni modifica inventario.
+            </p>
+            <button type="button" disabled={!enabled || busy || !validQuantities || requested.length === 0}
+              onClick={simulate}
+              className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
+              {busy ? "Comprobando…" : "Simular devolución de los libros seleccionados"}
+            </button>
+            {simulacion && (
+              <div role="status" className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-900">
+                <p className="font-bold">Simulación correcta: {simulacion.quantity} libros</p>
+                <p className="mt-1 text-xs text-gray-700">
+                  {simulacion.source} → {simulacion.destination}. No se movió ningún libro.
+                  No se emitió GRE ni se confirmó recepción.
+                </p>
+                <p className="mt-1 text-xs text-gray-600">
+                  La confirmación real volverá a comprobar el saldo y la documentación aplicable.
+                </p>
+              </div>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={!canPrepare} onClick={prepare}
               className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
