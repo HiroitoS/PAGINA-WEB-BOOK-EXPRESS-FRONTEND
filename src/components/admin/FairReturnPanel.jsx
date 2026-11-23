@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FiArrowLeft, FiCheckCircle, FiPrinter } from "react-icons/fi";
+import { FiArrowLeft, FiCheckCircle, FiFileText, FiPrinter } from "react-icons/fi";
 import printInternalReturn from "./printInternalReturn";
 import { prepararRetornoDestino, registrarRetornoDestino } from "../../api/warehouseApi";
 
@@ -26,7 +26,11 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [recentPlanId, setRecentPlanId] = useState(null);
 
+  const plans = dispatch.internal_return_plans ?? [];
+  const recentPlan = plans.find((plan) => plan.id === recentPlanId)
+    ?? plans.at(-1) ?? null;
   const returned = new Map();
   for (const entry of dispatch.destination_returns ?? dispatch.fair_returns ?? []) {
     for (const item of entry.details ?? []) {
@@ -66,7 +70,11 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
         lines: requested,
       });
       setKey(crypto.randomUUID());
-      setNotice(`Constancia interna ${result.internal_return_number} registrada. No se han trasladado libros.`);
+      const plan = (result.internal_return_plans ?? []).find(
+        (item) => item.reference === result.internal_return_number,
+      );
+      setRecentPlanId(plan?.id ?? null);
+      setNotice(`Documento ${result.internal_return_number} generado. Puedes abrirlo e imprimirlo aquí mismo; no se movió inventario.`);
       onSaved?.(result);
     } catch (err) {
       setError(readError(err));
@@ -122,7 +130,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
           </button>
         )}
       </div>
-      {(dispatch.fair_returns ?? []).length > 0 && (
+      {(dispatch.destination_returns ?? dispatch.fair_returns ?? []).length > 0 && (
         <details className="rounded-lg border border-gray-200 bg-gray-50 p-3">
           <summary className="cursor-pointer text-xs font-bold text-gray-950">
             Historial de retornos ({(dispatch.destination_returns ?? dispatch.fair_returns ?? []).length})
@@ -140,13 +148,13 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
           </div>
         </details>
       )}
-      {(dispatch.internal_return_plans ?? []).length > 0 && (
+      {plans.length > 0 && (
         <details className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
           <summary className="cursor-pointer font-bold text-gray-900">
-            Constancias internas de retorno ({dispatch.internal_return_plans.length})
+            Historial de documentos internos ({plans.length})
           </summary>
           <div className="mt-2 space-y-2">
-            {dispatch.internal_return_plans.map((plan) => (
+            {plans.map((plan) => (
               <div key={plan.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3">
                 <p className="min-w-0 flex-1 text-gray-700">
                   <strong className="text-gray-950">{plan.reference}</strong> · {plan.reason}
@@ -163,6 +171,26 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             ))}
           </div>
         </details>
+      )}
+      {recentPlan && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-300 bg-gray-50 p-4">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-2 text-xs font-black text-gray-950">
+              <FiFileText aria-hidden="true" /> Documento interno generado automáticamente
+            </p>
+            <p className="mt-1 text-lg font-black tracking-wide text-red-700">{recentPlan.reference}</p>
+            <p className="mt-1 text-xs leading-5 text-gray-600">
+              Puedes volver a imprimirlo cuando lo necesites. No certifica salida física ni GRE.
+            </p>
+          </div>
+          <button type="button" onClick={() => {
+            if (!printInternalReturn(recentPlan, dispatch)) {
+              setError("Permite ventanas emergentes para abrir el documento.");
+            }
+          }} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800">
+            <FiPrinter aria-hidden="true" /> Ver / imprimir documento
+          </button>
+        </div>
       )}
       {notice && <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs font-bold text-gray-900">{notice}</p>}
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-800">{error}</p>}
@@ -209,14 +237,17 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={!canPrepare} onClick={prepare}
               className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
-              Generar documento interno de retorno
+              {busy ? "Generando documento…" : "Generar / recuperar documento BE-RI"}
             </button>
-            <p className="text-xs text-gray-600">Sin alterar stock ni registrar salida.</p>
+            <p className="text-xs text-gray-600">La serie y numeración BE-RI se asignan automáticamente, sin mover existencias.</p>
           </div>
-          <label className={label}>GRE del retorno, únicamente si corresponde al traslado real
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+            <strong>Dos documentos distintos:</strong> BE-RI es la constancia interna automática de Book Express. La GRE, cuando corresponda, se emite por el canal de SUNAT y tiene una numeración distinta. No debes copiar BE-RI ni la guía del proveedor en este campo.
+          </div>
+          <label className={label}>Número de la GRE real del retorno (cuando corresponda)
             <input className={field} maxLength={120} value={reference}
               onChange={(event) => setReference(event.target.value.toUpperCase())}
-              placeholder="EG01-00000001" />
+              placeholder="Escribe el número real emitido, no el BE-RI" />
           </label>
           <label className="flex items-start gap-2 text-xs leading-5 text-gray-800">
             <input type="checkbox" checked={confirmed} className="mt-1"
