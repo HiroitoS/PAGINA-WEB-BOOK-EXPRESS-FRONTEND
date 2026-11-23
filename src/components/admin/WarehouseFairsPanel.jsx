@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { Link } from "react-router";
-import { FiCalendar, FiMapPin, FiPlus, FiX } from "react-icons/fi";
+import { FiAlertTriangle, FiCalendar, FiMapPin, FiPlus, FiSearch, FiX } from "react-icons/fi";
 import { listarFeriasAlmacen, registrarFeriaAlmacen } from "../../api/warehouseApi";
 
 const inputClass = "mt-1 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100";
@@ -29,6 +30,21 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
   const [formulario, setFormulario] = useState(nuevoFormulario);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [buscar, setBuscar] = useState("");
+  const reducirMovimiento = useReducedMotion();
+  const agrupadas = useMemo(() => {
+    const groups = new Map();
+    const term = buscar.trim().toLocaleLowerCase("es");
+    for (const feria of ferias) {
+      const schools = feria.schools?.length ? feria.schools : ["Sin colegio asociado todavía"];
+      if (term && ![feria.name, feria.venue_name, ...schools].join(" ").toLocaleLowerCase("es").includes(term)) continue;
+      // Mostrar un evento mixto una sola vez para no aparentar dos custodias.
+      const groupName = schools.length > 1 ? "Ferias que requieren revisión" : schools[0];
+      if (!groups.has(groupName)) groups.set(groupName, []);
+      groups.get(groupName).push(feria);
+    }
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b, "es"));
+  }, [ferias, buscar]);
 
   useEffect(() => {
     let ignore = false;
@@ -94,8 +110,8 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
             Ferias registradas {!cargando && <span className="text-sm font-semibold text-gray-500">({ferias.length})</span>}
           </h2>
           <p className="mt-1 text-xs leading-5 text-gray-600">
-            Cada feria registrada crea su depósito temporal de custodia. No se requiere
-            un segundo subalmacén ni se modifica el stock al crearla.
+            Las ferias se agrupan por colegio cuando ya tienen una distribución vinculada.
+            Cada evento conserva su registro y existencias; agrupar no traslada libros.
           </p>
         </div>
         {puedeGestionar && !mostrarFormulario && (
@@ -171,25 +187,65 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
         </p>
       )}
       {ferias.length > 0 && (
-        <div className="divide-y divide-gray-200 overflow-hidden rounded-xl border border-gray-200">
-          {ferias.map((feria) => (
-            <article key={feria.id} className="grid gap-2 px-3 py-3 sm:grid-cols-2 sm:gap-4 sm:px-4">
-              <div className="min-w-0">
-                <h3 className="text-sm font-bold text-gray-950">{feria.name}</h3>
-                <p className="mt-1 flex items-start gap-2 text-xs leading-5 text-gray-700">
-                  <FiMapPin aria-hidden="true" className="mt-0.5 shrink-0" />
-                  <span>{feria.venue_name} · {feria.venue_address}</span>
-                </p>
+        <div className="space-y-4">
+          <label className="relative block text-sm font-bold text-gray-800">
+            <span className="mb-2 block">Buscar por colegio o feria</span>
+            <FiSearch aria-hidden="true" className="pointer-events-none absolute bottom-3.5 left-3 text-gray-500" />
+            <input type="search" value={buscar}
+              onChange={(event) => setBuscar(event.target.value)}
+              maxLength={100} placeholder="Colegio, feria o recinto"
+              className={inputClass + " pl-10"} />
+          </label>
+          {agrupadas.length === 0 && (
+            <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
+              No hay ferias que coincidan con la búsqueda.
+            </p>
+          )}
+          {agrupadas.map(([colegio, eventos]) => (
+            <motion.section key={colegio} aria-label={`Ferias de ${colegio}`}
+              initial={reducirMovimiento ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}
+              className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
+                <div>
+                  <h3 className="text-sm font-black text-gray-950">{colegio}</h3>
+                  <p className="mt-0.5 text-xs text-gray-600">
+                    {eventos.length} {eventos.length === 1 ? "feria registrada" : "ferias registradas"}
+                  </p>
+                </div>
+                <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-700">
+                  Agrupación por colegio
+                </span>
               </div>
-              <div className="min-w-0 space-y-1 text-xs text-gray-700 sm:text-right">
-                <p className="inline-flex items-center gap-1.5 sm:justify-end">
-                  <FiCalendar aria-hidden="true" />
-                  {feria.starts_on.split("-").reverse().join("/")} – {feria.ends_on.split("-").reverse().join("/")}
-                </p>
-                <p>Responsable: <strong>{feria.responsible_name}</strong></p>
-                <p className="text-gray-500">Custodia: {feria.location_name}</p>
+              <div className="divide-y divide-gray-100">
+                {eventos.map((feria) => (
+                  <article key={feria.id} className="grid gap-3 p-4 sm:grid-cols-2">
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold text-gray-950">{feria.name}</h4>
+                      <p className="mt-1 flex items-start gap-2 text-xs leading-5 text-gray-700">
+                        <FiMapPin aria-hidden="true" className="mt-0.5 shrink-0" />
+                        <span>{feria.venue_name} · {feria.venue_address}</span>
+                      </p>
+                      {feria.school_conflict && (
+                        <p role="alert" className="mt-2 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">
+                          <FiAlertTriangle aria-hidden="true" className="mt-0.5 shrink-0" />
+                          Entregas de colegios distintos: {feria.schools.join(", ")}.
+                          Conciliar antes de nuevos movimientos.
+                        </p>
+                      )}
+                    </div>
+                    <div className="min-w-0 space-y-1 text-xs text-gray-700 sm:text-right">
+                      <p className="inline-flex items-center gap-1.5 sm:justify-end">
+                        <FiCalendar aria-hidden="true" />
+                        {feria.starts_on.split("-").reverse().join("/")} – {feria.ends_on.split("-").reverse().join("/")}
+                      </p>
+                      <p>Responsable: <strong>{feria.responsible_name}</strong></p>
+                      <p className="text-gray-500">Custodia registrada: {feria.location_name}</p>
+                    </div>
+                  </article>
+                ))}
               </div>
-            </article>
+            </motion.section>
           ))}
         </div>
       )}
