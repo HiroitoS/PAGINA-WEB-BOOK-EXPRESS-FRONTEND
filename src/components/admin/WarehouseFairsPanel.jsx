@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Link } from "react-router";
 import { FiAlertTriangle, FiCalendar, FiMapPin, FiPlus, FiSearch, FiX } from "react-icons/fi";
-import { listarFeriasAlmacen, registrarFeriaAlmacen } from "../../api/warehouseApi";
+import { listarFeriasAlmacen, listarUbicacionesAlmacen, registrarFeriaAlmacen } from "../../api/warehouseApi";
 
 const inputClass = "mt-1 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100";
 
@@ -25,6 +25,7 @@ function leerError(error) {
 export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
   const [ferias, setFerias] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [heredadas, setHeredadas] = useState([]);
   const [guardando, setGuardando] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [formulario, setFormulario] = useState(nuevoFormulario);
@@ -48,8 +49,11 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
 
   useEffect(() => {
     let ignore = false;
-    listarFeriasAlmacen().then((data) => {
-      if (!ignore) setFerias(Array.isArray(data) ? data : []);
+    Promise.all([listarFeriasAlmacen(), listarUbicacionesAlmacen()]).then(([data, locations]) => {
+      if (ignore) return;
+      setFerias(Array.isArray(data) ? data : []);
+      const all = Array.isArray(locations) ? locations : locations?.results ?? [];
+      setHeredadas(all.filter((item) => item.kind === "fair" && !item.fair_event_id));
     }).catch((err) => {
       if (!ignore) setError(leerError(err));
     }).finally(() => {
@@ -250,6 +254,30 @@ export default function WarehouseFairsPanel({ puedeGestionar, onCreated }) {
         </div>
       )}
 
+      {heredadas.length > 0 && (
+        <details className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <summary className="cursor-pointer text-sm font-black text-amber-950">
+            Ubicaciones de feria anteriores por revisar ({heredadas.length})
+          </summary>
+          <p className="mt-2 text-xs leading-5 text-amber-900">
+            Estas ubicaciones figuran como ferias, pero no tienen un evento asociado.
+            Pueden conservar libros reales: no se fusionan ni se les asigna un colegio
+            automáticamente. Jefatura debe comprobar su custodia antes de reorganizarlas.
+          </p>
+          <div className="mt-3 space-y-2">
+            {heredadas.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white px-3 py-2">
+                <p className="text-xs font-bold text-gray-900">{item.name}</p>
+                <span className="text-xs text-gray-600">{item.is_active ? "Activa" : "Inactiva"}</span>
+              </div>
+            ))}
+          </div>
+          <Link to="/admin/erp/almacen/stock-por-almacen"
+            className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-amber-300 bg-white px-3 text-xs font-bold text-amber-950 hover:border-amber-500">
+            Ver existencias por ubicación
+          </Link>
+        </details>
+      )}
       <p className="rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-700">
         Siguiente paso: elegir la feria como destino en
         {" "}<Link to="/admin/erp/almacen/distribuciones" className="font-bold text-red-700 underline underline-offset-2">
