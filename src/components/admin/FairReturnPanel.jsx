@@ -20,6 +20,8 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
   const [quantities, setQuantities] = useState({});
   const [receiver, setReceiver] = useState("");
   const [reference, setReference] = useState("");
+  const [documentationStatus, setDocumentationStatus] = useState("gre");
+  const [documentationNote, setDocumentationNote] = useState("");
   const [reason, setReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [key, setKey] = useState(() => crypto.randomUUID());
@@ -54,8 +56,10 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
     && reason.trim().length >= 15;
   const canSubmit = enabled && !busy && validQuantities && requested.length > 0
     && receiver.trim().split(/\s+/).length >= 2
-    && grePattern.test(reference.trim().toUpperCase())
-    && Number(reference.trim().split("-")[1]) > 0
+    && (documentationStatus === "gre"
+      ? grePattern.test(reference.trim().toUpperCase())
+        && Number(reference.trim().split("-")[1]) > 0
+      : documentationNote.trim().length >= 40)
     && reason.trim().length >= 15 && confirmed;
 
   async function prepare(event) {
@@ -110,7 +114,9 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
       const result = await registrarRetornoDestino(operationId, {
         idempotency_key: key,
         receiver_name: receiver.trim(),
-        transport_reference: reference.trim().toUpperCase(),
+        transport_reference: documentationStatus === "gre" ? reference.trim().toUpperCase() : "",
+        documentation_status: documentationStatus,
+        documentation_note: documentationStatus === "pending_review" ? documentationNote.trim() : "",
         reason: reason.trim(),
         received_confirmed: true,
         lines: requested,
@@ -118,6 +124,8 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
       setKey(crypto.randomUUID());
       setQuantities({});
       setConfirmed(false);
+      setDocumentationNote("");
+      setReference("");
       setExpanded(false);
       setNotice("Retorno físico registrado en el inventario.");
       setSimulacion(null);
@@ -160,7 +168,10 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
                   {item.details.reduce((total, line) => total + line.quantity, 0)} libros retornados
                 </p>
                 <p className="mt-1">Recibió: {item.received_by}</p>
-                <p className="mt-1">Sustento: {item.reference}</p>
+                <p className="mt-1">Documentación: {item.documentation_followup_required
+                  ? "Pendiente de revisión por Jefatura" : "GRE declarada externamente"}</p>
+                {item.reference && <p className="mt-1">Referencia: {item.reference}</p>}
+                {item.documentation_note && <p className="mt-1">Observación: {item.documentation_note}</p>}
               </div>
             ))}
           </div>
@@ -286,11 +297,41 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
             <strong>Dos documentos distintos:</strong> BE-RI es la constancia interna automática de Book Express. La GRE, cuando corresponda, se emite por el canal de SUNAT y tiene una numeración distinta. No debes copiar BE-RI ni la guía del proveedor en este campo.
           </div>
-          <label className={label}>Número de la GRE real del retorno (cuando corresponda)
-            <input className={field} maxLength={120} value={reference}
-              onChange={(event) => setReference(event.target.value.toUpperCase())}
-              placeholder="Escribe el número real emitido, no el BE-RI" />
-          </label>
+          <fieldset className="space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+            <legend className="px-1 text-sm font-bold text-gray-950">Estado documental de la recepción física</legend>
+            <label className="flex items-center gap-2 text-sm text-gray-800">
+              <input type="radio" name={`documentation-${operationId}`}
+                checked={documentationStatus === "gre"}
+                onChange={() => setDocumentationStatus("gre")} />
+              Dispongo de GRE real emitida para este traslado
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-800">
+              <input type="radio" name={`documentation-${operationId}`}
+                checked={documentationStatus === "pending_review"}
+                onChange={() => setDocumentationStatus("pending_review")} />
+              Los libros ya regresaron, pero la documentación está pendiente de revisión
+            </label>
+            {documentationStatus === "gre" ? (
+              <label className={label}>Número de la GRE emitida
+                <input className={field} maxLength={120} value={reference}
+                  onChange={(event) => setReference(event.target.value.toUpperCase())}
+                  placeholder="Número real de la GRE, no de BE-RI" />
+              </label>
+            ) : (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+                <p className="text-xs leading-5 text-amber-950">
+                  Este registro documenta una recepción física que YA ocurrió. No autoriza
+                  realizar un traslado sin GRE ni regulariza una infracción. Requiere
+                  Jefatura y deja seguimiento documental auditable.
+                </p>
+                <label className={label}>Observación para Jefatura (mínimo 40 caracteres)
+                  <textarea rows={3} maxLength={500} value={documentationNote}
+                    onChange={(event) => setDocumentationNote(event.target.value)}
+                    className={field} placeholder="Describir cuándo y cómo llegaron los libros y qué documentación debe revisarse" />
+                </label>
+              </div>
+            )}
+          </fieldset>
           <label className="flex items-start gap-2 text-xs leading-5 text-gray-800">
             <input type="checkbox" checked={confirmed} className="mt-1"
               onChange={(event) => setConfirmed(event.target.checked)} />
@@ -298,7 +339,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
           </label>
           <button type="submit" disabled={!canSubmit}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
-            <FiCheckCircle aria-hidden="true" /> {busy ? "Registrando…" : "Confirmar retorno físico"}
+            <FiCheckCircle aria-hidden="true" /> {busy ? "Registrando…" : documentationStatus === "pending_review" ? "Registrar recepción física observada" : "Confirmar retorno físico"}
           </button>
         </form>
       )}
