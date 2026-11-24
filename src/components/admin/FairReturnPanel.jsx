@@ -53,13 +53,23 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
   });
   const allowPreparation = canPrepare && !busy && validQuantities && requested.length > 0
     && reason.trim().length >= 15;
+  const receiveNameValid = receiver.trim().split(/\s+/).length >= 2;
+  const reasonValid = reason.trim().length >= 15;
+  const missing = [
+    ...(requested.length === 0 ? ["Indica la cantidad de libros que realmente regresaron."] : []),
+    ...(!validQuantities ? ["Revisa las cantidades: no pueden superar lo pendiente."] : []),
+    ...(!receiveNameValid ? ["Escribe nombres y apellidos de quien recibe."] : []),
+    ...(!reasonValid ? ["Describe el motivo con al menos 15 caracteres."] : []),
+    ...(!confirmed ? ["Marca la confirmación de recepción física."] : []),
+    ...(!canConfirm ? ["La confirmación requiere autorización de Jefatura de Almacén."] : []),
+  ];
   const canSubmit = canConfirm && !busy && validQuantities && requested.length > 0
-    && receiver.trim().split(/\s+/).length >= 2
+    && receiveNameValid
     && (mode === "fair" || (documentationStatus === "gre"
       ? grePattern.test(reference.trim().toUpperCase())
         && Number(reference.trim().split("-")[1]) > 0
       : documentationNote.trim().length >= 40))
-    && reason.trim().length >= 15 && confirmed;
+    && reasonValid && confirmed;
 
   async function prepare(event) {
     event.preventDefault();
@@ -111,7 +121,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
       setReference("");
       setExpanded(false);
       setNotice("Retorno físico registrado en el inventario.");
-        onSaved?.(result);
+      onSaved?.(result);
     } catch (err) {
       setError(readError(err));
     } finally {
@@ -214,9 +224,12 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
             <p className="mt-1">Primero puedes generar una constancia interna automática BE-RI
               para contar y preparar el retorno. Esto no mueve existencias ni acredita
               transporte. La guía de tu editorial corresponde a la compra, no a este retorno.</p>
-            <p className="mt-1">Para confirmar el regreso físico entre direcciones diferentes,
-              identifica la GRE que realmente sustenta ese traslado cuando corresponda.
-              La constancia interna no la sustituye.</p>
+            {mode !== "fair" && (
+              <p className="mt-1">
+                Para el transporte físico, verifica la documentación que corresponda.
+                La constancia interna no la sustituye.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             {dispatch.lines.map((line) => {
@@ -277,9 +290,8 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
                 Los libros que no regresan <strong>no se consideran vendidos automáticamente</strong>.
                 El cierre deberá conciliar ventas registradas, sobrantes y diferencias.
               </p>
-              <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
-                El control interno no reemplaza una GRE exigible por el transporte
-                entre colegio y Book Express. Jefatura revisará el sustento correspondiente.
+              <p className="mt-2 text-xs text-gray-600">
+                La documentación de transporte, cuando sea exigible, se revisa por separado.
               </p>
             </div>
           ) : (
@@ -333,6 +345,22 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
               ? "Confirmo que los libros ya regresaron físicamente, fueron contados y la falta de documentación quedó registrada para revisión de Jefatura."
               : "Confirmo que los libros retornaron físicamente, fueron contados y se verificó el documento de transporte declarado."}
           </label>
+          {!canSubmit && !busy && (
+            <div role="status" className="rounded-xl border border-gray-200 bg-white p-3 text-xs text-gray-800">
+              <p className="font-bold text-gray-950">Para habilitar la confirmación:</p>
+              <ul className="mt-2 list-inside list-disc space-y-1">
+                {missing.map((item) => <li key={item}>{item}</li>)}
+                {mode !== "fair" && documentationStatus === "gre"
+                  && !grePattern.test(reference.trim().toUpperCase()) && (
+                    <li>Registra el número válido de la GRE emitida.</li>
+                  )}
+                {mode !== "fair" && documentationStatus === "pending_review"
+                  && documentationNote.trim().length < 40 && (
+                    <li>Completa la observación documental (mínimo 40 caracteres).</li>
+                  )}
+              </ul>
+            </div>
+          )}
           {!canConfirm && (
             <p className="rounded-lg border border-gray-200 bg-white p-3 text-xs leading-5 text-gray-700">
               Puedes preparar e imprimir el BE-RI. La confirmación física
