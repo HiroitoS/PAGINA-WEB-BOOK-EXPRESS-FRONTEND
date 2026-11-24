@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FiArrowLeft, FiCheckCircle, FiFileText, FiPrinter } from "react-icons/fi";
 import printInternalReturn from "./printInternalReturn";
-import { prepararRetornoDestino, registrarRetornoDestino, simularRetornoDestino } from "../../api/warehouseApi";
+import { prepararRetornoDestino, registrarRetornoDestino } from "../../api/warehouseApi";
 
 const field = "mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 focus:border-red-700 focus:outline-none";
 const label = "block text-xs font-semibold text-gray-900";
@@ -20,7 +20,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
   const [quantities, setQuantities] = useState({});
   const [receiver, setReceiver] = useState("");
   const [reference, setReference] = useState("");
-  const [documentationStatus, setDocumentationStatus] = useState("gre");
+  const [documentationStatus, setDocumentationStatus] = useState(mode === "fair" ? "internal_control" : "gre");
   const [documentationNote, setDocumentationNote] = useState("");
   const [reason, setReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -29,7 +29,6 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [recentPlanId, setRecentPlanId] = useState(null);
-  const [simulacion, setSimulacion] = useState(null);
 
   const plans = dispatch.internal_return_plans ?? [];
   const recentPlan = plans.find((plan) => plan.id === recentPlanId)
@@ -56,10 +55,10 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
     && reason.trim().length >= 15;
   const canSubmit = enabled && !busy && validQuantities && requested.length > 0
     && receiver.trim().split(/\s+/).length >= 2
-    && (documentationStatus === "gre"
+    && (mode === "fair" || (documentationStatus === "gre"
       ? grePattern.test(reference.trim().toUpperCase())
         && Number(reference.trim().split("-")[1]) > 0
-      : documentationNote.trim().length >= 40)
+      : documentationNote.trim().length >= 40))
     && reason.trim().length >= 15 && confirmed;
 
   async function prepare(event) {
@@ -68,7 +67,6 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
     setBusy(true);
     setError("");
     setNotice("");
-    setSimulacion(null);
     try {
       const result = await prepararRetornoDestino(operationId, {
         idempotency_key: key,
@@ -89,21 +87,6 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
     }
   }
 
-  async function simulate() {
-    if (!enabled || busy || !validQuantities || requested.length === 0) return;
-    setBusy(true);
-    setError("");
-    setSimulacion(null);
-    try {
-      const response = await simularRetornoDestino(operationId, { lines: requested });
-      setSimulacion(response);
-    } catch (err) {
-      setError(readError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function submit(event) {
     event.preventDefault();
     if (!canSubmit) return;
@@ -114,9 +97,9 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
       const result = await registrarRetornoDestino(operationId, {
         idempotency_key: key,
         receiver_name: receiver.trim(),
-        transport_reference: documentationStatus === "gre" ? reference.trim().toUpperCase() : "",
-        documentation_status: documentationStatus,
-        documentation_note: documentationStatus === "pending_review" ? documentationNote.trim() : "",
+        transport_reference: mode !== "fair" && documentationStatus === "gre" ? reference.trim().toUpperCase() : "",
+        documentation_status: mode === "fair" ? "internal_control" : documentationStatus,
+        documentation_note: mode !== "fair" && documentationStatus === "pending_review" ? documentationNote.trim() : "",
         reason: reason.trim(),
         received_confirmed: true,
         lines: requested,
@@ -128,8 +111,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
       setReference("");
       setExpanded(false);
       setNotice("Retorno físico registrado en el inventario.");
-      setSimulacion(null);
-      onSaved?.(result);
+        onSaved?.(result);
     } catch (err) {
       setError(readError(err));
     } finally {
@@ -168,8 +150,10 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
                   {item.details.reduce((total, line) => total + line.quantity, 0)} libros retornados
                 </p>
                 <p className="mt-1">Recibió: {item.received_by}</p>
-                <p className="mt-1">Documentación: {item.documentation_followup_required
-                  ? "Pendiente de revisión por Jefatura" : "GRE declarada externamente"}</p>
+                <p className="mt-1">Documentación: {item.documentation_status === "internal_control"
+                  ? "Control interno de feria · revisión documental pendiente"
+                  : item.documentation_followup_required
+                    ? "Pendiente de revisión por Jefatura" : "GRE declarada externamente"}</p>
                 {item.reference && <p className="mt-1">Referencia: {item.reference}</p>}
                 {item.documentation_note && <p className="mt-1">Observación: {item.documentation_note}</p>}
               </div>
@@ -275,30 +259,6 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
               Una cantidad ingresada es inválida o supera el saldo pendiente del lote.
             </p>
           )}
-          <div className="rounded-xl border border-gray-200 bg-white p-3">
-            <p className="text-sm font-bold text-gray-950">Prueba del retorno sin afectar existencias</p>
-            <p className="mt-1 text-xs leading-5 text-gray-600">
-              Comprueba cantidades, saldos y restricciones antes de realizar un movimiento real.
-              Esta prueba no pide GRE, no crea documento ni modifica inventario.
-            </p>
-            <button type="button" disabled={!enabled || busy || !validQuantities || requested.length === 0}
-              onClick={simulate}
-              className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
-              {busy ? "Comprobando…" : "Simular devolución de los libros seleccionados"}
-            </button>
-            {simulacion && (
-              <div role="status" className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-900">
-                <p className="font-bold">Simulación correcta: {simulacion.quantity} libros</p>
-                <p className="mt-1 text-xs text-gray-700">
-                  {simulacion.source} → {simulacion.destination}. No se movió ningún libro.
-                  No se emitió GRE ni se confirmó recepción.
-                </p>
-                <p className="mt-1 text-xs text-gray-600">
-                  La confirmación real volverá a comprobar el saldo y la documentación aplicable.
-                </p>
-              </div>
-            )}
-          </div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" disabled={!canPrepare} onClick={prepare}
               className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
@@ -306,10 +266,24 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             </button>
             <p className="text-xs text-gray-600">La serie y numeración BE-RI se asignan automáticamente, sin mover existencias.</p>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
-            <strong>Dos documentos distintos:</strong> BE-RI es la constancia interna automática de Book Express. La GRE, cuando corresponda, se emite por el canal de SUNAT y tiene una numeración distinta. No debes copiar BE-RI ni la guía del proveedor en este campo.
-          </div>
-          <fieldset className="space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+          {mode === "fair" ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-sm font-black text-gray-950">Devolución interna de feria</p>
+              <p className="mt-1 text-xs leading-5 text-gray-700">
+                Cuenta los libros sobrantes y registra la recepción en el almacén.
+                No ingreses una serie ni una guía manual. BE-RI se numera automáticamente.
+              </p>
+              <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+                El control interno no reemplaza una GRE exigible por el transporte
+                entre colegio y Book Express. Jefatura revisará el sustento correspondiente.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+                La constancia interna BE-RI no sustituye una GRE aplicable al traslado de consignaciones.
+              </div>
+              <fieldset className="space-y-2 rounded-xl border border-gray-200 bg-white p-3">
             <legend className="px-1 text-sm font-bold text-gray-950">Estado documental de la recepción física</legend>
             <label className="flex items-center gap-2 text-sm text-gray-800">
               <input type="radio" name={`documentation-${operationId}`}
@@ -343,17 +317,21 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
                 </label>
               </div>
             )}
-          </fieldset>
+              </fieldset>
+            </>
+          )}
           <label className="flex items-start gap-2 text-xs leading-5 text-gray-800">
             <input type="checkbox" checked={confirmed} className="mt-1"
               onChange={(event) => setConfirmed(event.target.checked)} />
-            {documentationStatus === "pending_review"
+            {mode === "fair"
+              ? "Confirmo que los libros sobrantes ya regresaron físicamente al almacén y fueron contados. El control documental queda pendiente de revisión."
+              : documentationStatus === "pending_review"
               ? "Confirmo que los libros ya regresaron físicamente, fueron contados y la falta de documentación quedó registrada para revisión de Jefatura."
               : "Confirmo que los libros retornaron físicamente, fueron contados y se verificó el documento de transporte declarado."}
           </label>
           <button type="submit" disabled={!canSubmit}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
-            <FiCheckCircle aria-hidden="true" /> {busy ? "Registrando…" : documentationStatus === "pending_review" ? "Registrar recepción física observada" : "Confirmar retorno físico"}
+            <FiCheckCircle aria-hidden="true" /> {busy ? "Registrando…" : mode === "fair" ? "Confirmar devolución interna de feria" : documentationStatus === "pending_review" ? "Registrar recepción física observada" : "Confirmar retorno físico"}
           </button>
         </form>
       )}
