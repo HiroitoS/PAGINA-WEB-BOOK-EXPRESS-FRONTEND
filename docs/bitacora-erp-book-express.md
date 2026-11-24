@@ -1,5 +1,14 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 24/11/2026 — causa exacta del botón deshabilitado y mensajes de feria [CAMBIO EN RAMA; CI PENDIENTE]
+
+Capturas de usuario: la sección visible **YA NO contiene simulación**. Muestra «Devolución interna de feria», BE-RI automático y botón rosa **deshabilitado**. Lectura de código `FairReturnPanel.jsx`: el botón solo se habilita con cantidad positiva y válida (no exceder lo no retornado), receptor con **dos palabras como mínimo**, motivo de 15 caracteres, checkbox marcado y los permisos efectivos `warehouse.manage_distribution_operations` + `warehouse.manage_stock_transfers` + `warehouse.validate_receiving`. Las capturas recortadas NO permiten confirmar la cantidad y nombre; no afirmar que el backend esté bloqueando ni que se deba a GRE. En feria `documentation_status=internal_control`, **no pide GRE**. El almacenero sin validar recepciones prepara BE-RI, el jefe con permisos efectivos confirma.
+
+Frontend commit `6d332749`: en vez de dejar botón deshabilitado silenciosamente se muestra tarjeta de requisitos concretos faltantes (cantidad, nombre/apellido, motivo, casilla, autorización); elimina texto GRE repetido de feria y deja una sola indicación documental discreta, corrige sangría. Test visual LOCAL de este commit pendiente, CI más reciente pendiente. Ruta: ERP → Almacén → Movimientos → Distribuciones → Recibidas → ANDINO. En el ejemplo de 15 LECTOPOLIS 4 pendientes, escribir 10, receptor «Nombre Apellido», motivo >15 y confirmar casilla; verificar estados del botón; NO registrar movimiento ficticio en base habitual. Almacenamiento histórico intacto, main/Tecnoweb no alterados.
+
+Pendientes funcionales: probar retorno físico real en PostgreSQL aislado; cierre conciliado de feria, consignación y punto de venta = entregado - ventas registradas - devoluciones - diferencias justificadas; BE-RI automático por remesa, contratos de roles; GRE SUNAT por devolución a proveedor/consignación según supuesto legal. No declarar cerrado todo Almacén.
+
+
 ## 24/11/2026 — Feria: retorno interno simplificado, sin simulador [RAMA; CI NUEVO PENDIENTE]
 
 **Negocio aclarado:** el usuario exige una feria REAL en colegios con custodia individual, control interno de salidas y sobrantes. Ejemplo 100 libros enviados, 80 vendidos, 20 retornados. **No concluir que 80 están vendidos solo por el diferencial**: el ERP de Almacén puede registrar y mover de vuelta los 20 sobrantes físicos, pero los 80 deben descontarse por ventas reales desde el módulo comercial con conciliación. Se retira la simulación de devolución del flujo al usuario Y del endpoint: `simular_retorno_destino`, su ruta API y pruebas asociadas, más cliente API y botón frontend (commits `b74ae035`, `b7d82123`, `3c33e7ba`, `e06e5095`, `6a0d5f08`). El documento BE-RI ya cuenta con serie automática y se mantiene en preparación / impresión, no se exige inventar número GRE para controlar recepción interna de feria.
