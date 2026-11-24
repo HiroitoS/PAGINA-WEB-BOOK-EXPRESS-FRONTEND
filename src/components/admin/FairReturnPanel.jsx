@@ -273,6 +273,10 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
                 Cuenta los libros sobrantes y registra la recepción en el almacén.
                 No ingreses una serie ni una guía manual. BE-RI se numera automáticamente.
               </p>
+              <p className="mt-2 text-xs leading-5 text-gray-700">
+                Los libros que no regresan <strong>no se consideran vendidos automáticamente</strong>.
+                El cierre deberá conciliar ventas registradas, sobrantes y diferencias.
+              </p>
               <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
                 El control interno no reemplaza una GRE exigible por el transporte
                 entre colegio y Book Express. Jefatura revisará el sustento correspondiente.
