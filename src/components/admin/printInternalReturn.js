@@ -20,6 +20,7 @@ export default function printInternalReturn(plan, dispatch) {
   const printWindow = window.open("", "_blank");
   if (!printWindow) return false;
 
+  const confirmed = plan.kind === "received";
   const details = (plan.lines ?? []).map((entry, index) => {
     const product = dispatch.lines?.find((line) => line.id === entry.line_id);
     return `<tr><td class="number">${index + 1}</td>
@@ -30,6 +31,15 @@ export default function printInternalReturn(plan, dispatch) {
   const total = (plan.lines ?? []).reduce((sum, item) => sum + item.quantity, 0);
   const logo = escapeHtml(new URL(logoBookExpress, window.location.href).href);
   const documentNumber = escapeHtml(plan.reference);
+  const heading = confirmed
+    ? "CONSTANCIA INTERNA DE RECEPCIÓN DE RETORNO"
+    : "CONSTANCIA INTERNA DE PREPARACIÓN DE RETORNO";
+  const subtitle = confirmed
+    ? "Recepción física confirmada · cantidades efectivamente devueltas"
+    : "Documento de control por lote · preparación sin movimiento de inventario";
+  const status = confirmed
+    ? "Recepción física registrada en inventario. Este documento interno no acredita GRE."
+    : "Preparación registrada. La salida, el transporte y la recepción aún requieren confirmación física.";
   const content = `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${documentNumber} · Book Express</title>
@@ -71,25 +81,25 @@ tfoot th { background: #e9ebed; }
 <div class="business">BOOK EXPRESS<small>Distribuidora y Comercializadora Book Express S.A.C.</small><small>RUC 20601658811</small></div>
 <div class="identifier"><small>CONTROL INTERNO</small>${documentNumber}</div>
 </header>
-<h1>CONSTANCIA INTERNA DE PREPARACIÓN DE RETORNO</h1>
-<p class="subtitle">Documento de control por lote · preparación sin movimiento de inventario</p>
+<h1>${heading}</h1>
+<p class="subtitle">${subtitle}</p>
 <div class="heading">Datos de la operación</div>
 <div class="info">
 <div><span>Documento de salida original</span><strong>${escapeHtml(plan.source_document)}</strong></div>
-<div><span>Fecha de preparación</span><strong>${escapeHtml(dateTime(plan.created_at))}</strong></div>
+<div><span>${confirmed ? "Fecha de recepción" : "Fecha de preparación"}</span><strong>${escapeHtml(dateTime(plan.created_at))}</strong></div>
 <div><span>Origen de retorno</span><strong>${escapeHtml(dispatch.destination)}</strong></div>
-<div><span>Destino previsto</span><strong>${escapeHtml(dispatch.source)}</strong></div>
+<div><span>${confirmed ? "Almacén receptor" : "Destino previsto"}</span><strong>${escapeHtml(dispatch.source)}</strong></div>
 <div><span>Colegio asociado</span><strong>${escapeHtml(dispatch.school)}</strong></div>
-<div><span>Preparó en el ERP</span><strong>${escapeHtml(plan.created_by)}</strong></div>
+<div><span>${confirmed ? "Registrado por" : "Preparó en el ERP"}</span><strong>${escapeHtml(plan.created_by)}</strong></div>
 </div>
-<div class="heading">Libros preparados para retorno</div>
+<div class="heading">${confirmed ? "Libros efectivamente recibidos" : "Libros preparados para retorno"}</div>
 <table><colgroup><col style="width:7%"><col style="width:55%"><col style="width:25%"><col style="width:13%"></colgroup>
 <thead><tr><th>N.º</th><th>Producto</th><th>Lote / guía de origen</th><th>Cantidad</th></tr></thead>
 <tbody>${details}</tbody>
-<tfoot><tr><th colspan="3">TOTAL PREPARADO</th><th>${escapeHtml(total)}</th></tr></tfoot>
+<tfoot><tr><th colspan="3">${confirmed ? "TOTAL RECIBIDO" : "TOTAL PREPARADO"}</th><th>${escapeHtml(total)}</th></tr></tfoot>
 </table>
 <div class="status"><strong>Motivo registrado:</strong> ${escapeHtml(plan.reason)}<br>
-<strong>Estado:</strong> Preparación registrada. La salida, el transporte y la recepción aún requieren confirmación física.</div>
+<strong>Estado:</strong> ${status}${confirmed ? `<br><strong>Recibió:</strong> ${escapeHtml(plan.received_by)}` : ""}</div>
 <div class="sign"><div>Responsable que entrega · nombre, firma y fecha</div><div>Responsable que recibe · nombre, firma y fecha</div></div>
 <p class="legal">USO INTERNO BOOK EXPRESS. Esta constancia NO es una Guía de Remisión Electrónica SUNAT,
 NO acredita transporte ni recepción, y NO reemplaza la documentación tributaria exigible.</p>
