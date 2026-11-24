@@ -408,7 +408,8 @@ export default function DistributionDispatchPanel({
               dispatch={dispatch}
               operationId={operation.id}
               mode={operation.mode}
-              enabled={canManage && canMoveStock && canResolveIncidents}
+              canPrepare={canManage && canMoveStock}
+              canConfirm={canManage && canMoveStock && canResolveIncidents}
               onSaved={(next) => {
                 setDispatch(next);
                 setNotice("Retorno físico registrado. Las existencias quedaron actualizadas con historial.");
