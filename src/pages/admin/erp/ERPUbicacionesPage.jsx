@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { FiArrowLeft, FiBox, FiMapPin } from "react-icons/fi";
+import { FiAlertTriangle, FiArrowLeft, FiBox, FiMapPin } from "react-icons/fi";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import WarehouseLocationsPanel from "../../../components/admin/WarehouseLocationsPanel";
 import WarehouseFairsPanel from "../../../components/admin/WarehouseFairsPanel";
 import WarehouseConsignmentsPanel from "../../../components/admin/WarehouseConsignmentsPanel";
+import WarehouseReturnDocumentReviewPanel from "../../../components/admin/WarehouseReturnDocumentReviewPanel";
 
 const SECCIONES = [
   { id: "ferias", nombre: "Ferias · ubicaciones temporales", icono: FiMapPin },
   { id: "consignaciones", nombre: "Consignaciones", icono: FiBox },
   { id: "lugares", nombre: "Almacenes y tiendas", icono: FiBox },
+  { id: "documentos", nombre: "Retornos por revisar", icono: FiAlertTriangle },
 ];
 
 export default function ERPUbicacionesPage() {
@@ -18,9 +20,11 @@ export default function ERPUbicacionesPage() {
   const [revisionUbicaciones, setRevisionUbicaciones] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
   const selected = searchParams.get("seccion");
-  const actual = ["lugares", "consignaciones"].includes(selected) ? selected : "ferias";
+  const actual = ["lugares", "consignaciones", "documentos"].includes(selected)
+    ? selected : "ferias";
   const puedeGestionar = userHasPermission(user, ["warehouse.manage_warehouse_locations"]);
   const puedeVerTraslados = userHasPermission(user, ["warehouse.view_receiving"]);
+  const puedeRevisarDocumentos = userHasPermission(user, ["warehouse.validate_receiving"]);
   const puedeConciliar = puedeGestionar
     && userHasPermission(user, ["warehouse.validate_receiving"])
     && puedeVerTraslados;
@@ -52,8 +56,9 @@ export default function ERPUbicacionesPage() {
           </Link>
         </div>
         <nav aria-label="Tipo de ubicación"
-          className="mt-4 grid gap-1 rounded-xl bg-gray-100 p-1 sm:grid-cols-3">
-          {SECCIONES.map(({ id, nombre, icono: Icono }) => (
+          className="mt-4 grid gap-1 rounded-xl bg-gray-100 p-1 sm:grid-cols-2 lg:grid-cols-4">
+          {SECCIONES.filter((item) => item.id !== "documentos" || puedeRevisarDocumentos)
+            .map(({ id, nombre, icono: Icono }) => (
             <button key={id} type="button" aria-pressed={actual === id}
               onClick={() => cambiarSeccion(id)}
               className={
@@ -77,6 +82,16 @@ export default function ERPUbicacionesPage() {
       )}
 
       {actual === "consignaciones" && <WarehouseConsignmentsPanel />}
+
+      {actual === "documentos" && puedeRevisarDocumentos && (
+        <WarehouseReturnDocumentReviewPanel />
+      )}
+
+      {actual === "documentos" && !puedeRevisarDocumentos && (
+        <p role="alert" className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-800">
+          No tienes autorización para revisar observaciones documentales.
+        </p>
+      )}
 
       {actual === "lugares" && (
         <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
