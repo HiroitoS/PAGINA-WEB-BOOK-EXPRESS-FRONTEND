@@ -162,6 +162,25 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
                   {item.details.reduce((total, line) => total + line.quantity, 0)} libros retornados
                 </p>
                 <p className="mt-1">Recibió: {item.received_by}</p>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-bold text-red-700">{item.receipt_number} · Recepción confirmada</p>
+                  <button type="button" onClick={() => {
+                    if (!printInternalReturn({
+                      kind: "received",
+                      reference: item.receipt_number,
+                      source_document: item.source_document ?? dispatch.document_number,
+                      lines: item.details,
+                      reason: item.reason,
+                      created_by: item.recorded_by,
+                      created_at: item.recorded_at,
+                      received_by: item.received_by,
+                    }, dispatch)) {
+                      setError("Permite ventanas emergentes para imprimir la recepción.");
+                    }
+                  }} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 font-semibold text-gray-900 hover:border-red-600">
+                    <FiPrinter aria-hidden="true" /> Imprimir recepción
+                  </button>
+                </div>
                 <p className="mt-1">Documentación: {item.documentation_status === "internal_control"
                   ? "Control interno · revisión documental pendiente"
                   : item.documentation_followup_required
@@ -172,6 +191,14 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
             ))}
           </div>
         </details>
+      )}
+      {plans.length > 0 && (
+        <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950">
+          Los documentos BE-RI indican cantidades <strong>preparadas</strong>, no
+          necesariamente las recibidas. La recepción efectiva se imprime en
+          el historial de retornos como <strong>BE-RC</strong> y conserva sus
+          cantidades reales. Una preparación anterior no debe modificarse.
+        </p>
       )}
       {plans.length > 0 && (
         <details className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
