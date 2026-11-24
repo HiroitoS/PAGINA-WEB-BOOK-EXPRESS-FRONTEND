@@ -16,11 +16,13 @@ function readError(error) {
 
 export default function FairReturnPanel({ dispatch, operationId, mode, canPrepare, canConfirm, onSaved }) {
   const [expanded, setExpanded] = useState(false);
-  const destinationLabel = mode === "consignment" ? "consignación" : "feria";
+  const internalReturn = mode === "fair" || mode === "point_of_sale";
+  const destinationLabel = mode === "consignment" ? "consignación"
+    : mode === "point_of_sale" ? "punto de venta" : "feria";
   const [quantities, setQuantities] = useState({});
   const [receiver, setReceiver] = useState("");
   const [reference, setReference] = useState("");
-  const [documentationStatus, setDocumentationStatus] = useState(mode === "fair" ? "internal_control" : "gre");
+  const [documentationStatus, setDocumentationStatus] = useState(internalReturn ? "internal_control" : "gre");
   const [documentationNote, setDocumentationNote] = useState("");
   const [reason, setReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -65,7 +67,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
   ];
   const canSubmit = canConfirm && !busy && validQuantities && requested.length > 0
     && receiveNameValid
-    && (mode === "fair" || (documentationStatus === "gre"
+    && (internalReturn || (documentationStatus === "gre"
       ? grePattern.test(reference.trim().toUpperCase())
         && Number(reference.trim().split("-")[1]) > 0
       : documentationNote.trim().length >= 40))
@@ -107,9 +109,9 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
       const result = await registrarRetornoDestino(operationId, {
         idempotency_key: key,
         receiver_name: receiver.trim(),
-        transport_reference: mode !== "fair" && documentationStatus === "gre" ? reference.trim().toUpperCase() : "",
-        documentation_status: mode === "fair" ? "internal_control" : documentationStatus,
-        documentation_note: mode !== "fair" && documentationStatus === "pending_review" ? documentationNote.trim() : "",
+        transport_reference: !internalReturn && documentationStatus === "gre" ? reference.trim().toUpperCase() : "",
+        documentation_status: internalReturn ? "internal_control" : documentationStatus,
+        documentation_note: !internalReturn && documentationStatus === "pending_review" ? documentationNote.trim() : "",
         reason: reason.trim(),
         received_confirmed: true,
         lines: requested,
@@ -161,7 +163,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
                 </p>
                 <p className="mt-1">Recibió: {item.received_by}</p>
                 <p className="mt-1">Documentación: {item.documentation_status === "internal_control"
-                  ? "Control interno de feria · revisión documental pendiente"
+                  ? "Control interno · revisión documental pendiente"
                   : item.documentation_followup_required
                     ? "Pendiente de revisión por Jefatura" : "GRE declarada externamente"}</p>
                 {item.reference && <p className="mt-1">Referencia: {item.reference}</p>}
@@ -224,7 +226,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
             <p className="mt-1">Primero puedes generar una constancia interna automática BE-RI
               para contar y preparar el retorno. Esto no mueve existencias ni acredita
               transporte. La guía de tu editorial corresponde a la compra, no a este retorno.</p>
-            {mode !== "fair" && (
+            {!internalReturn && (
               <p className="mt-1">
                 Para el transporte físico, verifica la documentación que corresponda.
                 La constancia interna no la sustituye.
@@ -279,9 +281,9 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
             </button>
             <p className="text-xs text-gray-600">La serie y numeración BE-RI se asignan automáticamente, sin mover existencias.</p>
           </div>
-          {mode === "fair" ? (
+          {internalReturn ? (
             <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <p className="text-sm font-black text-gray-950">Devolución interna de feria</p>
+              <p className="text-sm font-black text-gray-950">Devolución interna de {destinationLabel}</p>
               <p className="mt-1 text-xs leading-5 text-gray-700">
                 Cuenta los libros sobrantes y registra la recepción en el almacén.
                 No ingreses una serie ni una guía manual. BE-RI se numera automáticamente.
@@ -339,7 +341,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
           <label className="flex items-start gap-2 text-xs leading-5 text-gray-800">
             <input type="checkbox" checked={confirmed} className="mt-1"
               onChange={(event) => setConfirmed(event.target.checked)} />
-            {mode === "fair"
+            {internalReturn
               ? "Confirmo que los libros sobrantes ya regresaron físicamente al almacén y fueron contados. El control documental queda pendiente de revisión."
               : documentationStatus === "pending_review"
               ? "Confirmo que los libros ya regresaron físicamente, fueron contados y la falta de documentación quedó registrada para revisión de Jefatura."
@@ -350,11 +352,11 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
               <p className="font-bold text-gray-950">Para habilitar la confirmación:</p>
               <ul className="mt-2 list-inside list-disc space-y-1">
                 {missing.map((item) => <li key={item}>{item}</li>)}
-                {mode !== "fair" && documentationStatus === "gre"
+                {!internalReturn && documentationStatus === "gre"
                   && !grePattern.test(reference.trim().toUpperCase()) && (
                     <li>Registra el número válido de la GRE emitida.</li>
                   )}
-                {mode !== "fair" && documentationStatus === "pending_review"
+                {!internalReturn && documentationStatus === "pending_review"
                   && documentationNote.trim().length < 40 && (
                     <li>Completa la observación documental (mínimo 40 caracteres).</li>
                   )}
@@ -370,7 +372,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
           )}
           <button type="submit" disabled={!canSubmit}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
-            <FiCheckCircle aria-hidden="true" /> {busy ? "Registrando…" : mode === "fair" ? "Confirmar devolución interna de feria" : documentationStatus === "pending_review" ? "Registrar recepción física observada" : "Confirmar retorno físico"}
+            <FiCheckCircle aria-hidden="true" /> {busy ? "Registrando…" : internalReturn ? `Confirmar devolución interna de ${destinationLabel}` : documentationStatus === "pending_review" ? "Registrar recepción física observada" : "Confirmar retorno físico"}
           </button>
         </form>
       )}
