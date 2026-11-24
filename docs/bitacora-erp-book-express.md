@@ -1,5 +1,14 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 24/11/2026 — Retorno de trabajo: validación verde y panel de Jefatura [RAMA, CI ÚLTIMO PENDIENTE]
+
+GitHub Actions verificado el 24/11: backend `807736e` (endpoint de documentos pendientes y test de permisos) **success**, frontend previo `83af61d` **success**. No se debe repetir código de B5.1 ni afirmar que B5.2 y B7 estén cerrados.
+
+**Nueva interfaz en rama:** `warehouseApi.js` consulta `GET ubicaciones/retornos-documentacion-pendiente/` (commit `792d380`); componente `WarehouseReturnDocumentReviewPanel.jsx` (commit `6209064`) presenta para Jefatura recepciones ya registradas con documentación pendiente, por colegio, custodias, fecha, responsable, cantidad y observación. Búsqueda, estado vacío correcto, botón actualizar, tarjetas responsive, `motion` con reduced-motion. `ERPUbicacionesPage.jsx` (commit `2a14a9f`) habilita pestaña «Retornos por revisar» SOLO a usuarios con permiso `warehouse.validate_receiving`; el endpoint impide la lectura a quien carezca del permiso. Esta función es **solo lectura** y no implica emitir/aceptar GRE ni subsanar obligación; **no mueve inventario** ni crea cierres documentales artificiales. Revisar CI del último frontend antes de dar aprobado.
+
+**Pruebas manuales siguientes:** con repositorios sincronizados en rama y árbol limpio, verificar `/admin/erp/almacen/ubicaciones?seccion=documentos` con usuario administrador; debería existir pestaña y mostrar vacía si NO hubo retornos reales documentados como pendientes (no inventar registros). No se requiere crear un retorno ficticio para probar. Luego probar simulación ANDINO BE-RI y revisar saldos sin cambios. Pendientes: B5.2 incidencias persistentes e inspección, conciliación de custodia, packs B7, reportes B8 y módulo SUNAT futuro. Nada pasó a `main` ni Tecnoweb.
+
+
 ## 22/11/2026 noche — Entrega para pruebas y comienzo de auditoría B5 [RAMA, CI NUEVO PENDIENTE]
 
 **Validación posterior:** GitHub Actions frontend `0f89774` y backend `c0e20fa` **verdes** para el nuevo flujo de registro de retorno recibido con `documentation_status=pending_review`; no se tocó `main` ni Tecnoweb. **Prueba manual de recepción real sigue pendiente** (no ejecutar en inventario normal si no ocurrió retorno físico).
