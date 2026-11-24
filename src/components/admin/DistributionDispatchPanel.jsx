@@ -9,6 +9,7 @@ import ArrivalIncidentPanel, { ArrivalIncidentHistory } from "./ArrivalIncidentP
 import printInternalDispatch from "./printInternalDispatch";
 import PreparedFairDestinationCorrection from "./PreparedFairDestinationCorrection";
 import FairReturnPanel from "./FairReturnPanel";
+import DistributionCloseIncidentsPanel from "./DistributionCloseIncidentsPanel";
 
 const buttonPrimary = "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50";
 const fieldClass = "mt-1 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 text-sm text-gray-950 focus:border-red-700 focus:outline-none focus:ring-2 focus:ring-red-100";
@@ -256,6 +257,15 @@ export default function DistributionDispatchPanel({
                 La operación no puede declararse conciliada ni cerrada automáticamente.
               </p>
             </section>
+          )}
+
+          {dispatch.status === "received" && (
+            <DistributionCloseIncidentsPanel
+              operationId={operation.id}
+              dispatch={dispatch}
+              canReport={canManage && canMoveStock}
+              onChanged={() => setRevision((value) => value + 1)}
+            />
           )}
 
           {dispatch.status === "documented" && (
