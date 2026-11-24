@@ -32,6 +32,22 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
   const [notice, setNotice] = useState("");
   const [recentPlanId, setRecentPlanId] = useState(null);
 
+  const completedReturns = dispatch.destination_returns ?? dispatch.fair_returns ?? [];
+  const latestReceipt = completedReturns.at(-1);
+  const printReceipt = (item) => {
+    if (!printInternalReturn({
+      kind: "received",
+      reference: item.receipt_number,
+      source_document: item.source_document ?? dispatch.document_number,
+      lines: item.details,
+      reason: item.reason,
+      created_by: item.recorded_by,
+      created_at: item.recorded_at,
+      received_by: item.received_by,
+    }, dispatch)) {
+      setError("Permite ventanas emergentes para imprimir la recepción.");
+    }
+  };
   const plans = dispatch.internal_return_plans ?? [];
   const recentPlan = plans.find((plan) => plan.id === recentPlanId)
     ?? plans.at(-1) ?? null;
@@ -164,20 +180,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
                 <p className="mt-1">Recibió: {item.received_by}</p>
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                   <p className="font-bold text-red-700">{item.receipt_number} · Recepción confirmada</p>
-                  <button type="button" onClick={() => {
-                    if (!printInternalReturn({
-                      kind: "received",
-                      reference: item.receipt_number,
-                      source_document: item.source_document ?? dispatch.document_number,
-                      lines: item.details,
-                      reason: item.reason,
-                      created_by: item.recorded_by,
-                      created_at: item.recorded_at,
-                      received_by: item.received_by,
-                    }, dispatch)) {
-                      setError("Permite ventanas emergentes para imprimir la recepción.");
-                    }
-                  }} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 font-semibold text-gray-900 hover:border-red-600">
+                  <button type="button" onClick={() => printReceipt(item)} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 font-semibold text-gray-900 hover:border-red-600">
                     <FiPrinter aria-hidden="true" /> Imprimir recepción
                   </button>
                 </div>
@@ -191,6 +194,22 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
             ))}
           </div>
         </details>
+      )}
+      {latestReceipt && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-300 bg-white p-4">
+          <div>
+            <p className="text-xs font-black text-gray-950">Última recepción física registrada</p>
+            <p className="mt-1 text-lg font-black text-red-700">{latestReceipt.receipt_number}</p>
+            <p className="mt-1 text-xs text-gray-600">
+              {latestReceipt.details.reduce((sum, line) => sum + line.quantity, 0)} libros efectivamente recibidos.
+              El BE-RI de preparación puede indicar otra cantidad.
+            </p>
+          </div>
+          <button type="button" onClick={() => printReceipt(latestReceipt)}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800">
+            <FiPrinter aria-hidden="true" /> Imprimir recepción real
+          </button>
+        </div>
       )}
       {plans.length > 0 && (
         <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950">
@@ -224,7 +243,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
           </div>
         </details>
       )}
-      {recentPlan && (
+      {recentPlan && !latestReceipt && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-300 bg-gray-50 p-4">
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-2 text-xs font-black text-gray-950">
