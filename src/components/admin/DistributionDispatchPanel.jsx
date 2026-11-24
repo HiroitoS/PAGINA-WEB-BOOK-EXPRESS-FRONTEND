@@ -226,6 +226,38 @@ export default function DistributionDispatchPanel({
             </button>
           </div>
 
+          {dispatch.status === "received" && dispatch.reconciliation && (
+            <section aria-label="Conciliación de la entrega"
+              className="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
+              <div>
+                <h5 className="text-sm font-black text-gray-950">Control de entrega y retornos</h5>
+                <p className="mt-1 text-xs leading-5 text-gray-600">
+                  Resumen logístico para {dispatch.mode === "fair" ? "feria"
+                    : dispatch.mode === "consignment" ? "consignación" : "punto de venta"}.
+                  Todavía no representa una liquidación comercial.
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-4">
+                {[
+                  ["Entregados", dispatch.reconciliation.delivered],
+                  ["Devueltos", dispatch.reconciliation.returned],
+                  ["Sin retorno registrado", dispatch.reconciliation.not_returned],
+                  ["Vendidos", "Por integrar"],
+                ].map(([title, amount]) => (
+                  <div key={title} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-xs text-gray-600">{title}</p>
+                    <p className="mt-1 text-lg font-black tabular-nums text-gray-950">{amount}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">
+                El saldo sin retorno no demuestra que esos libros fueron vendidos.
+                Falta integrar ventas comprobadas y diferencias justificadas.
+                La operación no puede declararse conciliada ni cerrada automáticamente.
+              </p>
+            </section>
+          )}
+
           {dispatch.status === "documented" && (
             <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <h5 className="text-sm font-bold text-amber-950">
