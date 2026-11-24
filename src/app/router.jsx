@@ -54,6 +54,7 @@ const ERPDistribucionesPage = lazy(() => import("../pages/admin/erp/ERPDistribuc
 const ERPHistorialTrasladosPage = lazy(() => import("../pages/admin/erp/ERPHistorialTrasladosPage"));
 const ERPCortesiasPage = lazy(() => import("../pages/admin/erp/ERPCortesiasPage"));
 const ERPUbicacionesPage = lazy(() => import("../pages/admin/erp/ERPUbicacionesPage"));
+const ERPSunatPage = lazy(() => import("../pages/admin/erp/ERPSunatPage"));
 
 const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
@@ -212,6 +213,10 @@ const router = createBrowserRouter([
           {
             path: "dashboard",
             element: protectRole(renderLazyPage(DashboardPage), DASHBOARD_ROLES),
+          },
+          {
+            path: "erp/documentos-electronicos",
+            element: protectRole(renderLazyPage(ERPSunatPage), ADMIN_ONLY_ROLES),
           },
           {
             path: "erp/compras/pedidos",
