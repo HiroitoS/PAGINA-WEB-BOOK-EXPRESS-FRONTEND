@@ -14,7 +14,7 @@ function readError(error) {
     ? value : "No fue posible registrar la devolución. Revisa los datos.";
 }
 
-export default function FairReturnPanel({ dispatch, operationId, mode, enabled, onSaved }) {
+export default function FairReturnPanel({ dispatch, operationId, mode, canPrepare, canConfirm, onSaved }) {
   const [expanded, setExpanded] = useState(false);
   const destinationLabel = mode === "consignment" ? "consignación" : "feria";
   const [quantities, setQuantities] = useState({});
@@ -51,9 +51,9 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
     return Number.isSafeInteger(number) && number >= 0
       && number <= line.quantity - (returned.get(line.id) ?? 0);
   });
-  const canPrepare = enabled && !busy && validQuantities && requested.length > 0
+  const allowPreparation = canPrepare && !busy && validQuantities && requested.length > 0
     && reason.trim().length >= 15;
-  const canSubmit = enabled && !busy && validQuantities && requested.length > 0
+  const canSubmit = canConfirm && !busy && validQuantities && requested.length > 0
     && receiver.trim().split(/\s+/).length >= 2
     && (mode === "fair" || (documentationStatus === "gre"
       ? grePattern.test(reference.trim().toUpperCase())
@@ -63,7 +63,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
 
   async function prepare(event) {
     event.preventDefault();
-    if (!canPrepare) return;
+    if (!allowPreparation) return;
     setBusy(true);
     setError("");
     setNotice("");
@@ -131,7 +131,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             Registra únicamente los libros que ya regresaron físicamente al almacén de origen.
           </p>
         </div>
-        {enabled && (
+        {(canPrepare || canConfirm) && (
           <button type="button" onClick={() => setExpanded((value) => !value)}
             className="min-h-10 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-950 hover:border-red-600">
             {expanded ? "Cerrar" : "Registrar retorno"}
@@ -207,7 +207,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
       )}
       {notice && <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs font-bold text-gray-900">{notice}</p>}
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-800">{error}</p>}
-      {expanded && enabled && (
+      {expanded && (canPrepare || canConfirm) && (
         <form onSubmit={submit} className="space-y-3 rounded-xl bg-gray-50 p-3">
           <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs leading-5 text-gray-700">
             <p><strong>Documento de entrega original: {dispatch.document_number}</strong></p>
@@ -260,7 +260,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             </p>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" disabled={!canPrepare} onClick={prepare}
+            <button type="button" disabled={!allowPreparation} onClick={prepare}
               className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
               {busy ? "Generando documento…" : "Generar / recuperar documento BE-RI"}
             </button>
@@ -329,6 +329,13 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
               ? "Confirmo que los libros ya regresaron físicamente, fueron contados y la falta de documentación quedó registrada para revisión de Jefatura."
               : "Confirmo que los libros retornaron físicamente, fueron contados y se verificó el documento de transporte declarado."}
           </label>
+          {!canConfirm && (
+            <p className="rounded-lg border border-gray-200 bg-white p-3 text-xs leading-5 text-gray-700">
+              Puedes preparar e imprimir el BE-RI. La confirmación física
+              y actualización de existencias corresponde al Jefe de Almacén
+              o usuario expresamente autorizado.
+            </p>
+          )}
           <button type="submit" disabled={!canSubmit}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
             <FiCheckCircle aria-hidden="true" /> {busy ? "Registrando…" : mode === "fair" ? "Confirmar devolución interna de feria" : documentationStatus === "pending_review" ? "Registrar recepción física observada" : "Confirmar retorno físico"}
