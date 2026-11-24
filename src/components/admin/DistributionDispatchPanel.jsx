@@ -434,7 +434,7 @@ export default function DistributionDispatchPanel({
               retornos ni regularizaciones automáticas hasta conciliar la custodia real con Jefatura.
             </p>
           )}
-          {dispatch.status === "received" && ["fair", "consignment"].includes(operation.mode)
+          {dispatch.status === "received" && ["fair", "consignment", "point_of_sale"].includes(operation.mode)
             && !operation.destination_school_conflict && (
             <FairReturnPanel
               dispatch={dispatch}
