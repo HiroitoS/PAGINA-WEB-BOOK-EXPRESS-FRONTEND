@@ -1,5 +1,14 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 24/11/2026 — Botón devolución habilitado; siguiente desarrollo: retornos de punto de venta [PENDIENTE CI NUEVO]
+
+**Validación del usuario:** captura 17:56 muestra que el botón rojo «Confirmar devolución interna de feria» YA SE HABILITA con datos completos. Por tanto se cierra la corrección visual del bloqueo; aún NO se ha demostrado movimiento físico registrado en base de ensayo. No pulsar en base local si no regresaron físicamente libros. El cierre de feria comercial aún no está integrado: fórmula entregado = vendido comprobado + devuelto confirmado + diferencia justificada, sin asumir vendidos por saldo no retornado.
+
+**Implementación siguiente fase, en rama:** servicio `warehouse/distribution_dispatch.py` ahora soporta `DistributionOperation.Mode.POINT_OF_SALE` para preparación BE-RI y retorno físico por lote con evento específico `pos_return_recorded`, manteniendo el idempotency key, límites, saldos disponibles, revisión documental y prohibición de duplicar movimientos; `output_dispatch` y agregaciones previas incluyen estos retornos en la conciliación logística (commit `783515e`). Frontend `FairReturnPanel.jsx` muestra «Retornos de punto de venta» con formulario interno y confirmación supervisada, reutiliza BE-RI (commit `06fbe76`), y `DistributionDispatchPanel.jsx` lo presenta también para distribuciones `point_of_sale` recibidas (commit `b47e188`). Test `warehouse/test_distribution_preparation.py` verifica flujo completo de punto de venta, BE-RI, actualización de lotes origen/destino, idempotencia y `sold=null` hasta integrar ventas (commit `271fb22`). `main` y Tecnoweb intactos. **Verificar CI más reciente antes de declarar aprobado.**
+
+**Pendientes:** proceso de consignación mantiene devolución logística y documentos separados, liquidación comercial por ventas/abonos/facturas NO desarrollada. Conciliación y cierre comercial aún sin fuente de ventas. Probar BE-RI y retornos POS en entorno PostgreSQL aislado, sin falsificar movimiento; auditar permisos JEFE_ALMACEN/ALMACEN y continuar B5.2 (diferencias y deterioro), B7 packs y B8 reportes.
+
+
 ## 24/11/2026 — Validado botón de retorno y primer tablero de conciliación logística [CI PENDIENTE]
 
 El usuario muestra **«Confirmar devolución interna de feria» activo**. Se valida por captura la habilitación de la interfaz y la eliminación del simulador; **NO se ha confirmado físicamente el retorno ni ejecutado el movimiento en base local**. No dar por cerrada integración ventas, consignación, punto de venta ni packs. La última corrección UX de botón y validaciones pasó CI frontend previamente.
