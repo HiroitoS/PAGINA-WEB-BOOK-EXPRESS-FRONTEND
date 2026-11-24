@@ -213,7 +213,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
       )}
       {!internalReturn && plans.length > 0 && (
         <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950">
-          Los documentos BE-RI indican cantidades <strong>preparadas</strong>, no
+          Los documentos BE-RI antiguos indican cantidades <strong>preparadas</strong>, no
           necesariamente las recibidas. La recepción efectiva se imprime en
           el historial de retornos como <strong>BE-RC</strong> y conserva sus
           cantidades reales. Una preparación anterior no debe modificarse.
@@ -222,14 +222,14 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
       {plans.length > 0 && (
         <details className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs">
           <summary className="cursor-pointer font-bold text-gray-900">
-            Historial de documentos internos ({plans.length})
+            {internalReturn ? "Preparaciones anteriores (archivo histórico)" : "Historial de documentos internos"} ({plans.length})
           </summary>
           <div className="mt-2 space-y-2">
             {plans.map((plan) => (
               <div key={plan.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white p-3">
                 <p className="min-w-0 flex-1 text-gray-700">
                   <strong className="text-gray-950">{plan.reference}</strong> · {plan.reason}
-                  <span className="block text-gray-500">Solo preparación; sin traslado confirmado.</span>
+                  <span className="block text-gray-500">Documento histórico de preparación; no acredita la cantidad recibida.</span>
                 </p>
                 <button type="button" onClick={() => {
                   if (!printInternalReturn(plan, dispatch)) {
