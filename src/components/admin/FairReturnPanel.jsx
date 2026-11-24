@@ -138,7 +138,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
       setDocumentationNote("");
       setReference("");
       setExpanded(false);
-      setNotice("Retorno físico registrado en el inventario.");
+      setNotice(internalReturn ? "Devolución recibida. La constancia BE-RC ya está disponible para imprimir." : "Retorno físico registrado en el inventario.");
       onSaved?.(result);
     } catch (err) {
       setError(readError(err));
@@ -211,7 +211,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
           </button>
         </div>
       )}
-      {plans.length > 0 && (
+      {!internalReturn && plans.length > 0 && (
         <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-950">
           Los documentos BE-RI indican cantidades <strong>preparadas</strong>, no
           necesariamente las recibidas. La recepción efectiva se imprime en
@@ -243,7 +243,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
           </div>
         </details>
       )}
-      {recentPlan && !latestReceipt && (
+      {!internalReturn && recentPlan && !latestReceipt && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-300 bg-gray-50 p-4">
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-2 text-xs font-black text-gray-950">
@@ -269,9 +269,11 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
         <form onSubmit={submit} className="space-y-3 rounded-xl bg-gray-50 p-3">
           <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs leading-5 text-gray-700">
             <p><strong>Documento de entrega original: {dispatch.document_number}</strong></p>
-            <p className="mt-1">Primero puedes generar una constancia interna automática BE-RI
-              para contar y preparar el retorno. Esto no mueve existencias ni acredita
-              transporte. La guía de tu editorial corresponde a la compra, no a este retorno.</p>
+            <p className="mt-1">
+              {internalReturn
+                ? "Cuenta los sobrantes recibidos y confirma la devolución. El sistema genera automáticamente una constancia BE-RC con las cantidades realmente recibidas."
+                : "Puedes preparar una constancia BE-RI antes de recibir el retorno. No mueve existencias ni acredita transporte."}
+            </p>
             {!internalReturn && (
               <p className="mt-1">
                 Para el transporte físico, verifica la documentación que corresponda.
@@ -310,8 +312,8 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
           </label>
           {requested.length === 0 && (
             <p role="status" className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
-              Para preparar el BE-RI y registrar la devolución, escribe primero
-              la cantidad de libros que deseas devolver (por ejemplo, 10).
+              Para registrar la devolución, escribe primero
+              la cantidad de libros que efectivamente regresaron.
               El campo vacío no representa una devolución.
             </p>
           )}
@@ -320,19 +322,22 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
               Una cantidad ingresada es inválida o supera el saldo pendiente del lote.
             </p>
           )}
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" disabled={!allowPreparation} onClick={prepare}
-              className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
-              {busy ? "Generando documento…" : "Generar / recuperar documento BE-RI"}
-            </button>
-            <p className="text-xs text-gray-600">La serie y numeración BE-RI se asignan automáticamente, sin mover existencias.</p>
-          </div>
+          {!internalReturn && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" disabled={!allowPreparation} onClick={prepare}
+                className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-900 hover:border-red-600 disabled:cursor-not-allowed disabled:opacity-50">
+                {busy ? "Generando documento…" : "Generar / recuperar documento BE-RI"}
+              </button>
+              <p className="text-xs text-gray-600">La serie y numeración BE-RI se asignan automáticamente, sin mover existencias.</p>
+            </div>
+          )}
           {internalReturn ? (
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-sm font-black text-gray-950">Devolución interna de {destinationLabel}</p>
               <p className="mt-1 text-xs leading-5 text-gray-700">
-                Cuenta los libros sobrantes y registra la recepción en el almacén.
-                No ingreses una serie ni una guía manual. BE-RI se numera automáticamente.
+                Confirma los libros sobrantes ya recibidos en el almacén.
+                La constancia de devolución efectiva BE-RC se genera automáticamente,
+                con su propia numeración y las cantidades comprobadas.
               </p>
               <p className="mt-2 text-xs leading-5 text-gray-700">
                 Los libros que no regresan <strong>no se consideran vendidos automáticamente</strong>.
@@ -411,9 +416,9 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
           )}
           {!canConfirm && (
             <p className="rounded-lg border border-gray-200 bg-white p-3 text-xs leading-5 text-gray-700">
-              Puedes preparar e imprimir el BE-RI. La confirmación física
-              y actualización de existencias corresponde al Jefe de Almacén
-              o usuario expresamente autorizado.
+              {internalReturn
+                ? "La confirmación de los libros recibidos y la actualización de existencias corresponden al Jefe de Almacén o usuario autorizado."
+                : "Puedes preparar e imprimir el BE-RI. La confirmación física corresponde al Jefe de Almacén o usuario autorizado."}
             </p>
           )}
           <button type="submit" disabled={!canSubmit}
