@@ -182,6 +182,12 @@ const NAV_SECTIONS = [
         permissions: ["purchasing.view_purchasing"],
       },
       {
+        label: "Documentos electrónicos SUNAT",
+        to: "/admin/erp/documentos-electronicos",
+        icon: <FaClipboardList />,
+        roles: ADMIN_ONLY_ROLES,
+      },
+      {
         type: "subgroup",
         label: "Almacén",
         icon: <FaBoxOpen />,
