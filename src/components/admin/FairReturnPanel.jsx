@@ -249,7 +249,7 @@ export default function FairReturnPanel({ dispatch, operationId, mode, canPrepar
           </label>
           {requested.length === 0 && (
             <p role="status" className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
-              Para habilitar la simulación y el documento BE-RI, escribe primero
+              Para preparar el BE-RI y registrar la devolución, escribe primero
               la cantidad de libros que deseas devolver (por ejemplo, 10).
               El campo vacío no representa una devolución.
             </p>
