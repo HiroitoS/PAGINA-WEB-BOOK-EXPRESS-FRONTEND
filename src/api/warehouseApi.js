@@ -408,6 +408,20 @@ export async function prepararRetornoDestino(id, payload) {
   return data;
 }
 
+export async function registrarDiferenciaCierre(id, payload) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/registrar-diferencia-cierre/`, payload,
+  );
+  return data;
+}
+
+export async function registrarHallazgoCierre(id, payload) {
+  const { data } = await axiosClient.post(
+    `${DISTRIBUTION_BASE}/${id}/registrar-hallazgo-cierre/`, payload,
+  );
+  return data;
+}
+
 export async function registrarRetornoDestino(id, payload) {
   const { data } = await axiosClient.post(
     `${DISTRIBUTION_BASE}/${id}/registrar-retorno-destino/`, payload,
