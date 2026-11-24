@@ -1,5 +1,14 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 24/11/2026 — avance pruebas para pasar a packs [última CI backend pendiente]
+
+El usuario solicita acelerar pruebas de feria, consignación y punto de venta. **Error CI diagnosticado desde logs GitHub Actions**: único fallo en test `test_b5_3_retorno_parcial_de_feria_no_duplica_saldos` al comparar `summary["delivered"] = 10` contra primera línea `line["quantity"] = 5`. La implementación de conciliación suma correctamente TODAS las líneas del despacho; el fallo estaba en la expectativa de prueba. Corregida para `sum(row["quantity"] for row in arrival.data["lines"])` tanto entregados como no retornados; commit `4745ac6f`.
+
+**Más cobertura de pruebas:** `test_b5_retorno_directo_punto_venta_con_be_rc_y_saldos_sin_ventas_inferidas` elimina preparación BE-RI previa en prueba, ejecuta retorno interno directo, verifica BE-RC de 2 libros, saldos no inferidos e idempotencia (commit `ab9872a1`). Consignación: incorpora aserciones de BE-RC, cantidades entregadas/devueltas, no retornadas, ventas aún no integradas, cierre deshabilitado (commit `cfb5f351`). Frontend última CI verde en `2dd6e7e9`; CI backend más reciente aún en ejecución y no declarar éxito hasta verificar. No cambios a main ni producción.
+
+**Prueba manual segura**: tras CI verde y pull de rama limpia, entrar ANDINO: 15 entregados, 5 devueltos, 10 sin retorno; BE-RC de 5 imprimible. Inspeccionar 3 modalidades sin registrar otra devolución ficticia. Prueba de stock real solo en DB de ensayo aislada, verificando origen -n, destino +n y repetición idempotente. Para cierre de campaña, ventas deben venir del módulo Ventas (no inferir por resta); faltantes, errores de conteo, cortesías y dañados requieren tipificación, evidencia y aprobación. Consignación requiere liquidación y pagos parciales en módulo comercial, no en inventario. Packs B7 permanece como siguiente fase tras validación de integridad.
+
+
 ## 24/11/2026 — Devolución interna con una sola acción y BE-RC [CI PENDIENTE]
 
 La impresión BE-RC con 5 ejemplares físicamente recibidos fue validada por el usuario, pero éste quiere evitar preparar BE-RI y luego emitir BE-RC para feria. Desde commits frontend `496a698d`, `916842f5`, para **feria y punto de venta** el formulario sólo exige cantidad realmente devuelta, receptor, motivo y confirmación de Jefatura; ya no ofrece el botón de preparar BE-RI. El backend existente permite registrar directamente el retorno físico y genera constancia BE-RC vinculada a BE-SI con cantidad real. BE-RI antiguos se preservan en «Preparaciones anteriores (archivo histórico)», no se eliminan ni reescriben. Consignación sigue diferenciada con preparación y revisión documental. No se tocó main, Tecnoweb, backend ni datos existentes en este cambio.
