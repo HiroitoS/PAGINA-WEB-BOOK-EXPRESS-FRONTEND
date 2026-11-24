@@ -263,6 +263,18 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
             <textarea rows={2} maxLength={500} className={field} value={reason}
               onChange={(event) => setReason(event.target.value)} />
           </label>
+          {requested.length === 0 && (
+            <p role="status" className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
+              Para habilitar la simulación y el documento BE-RI, escribe primero
+              la cantidad de libros que deseas devolver (por ejemplo, 10).
+              El campo vacío no representa una devolución.
+            </p>
+          )}
+          {!validQuantities && (
+            <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+              Una cantidad ingresada es inválida o supera el saldo pendiente del lote.
+            </p>
+          )}
           <div className="rounded-xl border border-gray-200 bg-white p-3">
             <p className="text-sm font-bold text-gray-950">Prueba del retorno sin afectar existencias</p>
             <p className="mt-1 text-xs leading-5 text-gray-600">
@@ -335,7 +347,9 @@ export default function FairReturnPanel({ dispatch, operationId, mode, enabled, 
           <label className="flex items-start gap-2 text-xs leading-5 text-gray-800">
             <input type="checkbox" checked={confirmed} className="mt-1"
               onChange={(event) => setConfirmed(event.target.checked)} />
-            Confirmo que los libros retornaron físicamente, fueron contados y se comprobó el sustento legal aplicable.
+            {documentationStatus === "pending_review"
+              ? "Confirmo que los libros ya regresaron físicamente, fueron contados y la falta de documentación quedó registrada para revisión de Jefatura."
+              : "Confirmo que los libros retornaron físicamente, fueron contados y se verificó el documento de transporte declarado."}
           </label>
           <button type="submit" disabled={!canSubmit}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-red-700 px-4 text-sm font-bold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
