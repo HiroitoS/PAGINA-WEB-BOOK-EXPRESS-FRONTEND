@@ -34,6 +34,13 @@ export default function DistributionCloseIncidentsPanel({
   const [success, setSuccess] = useState("");
   const incidents = dispatch.close_incidents ?? [];
   const lines = dispatch.lines ?? [];
+  const reportedByLine = incidents.reduce((totals, incident) => {
+    totals[incident.line_id] = (totals[incident.line_id] ?? 0) + incident.quantity;
+    return totals;
+  }, {});
+  const availableForReport = (line) => Math.max(0, line.quantity - (reportedByLine[line.id] ?? 0));
+  const selectedLine = lines.find((line) => String(line.id) === lineId);
+  const reportableQuantity = selectedLine ? availableForReport(selectedLine) : 0;
 
   async function report(event) {
     event.preventDefault();
@@ -45,7 +52,7 @@ export default function DistributionCloseIncidentsPanel({
         line_id: Number(lineId), quantity: Number(quantity),
         category, note: note.trim(),
       });
-      setNote(""); setQuantity("");
+      setNote(""); setQuantity(""); setLineId("");
       setSuccess("Observación registrada. No se modificaron las existencias.");
       onChanged?.();
     } catch (err) {
@@ -122,11 +129,16 @@ export default function DistributionCloseIncidentsPanel({
             <label className="block text-xs font-semibold text-gray-800">Producto y lote
               <select className={inputClass} required value={lineId} onChange={(e) => setLineId(e.target.value)}>
                 <option value="">Selecciona un lote</option>
-                {lines.map((line) => <option key={line.id} value={line.id}>{line.product} · Entregados: {line.quantity}</option>)}
+                {lines.filter((line) => availableForReport(line) > 0).map((line) => (
+                  <option key={line.id} value={line.id}>
+                    {line.product} · Por observar como máximo: {availableForReport(line)} de {line.quantity}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="block text-xs font-semibold text-gray-800">Cantidad por investigar
-              <input type="number" min="1" required className={inputClass} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+              <input type="number" min="1" max={reportableQuantity || undefined} required className={inputClass} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+              {selectedLine && <span className="mt-1 block font-normal text-gray-600">Hasta {reportableQuantity} unidades adicionales para observar en este lote. No es saldo de inventario.</span>}
             </label>
             <label className="block text-xs font-semibold text-gray-800">Situación identificada
               <select className={inputClass} value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -136,7 +148,7 @@ export default function DistributionCloseIncidentsPanel({
             <label className="block text-xs font-semibold text-gray-800">¿Qué ocurrió? (mínimo 20 caracteres)
               <textarea required minLength={20} maxLength={500} rows={3} className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} />
             </label>
-            <button type="submit" disabled={busy || !lineId || !quantity || note.trim().length < 20}
+            <button type="submit" disabled={busy || !lineId || !quantity || Number(quantity) < 1 || Number(quantity) > reportableQuantity || note.trim().length < 20}
               className="min-h-10 rounded-xl bg-red-700 px-4 text-xs font-bold text-white disabled:opacity-50">
               Registrar observación
             </button>
