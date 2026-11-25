@@ -8,6 +8,8 @@
 
 **Cobertura adicional:** commit backend `bfdd229b1e3cea58932c286a69ad7c7ea008f5eb` verifica que un segundo reporte legítimo de una unidad dentro del saldo del lote se admita sin cambiar existencias. La ejecución de CI a verificar debe corresponder a este último SHA, no únicamente a `ee7f1f3a`.
 
+**Mejora UX coherente:** frontend commit `f12055f08205691fac3fde33ed4376dcf7ef3ce4` calcula las observaciones ya reportadas por `line_id`, muestra límite adicional por lote, restringe la cantidad del formulario y excluye lotes cuyo máximo de reportes ya se alcanzó. Es un límite de observaciones, NO saldo vendible ni stock. Al guardar se limpia selección de lote; el backend sigue siendo autoridad para validar concurrencia. CI frontend y revisión visual de este cambio pendientes.
+
 **Verificaciones:** la última CI previa de B5.4 era verde (backend `7d633c9`, run `45513329491`; frontend `81b0efa`, run `45513382968`). Esas CI NO cubren los dos commits nuevos; comprobar nuevo run y E2E antes de dar por aprobado este endurecimiento. No hubo cambios frontend, migraciones, `main`, Tecnoweb ni base de datos real.
 
 **Siguiente avance para cierre de Almacén:** validar B5.4 con múltiples reportes, hallazgos y BE-RC en PostgreSQL aislada; después definir e integrar origen verificable de ventas por operación/lote, revisión de diferencias, autorización de jefatura y estado de cierre irrevocable. El cierre no se calcula suponiendo que `not_returned` equivale a ventas. Consignación necesita liquidación comercial y cuentas por cobrar fuera de Almacén. Packs B7 continúa pendiente de la conciliación comprobada.
