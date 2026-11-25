@@ -1,5 +1,15 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 24/11/2026 — B5.4 endurecimiento de auditoría de conteo [CAMBIO EN RAMA; CI NUEVO POR VERIFICAR]
+
+**Hallazgo de revisión de código:** en `warehouse/distribution_close_incidents.py`, la validación de `report_close_difference` comprobaba únicamente que cada reporte fuera menor o igual a `DistributionDispatchLine.quantity`. Con claves distintas se podía sumar más diferencias que unidades entregadas del mismo lote, sin que el reporte individual excediera el límite. Es una inconsistencia documental, no un movimiento de stock, pero afecta la conciliación futura.
+
+**Implementación backend:** commit `29ad5c2640e0fd719901b53a6029bfd0f643cb0c` limita la **suma de reportes previos + nuevo reporte** por `line_id` a `line.quantity`, bajo bloqueo transaccional de la operación. Conserva reintentos idempotentes y no modifica existencias, ventas ni documentos de recepción. **Prueba de regresión:** commit `ee7f1f3a08a5fd9e35eb336bfcfa28f81bccecc6` agrega un segundo reporte con clave diferente y una cantidad que excedería el total, exigiendo HTTP 400 sin alterar posiciones del inventario.
+
+**Verificaciones:** la última CI previa de B5.4 era verde (backend `7d633c9`, run `45513329491`; frontend `81b0efa`, run `45513382968`). Esas CI NO cubren los dos commits nuevos; comprobar nuevo run y E2E antes de dar por aprobado este endurecimiento. No hubo cambios frontend, migraciones, `main`, Tecnoweb ni base de datos real.
+
+**Siguiente avance para cierre de Almacén:** validar B5.4 con múltiples reportes, hallazgos y BE-RC en PostgreSQL aislada; después definir e integrar origen verificable de ventas por operación/lote, revisión de diferencias, autorización de jefatura y estado de cierre irrevocable. El cierre no se calcula suponiendo que `not_returned` equivale a ventas. Consignación necesita liquidación comercial y cuentas por cobrar fuera de Almacén. Packs B7 continúa pendiente de la conciliación comprobada.
+
 ## 24/11/2026 — Continuidad entre chats: verificadas últimas CI de B5.4 [AUTOMÁTICAS VERDES; E2E PENDIENTE]
 
 **Verificación directa de GitHub realizada en este chat:** rama `feature/erp-p08-traslados-por-guia` existe en ambos repositorios. Backend `HiroitoS/PAGINA-WEB-BOOK-EXPRESS`: HEAD `7d633c99edc2525b8fc673a4d8cb5f014f3dc021`, workflow «Backend - pruebas y seguridad», run `45513329491`, `completed/success`. Frontend `HiroitoS/PAGINA-WEB-BOOK-EXPRESS-FRONTEND`: HEAD `81b0efa57c7683edb7e3a525a9c55fd37dc867bd`, workflow «Frontend - lint, tests y compilacion», run `45513382968`, `completed/success`. El commit frontend anterior `822157ef7d` también tiene CI exitosa. Esto **sustituye el estado «CI pendiente» de la entrada B5.4**, solo para esos SHAs; no se ejecutaron pruebas locales ni se verificó visualmente el formulario en esta sesión.
