@@ -6,6 +6,8 @@
 
 **Implementación backend:** commit `29ad5c2640e0fd719901b53a6029bfd0f643cb0c` limita la **suma de reportes previos + nuevo reporte** por `line_id` a `line.quantity`, bajo bloqueo transaccional de la operación. Conserva reintentos idempotentes y no modifica existencias, ventas ni documentos de recepción. **Prueba de regresión:** commit `ee7f1f3a08a5fd9e35eb336bfcfa28f81bccecc6` agrega un segundo reporte con clave diferente y una cantidad que excedería el total, exigiendo HTTP 400 sin alterar posiciones del inventario.
 
+**Cobertura adicional:** commit backend `bfdd229b1e3cea58932c286a69ad7c7ea008f5eb` verifica que un segundo reporte legítimo de una unidad dentro del saldo del lote se admita sin cambiar existencias. La ejecución de CI a verificar debe corresponder a este último SHA, no únicamente a `ee7f1f3a`.
+
 **Verificaciones:** la última CI previa de B5.4 era verde (backend `7d633c9`, run `45513329491`; frontend `81b0efa`, run `45513382968`). Esas CI NO cubren los dos commits nuevos; comprobar nuevo run y E2E antes de dar por aprobado este endurecimiento. No hubo cambios frontend, migraciones, `main`, Tecnoweb ni base de datos real.
 
 **Siguiente avance para cierre de Almacén:** validar B5.4 con múltiples reportes, hallazgos y BE-RC en PostgreSQL aislada; después definir e integrar origen verificable de ventas por operación/lote, revisión de diferencias, autorización de jefatura y estado de cierre irrevocable. El cierre no se calcula suponiendo que `not_returned` equivale a ventas. Consignación necesita liquidación comercial y cuentas por cobrar fuera de Almacén. Packs B7 continúa pendiente de la conciliación comprobada.
