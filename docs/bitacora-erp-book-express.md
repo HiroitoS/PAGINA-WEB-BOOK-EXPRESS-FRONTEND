@@ -12,6 +12,8 @@
 
 **Verificaciones:** la última CI previa de B5.4 era verde (backend `7d633c9`, run `45513329491`; frontend `81b0efa`, run `45513382968`). Esas CI NO cubren los dos commits nuevos; comprobar nuevo run y E2E antes de dar por aprobado este endurecimiento. No hubo cambios frontend, migraciones, `main`, Tecnoweb ni base de datos real.
 
+**Dependencia confirmada al inspeccionar árbol backend de la rama:** no existe una app de dominio `sales`/`ventas` propia para registrar ventas reales por lote y distribución (las apps de dominio visibles incluyen `warehouse`, `purchasing`, `catalog`, `crm`, entre otras). Hay datos de modalidad comercial en CRM y facturas de proveedores en Compras, pero NO sustituyen un registro de venta con sus unidades, devoluciones y comprobante. Por seguridad, no implementar todavía un botón de cierre que asuma ventas de las unidades no retornadas; diseñar contrato de integración y reglas de aprobación antes de automatizarlo.
+
 **Siguiente avance para cierre de Almacén:** validar B5.4 con múltiples reportes, hallazgos y BE-RC en PostgreSQL aislada; después definir e integrar origen verificable de ventas por operación/lote, revisión de diferencias, autorización de jefatura y estado de cierre irrevocable. El cierre no se calcula suponiendo que `not_returned` equivale a ventas. Consignación necesita liquidación comercial y cuentas por cobrar fuera de Almacén. Packs B7 continúa pendiente de la conciliación comprobada.
 
 ## 24/11/2026 — Continuidad entre chats: verificadas últimas CI de B5.4 [AUTOMÁTICAS VERDES; E2E PENDIENTE]
