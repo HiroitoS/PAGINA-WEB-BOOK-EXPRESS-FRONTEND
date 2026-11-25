@@ -37,6 +37,15 @@ function getErrorMessage(error, fallback) {
   return fallback;
 }
 
+function hasUnrecognizedLevels(data) {
+  return (data?.rows || []).some((row) =>
+    (row.errors || []).some((message) =>
+      typeof message === "string"
+      && message.includes("No se reconoce el nivel"),
+    ),
+  );
+}
+
 function statusClass(status) {
   if (status === "imported") {
     return "bg-emerald-50 text-emerald-700 ring-emerald-200";
@@ -212,7 +221,9 @@ export default function CRMSchoolImportsPage() {
         );
       } else if (Number(data?.total_errors || 0) > 0) {
         setErrorMessage(
-          "No hay colegios listos para importar. Revisa primero los registros pendientes.",
+          hasUnrecognizedLevels(data)
+            ? "No se reconocen algunos niveles educativos. Comprueba que Inicial, Primaria y Secundaria estén activos en Clasificaciones y vuelve a generar la vista previa."
+            : "No hay colegios listos para importar. Revisa los motivos en «Resultado de la validación».",
         );
       } else {
         setSuccessMessage(
@@ -325,8 +336,16 @@ export default function CRMSchoolImportsPage() {
       </section>
 
       {errorMessage ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
-          {errorMessage}
+        <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+          <p>{errorMessage}</p>
+          {hasUnrecognizedLevels(preview) ? (
+            <Link
+              to="/admin/clasificaciones"
+              className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-red-300 bg-white px-3 text-sm font-bold text-red-800 transition hover:bg-red-100"
+            >
+              Revisar niveles educativos
+            </Link>
+          ) : null}
         </div>
       ) : null}
 

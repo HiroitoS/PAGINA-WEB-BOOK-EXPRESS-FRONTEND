@@ -96,6 +96,12 @@ const NAV_SECTIONS = [
     icon: <FaUsers />,
     children: [
       {
+        label: "Roles y permisos",
+        to: "/admin/roles-permisos",
+        icon: <FaUsers />,
+        roles: ADMIN_ONLY_ROLES,
+      },
+      {
         label: "Usuarios",
         to: "/admin/usuarios",
         icon: <FaUsers />,
@@ -176,11 +182,17 @@ const NAV_SECTIONS = [
         permissions: ["purchasing.view_purchasing"],
       },
       {
+        label: "Documentos electrónicos SUNAT",
+        to: "/admin/erp/documentos-electronicos",
+        icon: <FaClipboardList />,
+        roles: ADMIN_ONLY_ROLES,
+      },
+      {
         type: "subgroup",
         label: "Almacén",
         icon: <FaBoxOpen />,
         basePath: "/admin/erp/almacen/",
-        permissions: ["warehouse.view_receiving", "warehouse.view_warehouse_locations"],
+        permissions: ["warehouse.view_receiving", "warehouse.view_warehouse_locations", "warehouse.view_internal_stock_requests"],
         children: [
           {
             label: "Recepción de mercadería",
@@ -195,10 +207,22 @@ const NAV_SECTIONS = [
             permissions: ["warehouse.view_receiving"],
           },
           {
-            label: "Ubicaciones",
+            label: "Existencias por almacén",
+            to: "/admin/erp/almacen/stock-por-almacen",
+            icon: <FaBoxOpen />,
+            permissions: ["warehouse.view_receiving"],
+          },
+          {
+            label: "Ubicaciones y ferias",
             to: "/admin/erp/almacen/ubicaciones",
             icon: <FaMapMarkerAlt />,
             permissions: ["warehouse.view_warehouse_locations"],
+          },
+          {
+            label: "Movimientos",
+            to: "/admin/erp/almacen/traslados",
+            icon: <FaMapMarkerAlt />,
+            permissions: ["warehouse.view_receiving"],
           },
         ],
       },
@@ -239,6 +263,12 @@ const NAV_SECTIONS = [
         to: "/admin/crm/equipos",
         icon: <FaUsers />,
         permissions: ["crm.assign_schools"],
+      },
+      {
+        label: "Campañas",
+        to: "/admin/crm/campanas",
+        icon: <FaCalendarAlt />,
+        permissions: ["crm.manage_campaigns"],
       },
       {
         label: "Oportunidades",

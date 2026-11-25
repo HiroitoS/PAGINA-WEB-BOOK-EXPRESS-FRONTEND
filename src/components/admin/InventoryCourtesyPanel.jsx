@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { warehouseErrorMessage as explicarError } from "../../utils/warehouseErrorMessage";
 import { buscarEntradasParaCortesia, registrarCortesiaInventario } from "../../api/warehouseApi";
 import ConfirmActionDialog from "./ConfirmActionDialog";
 import { CRM_POSITION_OPTIONS } from "../../utils/crmPositionOptions";
@@ -6,14 +7,6 @@ import { CRM_POSITION_OPTIONS } from "../../utils/crmPositionOptions";
 function formatoCosto(valor) {
   if (valor === null || valor === undefined || valor === "") return "Sin costo registrado";
   return new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }).format(Number(valor));
-}
-
-function explicarError(err) {
-  const data = err?.response?.data;
-  if (typeof data?.detail === "string") return data.detail;
-  if (Array.isArray(data?.detail)) return data.detail.join(" ");
-  if (data && typeof data === "object") return Object.values(data).flat().map(String).join(" ");
-  return "No se pudo completar la operación. Revisa los datos e intenta de nuevo.";
 }
 
 export default function InventoryCourtesyPanel({ outflows, canManage, onRefresh }) {

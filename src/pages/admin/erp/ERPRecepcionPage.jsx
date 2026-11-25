@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router";
+import { warehouseErrorMessage as errorLegible } from "../../../utils/warehouseErrorMessage";
+import { Link, useLocation, useNavigate } from "react-router";
 import ConfirmActionDialog from "../../../components/admin/ConfirmActionDialog";
+import ReceivingEvidencePanel from "../../../components/admin/ReceivingEvidencePanel";
 import { useAuth } from "../../../hooks/useAuth";
 import { userHasPermission } from "../../../utils/adminAccess";
 import {
   actualizarRecepcion,
+  anularBorradorRecepcion,
   crearRecepcion,
   consultarSeguimientoRecepcion,
   listarPedidosPorRecibir,
   listarRecepciones,
+  listarRecepcionesPendientesAprobacion,
+  obtenerRecepcion,
+  solicitarAprobacionRecepcion,
+  devolverRecepcion,
   validarRecepcion,
 } from "../../../api/warehouseApi";
 
@@ -39,17 +46,10 @@ function nombreEvento(accion) {
     created: "Recepción registrada",
     updated: "Borrador corregido",
     validated: "Recepción validada",
+    submitted: "Enviada a jefatura",
+    returned: "Devuelta para corrección",
+    cancelled: "Borrador anulado",
   }[accion] || "Acción registrada";
-}
-
-function errorLegible(error) {
-  const data = error?.response?.data;
-  if (typeof data?.detail === "string") return data.detail;
-  if (Array.isArray(data?.detail)) return data.detail.join(" ");
-  if (data && typeof data === "object") {
-    return Object.values(data).flat().map(String).join(" ");
-  }
-  return "No se pudo completar la operación. Revisa los datos e inténtalo nuevamente.";
 }
 
 function normalizarListado(response) {
@@ -61,16 +61,19 @@ function normalizarListado(response) {
 
 function EstadoRecepcion({ estado, cumplimiento }) {
   const validada = estado === "validated";
+  const anulada = estado === "cancelled";
+  const pendiente = estado === "submitted";
   const completo = validada && cumplimiento === "complete";
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
-      <span className={`rounded-full border px-2 py-1 text-xs font-bold ${validada ? "border-gray-300 bg-white text-gray-700" : "border-gray-200 bg-gray-100 text-gray-600"}`}>
-        {validada ? "Recepción validada" : "En borrador"}
+      <span className={`rounded-full border px-2 py-1 text-xs font-bold ${pendiente ? "border-amber-300 bg-amber-100 text-amber-950" : validada ? "border-gray-300 bg-white text-gray-700" : "border-gray-200 bg-gray-100 text-gray-600"}`}>
+        {anulada ? "Anulada" : validada ? "Recepción validada"
+          : pendiente ? "Pendiente de aprobación" : "En borrador"}
       </span>
       {validada && (
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold ${completo ? "border-green-300 bg-green-100 text-green-900" : "border-amber-300 bg-amber-100 text-amber-950"}`}>
           <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${completo ? "bg-green-600" : "bg-amber-500"}`} />
-          {completo ? "Pedido completo hoy" : "Saldo pendiente hoy"}
+          {completo ? "Pedido completo" : "Pedido pendiente"}
         </span>
       )}
     </span>
@@ -78,9 +81,35 @@ function EstadoRecepcion({ estado, cumplimiento }) {
 }
 
 function colorTarjetaRecepcion(recepcion) {
-  if (recepcion.status !== "validated") return "border-gray-200 bg-gray-50";
+  if (recepcion.status === "cancelled") return "border-gray-200 bg-gray-50";
+  if (recepcion.status !== "validated") return "border-amber-200 bg-amber-50";
   return recepcion.fulfillment_status === "complete"
     ? "border-green-300 bg-green-50" : "border-amber-300 bg-amber-50";
+}
+
+function claveNivel(linea) {
+  return linea.nivel_id == null ? "sin-nivel" : String(linea.nivel_id);
+}
+
+function datosEditablesRecepcion(recepcion) {
+  return {
+    provider_id: recepcion.provider,
+    document_type: recepcion.document_type,
+    document_number: recepcion.document_number,
+    received_on: recepcion.received_on,
+    notes: recepcion.notes,
+    lines: recepcion.lines.map((linea) => ({
+      order_item_id: linea.order_item,
+      nombre: linea.product_name,
+      pedido: linea.order_id,
+      quantity_arrived: String(linea.quantity_arrived),
+      quantity_observed: String(linea.quantity_observed),
+      quantity_extra: String(linea.quantity_extra ?? 0),
+      pending_before: linea.pending_before,
+      quantity_documented: linea.quantity_documented == null ? "" : String(linea.quantity_documented),
+      notes: linea.notes,
+    })),
+  };
 }
 
 function validarLineas(lineas) {
@@ -88,6 +117,11 @@ function validarLineas(lineas) {
   for (const linea of lineas) {
     const llegada = Number(linea.quantity_arrived);
     const observada = Number(linea.quantity_observed);
+    const documentada = linea.quantity_documented;
+    if (documentada !== null && documentada !== undefined && documentada !== ""
+      && (!Number.isSafeInteger(Number(documentada)) || Number(documentada) < 0)) {
+      return `La cantidad indicada en la guía para ${linea.producto} debe ser un número entero, sin decimales.`;
+    }
     if (!Number.isSafeInteger(llegada) || llegada < 1
       || !Number.isSafeInteger(observada) || observada < 0 || observada > llegada) {
       return "Las cantidades deben ser enteras y la observada no puede exceder la llegada.";
@@ -103,90 +137,149 @@ function validarLineas(lineas) {
 }
 
 function SeguimientoPedidos({ data, cargando, error, estado }) {
-  if (cargando) return <p role="status" className="text-sm text-gray-600">Consultando entregas y saldos actualizados…</p>;
+  const [vista, setVista] = useState("resumen");
+  if (cargando) return <p role="status" className="text-sm text-gray-600">Consultando cantidades del pedido…</p>;
   if (error) return <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>;
-  if (!data) return null;
+  if (!data?.pedidos?.length) return null;
 
   return (
-    <section className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4" aria-label="Seguimiento de pedidos">
-      <div>
-        <h3 className="font-black text-gray-900">Conciliación por pedido</h3>
-        <p className="mt-1 text-xs text-gray-600">
-          Datos acumulados de recepciones validadas. Las cantidades de la guía seleccionada
-          son definitivas solo si esa recepción está validada.
-        </p>
+    <section className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4"
+      aria-label="Seguimiento del pedido">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-black text-gray-950">Seguimiento del pedido</h3>
+          <p className="mt-1 text-xs text-gray-600">
+            Compara lo solicitado con lo recibido y validado por Almacén.
+          </p>
+        </div>
+        <div role="tablist" aria-label="Vistas de seguimiento de pedidos"
+          className="inline-flex gap-1 rounded-lg bg-gray-100 p-1">
+          {[
+            ["resumen", "Resumen"],
+            ["detalle", "Ver detalle"],
+          ].map(([value, label]) => (
+            <button key={value} type="button" role="tab"
+              aria-selected={vista === value}
+              onClick={() => setVista(value)}
+              className={`min-h-9 rounded-md px-3 text-xs font-bold transition ${
+                vista === value
+                  ? "bg-gray-950 text-white shadow-sm"
+                  : "text-gray-700 hover:bg-white"
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
-      {data.pedidos.map((pedido) => (
-        <div key={pedido.pedido_id} className="space-y-3 rounded-xl border border-gray-200 bg-white p-3">
-          <div>
-            <p className="font-bold text-gray-900">{pedido.colegio}</p>
-            <p className="text-xs text-gray-500">{pedido.referencia}</p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 p-2 text-center">
-            <div><p className="text-xs text-gray-600">Solicitadas</p><p className="text-lg font-black tabular-nums">{pedido.solicitadas}</p></div>
-            <div><p className="text-xs text-gray-600">Aceptadas acumuladas</p><p className="text-lg font-black tabular-nums">{pedido.aceptadas}</p></div>
-            <div><p className="text-xs text-gray-600">Por recibir</p>
-              <p className={`text-lg font-black tabular-nums ${pedido.pendientes ? "text-amber-800" : "text-green-800"}`}>{pedido.pendientes}</p>
+      {estado === "draft" && (
+        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+          Recepción en borrador: las cantidades propuestas todavía no ingresan al
+          Inventario ni reducen el saldo pendiente. Solo se cuentan las validaciones.
+        </p>
+      )}
+      {estado === "cancelled" && (
+        <p className="mt-3 rounded-lg bg-gray-100 px-3 py-2 text-xs text-gray-700">
+          Este borrador fue anulado y no modificó las existencias.
+        </p>
+      )}
+      <div role="tabpanel" className="mt-3 space-y-3">
+        {data.pedidos.map((pedido) => (
+          <div key={pedido.pedido_id} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-bold text-gray-950">{pedido.colegio}</p>
+                <p className="text-xs text-gray-500">{pedido.referencia}</p>
+              </div>
+              <span className={`rounded-full px-2 py-1 text-xs font-bold ${
+                pedido.pendientes ? "bg-amber-100 text-amber-900" : "bg-green-100 text-green-900"
+              }`}>
+                {pedido.pendientes ? "Pendiente de completar" : "Pedido recibido"}
+              </span>
             </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-gray-200 text-gray-600">
-                <tr>
-                  <th className="min-w-48 py-2 pr-2">Libro</th>
-                  <th className="px-2 text-center">Solic.</th>
-                  <th className="px-2 text-center">{estado === "validated" ? "Acept. esta guía" : "Prop. aceptación"}</th>
-                  <th className="px-2 text-center">Adic. guía</th>
-                  <th className="px-2 text-center">No conf.</th>
-                  <th className="px-2 text-center">Acept. total</th>
-                  <th className="px-2 text-center">Pendiente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pedido.productos.map((linea) => (
-                  <tr key={linea.item_id} className="border-b border-gray-100">
-                    <td className="py-2 pr-2 font-semibold text-gray-900">{linea.producto}</td>
-                    <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
-                    <td className="px-2 text-center tabular-nums">{linea.aceptadas_en_guia}</td>
-                    <td className="px-2 text-center font-semibold tabular-nums text-amber-800">{linea.excedentes_en_guia ?? 0}</td>
-                    <td className="px-2 text-center tabular-nums">{linea.observadas_en_guia}</td>
-                    <td className="px-2 text-center tabular-nums">{linea.aceptadas_acumuladas}</td>
-                    <td className={`px-2 text-center font-bold tabular-nums ${linea.pendientes ? "text-amber-800" : "text-green-800"}`}>{linea.pendientes}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <details className="rounded-lg border border-gray-200 p-3">
-            <summary className="cursor-pointer text-sm font-bold text-gray-800">
-              Historial de entregas ({pedido.entregas.length})
-            </summary>
-            {pedido.entregas.length === 0 ? (
-              <p className="mt-2 text-xs text-gray-600">Aún no hay entregas validadas.</p>
-            ) : (
-              <div className="mt-2 overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-gray-200 text-gray-600">
-                    <tr><th className="py-2">Fecha</th><th>Guía / documento</th><th className="text-center">Llegaron</th><th className="text-center">Aceptadas</th><th className="text-center">Adicionales</th><th className="text-center">No conformes</th></tr>
-                  </thead>
-                  <tbody>
-                    {pedido.entregas.map((entrega, index) => (
-                      <tr key={entrega.receipt_id} className="border-b border-gray-100">
-                        <td className="py-2 pr-2">{index + 1}. {entrega.received_on}</td>
-                        <td className="pr-2">{entrega.document_number}{entrega.es_recepcion_actual ? " · Esta guía" : ""}</td>
-                        <td className="text-center tabular-nums">{entrega.llegaron}</td>
-                        <td className="text-center tabular-nums">{entrega.aceptadas}</td>
-                        <td className="text-center tabular-nums text-amber-800">{entrega.excedentes ?? 0}</td>
-                        <td className="text-center tabular-nums">{entrega.observadas}</td>
+            <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-white p-2 text-center">
+              <div>
+                <p className="text-xs text-gray-600">Solicitados</p>
+                <p className="text-lg font-black tabular-nums text-gray-950">{pedido.solicitadas}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600">Validados</p>
+                <p className="text-lg font-black tabular-nums text-green-800">{pedido.aceptadas}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600">Por recibir</p>
+                <p className="text-lg font-black tabular-nums text-amber-800">{pedido.pendientes}</p>
+              </div>
+            </div>
+            {vista === "detalle" && (
+              <div className="mt-3 space-y-3">
+                <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                  <table className="w-full min-w-150 text-left text-xs">
+                    <thead className="border-b border-gray-200 bg-gray-50 text-gray-700">
+                      <tr>
+                        <th className="min-w-52 px-2 py-2">Libro</th>
+                        <th className="px-2 text-center">Pedido</th>
+                        <th className="px-2 text-center">{estado === "validated" ? "Esta recepción" : "Propuesta"}</th>
+                        <th className="px-2 text-center">Extras</th>
+                        <th className="px-2 text-center">Observ.</th>
+                        <th className="px-2 text-center">Validados</th>
+                        <th className="px-2 text-center">Pendientes</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {pedido.productos.map((linea) => (
+                        <tr key={linea.item_id} className="border-b border-gray-100 last:border-0">
+                          <td className="px-2 py-2 font-semibold text-gray-900">{linea.producto}</td>
+                          <td className="px-2 text-center tabular-nums">{linea.solicitadas}</td>
+                          <td className="px-2 text-center tabular-nums">{linea.aceptadas_en_guia}</td>
+                          <td className="px-2 text-center tabular-nums text-amber-800">{linea.excedentes_en_guia ?? 0}</td>
+                          <td className="px-2 text-center tabular-nums">{linea.observadas_en_guia}</td>
+                          <td className="px-2 text-center tabular-nums">{linea.aceptadas_acumuladas}</td>
+                          <td className="px-2 text-center font-bold tabular-nums">{linea.pendientes}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <details className="rounded-lg border border-gray-200 bg-white p-3">
+                  <summary className="cursor-pointer text-xs font-bold text-gray-800">
+                    Historial de entregas validadas ({pedido.entregas.length})
+                  </summary>
+                  {pedido.entregas.length === 0 ? (
+                    <p className="mt-2 text-xs text-gray-600">Aún no hay entregas validadas.</p>
+                  ) : (
+                    <div className="mt-2 overflow-x-auto">
+                      <table className="w-full min-w-125 text-left text-xs">
+                        <thead className="border-b border-gray-200 text-gray-600">
+                          <tr>
+                            <th className="py-2">Fecha</th>
+                            <th>Documento</th>
+                            <th className="text-center">Llegaron</th>
+                            <th className="text-center">Validados</th>
+                            <th className="text-center">Extras</th>
+                            <th className="text-center">Observados</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pedido.entregas.map((entrega) => (
+                            <tr key={entrega.receipt_id} className="border-b border-gray-100">
+                              <td className="py-2 pr-2">{entrega.received_on}</td>
+                              <td className="pr-2">{entrega.document_number}</td>
+                              <td className="text-center tabular-nums">{entrega.llegaron}</td>
+                              <td className="text-center tabular-nums">{entrega.aceptadas}</td>
+                              <td className="text-center tabular-nums">{entrega.excedentes ?? 0}</td>
+                              <td className="text-center tabular-nums">{entrega.observadas}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </details>
               </div>
             )}
-          </details>
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -194,6 +287,10 @@ function SeguimientoPedidos({ data, cargando, error, estado }) {
 export default function ERPRecepcionPage() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const receiptRouteValue = new URLSearchParams(location.search).get("recepcion") || "";
+  const receiptTargetId = /^\d+$/.test(receiptRouteValue) && Number.isSafeInteger(Number(receiptRouteValue))
+    ? Number(receiptRouteValue) : null;
   const rutaRetorno = location.state?.inventoryReturnTo;
   const retornoInventario = typeof rutaRetorno === "string" &&
     (rutaRetorno === "/admin/erp/almacen/inventario" ||
@@ -215,16 +312,22 @@ export default function ERPRecepcionPage() {
   const [error, setError] = useState("");
   const [editorial, setEditorial] = useState("");
   const [buscarColegio, setBuscarColegio] = useState("");
+  const [nivelSeleccionado, setNivelSeleccionado] = useState("");
   const [pedidosMarcados, setPedidosMarcados] = useState([]);
   const [cantidades, setCantidades] = useState({});
   const [documento, setDocumento] = useState(documentoInicial);
   const [recepcionId, setRecepcionId] = useState(null);
   const [edicion, setEdicion] = useState(null);
   const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
+  const [confirmarAnulacion, setConfirmarAnulacion] = useState(false);
+  const [motivoAnulacion, setMotivoAnulacion] = useState("");
+  const [motivoDevolucion, setMotivoDevolucion] = useState("");
+  const [mostrarSeguimiento, setMostrarSeguimiento] = useState(false);
   const [cambiosSinGuardar, setCambiosSinGuardar] = useState(false);
   const [seguimiento, setSeguimiento] = useState(null);
   const [cargandoSeguimiento, setCargandoSeguimiento] = useState(false);
   const [errorSeguimiento, setErrorSeguimiento] = useState("");
+  const [pendientesRevision, setPendientesRevision] = useState({ total: 0, recepciones: [] });
 
   useEffect(() => {
     let ignore = false;
@@ -237,7 +340,13 @@ export default function ERPRecepcionPage() {
         const lOrdenes = normalizarListado(ordenes);
         const lEntradas = normalizarListado(entradas);
         setPedidos(lOrdenes.items);
-        setRecepciones(lEntradas.items);
+        setRecepciones((current) => {
+          const selectedFromLink = current.find((item) => item.id === receiptTargetId);
+          if (selectedFromLink && !lEntradas.items.some((item) => item.id === receiptTargetId)) {
+            return [selectedFromLink, ...lEntradas.items];
+          }
+          return lEntradas.items;
+        });
         setMasPedidos(lOrdenes.next);
         setMasRecepciones(lEntradas.next);
         setPaginaPedidos(1);
@@ -251,7 +360,42 @@ export default function ERPRecepcionPage() {
     }
     consultar();
     return () => { ignore = true; };
-  }, [revision]);
+  }, [revision, receiptTargetId]);
+
+  useEffect(() => {
+    if (!receiptTargetId) return;
+    let ignore = false;
+    async function abrirDesdeEnlace() {
+      try {
+        const receipt = await obtenerRecepcion(receiptTargetId);
+        if (ignore) return;
+        setRecepciones((current) => {
+          const without = current.filter((item) => item.id !== receiptTargetId);
+          return [receipt, ...without];
+        });
+        setRecepcionId(receipt.id);
+        setEdicion(datosEditablesRecepcion(receipt));
+        setCambiosSinGuardar(false);
+        setPestana("historial");
+        setError("");
+      } catch (err) {
+        if (!ignore) setError(`No pudimos abrir esta recepción. ${errorLegible(err)}`);
+      }
+    }
+    abrirDesdeEnlace();
+    return () => { ignore = true; };
+  }, [receiptTargetId, revision]);
+
+  useEffect(() => {
+    if (!puedeValidar) return;
+    let ignore = false;
+    listarRecepcionesPendientesAprobacion().then((data) => {
+      if (!ignore) setPendientesRevision(data);
+    }).catch(() => {
+      if (!ignore) setPendientesRevision({ total: 0, recepciones: [] });
+    });
+    return () => { ignore = true; };
+  }, [puedeValidar, revision]);
 
   useEffect(() => {
     if (pestana !== "historial" || !recepcionId) return;
@@ -296,6 +440,22 @@ export default function ERPRecepcionPage() {
       colegio: pedido.colegio,
     })));
 
+  const nivelesDisponibles = [...new Map(
+    lineasPreparadas.map((linea) => [
+      claveNivel(linea),
+      { clave: claveNivel(linea), nombre: linea.nivel || "Sin nivel" },
+    ]),
+  ).values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+
+  const lineasVisibles = nivelSeleccionado
+    ? lineasPreparadas.filter((linea) => claveNivel(linea) === nivelSeleccionado)
+    : lineasPreparadas;
+
+  const pedidoDePruebaSeleccionado = pedidos.some(
+    (pedido) => pedidosMarcados.includes(pedido.id) &&
+      pedido.colegio?.startsWith("[PRUEBA ERP]"),
+  );
+
   const resumenSeleccion = pedidos
     .filter((pedido) => pedidosMarcados.includes(pedido.id))
     .reduce((suma, pedido) => {
@@ -311,10 +471,42 @@ export default function ERPRecepcionPage() {
       };
     }, { solicitadas: 0, aceptadas: 0, pendientes: 0 });
 
+  const pedidosSeguimiento = pedidos.filter((pedido) => pedidosMarcados.includes(pedido.id));
+  const seguimientoEditoriales = new Set(pedidosSeguimiento.map((pedido) => pedido.editorial_id));
+  const textoSeguimiento = [
+    "Estimados señores:",
+    "",
+    "Solicitamos confirmar el estado de los siguientes saldos pendientes de despacho:",
+    ...pedidosSeguimiento.flatMap((pedido) => [
+      "",
+      `Pedido ${pedido.referencia} · ${pedido.editorial} · ${pedido.colegio}`,
+      ...pedido.productos.filter((linea) => linea.pendientes > 0).map((linea) => (
+        `- ${linea.producto}: solicitado ${linea.solicitadas}, recibido validado ${linea.aceptadas}, pendiente ${linea.pendientes}.`
+      )),
+    ]),
+    "",
+    "Agradeceremos confirmar cantidades y fecha prevista de atención.",
+    "Esta consulta corresponde a saldos pendientes del pedido; no afirma faltantes frente a una guía.",
+    "",
+    "Distribuidora y Comercializadora Book Express S.A.C.",
+  ].join("\n");
+
   const recepcionSeleccionada = recepciones.find((recepcion) => recepcion.id === recepcionId);
+  const recepcionesActivas = recepciones.filter((item) => item.status !== "cancelled");
+  const recepcionesAnuladas = recepciones.filter((item) => item.status === "cancelled");
+  const borradorExistente = recepcionesActivas.find((item) => item.status === "draft"
+    && item.lines.some((linea) => pedidosMarcados.includes(linea.order_id)));
+  const documentoDuplicado = recepcionesActivas.find((item) => (
+    item.provider === pedidos.find((pedido) => pedidosMarcados.includes(pedido.id))?.editorial_id
+    && item.document_type === documento.document_type
+    && documento.document_number.trim() !== ""
+    && item.document_number.trim().toLocaleUpperCase("es")
+      === documento.document_number.trim().toLocaleUpperCase("es")
+  ));
 
   function cambiarEditorial(value) {
     setEditorial(value);
+    setNivelSeleccionado("");
     setPedidosMarcados([]);
     setCantidades({});
   }
@@ -322,6 +514,7 @@ export default function ERPRecepcionPage() {
   function marcarPedido(pedido) {
     if (procesando) return;
     if (pedidosMarcados.includes(pedido.id)) {
+      setNivelSeleccionado("");
       setPedidosMarcados((actual) => actual.filter((id) => id !== pedido.id));
       return;
     }
@@ -333,6 +526,7 @@ export default function ERPRecepcionPage() {
       }
     }
     setPedidosMarcados((actual) => [...actual, pedido.id]);
+    setNivelSeleccionado("");
     setError("");
   }
 
@@ -375,6 +569,10 @@ export default function ERPRecepcionPage() {
   async function registrarBorrador(event) {
     event.preventDefault();
     if (procesando) return;
+    if (documentoDuplicado) {
+      setError("Este documento ya figura en Recepciones registradas. Abre el registro existente para evitar duplicidades.");
+      return;
+    }
     const ordenes = pedidos.filter((pedido) => pedidosMarcados.includes(pedido.id));
     const lineas = lineasPreparadas
       .filter((linea) => String(cantidades[linea.item_id]?.llegada ?? "").trim() !== "")
@@ -430,8 +628,10 @@ export default function ERPRecepcionPage() {
       setDocumento(documentoInicial());
       setCantidades({});
       setPedidosMarcados([]);
+      setNivelSeleccionado("");
       setPestana("historial");
-      setMensaje("Recepción guardada en borrador. Revísala y valídala cuando las cantidades estén verificadas.");
+      navigate(`/admin/erp/almacen/recepciones?recepcion=${creada.id}`, { replace: true });
+      setMensaje("Recepción guardada en borrador. Verifica las cantidades y envíala a aprobación.");
       setCargando(true);
       setRevision((actual) => actual + 1);
     } catch (err) {
@@ -442,30 +642,16 @@ export default function ERPRecepcionPage() {
   }
 
   function abrirRecepcion(recepcion) {
+    setConfirmarAnulacion(false);
+    setMotivoAnulacion("");
     setSeguimiento(null);
     setCargandoSeguimiento(true);
     setErrorSeguimiento("");
     setRecepcionId(recepcion.id);
     setConfirmacionAbierta(false);
     setCambiosSinGuardar(false);
-    setEdicion({
-      provider_id: recepcion.provider,
-      document_type: recepcion.document_type,
-      document_number: recepcion.document_number,
-      received_on: recepcion.received_on,
-      notes: recepcion.notes,
-      lines: recepcion.lines.map((linea) => ({
-        order_item_id: linea.order_item,
-        nombre: linea.product_name,
-        pedido: linea.order_id,
-        quantity_arrived: String(linea.quantity_arrived),
-        quantity_observed: String(linea.quantity_observed),
-          quantity_extra: String(linea.quantity_extra ?? 0),
-          pending_before: linea.pending_before,
-          quantity_documented: linea.quantity_documented == null ? "" : String(linea.quantity_documented),
-        notes: linea.notes,
-      })),
-    });
+    setEdicion(datosEditablesRecepcion(recepcion));
+    navigate(`/admin/erp/almacen/recepciones?recepcion=${recepcion.id}`, { replace: true });
   }
 
   function modificarLinea(index, campo, value) {
@@ -525,6 +711,66 @@ export default function ERPRecepcionPage() {
     finally { setProcesando(false); }
   }
 
+  async function anularBorradorActual() {
+    if (!puedeCrear || !recepcionSeleccionada || recepcionSeleccionada.status !== "draft"
+      || procesando || motivoAnulacion.trim().length < 8) return;
+    setProcesando(true);
+    setError("");
+    setMensaje("");
+    try {
+      await anularBorradorRecepcion(recepcionSeleccionada.id, motivoAnulacion.trim());
+      setConfirmarAnulacion(false);
+      setMotivoAnulacion("");
+      setCambiosSinGuardar(false);
+      setEdicion(null);
+      setMensaje("Borrador anulado. Se conserva su historial y no se modificó el inventario.");
+      setCargando(true);
+      setRevision((actual) => actual + 1);
+    } catch (err) {
+      setError(errorLegible(err));
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  async function enviarParaAprobacion() {
+    if (!puedeCrear || recepcionSeleccionada?.status !== "draft" || procesando) return;
+    setProcesando(true);
+    setError("");
+    setMensaje("");
+    try {
+      if (cambiosSinGuardar) {
+        await actualizarRecepcion(recepcionSeleccionada.id, payloadEdicion());
+      }
+      await solicitarAprobacionRecepcion(recepcionSeleccionada.id);
+      setCambiosSinGuardar(false);
+      setMensaje("Recepción enviada a jefatura. El inventario se actualizará cuando sea aprobada.");
+      setCargando(true);
+      setRevision((actual) => actual + 1);
+    } catch (err) {
+      setError(errorLegible(err));
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  async function devolverParaCorreccion() {
+    if (!puedeValidar || recepcionSeleccionada?.status !== "submitted"
+      || motivoDevolucion.trim().length < 8 || procesando) return;
+    setProcesando(true);
+    setError("");
+    try {
+      await devolverRecepcion(recepcionSeleccionada.id, motivoDevolucion.trim());
+      setMotivoDevolucion("");
+      setMensaje("Recepción devuelta para corrección. No se modificó el inventario.");
+      setRevision((actual) => actual + 1);
+    } catch (err) {
+      setError(errorLegible(err));
+    } finally {
+      setProcesando(false);
+    }
+  }
+
   async function confirmarValidacion() {
     if (!recepcionSeleccionada || procesando || !puedeValidar || !confirmacionAbierta) return;
     setProcesando(true);
@@ -559,7 +805,7 @@ export default function ERPRecepcionPage() {
   }
 
   function solicitarValidacion() {
-    if (!recepcionSeleccionada || recepcionSeleccionada.status !== "draft" || !edicion) return;
+    if (!recepcionSeleccionada || recepcionSeleccionada.status !== "submitted" || !edicion) return;
     if (cambiosSinGuardar && !puedeCrear) {
       setError("No tienes permiso para guardar cambios en esta recepción.");
       return;
@@ -589,20 +835,19 @@ export default function ERPRecepcionPage() {
 
   return (
     <section className="min-w-0 max-w-full space-y-4">
-      <header className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+      <header className="rounded-2xl border border-gray-200 bg-white px-4 py-3 sm:px-5">
         <p className="text-xs font-bold uppercase tracking-wide text-red-700">ERP · Almacén</p>
-        <h1 className="mt-1 text-2xl font-black text-gray-950">Recepción de Mercadería</h1>
+        <h1 className="mt-1 text-xl font-black text-gray-950 sm:text-2xl">Recepción de mercadería</h1>
         <p className="mt-1 text-sm text-gray-600">
           Contrasta los pedidos enviados con los libros recibidos. Registra entregas parciales, observaciones y saldos pendientes.
         </p>
-        {retornoInventario && (
-          <div className="mt-3">
-            <Link to={retornoInventario}
-              className="inline-flex items-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-red-300 hover:text-red-700">
-              Volver a Inventario
-            </Link>
-          </div>
-        )}
+        <div className="mt-2">
+          <Link to={retornoInventario || "/admin/erp/almacen/inventario"}
+            target="_blank" rel="noopener noreferrer"
+            className="inline-flex min-h-10 items-center rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-800 transition hover:border-red-300 hover:text-red-700">
+            Consultar Inventario en otra pestaña
+          </Link>
+        </div>
       </header>
 
       <div role="tablist" aria-label="Secciones de recepción" className="grid grid-cols-2 gap-2 rounded-2xl border border-gray-200 bg-white p-2">
@@ -617,6 +862,32 @@ export default function ERPRecepcionPage() {
           </button>
         ))}
       </div>
+
+      {puedeValidar && pendientesRevision.total > 0 && (
+        <section aria-label="Recepciones por aprobar"
+          className="rounded-xl border border-amber-300 bg-amber-50 p-3 sm:p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-black text-amber-950">
+                {pendientesRevision.total} recepción(es) esperan tu aprobación
+              </h2>
+              <p className="mt-1 text-xs text-amber-950">
+                Selecciona una recepción para revisar cantidades, evidencias y aprobar o devolver.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {pendientesRevision.recepciones.map((item) => (
+              <button key={item.id} type="button"
+                onClick={() => navigate(`/admin/erp/almacen/recepciones?recepcion=${item.id}`)}
+                className="min-h-10 rounded-lg border border-amber-300 bg-white px-3 py-2 text-left text-xs font-bold text-gray-950 hover:border-red-600 hover:text-red-800">
+                {item.editorial} · {item.documento}
+                <span className="ml-2 font-normal text-gray-600">Revisar →</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {mensaje && <p role="status" className="rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-800">{mensaje}</p>}
@@ -659,6 +930,30 @@ export default function ERPRecepcionPage() {
                   </span>
                 </label>
               ))}
+              {pedidosSeguimiento.length > 0 && seguimientoEditoriales.size === 1 && (
+                <div className="space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+                  <button type="button" className="min-h-10 rounded-lg border border-red-300 px-3 text-xs font-bold text-red-800"
+                    onClick={() => setMostrarSeguimiento((current) => !current)}>
+                    {mostrarSeguimiento ? "Ocultar seguimiento" : "Generar seguimiento de saldos pendientes"}
+                  </button>
+                  {mostrarSeguimiento && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600">
+                        Borrador para revisar con la editorial. No constituye una reclamación por pérdida
+                        de libros ni se envía automáticamente.
+                      </p>
+                      <textarea readOnly rows={12} value={textoSeguimiento}
+                        aria-label="Texto de seguimiento de pedido" className={estilosCampo} />
+                      <button type="button" className="min-h-10 rounded-lg bg-gray-950 px-3 text-xs font-bold text-white"
+                        onClick={() => navigator.clipboard.writeText(textoSeguimiento)
+                          .then(() => setMensaje("Texto de seguimiento copiado. Verifica el destinatario antes de enviar."))
+                          .catch(() => setError("No fue posible copiar el texto. Puedes seleccionarlo manualmente."))}>
+                        Copiar seguimiento
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               {masPedidos && (
                 <button type="button" onClick={() => cargarMas("pedidos")} disabled={procesando}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50">
@@ -670,9 +965,47 @@ export default function ERPRecepcionPage() {
 
           <form onSubmit={registrarBorrador} className="space-y-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 xl:col-span-3">
             <div>
-              <h2 className="font-black text-gray-950">Registrar entrega física</h2>
-              <p className="mt-1 text-sm text-gray-600">Selecciona pedidos de una misma editorial. Una guía puede corresponder a varios colegios.</p>
+              <h2 className="text-base font-black text-gray-950">Registrar entrega física</h2>
+              <p className="mt-1 text-xs text-gray-600">
+                Selecciona pedidos de la misma editorial; una guía puede incluir varios colegios.
+              </p>
             </div>
+            {borradorExistente && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p className="max-w-2xl text-xs leading-5 text-amber-950">
+                  <strong>Ya hay un borrador para este pedido.</strong>
+                  {" "}Si es la misma entrega, continúa ese registro.
+                  Si es una entrega distinta, utiliza otro documento.
+                </p>
+                <button type="button"
+                  onClick={() => { setPestana("historial"); abrirRecepcion(borradorExistente); }}
+                  className="min-h-10 rounded-lg border border-amber-300 bg-white px-3 text-xs font-bold text-amber-950">
+                  Continuar borrador N.º {borradorExistente.id}
+                </button>
+              </div>
+            )}
+            {import.meta.env.DEV && pedidoDePruebaSeleccionado && (
+              <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
+                <strong>Operación de prueba.</strong> Para entregas simuladas, selecciona
+                «Otro documento» y utiliza una referencia de prueba. No registres
+                una guía oficial que no existe. Al validar se actualizará el
+                inventario utilizado para estas pruebas.
+              </div>
+            )}
+            {documentoDuplicado && (
+              <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                <p className="text-xs font-semibold text-red-900">
+                  El documento {documento.document_number.trim()} ya existe como
+                  {" "}{documentoDuplicado.status === "validated" ? "recepción validada" : "borrador"}.
+                  No registres dos veces la misma entrega.
+                </p>
+                <button type="button"
+                  onClick={() => { setPestana("historial"); abrirRecepcion(documentoDuplicado); }}
+                  className="min-h-10 rounded-lg border border-red-300 bg-white px-3 text-xs font-bold text-red-900">
+                  Abrir registro N.º {documentoDuplicado.id}
+                </button>
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="text-xs font-bold text-gray-700">Documento recibido
                 <select className={`mt-1 ${estilosCampo}`} value={documento.document_type}
@@ -697,13 +1030,120 @@ export default function ERPRecepcionPage() {
               <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">Marca uno o varios pedidos de la izquierda para registrar sus productos.</p>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-center sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-left sm:grid-cols-3">
                   <div><p className="text-xs text-gray-600">Solicitadas</p><p className="text-lg font-black">{resumenSeleccion.solicitadas}</p></div>
                   <div><p className="text-xs text-gray-600">Aceptadas anteriormente</p><p className="text-lg font-black">{resumenSeleccion.aceptadas}</p></div>
                   <div><p className="text-xs text-gray-600">Pendientes</p><p className="text-lg font-black text-amber-800">{resumenSeleccion.pendientes}</p></div>
                 </div>
-                <p className="text-xs text-gray-500">Guía se propone con el saldo pendiente (corrígelo según el documento real). Ingresa el conteo físico y los observados: dañados o incorrectos que sí llegaron. Los faltantes y adicionales se identificarán automáticamente. Una guía puede incluir varios colegios.</p>
-                <div key={pedidosMarcados.join("-")} className="overflow-x-auto">
+                <p className="text-sm leading-6 text-gray-600">
+                  Indica cuántos libros señala el documento y cuántos llegaron realmente.
+                  Las cantidades de libros son siempre unidades enteras, sin decimales.
+                  Si llegan menos de los solicitados, el saldo seguirá pendiente.
+                  Separa los libros dañados o incorrectos en «Observados».
+                </p>
+                <section aria-label="Filtrar libros por nivel educativo"
+                  className="space-y-2 rounded-xl border border-gray-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-black text-gray-950">Ver productos por nivel</h3>
+                      <p className="mt-1 text-xs leading-5 text-gray-600">
+                        Muestra solo el nivel que estés contando. Cambiar de nivel
+                        no borra cantidades registradas en el formulario.
+                      </p>
+                    </div>
+                    <p role="status" className="text-xs font-bold text-gray-600">
+                      {lineasVisibles.length} de {lineasPreparadas.length} productos
+                    </p>
+                  </div>
+                  <div role="group" aria-label="Niveles educativos"
+                    className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setNivelSeleccionado("")}
+                      aria-pressed={!nivelSeleccionado}
+                      className={`min-h-10 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                        !nivelSeleccionado
+                          ? "bg-gray-950 text-white"
+                          : "border border-gray-300 bg-white text-gray-700 hover:border-gray-500"
+                      }`}>
+                      Todos ({lineasPreparadas.length})
+                    </button>
+                    {nivelesDisponibles.map((nivel) => {
+                      const count = lineasPreparadas.filter(
+                        (linea) => claveNivel(linea) === nivel.clave,
+                      ).length;
+                      return (
+                        <button key={nivel.clave} type="button"
+                          onClick={() => setNivelSeleccionado(nivel.clave)}
+                          aria-pressed={nivelSeleccionado === nivel.clave}
+                          className={`min-h-10 rounded-lg px-3 py-2 text-xs font-bold transition ${
+                            nivelSeleccionado === nivel.clave
+                              ? "bg-red-700 text-white"
+                              : "border border-gray-300 bg-white text-gray-700 hover:border-red-400"
+                          }`}>
+                          {nivel.nombre} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {nivelSeleccionado && (
+                    <p className="text-xs leading-5 text-amber-800">
+                      Solo estás viendo este nivel. El pedido completo y las demás
+                      cantidades siguen disponibles en «Todos».
+                    </p>
+                  )}
+                </section>
+                <div className="space-y-3 lg:hidden">
+                  {lineasVisibles.map((linea) => {
+                    const llegada = cantidades[linea.item_id]?.llegada ?? "";
+                    const observada = cantidades[linea.item_id]?.observada ?? "0";
+                    const conformes = llegada === "" ? 0 : Math.max(0, Number(llegada) - Number(observada));
+                    const alPedido = Math.min(conformes, linea.pendientes);
+                    const adicionales = Math.max(0, conformes - linea.pendientes);
+                    return (
+                      <article key={linea.item_id} className="rounded-xl border border-gray-200 p-3">
+                        <p className="break-words text-sm font-bold text-gray-950">{linea.producto}</p>
+                        <p className="mt-1 break-words text-xs text-gray-600">
+                      {linea.nivel || "Sin nivel"}{linea.grado ? " · " + linea.grado : ""}
+                      {" · "}{linea.colegio} · {linea.pedido}
+                    </p>
+                        <p className="mt-2 text-sm font-semibold text-gray-800">Pendientes: {linea.pendientes} unidades</p>
+                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <label className="text-xs font-semibold text-gray-700">
+                            Según documento
+                            <input type="number" min="0" step="1" inputMode="numeric"
+                              value={cantidades[linea.item_id]?.documentada ?? String(linea.pendientes)}
+                              onChange={(event) => cambiarCantidad(linea.item_id, "documentada", event.target.value)}
+                              disabled={!puedeCrear || procesando}
+                              className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 px-3 text-sm" />
+                          </label>
+                          <label className="text-xs font-semibold text-gray-700">
+                            Cantidad recibida
+                            <input type="number" min="0" step="1" inputMode="numeric"
+                              value={llegada}
+                              onChange={(event) => cambiarCantidad(linea.item_id, "llegada", event.target.value)}
+                              disabled={!puedeCrear || procesando}
+                              className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 px-3 text-sm" />
+                          </label>
+                          <label className="text-xs font-semibold text-gray-700">
+                            Observados
+                            <input type="number" min="0" step="1" inputMode="numeric"
+                              value={observada}
+                              onChange={(event) => cambiarCantidad(linea.item_id, "observada", event.target.value)}
+                              disabled={!puedeCrear || procesando}
+                              className="mt-1 min-h-11 w-full rounded-lg border border-gray-300 px-3 text-sm" />
+                          </label>
+                        </div>
+                        {llegada !== "" && (
+                          <p className="mt-3 text-xs leading-5 text-gray-700">
+                            Al pedido: <strong>{alPedido}</strong> ·
+                            Pendientes después de esta entrega: <strong>{Math.max(0, linea.pendientes - alPedido)}</strong>
+                            {adicionales > 0 && <> · Adicionales: <strong>{adicionales}</strong></>}
+                          </p>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+                <div key={pedidosMarcados.join("-")} className="hidden overflow-x-auto lg:block">
                 <table className="w-full min-w-[760px] text-left text-xs">
                   <thead className="border-b border-gray-200 text-xs text-gray-600">
                     <tr>
@@ -718,7 +1158,7 @@ export default function ERPRecepcionPage() {
                      </tr>
                   </thead>
                   <tbody>
-                    {lineasPreparadas.map((linea) => {
+                    {lineasVisibles.map((linea) => {
                       const llegada = cantidades[linea.item_id]?.llegada ?? "";
                       const observada = cantidades[linea.item_id]?.observada ?? "0";
                       const excedenteConforme = llegada === "" ? 0 : Math.max(0, Number(llegada) - Number(observada) - linea.pendientes);
@@ -728,7 +1168,10 @@ export default function ERPRecepcionPage() {
                         <tr key={linea.item_id} className="border-b border-gray-100">
                           <td className="sticky left-0 z-10 min-w-64 bg-white py-2 pr-3">
                             <span className="block font-semibold text-gray-900">{linea.producto}</span>
-                            <span className="text-xs text-gray-500">{linea.colegio} · {linea.pedido}</span>
+                            <span className="text-xs text-gray-500">
+                              {linea.nivel || "Sin nivel"}{linea.grado ? " · " + linea.grado : ""}
+                              {" · "}{linea.colegio} · {linea.pedido}
+                            </span>
                             {excedente > 0 && (
                               <span className="mt-1 block text-xs font-semibold text-amber-800">
                                 {excedente} adicionales detectadas. Quedarán registradas automáticamente.
@@ -764,21 +1207,27 @@ export default function ERPRecepcionPage() {
                 placeholder="Ej.: cajas deterioradas, faltantes comunicados a la editorial" disabled={!puedeCrear} />
             </label>
             <p className="text-xs text-gray-500">
-              Los adicionales conformes se registran a favor de Book Express. Al validar, Django actualizará los pedidos y contabilizará las entradas en Inventario una sola vez.
+              Al validar una recepción, se actualizarán las cantidades pendientes y el inventario.
+              Los libros adicionales conformes se registrarán por separado, sin duplicar unidades.
             </p>
-            {puedeCrear && <button type="submit" className={estilosBoton} disabled={procesando || !pedidosMarcados.length}>Guardar recepción en borrador</button>}
+            {puedeCrear && (
+                <button type="submit" className={estilosBoton}
+                  disabled={procesando || !pedidosMarcados.length || Boolean(documentoDuplicado)}>
+                  Guardar recepción en borrador
+                </button>
+              )}
           </form>
         </div>
       )}
 
       {pestana === "historial" && (
-        <div className="grid min-w-0 gap-4 xl:grid-cols-3">
-          <div className="space-y-2">
+        <div className="grid min-w-0 gap-3 xl:grid-cols-12">
+          <div className="space-y-2 xl:col-span-3">
             <p className="text-xs text-gray-600">El color indica el saldo actual de los pedidos relacionados, no cómo llegó la guía original. Amarillo: pendiente · Verde: completo · Gris: borrador.</p>
             {recepciones.length === 0 && !cargando && (
               <p className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">Todavía no se registraron recepciones.</p>
             )}
-            {recepciones.map((recepcion) => (
+            {recepcionesActivas.map((recepcion) => (
               <button type="button" key={recepcion.id} onClick={() => abrirRecepcion(recepcion)}
                 className={`w-full rounded-xl border p-3 text-left transition hover:shadow-sm ${colorTarjetaRecepcion(recepcion)} ${recepcionId === recepcion.id ? "ring-2 ring-red-600 ring-offset-1" : ""}`}>
                 <span className="flex items-center justify-between gap-2">
@@ -793,6 +1242,23 @@ export default function ERPRecepcionPage() {
                  </span>
               </button>
             ))}
+            {recepcionesAnuladas.length > 0 && (
+              <details className="rounded-xl border border-gray-200 bg-white p-3">
+                <summary className="cursor-pointer text-xs font-black text-gray-700">
+                  Borradores anulados ({recepcionesAnuladas.length})
+                </summary>
+                <div className="mt-2 space-y-2">
+                  {recepcionesAnuladas.map((recepcion) => (
+                    <button key={recepcion.id} type="button"
+                      onClick={() => abrirRecepcion(recepcion)}
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 p-2 text-left text-xs text-gray-700 hover:bg-gray-100">
+                      {recepcion.provider_name} · N.º {recepcion.id} ·
+                      {" "}{recepcion.document_number || "Sin número"}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )}
             {masRecepciones && (
               <button type="button" onClick={() => cargarMas("recepciones")} disabled={procesando}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-bold text-gray-700">
@@ -801,7 +1267,7 @@ export default function ERPRecepcionPage() {
             )}
           </div>
 
-          <div className="xl:col-span-2">
+          <div className="xl:col-span-9">
             {!recepcionSeleccionada ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-7 text-center text-sm text-gray-500">Selecciona una recepción para revisar sus cantidades.</div>
             ) : (
@@ -813,12 +1279,25 @@ export default function ERPRecepcionPage() {
                   </div>
                   <EstadoRecepcion estado={recepcionSeleccionada.status} cumplimiento={recepcionSeleccionada.fulfillment_status} />
                 </div>
-                {recepcionSeleccionada.status === "validated" ? (
+                {recepcionSeleccionada.status === "cancelled" ? (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="text-sm font-black text-gray-900">Borrador anulado</p>
+                    <p className="mt-1 text-xs leading-5 text-gray-600">
+                      Se conserva el historial de esta recepción. No se ingresó
+                      mercadería al inventario.
+                    </p>
+                    <p className="mt-2 text-xs text-gray-700">
+                      Motivo: {recepcionSeleccionada.events?.find(
+                        (evento) => evento.action === "cancelled",
+                      )?.notes || "Consulta el historial."}
+                    </p>
+                  </div>
+                ) : recepcionSeleccionada.status === "validated" ? (
                   <div className="space-y-3">
                     <p className="text-sm text-gray-700">
                       <strong>Documento:</strong> {recepcionSeleccionada.document_number}
                     </p>
-                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-3 text-center">
+                    <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-left sm:grid-cols-3">
                       <div><p className="text-xs text-gray-600">Llegaron en esta guía</p>
                         <p className="text-lg font-black tabular-nums">
                           {recepcionSeleccionada.lines.reduce((suma, linea) => suma + linea.quantity_arrived, 0)}
@@ -849,7 +1328,7 @@ export default function ERPRecepcionPage() {
                     <div className="grid gap-3 sm:grid-cols-3">
                       <label className="text-xs font-bold text-gray-700">Documento
                         <select className={`mt-1 ${estilosCampo}`} value={edicion?.document_type ?? ""}
-                          disabled={!puedeCrear} onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_type: event.target.value })); }}>
+                          disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"} onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_type: event.target.value })); }}>
                           <option value="guide">Guía de remisión</option>
                           <option value="invoice">Factura (referencia física)</option>
                           <option value="other">Otro documento</option>
@@ -857,11 +1336,11 @@ export default function ERPRecepcionPage() {
                       </label>
                       <label className="text-xs font-bold text-gray-700">Número
                         <input className={`mt-1 ${estilosCampo}`} value={edicion?.document_number ?? ""}
-                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_number: event.target.value })); }} disabled={!puedeCrear} />
+                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, document_number: event.target.value })); }} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"} />
                       </label>
                       <label className="text-xs font-bold text-gray-700">Fecha
                         <input className={`mt-1 ${estilosCampo}`} type="date" value={edicion?.received_on ?? ""}
-                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, received_on: event.target.value })); }} disabled={!puedeCrear} />
+                          onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, received_on: event.target.value })); }} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"} />
                       </label>
                     </div>
                     <div className="overflow-x-auto">
@@ -871,13 +1350,13 @@ export default function ERPRecepcionPage() {
                           <tr key={linea.order_item_id} className="border-b border-gray-100">
                             <td className="py-2 pr-3 font-semibold">{linea.nombre}<span className="block text-xs font-normal text-gray-500">Pedido BE-OC-{String(linea.pedido).padStart(6, "0")}</span></td>
                             <td><input type="number" min="1" step="1" className="w-16 rounded-lg border border-gray-300 p-2"
-                              aria-label={`Llegaron ${linea.nombre}`} value={linea.quantity_arrived} disabled={!puedeCrear}
+                              aria-label={`Llegaron ${linea.nombre}`} value={linea.quantity_arrived} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"}
                               onChange={(event) => modificarLinea(index, "quantity_arrived", event.target.value)} /></td>
                             <td><input type="number" min="0" step="1" className="w-16 rounded-lg border border-gray-300 p-2"
-                              aria-label={`Según guía ${linea.nombre}`} value={linea.quantity_documented ?? ""} disabled={!puedeCrear}
+                              aria-label={`Según guía ${linea.nombre}`} value={linea.quantity_documented ?? ""} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"}
                               onChange={(event) => modificarLinea(index, "quantity_documented", event.target.value)} /></td>
                             <td><input type="number" min="0" step="1" className="w-16 rounded-lg border border-gray-300 p-2"
-                              aria-label={`Observados ${linea.nombre}`} value={linea.quantity_observed} disabled={!puedeCrear}
+                              aria-label={`Observados ${linea.nombre}`} value={linea.quantity_observed} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"}
                               onChange={(event) => modificarLinea(index, "quantity_observed", event.target.value)} /></td>
                             <td className="text-center font-semibold tabular-nums text-amber-800">{linea.quantity_extra ?? "0"}</td>
                             <td>{Number(linea.quantity_arrived) - Number(linea.quantity_observed) - Number(linea.quantity_extra ?? 0)}</td>
@@ -888,19 +1367,83 @@ export default function ERPRecepcionPage() {
                     <p className="text-xs text-gray-600">La guía indica lo declarado por la editorial; físico es lo contado. Observados son libros dañados o incorrectos que sí llegaron. Los adicionales se calculan automáticamente.</p>
                     <label className="block text-xs font-bold text-gray-700">Observaciones
                       <textarea className={`mt-1 ${estilosCampo}`} rows={2} value={edicion?.notes ?? ""}
-                        onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, notes: event.target.value })); }} disabled={!puedeCrear} />
+                        onChange={(event) => { setCambiosSinGuardar(true); setEdicion((actual) => ({ ...actual, notes: event.target.value })); }} disabled={!puedeCrear || recepcionSeleccionada.status !== "draft"} />
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {puedeValidar && <button type="button" onClick={solicitarValidacion} disabled={procesando}
+                      {puedeCrear && recepcionSeleccionada.status === "draft" && (
+                        <button type="button" disabled={procesando}
+                          onClick={enviarParaAprobacion} className={estilosBoton}>
+                          Enviar a aprobación
+                        </button>
+                      )}
+                      {puedeValidar && recepcionSeleccionada.status === "submitted" && <button type="button" onClick={solicitarValidacion} disabled={procesando}
                         className={estilosBoton}>
-                        Guardar y validar recepción
+                        Aprobar recepción e ingresar a inventario
                       </button>}
-                      {puedeCrear && <button type="submit" disabled={procesando || !cambiosSinGuardar}
+                      {puedeCrear && recepcionSeleccionada.status === "draft" && <button type="submit" disabled={procesando || !cambiosSinGuardar}
                         className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-600 underline-offset-4 transition hover:text-red-700 hover:underline disabled:opacity-40">
-                        Guardar sin validar
+                        Guardar borrador
                       </button>}
                     </div>
-                    <p className="text-xs text-gray-500">Al confirmar, la recepción y el ingreso a Inventario se registran conjuntamente. Puedes guardar sin validar si aún no terminaste el conteo.</p>
+                    {puedeCrear && recepcionSeleccionada.status === "draft" && (
+                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                        {!confirmarAnulacion ? (
+                          <button type="button" onClick={() => setConfirmarAnulacion(true)}
+                            className="min-h-10 text-xs font-bold text-red-800 underline underline-offset-2">
+                            Anular borrador
+                          </button>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-xs font-bold text-gray-950">
+                              Anulación auditada: el registro no se eliminará.
+                            </p>
+                            <label className="block text-xs font-semibold text-gray-700">
+                              Motivo de anulación (obligatorio)
+                              <textarea maxLength={500} rows={2} className={estilosCampo}
+                                placeholder="Ej. Recepción duplicada antes de validar"
+                                value={motivoAnulacion}
+                                onChange={(event) => setMotivoAnulacion(event.target.value)} />
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              <button type="button" disabled={procesando || motivoAnulacion.trim().length < 8}
+                                onClick={anularBorradorActual}
+                                className="min-h-10 rounded-lg bg-red-700 px-3 text-xs font-black text-white disabled:opacity-50">
+                                Confirmar anulación
+                              </button>
+                              <button type="button" disabled={procesando}
+                                onClick={() => { setConfirmarAnulacion(false); setMotivoAnulacion(""); }}
+                                className="min-h-10 rounded-lg border border-gray-300 bg-white px-3 text-xs font-bold text-gray-700">
+                                Volver
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {recepcionSeleccionada.status === "submitted" && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <p className="text-xs font-bold text-amber-900">
+                          Pendiente de aprobación. Las cantidades todavía no ingresan al inventario.
+                        </p>
+                        {puedeValidar && (
+                          <label className="mt-3 block text-xs font-bold text-gray-800">
+                            Motivo para devolver al almacenero
+                            <textarea rows={2} maxLength={500} value={motivoDevolucion}
+                              onChange={(event) => setMotivoDevolucion(event.target.value)}
+                              className={`mt-1 ${estilosCampo}`} />
+                            <button type="button" onClick={devolverParaCorreccion}
+                              disabled={procesando || motivoDevolucion.trim().length < 8}
+                              className="mt-2 min-h-10 rounded-lg border border-amber-400 bg-white px-3 text-xs font-bold text-amber-950 disabled:opacity-50">
+                              Devolver para corrección
+                            </button>
+                          </label>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      Al aprobar se actualiza el inventario. Si el documento ya fue
+                      validado en otra recepción, anula este borrador duplicado.
+                    </p>
                   </form>
                 )}
                 {recepcionSeleccionada.status === "validated" && recepcionSeleccionada.notes && (
@@ -908,6 +1451,9 @@ export default function ERPRecepcionPage() {
                     <strong>Observaciones:</strong> {recepcionSeleccionada.notes}
                   </p>
                 )}
+                <ReceivingEvidencePanel key={recepcionSeleccionada.id}
+                  receipt={recepcionSeleccionada} canUpload={puedeCrear}
+                  canSend={puedeValidar} />
                 <SeguimientoPedidos data={seguimiento} cargando={cargandoSeguimiento}
                   error={errorSeguimiento} estado={recepcionSeleccionada.status} />
                 <details className="rounded-xl border border-gray-200 bg-gray-50 p-3">
@@ -948,14 +1494,14 @@ export default function ERPRecepcionPage() {
       {confirmacionAbierta && recepcionSeleccionada && (
         <ConfirmActionDialog open
           eyebrow="Confirmación de almacén"
-          title="Confirmar recepción e ingreso"
+          title="Aprobar recepción e ingreso"
           description={<>Confirmarás las cantidades verificadas de <strong>{recepcionSeleccionada.provider_name}</strong>,
             documento <strong>{recepcionSeleccionada.document_number}</strong>.</>}
           processing={procesando}
-          confirmLabel="Confirmar e ingresar"
+          confirmLabel="Aprobar e ingresar"
           onCancel={() => setConfirmacionAbierta(false)}
           onConfirm={confirmarValidacion}>
-          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-center sm:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-3 text-left sm:grid-cols-4">
             <div><p className="text-xs text-gray-600">Llegaron</p><p className="text-lg font-black">{totalLlegado}</p></div>
             <div><p className="text-xs text-gray-600">Al pedido</p><p className="text-lg font-black">{totalAceptado}</p></div>
             <div><p className="text-xs text-amber-800">Adicionales</p><p className="text-lg font-black text-amber-800">{totalExtra}</p></div>
@@ -965,7 +1511,7 @@ export default function ERPRecepcionPage() {
             {totalExtra > 0 && <p><strong>{totalExtra} adicionales conformes:</strong> se incorporarán al Inventario a favor de Book Express, sin duplicar unidades.</p>}
             {totalFaltanteGuia > 0 && <p><strong>{totalFaltanteGuia} faltantes frente a guía:</strong> quedarán identificados para su seguimiento con la editorial.</p>}
             {totalObservado > 0 && <p><strong>{totalObservado} observados:</strong> se registrarán físicamente, separados de las unidades conformes.</p>}
-            <p>Al confirmar, Django registrará el ingreso en Inventario y actualizará los saldos. La recepción no podrá editarse después; no se generan facturas.</p>
+            <p>Al confirmar, los libros recibidos se registrarán en Inventario y se actualizarán los saldos pendientes. La recepción quedará cerrada para edición; este proceso no emite facturas.</p>
           </div>
         </ConfirmActionDialog>
       )}

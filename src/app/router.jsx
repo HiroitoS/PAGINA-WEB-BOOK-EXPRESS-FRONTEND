@@ -36,6 +36,7 @@ const ImportsPage = lazy(() => import("../pages/admin/ImportsPage"));
 const UsersPage = lazy(() => import("../pages/admin/UsersPage"));
 const NotificationsPage = lazy(() => import("../pages/admin/NotificationsPage"));
 const UserPermissionsPage = lazy(() => import("../pages/admin/UserPermissionsPage"));
+const RolePermissionsPage = lazy(() => import("../pages/admin/RolePermissionsPage"));
 const WorkspaceTodoPage = lazy(() => import("../pages/admin/workspace/WorkspaceTodoPage"));
 const WorkspaceTasksPage = lazy(() => import("../pages/admin/workspace/WorkspaceTasksPage"));
 const WorkspaceRemindersPage = lazy(() => import("../pages/admin/workspace/WorkspaceRemindersPage"));
@@ -45,8 +46,15 @@ const WorkspaceTaskListsPage = lazy(() => import("../pages/admin/workspace/Works
 
 const ERPPedidosPage = lazy(() => import("../pages/admin/erp/ERPPedidosPage"));
 const ERPRecepcionPage = lazy(() => import("../pages/admin/erp/ERPRecepcionPage"));
+const ERPSolicitudesMercaderiaPage = lazy(() => import("../pages/admin/erp/ERPSolicitudesMercaderiaPage"));
 const ERPInventarioPage = lazy(() => import("../pages/admin/erp/ERPInventarioPage"));
+const ERPStockPorAlmacenPage = lazy(() => import("../pages/admin/erp/ERPStockPorAlmacenPage"));
+const ERPTrasladosPage = lazy(() => import("../pages/admin/erp/ERPTrasladosPage"));
+const ERPDistribucionesPage = lazy(() => import("../pages/admin/erp/ERPDistribucionesPage"));
+const ERPHistorialTrasladosPage = lazy(() => import("../pages/admin/erp/ERPHistorialTrasladosPage"));
+const ERPCortesiasPage = lazy(() => import("../pages/admin/erp/ERPCortesiasPage"));
 const ERPUbicacionesPage = lazy(() => import("../pages/admin/erp/ERPUbicacionesPage"));
+const ERPSunatPage = lazy(() => import("../pages/admin/erp/ERPSunatPage"));
 
 const CRMSummaryPage = lazy(
   () => import("../pages/admin/crm/CRMSummaryPage"),
@@ -74,6 +82,9 @@ const CRMSchoolDetailPage = lazy(
 
 const CRMCommercialTeamsPage = lazy(
   () => import("../pages/admin/crm/CRMCommercialTeamsPage"),
+);
+const CRMCampaignsPage = lazy(
+  () => import("../pages/admin/crm/CRMCampaignsPage"),
 );
 
 const CRMSchoolImportsPage = lazy(
@@ -204,6 +215,10 @@ const router = createBrowserRouter([
             element: protectRole(renderLazyPage(DashboardPage), DASHBOARD_ROLES),
           },
           {
+            path: "erp/documentos-electronicos",
+            element: protectRole(renderLazyPage(ERPSunatPage), ADMIN_ONLY_ROLES),
+          },
+          {
             path: "erp/compras/pedidos",
             element: protectPermission(
               renderLazyPage(ERPPedidosPage),
@@ -218,10 +233,49 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: "erp/almacen/stock-por-almacen",
+            element: protectPermission(renderLazyPage(ERPStockPorAlmacenPage), ["warehouse.view_receiving"]),
+          },
+          {
+            path: "erp/almacen/distribuciones",
+            element: protectPermission(
+              renderLazyPage(ERPDistribucionesPage),
+              ["warehouse.view_distribution_operations"],
+            ),
+          },
+          {
+            path: "erp/almacen/traslados",
+            element: protectPermission(
+              renderLazyPage(ERPTrasladosPage),
+              ["warehouse.view_receiving"],
+            ),
+          },
+          {
+            path: "erp/almacen/historial-traslados",
+            element: protectPermission(
+              renderLazyPage(ERPHistorialTrasladosPage),
+              ["warehouse.view_receiving"],
+            ),
+          },
+          {
+            path: "erp/almacen/cortesias",
+            element: protectPermission(
+              renderLazyPage(ERPCortesiasPage),
+              ["warehouse.view_receiving"],
+            ),
+          },
+          {
             path: "erp/almacen/ubicaciones",
             element: protectPermission(
               renderLazyPage(ERPUbicacionesPage),
               ["warehouse.view_warehouse_locations"],
+            ),
+          },
+          {
+            path: "erp/almacen/solicitudes",
+            element: protectPermission(
+              renderLazyPage(ERPSolicitudesMercaderiaPage),
+              ["warehouse.view_internal_stock_requests"],
             ),
           },
           {
@@ -257,6 +311,13 @@ const router = createBrowserRouter([
             element: protectPermission(
               renderLazyPage(CRMContactDetailPage),
               ["crm.view_crm"],
+            ),
+          },
+          {
+            path: "crm/campanas",
+            element: protectPermission(
+              renderLazyPage(CRMCampaignsPage),
+              ["crm.manage_campaigns"],
             ),
           },
           {
@@ -437,6 +498,10 @@ const router = createBrowserRouter([
           {
             path: "notificaciones",
             element: renderLazyPage(NotificationsPage),
+          },
+          {
+            path: "roles-permisos",
+            element: protectRole(renderLazyPage(RolePermissionsPage), ADMIN_ONLY_ROLES),
           },
           {
             path: "usuarios",

@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { warehouseErrorMessage as mensajeError } from "../../utils/warehouseErrorMessage";
+import { Link } from "react-router";
+import { FiBox, FiMapPin } from "react-icons/fi";
 import {
   actualizarUbicacionAlmacen,
   crearUbicacionAlmacen,
@@ -32,19 +35,7 @@ function mostrarTipo(tipo) {
   return TIPOS.find((item) => item.value === tipo)?.label ?? tipo;
 }
 
-function mensajeError(error) {
-  const datos = error?.response?.data;
-  if (typeof datos?.detail === "string") return datos.detail;
-  if (Array.isArray(datos?.detail)) return datos.detail.join(" ");
-  if (datos && typeof datos === "object") {
-    return Object.entries(datos).map(([campo, valor]) =>
-      `${campo}: ${Array.isArray(valor) ? valor.join(" ") : String(valor)}`
-    ).join(" ");
-  }
-  return "No se pudo guardar la ubicación. Comprueba los datos e intenta nuevamente.";
-}
-
-export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar = false }) {
+export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar = false, puedeVerInventario = false }) {
   const [ubicaciones, setUbicaciones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -53,7 +44,13 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   const [formularioAbierto, setFormularioAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
+  const [categoria, setCategoria] = useState("principales");
+  const [conciliacionAbierta, setConciliacionAbierta] = useState(false);
   const formRef = useRef(null);
+  const principales = ubicaciones.filter((item) => item.kind === "main");
+  const subalmacenes = ubicaciones.filter((item) => item.kind !== "main");
+  const visibles = categoria === "principales" ? principales : subalmacenes;
+  const principalActivo = principales.some((item) => item.is_active);
 
   useEffect(() => {
     let ignore = false;
@@ -76,10 +73,9 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   }
 
   function abrirNuevo() {
-    const existePrincipal = ubicaciones.some((item) => item.kind === "main" && item.is_active);
     setFormulario({
       ...FORMULARIO_VACIO,
-      kind: existePrincipal ? "store" : "main",
+      kind: categoria === "principales" ? "main" : "store",
     });
     setEditandoId(null);
     setError("");
@@ -89,6 +85,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   }
 
   function editar(ubicacion) {
+    setCategoria(ubicacion.kind === "main" ? "principales" : "subalmacenes");
     setEditandoId(ubicacion.id);
     setFormulario({
       name: ubicacion.name,
@@ -114,6 +111,14 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
     setFormulario((previo) => ({ ...previo, [campo]: valor }));
   }
 
+  function elegirCategoria(nueva) {
+    setCategoria(nueva);
+    setFormularioAbierto(false);
+    setEditandoId(null);
+    setError("");
+    setMensaje("");
+  }
+
   async function guardar(event) {
     event.preventDefault();
     if (guardando || !puedeGestionar) return;
@@ -135,6 +140,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         ...anteriores.filter((item) => item.id !== guardado.id),
         guardado,
       ].sort((a, b) => a.name.localeCompare(b.name, "es")));
+      setCategoria(guardado.kind === "main" ? "principales" : "subalmacenes");
       setMensaje(editandoId !== null
         ? "La ubicación se actualizó correctamente."
         : "Ubicación registrada correctamente. No se modificaron las existencias.");
@@ -149,27 +155,59 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
   }
 
   return (
-    <div className="min-w-0 space-y-4 p-3 sm:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="min-w-0 space-y-3 p-3 sm:p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-base font-black text-gray-950">Lugares registrados</h2>
-          <p className="mt-1 text-sm text-gray-600">
-            Configura los almacenes y destinos de futuros traslados. Las cantidades se consultan en Inventario.
+          <h2 className="text-base font-black text-gray-950">Lugares de custodia</h2>
+          <p className="mt-1 text-xs leading-5 text-gray-600">
+            Una ubicación identifica dónde están los libros; no genera ni mueve existencias.
           </p>
-          {!cargando && !error && (
-            <p className="mt-1 text-xs font-semibold text-gray-500">
-              {ubicaciones.length} {ubicaciones.length === 1 ? "ubicación registrada" : "ubicaciones registradas"}
-            </p>
-          )}
         </div>
-        {puedeGestionar && !formularioAbierto && (
+        {puedeGestionar && !formularioAbierto && (categoria === "subalmacenes" || !principalActivo) && (
           <button type="button" onClick={abrirNuevo}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800 sm:w-auto">
-            + Agregar ubicación
+            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-red-700 px-4 text-xs font-bold text-white hover:bg-red-800">
+            + {categoria === "principales" && !principalActivo ? "Registrar almacén principal" : "Nueva ubicación"}
           </button>
         )}
       </div>
 
+      <nav aria-label="Clasificar ubicaciones" className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+        {[
+          { id: "principales", name: "Almacenes principales", total: principales.length, icon: FiBox },
+          { id: "subalmacenes", name: "Subalmacenes y destinos", total: subalmacenes.length, icon: FiMapPin },
+        ].map(({ id, name, total, icon: Icon }) => (
+          <button type="button" key={id} aria-pressed={categoria === id}
+            onClick={() => elegirCategoria(id)}
+            className={
+              "flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-center text-xs sm:text-sm " +
+              (categoria === id
+                ? "bg-white font-bold text-gray-950 shadow-sm ring-1 ring-gray-200"
+                : "font-semibold text-gray-600 hover:bg-white/70")
+            }>
+            <Icon aria-hidden="true" className="hidden shrink-0 sm:block" />
+            <span>{name}</span>
+            <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs tabular-nums text-gray-800">{total}</span>
+          </button>
+        ))}
+      </nav>
+
+      {categoria === "subalmacenes" && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+          <span>Tiendas, ferias y consignaciones: cada destino conserva sus propias existencias.</span>
+          <div className="flex flex-wrap gap-3">
+            {puedeVerInventario && (
+              <Link to="/admin/erp/almacen/stock-por-almacen"
+                className="font-bold text-red-700 underline underline-offset-2">
+                Consultar existencias
+              </Link>
+            )}
+            <Link to="/admin/erp/almacen/ubicaciones"
+              className="font-bold text-red-700 underline underline-offset-2">
+              Registrar feria
+            </Link>
+          </div>
+        </div>
+      )}
       {mensaje && (
         <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-800">
           {mensaje}
@@ -210,7 +248,9 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
               <select value={formulario.kind}
                 onChange={(event) => actualizarCampo("kind", event.target.value)}
                 className={campoClase}>
-                {TIPOS.map((tipo) => <option key={tipo.value} value={tipo.value}>{tipo.label}</option>)}
+                {TIPOS.filter((tipo) => editandoId !== null || tipo.value !== "fair").map((tipo) => (
+                  <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
+                ))}
               </select>
             </label>
             <label className="min-w-0 text-xs font-semibold text-gray-700 sm:col-span-2">
@@ -231,7 +271,9 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
           </div>
           <p className="rounded-lg bg-white px-3 py-2 text-xs leading-5 text-gray-600">
             {DESCRIPCIONES_TIPO[formulario.kind]}
-            {" "}Los traslados se habilitarán cuando las existencias estén conciliadas por ubicación.
+            {" "}Para registrar una feria nueva, utiliza «Ferias y subalmacenes por evento»,
+            disponible arriba. Los traslados se habilitarán cuando las existencias
+            estén conciliadas por ubicación.
           </p>
           <label className="block text-xs font-semibold text-gray-700">
             Observaciones (opcional)
@@ -251,21 +293,27 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
         <p role="status" className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">Consultando ubicaciones…</p>
       )}
       {!cargando && ubicaciones.length === 0 && !error && !formularioAbierto && (
-        <div className="space-y-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-5 text-center">
-          <h3 className="text-sm font-bold text-gray-900">Aún no hay ubicaciones registradas</h3>
-          <p className="text-sm text-gray-600">
-            Empieza registrando el almacén principal. Después podrás agregar tiendas, ferias y lugares de consignación.
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-center sm:p-8">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-xl bg-gray-100 text-gray-700"><FiMapPin aria-hidden="true" size={22} /></span>
+          <h3 className="mt-3 text-base font-black text-gray-950">Empieza con tu almacén principal</h3>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-600">
+            Aún no hay ubicaciones registradas. Primero identifica dónde se reciben los libros;
+            después podrás configurar los lugares donde realmente se trasladan.
           </p>
-          {!puedeGestionar && (
-            <p className="text-xs text-gray-500">Consulta con un administrador para configurar ubicaciones.</p>
+          {puedeGestionar ? (
+            <button type="button" onClick={abrirNuevo} className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-red-700 px-5 text-sm font-bold text-white hover:bg-red-800 sm:w-auto">
+              Registrar almacén principal
+            </button>
+          ) : (
+            <p className="mt-3 text-sm text-gray-600">Solicita al administrador que configure el almacén principal.</p>
           )}
         </div>
       )}
 
-      {ubicaciones.length > 0 && (
+      {visibles.length > 0 && (
         <>
           <div className="grid gap-2 sm:hidden">
-            {ubicaciones.map((item) => (
+            {visibles.map((item) => (
               <article key={item.id} className="min-w-0 space-y-2 rounded-xl border border-gray-200 bg-white p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -277,7 +325,7 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
                 </div>
                 <p className="text-xs text-gray-600">{mostrarTipo(item.kind)}</p>
                 {item.address && <p className="break-words text-xs text-gray-600">{item.address}</p>}
-                {puedeGestionar && (
+                {puedeGestionar && !item.fair_event_id && (
                   <button type="button" onClick={() => editar(item)}
                     className="min-h-11 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-red-700">
                     Editar ubicación
@@ -297,17 +345,21 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
                 </tr>
               </thead>
               <tbody>
-                {ubicaciones.map((item) => (
+                {visibles.map((item) => (
                   <tr key={item.id} className="border-t border-gray-100">
                     <td className="p-3">{item.name}</td>
                     <td className="p-3">{mostrarTipo(item.kind)}</td>
                     <td className="p-3">{item.is_active ? "Activa" : "Inactiva"}</td>
                     {puedeGestionar && (
                       <td className="p-3">
-                        <button type="button" onClick={() => editar(item)}
+                        {item.fair_event_id ? (
+                          <span className="text-xs text-gray-500">Feria registrada</span>
+                        ) : (
+                          <button type="button" onClick={() => editar(item)}
                           className="min-h-11 rounded-lg px-2 font-semibold text-red-700 hover:underline">
                           Editar
-                        </button>
+                          </button>
+                        )}
                       </td>
                     )}
                   </tr>
@@ -317,8 +369,25 @@ export default function WarehouseLocationsPanel({ puedeGestionar, puedeConciliar
           </div>
         </>
       )}
+      {!cargando && visibles.length === 0 && ubicaciones.length > 0 && (
+        <p className="rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600">
+          {categoria === "principales"
+            ? "No hay un almacén principal registrado en esta lista."
+            : "No hay subalmacenes ni destinos registrados."}
+        </p>
+      )}
       {puedeConciliar && !cargando && ubicaciones.length > 0 && (
-        <WarehouseReconciliationPanel ubicaciones={ubicaciones} />
+        <details className="rounded-xl border border-gray-200 bg-gray-50 p-3"
+          onToggle={(event) => setConciliacionAbierta(event.currentTarget.open)}> 
+          <summary className="cursor-pointer text-sm font-bold text-gray-950">
+            Conciliación inicial de existencias · solo jefatura
+          </summary>
+          <p className="mt-2 text-xs leading-5 text-gray-700">
+            Se utiliza únicamente para verificar la ubicación de existencias anteriores,
+            no para preparar ni despachar una entrega.
+          </p>
+          {conciliacionAbierta && <WarehouseReconciliationPanel ubicaciones={ubicaciones} />}
+        </details>
       )}
     </div>
   );

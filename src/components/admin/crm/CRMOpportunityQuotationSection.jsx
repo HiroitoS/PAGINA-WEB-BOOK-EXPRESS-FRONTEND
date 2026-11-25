@@ -550,6 +550,7 @@ export default function CRMOpportunityQuotationSection({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingQuotationId, setEditingQuotationId] = useState(null);
   const [draftItems, setDraftItems] = useState([]);
+  const [visibleDraftLevel, setVisibleDraftLevel] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
   const [draftSaleMode, setDraftSaleMode] = useState("");
   const [draftServiceDate, setDraftServiceDate] = useState("");
@@ -899,6 +900,7 @@ export default function CRMOpportunityQuotationSection({
 
     setEditingQuotationId(quotation?.id || null);
     setDraftItems(nextItems);
+    setVisibleDraftLevel(nextItems[0]?.level_name || "");
     setDraftNotes(quotation?.notes || "");
     setDraftSaleMode(quotation?.sale_mode || "");
     setDraftServiceDate(quotation?.service_date || "");
@@ -932,6 +934,7 @@ export default function CRMOpportunityQuotationSection({
 
     setDrawerOpen(false);
     setEditingQuotationId(null);
+    setVisibleDraftLevel("");
     setDraftSaleMode("");
     setDraftServiceDate("");
     setDraftServiceEndDate("");
@@ -963,7 +966,7 @@ export default function CRMOpportunityQuotationSection({
     setDraftItems((current) =>
       current.map((item) => {
         const matchesProvider =
-          item.provider_name === providerName;
+          !providerName || item.provider_name === providerName;
         const matchesLevel =
           !levelName || item.level_name === levelName;
 
@@ -2393,8 +2396,47 @@ export default function CRMOpportunityQuotationSection({
                 />
               ) : null}
 
+              <section className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-3 sm:p-4">
+                <h3 className="text-sm font-black text-gray-950">Ver libros por nivel educativo</h3>
+                <p className="mt-1 text-xs leading-5 text-gray-600">
+                  Puedes revisar solo Inicial, solo Primaria o todos los niveles.
+                  Este filtro no elimina libros de la cotización.
+                  Para cambiar los grados de la propuesta, edita la Proyección.
+                </p>
+                <div role="group" aria-label="Filtrar productos por nivel"
+                  className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setVisibleDraftLevel("")}
+                    aria-pressed={!visibleDraftLevel}
+                    className={`min-h-10 rounded-lg px-3 text-xs font-bold ${
+                      !visibleDraftLevel ? "bg-gray-950 text-white" : "border border-gray-300 bg-white text-gray-700"
+                    }`}>
+                    Todos ({draftItems.length})
+                  </button>
+                  {Array.from(new Set(draftItems.map((item) => item.level_name)))
+                    .filter(Boolean)
+                    .map((level) => (
+                      <button key={level} type="button"
+                        aria-pressed={visibleDraftLevel === level}
+                        onClick={() => setVisibleDraftLevel(level)}
+                        className={`min-h-10 rounded-lg px-3 text-xs font-bold ${
+                          visibleDraftLevel === level
+                            ? "bg-red-700 text-white" : "border border-gray-300 bg-white text-gray-700"
+                        }`}>
+                        {level} ({draftItems.filter((item) => item.level_name === level).length})
+                      </button>
+                    ))}
+                </div>
+                <p role="status" className="mt-2 text-xs font-semibold text-gray-600">
+                  Mostrando {draftItems.filter((item) =>
+                    !visibleDraftLevel || item.level_name === visibleDraftLevel,
+                  ).length} de {draftItems.length} producto(s).
+                  Los descuentos y cambios se conservarán al cambiar de nivel.
+                </p>
+              </section>
+
               <div className="mt-5 space-y-3">
                 {draftItems.map((item, index) => {
+                  if (visibleDraftLevel && item.level_name !== visibleDraftLevel) return null;
                   const priceYear = Number(item.price_year_snapshot);
                   const campaignYear = Number(projection?.campaign_year_snapshot);
                   const referencePrice =
