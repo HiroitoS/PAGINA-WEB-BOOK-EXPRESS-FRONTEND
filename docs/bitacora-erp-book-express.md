@@ -1,5 +1,12 @@
 # Bitácora de continuidad — ERP Book Express
 
+## 25/11/2026 — B5.4 continuidad y validación en PostgreSQL de ensayo
+
+- **CI de la rama original verificada:** [backend bfdd229b](https://github.com/HiroitoS/PAGINA-WEB-BOOK-EXPRESS/actions/runs/45516111021), [frontend f12055f0](https://github.com/HiroitoS/PAGINA-WEB-BOOK-EXPRESS-FRONTEND/actions/runs/45516163414) y [frontend 34ea59b4](https://github.com/HiroitoS/PAGINA-WEB-BOOK-EXPRESS-FRONTEND/actions/runs/45516248534). Sustituye el estado CI por verificar de la entrada del 24/11 para esos commits. Los PR originales permanecen en borrador.
+- **B5.4 UI:** producto, guía e ID distinguen los lotes; el máximo se muestra al elegir una observación o un lote; los formularios sin opciones quedan compactos. Una respuesta perdida conserva la misma clave al repetir el envío con los mismos datos en ese panel. No se modificaron reglas de inventario.
+- **Validación técnica:** la rama backend original pasó 523 pruebas en PostgreSQL de ensayo. La revisión añade cobertura del lote exactamente al límite, reintento posterior y rechazo de un perfil sin permisos; pasaron las 31 pruebas de distribución con ese cambio. En frontend pasaron lint, 46 pruebas y compilación. En navegador autenticado, se verificaron el límite de un lote de 3, el reintento tras perder una respuesta, el hallazgo parcial, el panel móvil de 390 px y un retorno separado de 5 sobre 15 con BE-RC disponible y cierre bloqueado. No se probó la impresión física ni se usó inventario operativo.
+- **Aceptación de Daygoro pendiente:** seguir el [checklist B5.4](erp/ACEPTACION_ALMACEN_B54.md) y registrar resultado por modo de distribución. **B6 permanece pendiente** de fuente verificable de ventas por operación y lote y validación de quién aprueba el cierre. No se modificaron las ramas de producción ni Tecnoweb.
+
 ## 24/11/2026 — B5.4 endurecimiento de auditoría de conteo [CAMBIO EN RAMA; CI NUEVO POR VERIFICAR]
 
 **Hallazgo de revisión de código:** en `warehouse/distribution_close_incidents.py`, la validación de `report_close_difference` comprobaba únicamente que cada reporte fuera menor o igual a `DistributionDispatchLine.quantity`. Con claves distintas se podía sumar más diferencias que unidades entregadas del mismo lote, sin que el reporte individual excediera el límite. Es una inconsistencia documental, no un movimiento de stock, pero afecta la conciliación futura.

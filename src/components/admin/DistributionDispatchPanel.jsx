@@ -261,10 +261,11 @@ export default function DistributionDispatchPanel({
 
           {dispatch.status === "received" && (
             <DistributionCloseIncidentsPanel
+              key={operation.id}
               operationId={operation.id}
               dispatch={dispatch}
               canReport={canManage && canMoveStock}
-              onChanged={() => setRevision((value) => value + 1)}
+              onChanged={setDispatch}
             />
           )}
 
